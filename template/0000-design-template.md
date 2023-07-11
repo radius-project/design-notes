@@ -147,7 +147,7 @@ with the instrumentation.
 
 <!--
 This section is for planning how you will deliver your features. This includes
-aligning work items to features, scenarios or requirements, defining what
+aligning work items to features, scenarios, or requirements, defining what
 deliverable will be checked in at each point in the product and estimating the 
 cost of each work item. Don’t forget to include the Unit Test and functional 
 test in your estimates.
