@@ -1,7 +1,7 @@
 # Title
 
-* Status: Pending/Reviewed
-* Author: Radius Authors
+* Status: Pending/Approved
+* Author: Your name (@YourGitHubUserName)
 
 ## Overview
 
@@ -56,8 +56,6 @@ roles and personas in these user scenarios when it requires API design.
 
 ## Design
 
-### High-level design
-
 <!--
 Provide a high-level description, using diagrams as appropriate, and top-level
 explanations to convey the architectural/design overview. Don’t go into a lot
@@ -69,7 +67,7 @@ design document, if one exists. If you have the alternatives for your design,
 describe alternative solution too.
 -->
 
-### Detail design
+### Design details
 
 <!--
 This section should be detailed and through enough that another developer
@@ -137,7 +135,7 @@ components—such as incompatible with older CLI. Include breaking changes to
 behaviors or APIs here.
 -->
 
-## Supportability
+## Monitoring
 
 <!--
 This includes the list of instrumentation such as metric, log, and trace to 
