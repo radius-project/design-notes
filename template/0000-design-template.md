@@ -39,7 +39,7 @@ we will be successful when we deliver this feature.
 ### Non-Goals
 
 <!--
-Describe non-goals to identity something that we won’t be focusing on 
+Describe non-goals to identify something that we won’t be focusing on 
 immediately. We won’t be expending any effort on these matters.
 -->
 
@@ -59,18 +59,18 @@ roles and personas in these user scenarios when it requires API design.
 <!--
 Provide a high-level description, using diagrams as appropriate, and top-level
 explanations to convey the architectural/design overview. Don’t go into a lot
-of details yet but provide enough information so that the relationship between
+of details yet but provide enough information about the relationship between
 these components and other components. Call out or highlight new components
 that are not part of this feature (dependencies). This diagram generally
 treats the components as black boxes. Provide a pointer to a more detailed
 design document, if one exists. If you have the alternatives for your design,
-describe alternative solution too.
+describe alternative solutions too.
 -->
 
 ### Design details
 
 <!--
-This section should be detailed and through enough that another developer
+This section should be detailed and thorough enough that another developer
 could implement your design and provide enough detail to get a high confidence
 estimate of the cost to implement the feature but isn’t as detailed as the 
 code. Be sure to also consider testability in your design.
@@ -80,7 +80,7 @@ describe it in enough detail that someone else could implement it. Cover
 ALL of the important decisions like names. Your goal is to get agreement
 to proceed with coding and PRs.
 
-If there are alternative you are considering please include that in the open
+If there are alternatives you are considering please include that in the open
 questions section. If the product has a layered architecture, it's good to
 align these sections with the product's layers. This will help readers use
 their current understanding to understand your ideas.
@@ -122,17 +122,17 @@ functional tests.
 
 ## Security (Optional)
 <!--
-Optional. Use this section to describe the security threats and its mitigations
-with this design—such as authenticating request, storing secrets and 
-credentials, etc.
+Optional. Use this section to describe a security threat and its mitigation
+with this design—such as authenticating request, storing a secret and 
+a credential, etc.
 -->
 
 ## Compatibility (Optional)
 
 <!--
-Optional. Describe the potential risk and mitigations with the other 
-components—such as incompatible with older CLI. Include breaking changes to
-behaviors or APIs here.
+Optional. Describe potential compatibility issues with other components,
+such as incompatibility with older CLIs, and include any breaking changes
+to behaviors or APIs.
 -->
 
 ## Monitoring
@@ -157,6 +157,6 @@ test in your estimates.
 
 <!--
 Describe (Q&A format) the important unknowns or things you're not sure about. 
-Use the discussion of to answer these with experts after people digest the 
+Use the discussion to answer these with experts after people digest the 
 overall design.
 -->
