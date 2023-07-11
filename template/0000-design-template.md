@@ -116,8 +116,8 @@ possible.
 ## Test Plan
 
 <!--
-This includes the test plan to validate the features such as unit-test and
-functional tests.
+This includes the test plan to validate the features. e.g. unit test and
+functional test.
 -->
 
 ## Security (Optional)
