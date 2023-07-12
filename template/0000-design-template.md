@@ -1,30 +1,33 @@
 # Title
 
-* Status: Pending/Approved
-* Author: Your name (@YourGitHubUserName)
+* **Status**: Pending/Approved
+* **Author**: Your name (@YourGitHubUserName)
 
 ## Overview
 
 <!--
 Provide a succinct high-level description of the component or feature and 
 where/how it fits in the big picture. The overview should be one to three 
-paragraphs long and should be understandable by someone outside Radius
+paragraphs long and should be understandable by someone outside the Radius
 team.
 -->
 
 ## Terms and definitions
 
 <!--
-These terms are internal to your design and will not be shared publicly.
+Include any terms, definitions, or acronyms that are used in
+this design document to assist the reader. They may or may not
+be part of the user-facing experience once implemented, and can
+be specific to this design context.
 -->
 
 ## Objectives
 
 <!--
-Describes goals/non-goals and user-scenario of this feature to understand
+Describe goals/non-goals and user-scenario of this feature to understand
 the end-user goals.
 * If the feature shares the same objectives of the existing design, link
-  the existing doc rather than repeat the same context.
+  to the existing doc and section rather than repeat the same context.
 * If the feature has a scenario, UX, or other product feature design doc,
   link it here and summarize the important parts.
 -->
@@ -32,18 +35,18 @@ the end-user goals.
 ### Goals
 
 <!--
-Describes goals to define why we need, where we go, and how we know whether
+Describe goals to define why we need, where we go, and how we know whether
 we will be successful when we deliver this feature.
 -->
 
-### Non-Goals
+### Non goals
 
 <!--
 Describe non-goals to identify something that we won’t be focusing on 
 immediately. We won’t be expending any effort on these matters.
 -->
 
-### User scenarios (Optional)
+### User scenarios (optional)
 
 <!--
 Describe the user scenarios for this design. Ensure that you define the
@@ -93,7 +96,7 @@ their current understanding to understand your ideas.
   to cover risks.
 -->
 
-### API Design (Optional)
+### API design (optional)
 
 <!--
 Include if applicable – any design that changes our public REST API, CLI
@@ -105,7 +108,7 @@ section. Write N/A here if not applicable.
 - Describe the new or modified Go APIs for any shared components.
 -->
 
-## Alternatives Considered
+## Alternatives considered
 
 <!--
 Describe the alternative designs that were considered or should be considered.
@@ -113,21 +116,20 @@ Give a justification for why alternative approaches should be rejected if
 possible. 
 -->
 
-## Test Plan
+## Test plan
 
 <!--
-This includes the test plan to validate the features. e.g. unit test and
+Include the test plan to validate the features. e.g. unit test and
 functional test.
 -->
 
-## Security (Optional)
+## Security (optional)
 <!--
-Optional. Use this section to describe a security threat and its mitigation
-with this design—such as authenticating request, storing a secret and 
-a credential, etc.
+Optional. Describe a security threat and its mitigation with this
+design—such as authenticating request, storing a secret and a credential, etc.
 -->
 
-## Compatibility (Optional)
+## Compatibility (optional)
 
 <!--
 Optional. Describe potential compatibility issues with other components,
@@ -138,19 +140,19 @@ to behaviors or APIs.
 ## Monitoring
 
 <!--
-This includes the list of instrumentation such as metric, log, and trace to 
+Include the list of instrumentation such as metric, log, and trace to 
 diagnose this new feature. It also describes how to troubleshoot this feature
 with the instrumentation. 
 -->
 
-## Development Plan
+## Development plan
 
 <!--
-This section is for planning how you will deliver your features. This includes
-aligning work items to features, scenarios, or requirements, defining what
-deliverable will be checked in at each point in the product and estimating the 
-cost of each work item. Don’t forget to include the Unit Test and functional 
-test in your estimates.
+Describe how you will deliver your features. This includes aligning work items
+to features, scenarios, or requirements, defining what deliverable will be
+checked in at each point in the product and estimating the cost of each work
+item. Don’t forget to include the Unit Test and functional test in your
+estimates.
 -->
 
 ## Open issues
