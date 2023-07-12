@@ -77,7 +77,7 @@ code. Be sure to also consider testability in your design.
 
 For each change, give each "change" in the proposal its own section and
 describe it in enough detail that someone else could implement it. Cover
-ALL of the important decisions like names. Your goal is to get agreement
+ALL of the important decisions like names. Your goal is to get an agreement
 to proceed with coding and PRs.
 
 If there are alternatives you are considering please include that in the open
