@@ -420,4 +420,4 @@ gg
 kubernetesMetadata
 daprSidecar
 manualScaling
-YourGitHubName
+YourGitHubUserName
