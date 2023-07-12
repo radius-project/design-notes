@@ -125,16 +125,16 @@ functional test.
 
 ## Security (optional)
 <!--
-Optional. Describe a security threat and its mitigation with this
-design—such as authenticating request, storing a secret and a credential, etc.
+Describe a security threat and its mitigation with this design—such as
+authenticating request, storing a secret and a credential, etc.
 -->
 
 ## Compatibility (optional)
 
 <!--
-Optional. Describe potential compatibility issues with other components,
-such as incompatibility with older CLIs, and include any breaking changes
-to behaviors or APIs.
+Describe potential compatibility issues with other components, such as
+incompatibility with older CLIs, and include any breaking changes to
+behaviors or APIs.
 -->
 
 ## Monitoring
