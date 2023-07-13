@@ -33,10 +33,7 @@ the end-user goals.
   link it here and summarize the important parts.
 -->
 
-> **Issue Reference:** <!--
-(If appropriate) Reference an existing issue
-that describes the feature or bug.
--->
+> **Issue Reference:** <!-- (If appropriate) Reference an existing issue that describes the feature or bug. -->
 
 ### Goals
 
