@@ -9,7 +9,8 @@
 Provide a succinct high-level description of the component or feature and 
 where/how it fits in the big picture. The overview should be one to three 
 paragraphs long and should be understandable by someone outside the Radius
-team.
+team. Do not provide the design details in this, section - there is a
+dedicated section for that later in the document.
 -->
 
 ## Terms and definitions
@@ -32,18 +33,26 @@ the end-user goals.
   link it here and summarize the important parts.
 -->
 
+> **Issue Reference:** <!--
+(If appropriate) Reference an existing issue
+that describes the feature or bug.
+-->
+
 ### Goals
 
 <!--
-Describe goals to define why we need, where we go, and how we know whether
-we will be successful when we deliver this feature.
+Describe goals to define why we are doing this work, how we will make
+priority decisions, and how we will determine success.
 -->
 
 ### Non goals
 
 <!--
 Describe non-goals to identify something that we won’t be focusing on 
-immediately. We won’t be expending any effort on these matters.
+immediately. We won’t be expending any effort on these matters. If there
+will be follow-ups after this work, list them here. If there are things
+we plan to do in the future, but are out of scope of this design, list
+them here.
 -->
 
 ### User scenarios (optional)
@@ -51,6 +60,8 @@ immediately. We won’t be expending any effort on these matters.
 <!--
 Describe the user scenarios for this design. Ensure that you define the
 roles and personas in these user scenarios when it requires API design.
+If you have an existing issue that describes the user scenarios, please
+link to that issue instead.
 -->
 
 #### User story 1
@@ -66,8 +77,7 @@ of details yet but provide enough information about the relationship between
 these components and other components. Call out or highlight new components
 that are not part of this feature (dependencies). This diagram generally
 treats the components as black boxes. Provide a pointer to a more detailed
-design document, if one exists. If you have the alternatives for your design,
-describe alternative solutions too.
+design document, if one exists. 
 -->
 
 ### Design details
@@ -96,7 +106,7 @@ their current understanding to understand your ideas.
   to cover risks.
 -->
 
-### API design (optional)
+### API design (if applicable)
 
 <!--
 Include if applicable – any design that changes our public REST API, CLI
@@ -119,14 +129,29 @@ possible.
 ## Test plan
 
 <!--
-Include the test plan to validate the features. e.g. unit test and
-functional test.
+Include the test plan to validate the features including the areas that
+need functional tests.
+
+Describe any functionality that will create new testing challenges:
+- New dependencies
+- External assets that tests need to access
+- Features that do I/O or change OS state and are thus hard to unit test
 -->
 
-## Security (optional)
+## Security
+
 <!--
-Describe a security threat and its mitigation with this design—such as
-authenticating request, storing a secret and a credential, etc.
+Describe any changes to the existing security model of Radius or security 
+challenges of the features. For each challenge describe the security threat 
+and its mitigation with this design. 
+
+Examples include:
+- Authentication 
+- Storing secrets and credentials
+- Using cryptography
+
+If this feature has no new challenges or changes to the security model
+then describe how the feature will use existing security features of Radius.
 -->
 
 ## Compatibility (optional)
