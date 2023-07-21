@@ -1,0 +1,15 @@
+{
+    "[markdown]": {
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wrappingIndent": "same",
+        "editor.wordWrapColumn": 80,
+        "editor.unicodeHighlight.ambiguousCharacters": false,
+        "editor.unicodeHighlight.invisibleCharacters": false,
+        "diffEditor.ignoreTrimWhitespace": false,
+        "editor.quickSuggestions": {
+            "comments": "on",
+            "strings": "on",
+            "other": "on"
+        }
+    }
+}
