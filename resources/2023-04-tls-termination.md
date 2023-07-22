@@ -32,7 +32,7 @@ this, we will:
 | cert-manager | Cert-manager is a powerful and extensible X.509 certificate controller for Kubernetes|
 | Secret store CSI driver | The Secrets Store CSI Driver allows Kubernetes to mount multiple secrets, keys, and certs stored in enterprise-grade external secrets stores into their pods as a volume. |
 | External secret store | External Secrets Operator is a Kubernetes operator that integrates external secret management systems like AWS Secrets Manager, HashiCorp Vault, Google Secrets Manager, Azure Key Vault, IBM Cloud Secrets Manager, and many more. The operator reads information from external APIs and automatically injects the values into a Kubernetes Secret. |
-| Let’s encrypt | Let's Encrypt is a non-profit certificate authority run by Internet Security Research Group (ISRG) that provides X.509 certificates for Transport Layer Security (TLS) encryption at no charge. |
+| Let's encrypt | Let's Encrypt is a non-profit certificate authority run by Internet Security Research Group (ISRG) that provides X.509 certificates for Transport Layer Security (TLS) encryption at no charge. |
 | ACME Protocol | The Automatic Certificate Management Environment (ACME) protocol is a communications protocol for automating interactions between certificate authorities and their users' servers, allowing the automated deployment of public key infrastructure at very low cost.|
 | ACME challenge | An ACME challenge is a method used by an ACME server to verify that a client owns a domain name |
 | Project Contour | Contour is an open-source Kubernetes ingress controller providing the control plane for the Envoy edge and service proxy.|
@@ -48,7 +48,7 @@ this, we will:
 The following scenarios are common in the real world, and we will need to address them in the future:
 
 * Support authentication via Client Certificate.
-* Enable TLS encryption for upstream service (Xpirit’s feature request)
+* Enable TLS encryption for upstream service (customer request)
 * Support volume mount and env var reference for Applications.Core/secretStores.
 
 ### User scenarios
@@ -63,7 +63,7 @@ In general, Operator used to configure TLS certificates for ingress controller w
 | User scenario | CA integration | Auto certificate rotation | Dependency |
 |---|---|---|---|
 | PFX/PEM certificate | No | No | Kubernetes secret |
-| Let’s encrypt CA | Yes | Yes | cert-manager |
+| Let's encrypt CA | Yes | Yes | cert-manager |
 | Azure Keyvault with CA <br/> AWS SecretStore<br/>GCP| Yes|Yes|Azure Keyvault + External Secret Operator|
 
 #### PFX/PEM format certificate – Bring your own cert
@@ -78,7 +78,7 @@ the TLS certificate approaches expiration, the certificate admin acquires a new
 certificate, and the operator manually updates the certificate in the 
 Kubernetes secret.
 
-#### Use Let’s encrypt certificate
+#### Use Let's encrypt certificate
 
 ![Let's encrypt](2023-04-tls-termination/userstory-letsencrypt.png)
 
@@ -128,7 +128,7 @@ The following requirements must be addressed to enable the discussed scenarios:
 |---|---|
 | P0 | Define and create new secret resource type to save TLS certificate securely.|
 | P0 | Enable TLS termination in Applications.Core/gateways using secret resource. |
-| P0 | Integrate Applications.Core/gateways with Let’s encrypt CA |
+| P0 | Integrate Applications.Core/gateways with Let's encrypt CA |
 | P1 | Support Azure Keyvault to enable TLS termination in Applications.Core/gateways |
 | P2 | Support AWS Secrets manager to enable TLS termination in Applications.Core/gateways |
 
@@ -137,7 +137,7 @@ The following requirements must be addressed to enable the discussed scenarios:
    types requires to update OpenAPI spec, which results in Radius bicep type 
    updates.
 2. cert-manager(optional): this is the new third-party component to integrate 
-   with Let’s encrypt CA.
+   with Let's encrypt CA.
 3. External Secret Operator(optional) : this is the 3rd party component to 
    integrate with external secret stores.
 
@@ -376,7 +376,7 @@ the target Kubernetes secret resource. If the secret is stored in a different
 namespace, Applications.Core/secretStores can reference the secret across any 
 namespace.
 
-The following example references the existing ‘secret-name’ secret in radius-system namespace.
+The following example references the existing ‘secret-name' secret in radius-system namespace.
 
 ```bicep
 resource tlsSecretDirect 'Applications.Core/secretStores@2022-03-15-privatepreview' = {
@@ -601,7 +601,7 @@ resource tlsSecret 'Applications.Core/secretStores@2022-03-15-privatepreview' = 
 }
 ```
 
-#### Use cert-manager for Let’s encrypt certificate authority
+#### Use cert-manager for Let's encrypt certificate authority
 
 To enable Let's Encrypt within a Kubernetes environment, we will make use of 
 cert-manager. The operator is required to create Issuer/ClusterIssuer and 
@@ -983,7 +983,7 @@ The following diagram shows the application model to support Azure Keyvault CSI 
 * Functional tests
   - Create bring your own certificate scenario.
   - Create Azure KeyVault volume scenario.
-  - Create Let’s encrypt integration (it may be unnecessary to validate let’s encrypt integration scenario because the functionality of radius is same as bring your own certificate scenario)
+  - Create Let's encrypt integration (it may be unnecessary to validate let's encrypt integration scenario because the functionality of radius is same as bring your own certificate scenario)
 
 ## Security
 
@@ -1004,7 +1004,7 @@ by properties.kind.
 
 * Implement Applications.Core/secretStores for Kubernetes secret.
 * Enable TLS termination in Applications.Core/gateways using Applications.Core/secretStores.
-* Implement functional test for bring your own certificate scenario and let’s encrypt
+* Implement functional test for bring your own certificate scenario and let's encrypt
 * Documentation
 
 ### Milestone 2 – estimate: 2 sprint
@@ -1028,21 +1028,21 @@ by properties.kind.
 ## Appendices
 
 ### ACME Challenge
-Regarding challenge options for let’s encrypt, the current cert-manager supports only HTTP-01 and DNS-01 challenge of ACME protocol.
+Regarding challenge options for let's encrypt, the current cert-manager supports only HTTP-01 and DNS-01 challenge of ACME protocol.
 
 1. HTTP-01
   * Pros:
-    - It’s easy to automate without extra knowledge about a domain’s configuration.
+    - It's easy to automate without extra knowledge about a domain's configuration.
     - It allows hosting providers to issue certificates for domains CNAMEd to them.
     - It works with off-the-shelf web servers.
   * Cons:
-    - It doesn’t work if your ISP blocks port 80 (this is rare, but some residential ISPs do this).
-    - Let’s Encrypt doesn’t let you use this challenge to issue wildcard certificates.
+    - It doesn't work if your ISP blocks port 80 (this is rare, but some residential ISPs do this).
+    - Let's Encrypt doesn't let you use this challenge to issue wildcard certificates.
     - If you have multiple web servers, you have to make sure the file is available on all of them
-    - Operator needs to open port 80 with 443 HTTPS port redirection to challenge the domain validity (According to Let’s encrypt base practice, opening 80 and 443 is recommended)
+    - Operator needs to open port 80 with 443 HTTPS port redirection to challenge the domain validity (According to Let's encrypt base practice, opening 80 and 443 is recommended)
 2. DNS-01
   * Pros:
-    - Operator doesn’t need to open port 80.
+    - Operator doesn't need to open port 80.
     - Operator can use this challenge to issue certificates containing wildcard domain names.
     - It works well even if operator has multiple web servers.
   * Cons:
@@ -1054,7 +1054,7 @@ Regarding challenge options for let’s encrypt, the current cert-manager suppor
 
 | Title | Links |
 |---|---|
-| Let’s encrypt challenge | https://letsencrypt.org/docs/challenge-types/, https://letsencrypt.org/docs/allow-port-80/ |
+| Let's encrypt challenge | https://letsencrypt.org/docs/challenge-types/, https://letsencrypt.org/docs/allow-port-80/ |
 | Cert-manager HTTP-01 challenge support | https://cert-manager.io/docs/configuration/acme/http01/ |
 | Kubernetes secret | https://kubernetes.io/docs/concepts/configuration/secret/ |
 | ARM Async API specification | https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/async-api-reference.md#creating-or-updating-resources-asynchronously |
