@@ -204,7 +204,7 @@ UCP or new service will have common components with APIs and each RP exposes pre
 
 **Advantages:**
 1. This design also inherits all benefits from the decomposition design.
-2. User RP does not need any secret to access datastore and queue resources.
+1. User RP does not need any secret to access datastore and queue resources.
 
 **Disadvantages:**
 1. Each RP will have additional dependency on this centralized service. For instance, if service and network go down, all services can be impacted.
@@ -215,7 +215,13 @@ N/A
 
 ## Security
 
-N/A
+* Communication between the Radius Core (sidecar) and User RP occurs over 
+  localhost within the same Kubernetes POD context. The TCP port for the 
+  internal APIs is not exposed outside the POD, ensuring that external actors 
+  are unable to directly access the Radius core sidecar's internal APIs.
+* The datastore and queue requires secrets can be accessible only by Radius 
+  core (sidecar). As a result, the User RP no longer needs to manage these 
+  secrets directly, simplifying the security model.
 
 ## Monitoring
 
