@@ -1,6 +1,6 @@
 # Radius service architecture vNext
 
-* **Status**: Reviewing
+* **Status**: Pending
 * **Author**: Young Bu Park (@youngbupark)
 
 ## Overview
@@ -23,8 +23,8 @@ service reliability and resiliency.
 Specifically, DE cannot persistently store deployment metadata and queue 
 messages, leading to
 
-1.	loss of on-going deployments upon crashes or restarts and
-2.	unable to run DE with multiple instances for high availability.
+- loss of on-going deployments upon crashes or restarts and
+- unable to run DE with multiple instances for high availability.
 
 A naive solution of porting Go CRD store implementation to C# could solve this, 
 but managing two separate codebases for the same implementation is inefficient 
@@ -52,10 +52,9 @@ inefficient and may not scale effectively in the long run.
 
 ## Terms and definitions
 
-1. UCP: Universal Control Plane
-2. DE: Deployment engine
-3. Radius Core: 
-4. User RP:  
+1. ARM RPC: ARM RPC is [Azure Resource Manager Provider Contract](https://github.com/Azure/azure-resource-manager-rpc/tree/master). Radius uses the extended ARM-RPC contract to implement resource types.
+1. Radius Core: This is new sidecar service in this proposal.
+1. User RP (User resource provider): This is the [primary application](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar#solution) which uses sidecar.
 
 ## Objectives
 
@@ -151,12 +150,12 @@ Although each service needs to be deployed with the sidecar, we can get the belo
    to integrate with ARM because it has external service dependency unlike
    centralized service design. 
 
-### Detail design
+### Detailed design
 
-We can decompose the the existing radius components into `Radius Core` 
+We will decompose the the existing radius components into `Radius Core` 
 (sidecar) and `User resource provider` like below.
 
-| `Radius Core (sidecar)` | Localhost Network Boundary | `User resource Provider` |
+| `Radius Core (sidecar)` | Localhost Network Boundary | `User resource provider` |
 |---|:---:|---|
 | `Common components` | | `Common components` |
 | Data store providers (CRD, CosmosDB) | `<----API----` | (Data Store client)
@@ -218,14 +217,6 @@ N/A
 
 N/A
 
-## Compatibility (optional)
-
-<!--
-Describe potential compatibility issues with other components, such as
-incompatibility with older CLIs, and include any breaking changes to
-behaviors or APIs.
--->
-
 ## Monitoring
 
 N/A
@@ -267,5 +258,18 @@ This phase aims to move all common components to the Radius Core Sidecar and est
 
 ## Open issues
 
-1. Network latency for localhost?
-1. How do we maintain the API version of Radius core sidecar?
+1. Network Latency on Localhost
+   A: The network latency for localhost is significantly low. However, to further 
+   minimize the impact, we could utilize domain sockets, which offer a more 
+   robust security model and even lower latency.
+1. Maintenance of API Version for Radius Core Sidecar
+   A: For maintaining the API version of the Radius core sidecar, we plan to 
+   use gRPC for the communication between the Sidecar and User RP. With gRPC 
+   protobuf idl, we can maintain API version efficiently.
+1. Addressing Scalability Concerns for the Sidecar
+   A: Our current design is monolithic, containing both the frontend and 
+   backend servers into a single binary. Given that common components of this 
+   design don't demand extensive computing or memory resources, we do not 
+   anticipate scalability issues exclusively for the sidecar container. If we 
+   encounter such challenges, it may indicate the need to revisit our resource 
+   API design.
