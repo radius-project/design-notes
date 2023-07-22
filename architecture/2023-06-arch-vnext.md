@@ -131,7 +131,7 @@ pattern at high-level.
 ![Radius sidecar](2023-06-arch-vnext/sidecar.png)
 
 * **UCP** : UCP is not only gateway but also control plane and proxies for 
-  multiple cloud providers, so it will need to proxess the incoming request 
+  multiple cloud providers, so it will need to process the incoming request 
   directly. It may use a few functionalities such as data store / queue access 
   like DE.
 * **DE** : Since we decide to leverage ARM deployment engine service as much as 
