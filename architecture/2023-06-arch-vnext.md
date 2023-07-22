@@ -43,7 +43,7 @@ creating new resource provider.
 
 Currently, UCP lacks resource change notification feature. The notification 
 feature is critical to informing each RP about changes in foreign 
-resources—like ARM’s Azure Resource Notifications and Kubernetes' resource 
+resources—like ARM's Azure Resource Notifications and Kubernetes' resource 
 informer. In the current Radius implementation, each RP requires the change 
 (even though it will be part of armrpc package) for publishing and subscribing 
 to the notification messages. Beyond notification features, this approach is 
