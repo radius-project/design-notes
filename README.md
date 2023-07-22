@@ -16,7 +16,7 @@ The repository is organized into several sections, each corresponding to a speci
 | [bicep](./bicep/) | Contains the designs related to deployment-engine, Bicep compiler, and Bicep types. |
 | [cli](./cli/) | Contains the designs for Radius CLI. |
 | [ucp](./ucp/) | Contains the designs for the Universal Control Plane (UCP). |
-| [resources](./resources/) | Contains the designs for Radius resource types, such as those in the Application.* namespace. | 
+| [resources](./resources/) | Contains the designs for Radius resource types in `Application.*` namespace. | 
 | [recipe](./recipe/) | Contains the designs related to Radius recipes. |
 | [tools](./tools/) | Contains the designs for engineering tools, such as GitHub Action Workflow and test-infra. |
 | [template](./template/) | Contains the template for design documents.|
