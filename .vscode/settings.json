@@ -9,8 +9,6 @@
             "strings": "on",
             "other": "on"
         },
-        "rewrap.autoWrap.enabled": true,
-        "rewrap.wrappingColumn": 80,
     },
     "editor.detectIndentation": true
 }
