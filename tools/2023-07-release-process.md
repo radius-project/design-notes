@@ -1,4 +1,4 @@
-# Release automation for open source
+# Release Radius for open source
 
 * **Status**: Pending
 * **Author**: Will Smith (@willdavsmith) and Young Bu Park (@youngbupark)
@@ -56,7 +56,6 @@ This focuses more on design flow.
 ### Publish binaries to GitHub release
 
 ### Publish Release Notes
-
 
 
 
