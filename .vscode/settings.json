@@ -1,0 +1,16 @@
+{
+    "[markdown]": {
+        "editor.wrappingIndent": "same",
+        "editor.unicodeHighlight.ambiguousCharacters": true,
+        "editor.unicodeHighlight.invisibleCharacters": true,
+        "diffEditor.ignoreTrimWhitespace": false,
+        "editor.quickSuggestions": {
+            "comments": "on",
+            "strings": "on",
+            "other": "on"
+        },
+        "rewrap.autoWrap.enabled": true,
+        "rewrap.wrappingColumn": 80,
+    },
+    "editor.detectIndentation": true
+}
