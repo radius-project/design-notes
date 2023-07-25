@@ -1,6 +1,6 @@
 # Radius service architecture vNext
 
-* **Status**: Pending
+* **Status**: Approved
 * **Author**: Young Bu Park (@youngbupark)
 
 ## Overview
