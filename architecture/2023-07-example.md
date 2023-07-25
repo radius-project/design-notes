@@ -9,7 +9,7 @@ Radius has three core services: Universal Control Plane (UCP), Applications RP, 
 #### Using rewrap column width limit
 
 > Note: it is automatically word-wrap in the text file. So it is easier to read
-> on review.
+> on any editor and add the comment on PR.
 
 Radius has three core services: Universal Control Plane (UCP), Applications RP,
 and Deployment Engine (DE). UCP and Applications RP utilize Kubernetes CRD for
