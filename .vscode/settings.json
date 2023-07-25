@@ -1,5 +1,6 @@
 {
     "[markdown]": {
+        "editor.wordWrap": "wordWrapColumn",
         "editor.wrappingIndent": "same",
         "editor.unicodeHighlight.ambiguousCharacters": true,
         "editor.unicodeHighlight.invisibleCharacters": true,
@@ -9,8 +10,6 @@
             "strings": "on",
             "other": "on"
         },
-        "rewrap.autoWrap.enabled": true,
-        "rewrap.wrappingColumn": 80,
     },
     "editor.detectIndentation": true
 }
