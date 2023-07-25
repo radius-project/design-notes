@@ -507,3 +507,11 @@ CNAMEd
 AcMEv
 approvers
 readme
+contoso
+Terraform
+terraform
+CADL
+stringified
+Terraform's
+OSS
+SemVer
