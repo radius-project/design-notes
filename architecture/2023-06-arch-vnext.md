@@ -19,7 +19,7 @@ store is designed for development/test purposes, which raises questions about
 service reliability and resiliency. 
 
 ![DE Inmemory problem](2023-06-arch-vnext/problem-inmem-de.png)
- 
+
 Specifically, DE cannot persistently store deployment metadata and queue 
 messages, leading to
 
@@ -54,7 +54,8 @@ inefficient and may not scale effectively in the long run.
 
 1. ARM RPC: ARM RPC is [Azure Resource Manager Provider Contract](https://github.com/Azure/azure-resource-manager-rpc/tree/master). Radius uses the extended ARM-RPC contract to implement resource types.
 1. Radius Core: This is new sidecar service in this proposal.
-1. User RP (User resource provider): This is the [primary application](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar#solution) which uses sidecar.
+1. Resource Controller: This is the [primary application](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar#solution) which uses Radius Core. It implements the API handlers to handle the resource
+   type related APIs.
 
 ## Objectives
 
@@ -71,9 +72,9 @@ detailed design for the proposal will be written later.
 ## Design
 
 This vNext architecture proposal starts from the key idea of decomposing the 
-components of Radius Resource Provider (RP) server into two entities: Core 
-Server and User Resource Provider. The Core Server includes common components 
-leveraged by User RPs, while the User Resource Provider includes RP-specific 
+components of Radius Resource Provider (RP) server into two entities: **Radius Core Server** and 
+**Resource Controller**. The Radius Core Server includes common components 
+leveraged by Resource Controllers, while the Resource Controller includes RP-specific 
 components, implementing business logic for each resource type.
 
 
@@ -104,7 +105,7 @@ several benefits:
 
 1. It can establish a new programming model by Core server to streamline and 
    simplify the Radius resource provider implementation.
-1. It enables us to maintain the core server and user resource provider 
+1. It enables us to maintain the Radius core server and resource controller  
    separately, eliminating the need to recompile each resource provider code 
    when applying common component fixes.
 1. It enables our partners to use any programming language to implement their
@@ -112,7 +113,7 @@ several benefits:
 
 ```mermaid
 graph LR
-	A[Radius core] -- API --> B[User Resource Provider]
+	A[Radius core] -- API --> B[Resource Controller]
 	B -- API --> A
 ```
 
@@ -123,7 +124,8 @@ flexibility and extensibility, benefiting us not only in the short term but
 also offering long-term advantages.
 
 Radius Core sidecar is the separate sidecar container image, which serves the 
-common components. Radius Core sidecar will be deployed with User RP as a POD.
+common components. Radius Core sidecar will be deployed with Resource Controller 
+as a POD.
 
 The following diagram shows how to change the existing design with sidecar 
 pattern at high-level.
@@ -144,8 +146,8 @@ Although each service needs to be deployed with the sidecar, we can get the belo
 1. This design inherits all benefits from the decomposition design.
 2. We can adopt sidecar pattern without impacting other services because UCP 
    can still talk to sidecar with ARM RPC. 
-3. User RP does not need external dependency except for localhost network.
-4. User RP does not need any secret to access datastore and queue resources.
+3. Resource Controller does not need external dependency except for localhost network.
+4. Resource Controller does not need any secret to access datastore and queue resources.
 5. When we build Radius managed service (with ARM), sidecar pattern allows us
    to integrate with ARM because it has external service dependency unlike
    centralized service design. 
@@ -153,9 +155,9 @@ Although each service needs to be deployed with the sidecar, we can get the belo
 ### Detailed design
 
 We will decompose the the existing radius components into `Radius Core` 
-(sidecar) and `User resource provider` like below.
+(sidecar) and `Resource Controller` like below.
 
-| `Radius Core (sidecar)` | Localhost Network Boundary | `User resource provider` |
+| `Radius Core (sidecar)` | Localhost Network Boundary | `Resource Controller` |
 |---|:---:|---|
 | `Common components` | | `Common components` |
 | Data store providers (CRD, CosmosDB) | `<----API----` | (Data Store client)
@@ -178,7 +180,7 @@ We will decompose the the existing radius components into `Radius Core`
 | | `------->` | Resource notification handler (Not implemented) |
 
 `Radius Core (sidecar)` contains all common components needed to implement ARM 
-RPC. User Resource Provider, on the other hand, calls datastore APIs and 
+RPC. `Resource Controller`, on the other hand, calls datastore APIs and 
 implements predefined APIs according to the new programming model. That is, as 
 an RP developer, there's no need to run the worker service or implement 
 operationStatuses API to establish an async operation API. Instead, predefined 
@@ -188,11 +190,11 @@ care of the execution model for async operation workers.
 Moreover, `Radius Core` exposes an HTTP endpoint through the ARM Request 
 Handler to process ARM/UCP requests from UCP. This handler validates the 
 request schema using the swagger file, pre-processes the request (handling etag 
-and pagination) before forwarding it to User RP.
+and pagination) before forwarding it to Resource Controller.
 
 Sidecar design and *new Radius RP programming model* enables to implement User 
 RP in any programming language. In terms of extensibility, we can introduce 
-additional features to the sidecar without impacting the User RP.
+additional features to the sidecar without impacting the Resource Controller.
 
 ## Alternatives considered
 
@@ -204,7 +206,7 @@ UCP or new service will have common components with APIs and each RP exposes pre
 
 **Advantages:**
 1. This design also inherits all benefits from the decomposition design.
-1. User RP does not need any secret to access datastore and queue resources.
+1. Resource Controller does not need any secret to access datastore and queue resources.
 
 **Disadvantages:**
 1. Each RP will have additional dependency on this centralized service. For instance, if service and network go down, all services can be impacted.
@@ -215,12 +217,12 @@ N/A
 
 ## Security
 
-* Communication between the Radius Core (sidecar) and User RP occurs over 
+* Communication between the Radius Core (sidecar) and Resource Controller occurs over 
   localhost within the same Kubernetes POD context. The TCP port for the 
   internal APIs is not exposed outside the POD, ensuring that external actors 
   are unable to directly access the Radius core sidecar's internal APIs.
 * The datastore and queue requires secrets can be accessible only by Radius 
-  core (sidecar). As a result, the User RP no longer needs to manage these 
+  core (sidecar). As a result, the Resource Controller no longer needs to manage these 
   secrets directly, simplifying the security model.
 
 ## Monitoring
@@ -265,15 +267,15 @@ This phase aims to move all common components to the Radius Core Sidecar and est
 ## Open issues
 
 1. Network Latency on Localhost
-   A: The network latency for localhost is significantly low. However, to further 
+   * A: The network latency for localhost is significantly low. However, to further 
    minimize the impact, we could utilize domain sockets, which offer a more 
    robust security model and even lower latency.
 1. Maintenance of API Version for Radius Core Sidecar
-   A: For maintaining the API version of the Radius core sidecar, we plan to 
-   use gRPC for the communication between the Sidecar and User RP. With gRPC 
+   * A: For maintaining the API version of the Radius core sidecar, we plan to 
+   use gRPC for the communication between the Sidecar and Resource Controller. With gRPC 
    protobuf idl, we can maintain API version efficiently.
 1. Addressing Scalability Concerns for the Sidecar
-   A: Our current design is monolithic, containing both the frontend and 
+   * A: Our current design is monolithic, containing both the frontend and 
    backend servers into a single binary. Given that common components of this 
    design don't demand extensive computing or memory resources, we do not 
    anticipate scalability issues exclusively for the sidecar container. If we 
