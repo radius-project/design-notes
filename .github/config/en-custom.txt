@@ -557,3 +557,13 @@ GetResource
 UpdateResource
 vpc
 requery
+CrashLoopBackOff
+ErrImagePull
+ImagePullBackOff
+cpu
+replicaset
+replicasets
+reactively
+IsControlledBy
+OwnerReferences
+
