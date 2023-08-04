@@ -505,3 +505,5 @@ clientID
 tlsCert
 CNAMEd
 AcMEv
+approvers
+readme
