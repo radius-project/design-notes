@@ -211,9 +211,15 @@ When filling this out, focus on:
 
 TODO
 
-### rad recipe show 
+### rad recipe CLI commands
 
-TODO
+- For list, register, unregister:
+  - E2E test for positive scenario 
+- For show:
+  - E2E test for 'bicep' scenario
+  - E2E test for 'terraform' scenario
+- Negative testing:
+  - Negative cases are handled with unit testing and we can establish equivalency to the positive cases 
 
 ## Security
 
