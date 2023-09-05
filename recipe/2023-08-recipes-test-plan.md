@@ -244,9 +244,19 @@ Recipe Deletion Tests
 		- Kubernetes
 			- Positive: Test for deleting azure recipe verifying deletion of kubernetes secret.
 
-### rad recipe show 
+### rad recipe CLI commands
 
-TODO
+
+- For list, register, unregister:
+  - E2E test for positive scenario 
+- For show:
+  - E2E test for 'bicep' positive scenario
+  - E2E test for 'terraform' positive scenario
+- Negative testing (negative cases are primarily handled with unit testing and we can establish equivalency to the positive cases)
+  - Invalid Recipe property types (template kind, version, and path)
+  - Invalid portable resource type
+  - Invalid recipe name
+  - Invalid registry or module paths
 
 ## Security
 
