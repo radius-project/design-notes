@@ -213,40 +213,40 @@ When filling this out, focus on:
 
 ### Deployment/Deletion tests for "each provider" x "each driver" functionality (eg: Bicep with Azure, Terraform with AWS, etc)
 
-Recipe Deployemnt Tests
-	- Recipe Template Kind : Bicep
-		- Azure
-			- Positive: Test for deploying azure resource.
-			- Negative: Test for deploying azure resource without configuring Azure provider.
-		- AWS
-			- Positive: Test for deploying AWS resource.
-		- Kubernetes
-			- Positive: Test for deploying kubernetes resource.
-	- Terraform
-		- Azure
-			- Positive: Test for deploying azure resource and verifying terraform created kubernetes secret.
-		- AWS
-			- Positive: Test for deploying AWS resource and verifying terraform created kubernetes secret.
-			- Negative: Test with no provider information in the terraform module.
-		- Kubernetes
-			- Positive: Test for deploying azure recipe and verifying terraform created kubernetes secret.
+Recipe Deployment Tests
+- Recipe Template Kind : Bicep
+	- Azure
+		- Positive: Test for deploying azure resource.
+		- Negative: Test for deploying azure resource without configuring Azure provider.
+	- AWS
+		- Positive: Test for deploying AWS resource.
+	- Kubernetes
+		- Positive: Test for deploying kubernetes resource.
+- Recipe Template Kind : Terraform
+	- Azure
+		- Positive: Test for deploying azure resource and verifying terraform created kubernetes secret.
+	- AWS
+		- Positive: Test for deploying AWS resource.
+		- Negative: Test with no provider information in the terraform module.
+	- Kubernetes
+		- Positive: Test for deploying azure recipe.
 
 Recipe Deletion Tests
-	- Recipe Template Kind : Bicep
-		- Azure
-			- Positive: Test for deleting azure resource.
-		- AWS
-			- Positive: Test for deleting AWS resource.
-		- Kubernetes
-			- Positive: Test for deleting kubernetes resource.
-	- Recipe Template Kind : Terraform
-		- Azure
-			- Positive: Test for deleting azure resource and verifying deletion of kubernetes secret.
-		- AWS
-			- Positive: Test for deleting AWS resource verifying deletion of kubernetes secret.
-			- Negative: Test for deleting AWS resource without configuring AWS provider.
-		- Kubernetes
-			- Positive: Test for deleting azure recipe verifying deletion of kubernetes secret.
+- Recipe Template Kind : Bicep
+	- Azure
+		- Positive: Test for deleting azure resource.
+	- AWS
+		- Positive: Test for deleting AWS resource.
+	- Kubernetes
+		- Positive: Test for deleting kubernetes resource.
+- Recipe Template Kind : Terraform
+	- Azure
+		- Positive: Test for deleting azure resource.
+	- AWS
+		- Positive: Test for deleting AWS resource verifying deletion of kubernetes secret.
+		- Negative: Test for deleting AWS resource without configuring AWS provider.
+	- Kubernetes
+		- Positive: Test for deleting kubernetes recipe.
 
 ### rad recipe CLI commands
 
