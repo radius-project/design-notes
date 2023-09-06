@@ -193,7 +193,11 @@ We always have the alternative of **not** writing a test plan.
 
 ### Deployment/Deletion tests for "all drivers" functionality (recipe engine)
 
-TODO
+Analysis: There's very little logic that's truly shared for deployment and deletion.
+
+- Negative: Attempt to use a recipe that's not registered.
+- Negative: Attempt to use an environment that does not exist.
+- Positive: verify that the non-cloud provider configuration is generated correctly. Cloud provider configuration will have it's own tests.
 
 ### Deployment/Deletion tests for "each driver" functionality (eg: Bicep, Terraform)
 
