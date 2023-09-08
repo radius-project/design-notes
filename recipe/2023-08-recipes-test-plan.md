@@ -1,12 +1,12 @@
 # Recipes Test Plan
 
-* **Status**: Pending
-* **Author**: `Ryan Nowak (@rynowak)`
-* **Approver**: `Karishma Chawla (@kachawla)`
+- **Status**: Pending
+- **Author**: `Ryan Nowak (@rynowak)`
+- **Approver**: `Karishma Chawla (@kachawla)`
 
 ## Overview
 
-This document defines an overall test plan for Terraform recipes. We're creating a test plan for this now because we're executing on Terraform recipes in a highly parallel well. Getting a shared understanding of the test strategy will help individuals build the right tests by doing some *big picture thinking* upfront. 
+This document defines an overall test plan for Terraform recipes. We're creating a test plan for this now because we're executing on Terraform recipes in a highly parallel well. Getting a shared understanding of the test strategy will help individuals build the right tests by doing some _big picture thinking_ upfront.
 
 **As such, this document may not 100% follow our typical design document format, but this is still the correct home for it.**
 
@@ -28,7 +28,7 @@ This will be an opportunity to put these ideas into practice.
 
 ### Goals
 
-In Scope: We're writing this test plan because we're working on Terraform, but you may notice the title says "Recipes" not "Terraform Recipes". Bicep or other kinds of Recipes are in scope, we'll create issues for any gaps we discover and prioritize them alongside all other work. 
+In Scope: We're writing this test plan because we're working on Terraform, but you may notice the title says "Recipes" not "Terraform Recipes". Bicep or other kinds of Recipes are in scope, we'll create issues for any gaps we discover and prioritize them alongside all other work.
 
 ### Non goals
 
@@ -38,13 +38,13 @@ Out of Scope: We're not going to spend a lot of time talking about unit tests he
 
 Out of Scope: Testing exhaustively all recipes or all types of cloud resources. By-design recipes do not have any logic specific to any type of cloud resource. We will be defining a strategy for testing our curated recipes as part of the recipes repo, separate from this plan.
 
-Out of Scope: Non-functional testing - reliability, resource consumption, security, performance, etc. We're already doing long-haul testing that covers resource consumption and reliability *based on our functional tests*. We're also adding metrics to Recipes that will cover some of the performance basics. This means that we're getting a lot of non-functional testing for "free" every time we add a functional test. For now we're not going to design *separate* non-functional tests, we'll rely on the functional tests we're writing.
+Out of Scope: Non-functional testing - reliability, resource consumption, security, performance, etc. We're already doing long-haul testing that covers resource consumption and reliability _based on our functional tests_. We're also adding metrics to Recipes that will cover some of the performance basics. This means that we're getting a lot of non-functional testing for "free" every time we add a functional test. For now we're not going to design _separate_ non-functional tests, we'll rely on the functional tests we're writing.
 
 ### User scenarios (optional)
 
 #### Defining a recipe
 
-As a operator I define and curate the set of recipes that developers in my organization rely on. 
+As a operator I define and curate the set of recipes that developers in my organization rely on.
 
 This means that the following operator experiences are in scope:
 
@@ -55,7 +55,7 @@ This means that the following operator experiences are in scope:
 
 #### Consuming a recipe
 
-As a developer I can leverage recipes to create the resources my application needs. 
+As a developer I can leverage recipes to create the resources my application needs.
 
 This means that the following developer experiences are in scope:
 
@@ -80,7 +80,7 @@ Therefore we can think of the following buckets of tests:
 - Tests for the recipe engine as a whole (driver and resource being tested does not matter).
 - Tests for each recipe driver (resource being tested does not matter).
   - A set of tests for common error cases and behaviors that are duplicated per-driver.
-  - A set of tests unique to the driver. 
+  - A set of tests unique to the driver.
 - Tests for each cloud provider X each recipe driver (resource being tested does not matter)
   - As set of tests for the common error cases and behaviors that are duplicated per-cloud-provider per-driver.
   - (If needed) A set of tests unique to the cloud-provider X driver combination.
@@ -102,7 +102,7 @@ We can assert the following big decisions in addition to the matrix above:
 - We should only use cloud resources when they are necessary for the test being written (a small number of tests).
 - We should avoid unnecessary resource deployments in negative tests.
 
-### Analysis 
+### Analysis
 
 **These are my notes from the brainstorm we had in a previous meeting to serve as a record of what we covered.**
 
@@ -121,11 +121,11 @@ PUT operation:
   - Metadata: which template, which driver, and parameters
   - Configuration: cloud provider configuration
 - Invoking the driver: (engine)
-  - Installing Terraform (in the driver, specific to Terraform, handled by hc-install)
+  - Installing Terraform (in the driver, specific to Terraform, handled by `hc-install`)
   - Downloading the recipe (in the driver)
-    - This supports multiple sources 
+    - This supports multiple sources
       - For Bicep we support any OCI registry, but we only test ACR (we use the ORAS library)
-      - For Terraform we support any Teraform source, but we only test HTTP archive format (tf get, handled by tf-exec)
+      - For Terraform we support any Terraform source, but we only test HTTP archive format (tf get, handled by tf-exec)
   - Downloading providers (in the driver, specific to Terraform, handled by tf-exec)
   - Generating inputs to the template (in the driver)
     - Merging parameters
@@ -201,12 +201,29 @@ Analysis: There's very little logic that's truly shared for deployment and delet
 
 ### Deployment/Deletion tests for "each driver" functionality (eg: Bicep, Terraform)
 
-TODO
+- Deployment/Execution Tests
+  - Terraform Driver
+    - Positive: Test for successful Terraform initialization and application of the existing Terraform recipe
+    - Positive: Test for the Kubernetes secret creation if applicable
+    - Negative: Test for deploying a non-existing/removed Terraform module
+  - Bicep Driver
+    - Positive: Test for successful deployment of a Bicep recipe
+    - Positive: Test for successful garbage collection of resources that are no longer in use
+    - Negative: Test for deploying a non-existing/removed Bicep recipe
+- Deletion Tests
+  - Terraform Driver
+    - Positive: Test for successful Terraform initialization and destruction of the existing resources provided by the Terraform recipe
+    - Positive: Test for the Kubernetes secret deletion if applicable
+    - Negative: Test for deleting a non-existing/removed Terraform module
+  - Bicep Driver
+    - Positive: Test for successful deletion of resources associated with a Bicep recipe
+    - Positive: Testing successful deletion of orphaned resources
+    - Negative: Test for deletion of a non-existing/removed Bicep recipe
 
 When filling this out, focus on:
 
 - Positive: P1 features not covered on main success path
-- Positive: Anything 'tricky' 
+- Positive: Anything 'tricky'
 - Negative: External failure cases (deployment fails)
 - Negative: Authoring mistakes (where can the user get it wrong, and how do they know)
 - Negative: Misconfiguration (how do we deal with invalid data)
@@ -214,45 +231,46 @@ When filling this out, focus on:
 ### Deployment/Deletion tests for "each provider" x "each driver" functionality (eg: Bicep with Azure, Terraform with AWS, etc)
 
 Recipe Deployment Tests
+
 - Recipe Template Kind : Bicep
-	- Azure
-		- Positive: Test for deploying azure resource.
-		- Negative: Test for deploying azure resource without configuring Azure provider.
-	- AWS
-		- Positive: Test for deploying AWS resource.
-	- Kubernetes
-		- Positive: Test for deploying kubernetes resource.
+  - Azure
+    - Positive: Test for deploying azure resource.
+    - Negative: Test for deploying azure resource without configuring Azure provider.
+  - AWS
+    - Positive: Test for deploying AWS resource.
+  - Kubernetes
+    - Positive: Test for deploying kubernetes resource.
 - Recipe Template Kind : Terraform
-	- Azure
-		- Positive: Test for deploying azure resource and verifying terraform created kubernetes secret.
-	- AWS
-		- Positive: Test for deploying AWS resource.
-		- Negative: Test with no provider information in the terraform module.
-	- Kubernetes
-		- Positive: Test for deploying azure recipe.
+  - Azure
+    - Positive: Test for deploying azure resource and verifying terraform created kubernetes secret.
+  - AWS
+    - Positive: Test for deploying AWS resource.
+    - Negative: Test with no provider information in the terraform module.
+  - Kubernetes
+    - Positive: Test for deploying azure recipe.
 
 Recipe Deletion Tests
+
 - Recipe Template Kind : Bicep
-	- Azure
-		- Positive: Test for deleting azure resource.
-	- AWS
-		- Positive: Test for deleting AWS resource.
-	- Kubernetes
-		- Positive: Test for deleting kubernetes resource.
+  - Azure
+    - Positive: Test for deleting azure resource.
+  - AWS
+    - Positive: Test for deleting AWS resource.
+  - Kubernetes
+    - Positive: Test for deleting kubernetes resource.
 - Recipe Template Kind : Terraform
-	- Azure
-		- Positive: Test for deleting azure resource.
-	- AWS
-		- Positive: Test for deleting AWS resource verifying deletion of kubernetes secret.
-		- Negative: Test for deleting AWS resource without configuring AWS provider.
-	- Kubernetes
-		- Positive: Test for deleting kubernetes recipe.
+  - Azure
+    - Positive: Test for deleting azure resource.
+  - AWS
+    - Positive: Test for deleting AWS resource verifying deletion of kubernetes secret.
+    - Negative: Test for deleting AWS resource without configuring AWS provider.
+  - Kubernetes
+    - Positive: Test for deleting kubernetes recipe.
 
 ### rad recipe CLI commands
 
-
 - For list, register, unregister:
-  - E2E test for positive scenario 
+  - E2E test for positive scenario
 - For show:
   - E2E test for 'bicep' positive scenario
   - E2E test for 'terraform' positive scenario
@@ -281,7 +299,7 @@ Since we're writing a test plan, there are two categories of work being describe
 - Gaps in tests for existing features.
 - New tests for features currently being built.
 
-Test gaps we identify will 
+Test gaps we identify will
 
 ## Open issues
 
