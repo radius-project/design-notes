@@ -515,3 +515,9 @@ stringified
 Terraform's
 OSS
 SemVer
+Misconfiguration
+misconfiguration
+unregister
+tf
+underverified
+ORAS
