@@ -34,7 +34,7 @@ This document delves into the architectural updates to the recipe deployment flo
 
 #### Changing Infrastructure and Compliance Requirements
 
-As a developer, my applications infratructure requirements have changed over time, so have the compliance requirements for my organization. To address these changes, my IT ops team has revised the default recipe for the Redis cache within the environment where my applications are deployed. When I redeploy my application consuming the recipe, the modified recipe is deployed. It is expected that any resources that are no longer defined in the updated recipe will be automatically deleted as part of this deployment.
+As a developer, my applications infrastructure requirements have changed over time, so have the compliance requirements for my organization. To address these changes, my IT ops team has revised the default recipe for the Redis cache within the environment where my applications are deployed. When I redeploy my application consuming the recipe, the modified recipe is deployed. It is expected that any resources that are no longer defined in the updated recipe will be automatically deleted as part of this deployment.
 
 ## Design
 
@@ -115,7 +115,7 @@ No compatibility impact, no customer facing APIs are being added or updated.
 
 ## Monitoring
 
-* Recipe garbage colelction duration - this will be only applicable to Bicep recipe execution.
+* Recipe garbage collection duration - this will be only applicable to Bicep recipe execution.
 
 ## Development plan
 
