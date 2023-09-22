@@ -5,9 +5,9 @@
 
 ## Overview
 
-When a Radius portable resource consuming a recipe is redeployed, the recipe is retrieved from the source and redeployed. Garbage collection of the recipe resources that aren't included in the currently deployed resources compared to the list of resources from the previous deployment needs to be handled by separately for certain recipe types. For Terraform recipes, Terraform automatically manages deletion of the unused resources from previous state using the Terraform state file. For Bicep recipes however this needs to managed by Radius.
+When a Radius portable resource consuming a recipe is redeployed, the recipe is retrieved from the source and redeployed. Any unused resources that are no longer included in the output resources of current recipe deployment compared to the previous deployment output need to be deleted by Radius for certain recipe types. For Terraform recipes, Terraform automatically manages deletion of the unused resources from previous state using the Terraform state file. For Bicep recipes however this needs to managed by Radius.
 
-To address this for Bicep, we have implemented a solution that identifies the output resources that are no longer relevant to the recipe and delete each resource individually using the resource delete API. This functionality is currently implemented in the create/update controller of portable resources, tightly coupling the controller with Bicep specific behavior. To ensure flexibility in supporting different recipe types, we are moving garbage collection cleanup to recipe type specific abstraction layer - recipe driver.
+To address this for Bicep, we have implemented a solution that identifies the output resources that are no longer relevant to the recipe and delete each resource individually using the resource delete API. This functionality is currently implemented in the create/update controller of portable resources, tightly coupling the controller with Bicep specific behavior. To ensure flexibility in supporting different recipe types, we are moving garbage collection of unused resources to per recipe specific abstraction layer - recipe driver.
 
 This document delves into the architectural updates to the recipe deployment flow and the API updates proposed in the recipe engine and Driver.
 
@@ -23,12 +23,12 @@ This document delves into the architectural updates to the recipe deployment flo
 
 ### Goals
 
-* Enable support for recipe type specific garbage collection of resources.
+* Detect and garbage collect unused recipe resources.
 
 ### Non goals
 
 * Modify the existing approach to garbage collection of resources for Bicep recipes.
-* Introduce custom resource cleanup for Terraform recipes deployment. Terraform automatically manages this using the Terraform state file.
+* Introduce custom resource cleanup/garbage collection for resources deployed by Terraform recipes. Terraform automatically manages this using the Terraform state file.
 
 ### User scenarios
 
@@ -51,15 +51,15 @@ Currently, these steps are executed within the update resource controller. Howev
 
 ### Proposed Architecture
 
-The proposed design aims to move the garbage collection logic above to the Bicep driver. To achieve this, garbage collection of resources will be a part of the Execute API implementation flow after deployment of the recipe and retrieval of recipe outputs.
+The proposed design aims to move the garbage collection logic above to the Bicep driver. To achieve this, garbage collection of resources will be a part of the Execute API implementation flow, after deployment of the recipe and retrieval of recipe outputs have completed.
 
 Here's a high level architecture overview of the data flow involved in recipe deployment focusing on garbage collection:
 
-![Recipes Drift Management](./2023-08-drift-management/Overview.png)
+![Recipes Garbage Collection](./2023-08-garbage-collection/Overview.png)
 
-The updated API will be responsible for garbage collection of resources between deployments specifically for recipe types requiring explicit resource cleanup by Radius. For recipes such as Terraform where additional work is unnecessary, this additional step will not be executed. For instance, in the context of Bicep, this entails cleaning up obsolete resources that are no longer included in the output resources of current recipe deployment compared to the previous deployment output. The implementation of garbage collection as a part of Execute for any new driver will depend on the capabilities offered by the underlying orchestrator it utilizes.
+The updated Execute API will be responsible for garbage collection of resources between deployments specifically for recipe types requiring explicit resource cleanup by Radius. For recipes such as Terraform where additional work is unnecessary, this additional step will not be executed. For instance, in the context of Bicep, this entails cleaning up obsolete resources that are no longer included in the output resources of current recipe deployment compared to the previous deployment output. The implementation of garbage collection as a part of Execute API for any new driver will depend on the capabilities offered by the underlying orchestrator it utilizes.
 
-The Execute API is invoked from the update resource controller. The controller will be responsible for passing the list of previously deployed output resources to the recipe engine's Execute API.
+The Execute API is invoked from the update resource controller. The controller will be responsible for passing the list of previously deployed output resources identifiers to the recipe engine's Execute API.
 
 ### API design (if applicable)
 
@@ -78,30 +78,36 @@ type ExecuteOptions struct {
 ```
 
 **Outputs:**
-- `Error`
+- No change required to the Execute API response.
+
+- `Error`: A new error type will be added to the recipe driver to indicate that garbage collection of resources failed. This error will be returned by the Execute API if garbage collection fails.
   - `RecipeGarbageCollectionFailed`
 
 ## Alternatives considered
 
 ### Adding a new API for Garbage Collection in Engine and Driver
 
+An initial consideration was to introduce a new API into the recipe engine and driver components for garbage collection of resources, with individual recipe drivers implementing different implementations of this new API. The potential advantage of this approach is the clear separation of functionalities within each API - Execute and GarbageCollectResources, simplifying execute API logic and reducing the risk of oversights when new developers implement additional drivers.
+
+However, we realized that all the necessary information for garbage collection is available during recipe execution. Introducing an extra round trip between the controller, engine, and driver would not provide a favorable trade-off. Instead, we can achieve the desired separation of functionality by abstracting garbage collection into a separate function. If necessary, we can consider introducing the new API only within the driver if it becomes challenging to maintain as more driver implementations are added.
+
 ## Test plan
 
 ### Unit Tests
 
-Existing CreateOrUpdate controller unit tests will be updated to verify that the new API is invoked after recipe execution and output processing have completed.
+1. **Driver Unit Tests:** These tests will be updated to ensure that garbage collection is invoked after recipe execution and output processing have been completed. Additionally, these tests will validate the correct error type is returned if garbage collection fails.
 
-Unit tests will be added for the new API for the individual recipe drivers.
+2. **CreateOrUpdate Controller Unit Tests:** Existing unit tests for the CreateOrUpdate controller will be updated to exclude the expected execution of garbage collection after recipe execution.
 
 ### Functional Tests
 
-Currently, functional tests specifically validating drift management for Bicep are lacking. To address this, a new tracking issue will be created to introduce a test scenario that involves redeploying a resource with an updated recipe, with validation of the deletion of underlying resources that are no longer utilized by the revised recipe. The priority will be to achieve comprehensive functional test coverage for Bicep after the planned features for the August release are implemented.
+Currently, functional tests specifically validating garbage collection for Bicep are lacking. To address this, a new tracking issue will be created to introduce a test scenario that involves redeploying a resource with an updated recipe, with validation of the deletion of underlying resources that are no longer utilized by the revised recipe. The priority will be to achieve comprehensive functional test coverage for Bicep after the planned features for the August release are implemented.
 
 ## Security
 
 * No new security vectors are being introduced.
 
-* Updated implementation improves the overall security of recipe execution abstracting out the recipe type specific logic from the common code leading. This abstraction prevents the potential risk of data loss due to the unintended deletion of resources that are still in use for recipe types that do not require explicit drift management.
+* Updated implementation improves the overall security of recipe execution abstracting out the recipe type specific logic from the common code. This abstraction prevents the potential risk of data loss due to the unintended deletion of resources that are still in use for recipe types that do not require explicit garbage collection.
 
 ## Compatibility (optional)
 
@@ -109,11 +115,11 @@ No compatibility impact, no customer facing APIs are being added or updated.
 
 ## Monitoring
 
-* Recipe drift management duration - this will be only applicable to Bicep recipe execution.
+* Recipe garbage colelction duration - this will be only applicable to Bicep recipe execution.
 
 ## Development plan
 
-The existing Recipe Engine and Driver components are already in place. Implementation of the proposed design will involve the implementation of the new APIs and associated unit tests, all of which will be included within a single PR.
+The existing Recipe Engine and Driver components are already in place. Implementation of the proposed design will involve the update to the existing API and associated unit tests, all of which will be included within a single PR.
 
 ## Open issues
 
