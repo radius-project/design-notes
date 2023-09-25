@@ -521,3 +521,15 @@ unregister
 tf
 underverified
 ORAS
+Karishma
+Chawla
+kachawla
+orchestrator
+RecipeDriver
+RecipeEngine
+www
+BaseOptions
+ExecuteOptions
+struct
+prevState
+GarbageCollectResources
