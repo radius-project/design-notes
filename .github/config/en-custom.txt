@@ -533,3 +533,11 @@ ExecuteOptions
 struct
 prevState
 GarbageCollectResources
+Inspite
+inspite
+initialDelay
+CrashLoopBackoff
+ErrImagePull
+ImagePullBackOff
+cpu
+replicaset

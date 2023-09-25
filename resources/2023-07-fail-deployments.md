@@ -39,7 +39,7 @@ Radius should do a good job at classifying deployments and should report success
 
 ### Non goals
 
-* This document is not focussed on conveying the deployment progress to the user. I have created a separate feature request: https://github.com/project-radius/radius/issues/5934 for this.
+* This document is not focused on conveying the deployment progress to the user. I have created a separate feature request: https://github.com/project-radius/radius/issues/5934 for this.
 
 ### User scenarios
 
