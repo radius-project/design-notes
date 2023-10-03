@@ -398,7 +398,9 @@ Response indicating Success would be
 
 ## Alternatives considered
 
-None
+There are multiple ways of representing a graph. For instance, 
+Having a connections list per resource instead of a seperate array of connections could make it easier to process for display. However, the above model was chosen since it uses lesser bandwidth. 
+
 
 ## Test plan
 
