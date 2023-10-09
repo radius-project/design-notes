@@ -123,6 +123,9 @@ model ApplicationGraphResource {
   @doc("The connections between resources in the application graph.")
   @extension("x-ms-identifiers",[])
   connections: Array<ApplicationGraphConnection>;
+
+  @doc("provisioningState of this rersource") 
+  provisioningState: string
 }
 
 @doc("Describes an output resource that comprises an application graph resource.")
@@ -301,7 +304,8 @@ Response indicating Success would be
                     "type": "core/Service"
                 }
             ],
-            "type": "Applications.Core/httpRoutes"
+            "type": "Applications.Core/httpRoutes",
+            "provisioningState": "Succeeded"
         },
         {
             "connections": [
@@ -334,7 +338,8 @@ Response indicating Success would be
                     "type": "rbac.authorization.k8s.io/RoleBinding"
                 }
             ],
-            "type": "Applications.Core/containers"
+            "type": "Applications.Core/containers",
+            "provisioningState": "Succeeded"
         },
         {
             "connections": [
@@ -380,7 +385,8 @@ Response indicating Success would be
                     "type": "rbac.authorization.k8s.io/RoleBinding"
                 }
             ],
-            "type": "Applications.Core/containers"
+            "type": "Applications.Core/containers",
+            "provisioningState": "Succeeded"
         },
         {
             "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/gateways/http-gtwy-gtwy",
@@ -402,7 +408,8 @@ Response indicating Success would be
                     "type": "projectcontour.io/HTTPProxy"
                 }
             ],
-            "type": "Applications.Core/gateways"
+            "type": "Applications.Core/gateways",
+            "provisioningState": "Succeeded"
         },
         {
             "connections": [
@@ -420,7 +427,8 @@ Response indicating Success would be
                     "type": "core/Service"
                 }
             ],
-            "type": "Applications.Core/httpRoutes"
+            "type": "Applications.Core/httpRoutes",
+            "provisioningState": "Succeeded"
         }
     ]
 }
