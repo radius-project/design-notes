@@ -82,10 +82,6 @@ Addition of ApplicationGraphResponse type and getGraph method to applications.ts
 ```
 @doc("Describes the application architecture and its dependencies.")
 model ApplicationGraphResponse {
-  @doc("The connections between resources in the application graph.")
-  @extension("x-ms-identifiers",[])
-  connections: Array<ApplicationGraphConnection>;
-
   @doc("The resources in the application graph.")
   @extension("x-ms-identifiers", ["id"])
   resources: Array<ApplicationGraphResource>;
@@ -93,11 +89,20 @@ model ApplicationGraphResponse {
 
 @doc("Describes the connection between two resources.")
 model ApplicationGraphConnection {
-  @doc("The source of the connection.")
-  source: string;
+  @doc("The resource ID ")
+  id: string;
 
-  @doc("The destination of the connection.")
-  destination: string;
+  @doc("The direction of the connection. 'Outbound' indicates this connection specifies the ID of the destination and 'Inbound' indicates indicates this connection specifies the ID of the source.")
+  direction: Direction;
+}
+
+@doc("The direction of a connection.")
+enum Direction {
+  @doc("The resource defining this connection makes an outbound connection resource specified by this id.")
+  Outbound,
+
+  @doc("The resource defining this connection accepts inbound connections from the resource specified by this id.")
+  Inbound,
 }
 
 @doc("Describes a resource in the application graph.")
@@ -113,7 +118,11 @@ model ApplicationGraphResource {
 
   @doc("The resources that comprise this resource.")
   @extension("x-ms-identifiers", ["id"])
-  resources: Array<ApplicationGraphResource>;
+  resources: Array<ApplicationGraphOutputResource>;
+
+  @doc("The connections between resources in the application graph.")
+  @extension("x-ms-identifiers",[])
+  connections: Array<ApplicationGraphConnection>;
 }
 
 @doc("Describes an output resource that comprises an application graph resource.")
@@ -277,120 +286,142 @@ Response indicating Success would be
 {
     "resources": [
         {
-            "name": "http-gtwy-back-ctnr",
-            "type": "Applications.Core/containers",
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-back-ctnr",
-            "resources": [
+            "connections": [
                 {
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "apps/Deployment",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/apps/Deployment/http-gtwy-back-ctnr",
-                    "provider": "kubernetes"
-                },
-                {
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "core/ServiceAccount",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/ServiceAccount/http-gtwy-back-ctnr",
-                    "provider": "kubernetes"
-                },
-                {
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "rbac.authorization.k8s.io/Role",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/Role/http-gtwy-back-ctnr",
-                    "provider": "kubernetes"
-                },
-                {
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "rbac.authorization.k8s.io/RoleBinding",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/RoleBinding/http-gtwy-back-ctnr",
-                    "provider": "kubernetes"
+                    "direction": "Inbound",
+                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-front-ctnr"
                 }
-            ]
-        },
-        {
-            "name": "http-gtwy-front-ctnr",
-            "type": "Applications.Core/containers",
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-front-ctnr",
-            "resources": [
-                {
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "apps/Deployment",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/apps/Deployment/http-gtwy-front-ctnr",
-                },
-                {
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "core/Secret",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Secret/http-gtwy-front-ctnr",
-                },
-                {
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "core/ServiceAccount",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/ServiceAccount/http-gtwy-front-ctnr",
-                },
-                {
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "rbac.authorization.k8s.io/Role",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/Role/http-gtwy-front-ctnr",
-                },
-                {
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "rbac.authorization.k8s.io/RoleBinding",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/RoleBinding/http-gtwy-front-ctnr",
-                }
-            ]
-        },
-        {
-            "name": "http-gtwy-gtwy",
-            "type": "Applications.Core/gateways",
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/gateways/http-gtwy-gtwy",
-            "resources": [
-                {
-                    "name": "http-gtwy-back-rte",
-                    "type": "projectcontour.io/HTTPProxy",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-back-rte",
-                },
-                {
-                    "name": "http-gtwy-front-rte",
-                    "type": "projectcontour.io/HTTPProxy",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-front-rte",
-                },
-                {
-                    "name": "http-gtwy-gtwy",
-                    "type": "projectcontour.io/HTTPProxy",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-gtwy",
-                }
-            ]
-        },
-        {
-            "name": "http-gtwy-back-rte",
-            "type": "Applications.Core/httpRoutes",
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte",
-            "resources": [
-                {
-                    "name": "http-gtwy-back-rte",
-                    "type": "core/Service",
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Service/http-gtwy-back-rte",
-                }
-            ]
-        },
-        {
-            "name": "http-gtwy-front-rte",
-            "type": "Applications.Core/httpRoutes",
+            ],
             "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-front-rte",
+            "name": "http-gtwy-front-rte",
             "resources": [
                 {
-                    "name": "http-gtwy-front-rte",
-                    "type": "core/Service",
                     "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Service/http-gtwy-front-rte",
+                    "name": "http-gtwy-front-rte",
+                    "type": "core/Service"
                 }
-            ]
-        }
-    ],
-    connections: [
-        {
-            "source": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-front-ctnr"
-            "destination":"planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
+            ],
+            "type": "Applications.Core/httpRoutes"
         },
+        {
+            "connections": [
+                {
+                    "direction": "Outbound",
+                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
+                }
+            ],
+            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-back-ctnr",
+            "name": "http-gtwy-back-ctnr",
+            "resources": [
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/apps/Deployment/http-gtwy-back-ctnr",
+                    "name": "http-gtwy-back-ctnr",
+                    "type": "apps/Deployment"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/ServiceAccount/http-gtwy-back-ctnr",
+                    "name": "http-gtwy-back-ctnr",
+                    "type": "core/ServiceAccount"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/Role/http-gtwy-back-ctnr",
+                    "name": "http-gtwy-back-ctnr",
+                    "type": "rbac.authorization.k8s.io/Role"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/RoleBinding/http-gtwy-back-ctnr",
+                    "name": "http-gtwy-back-ctnr",
+                    "type": "rbac.authorization.k8s.io/RoleBinding"
+                }
+            ],
+            "type": "Applications.Core/containers"
+        },
+        {
+            "connections": [
+                {
+                    "direction": "Inbound",
+                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
+                },
+                {
+                    "direction": "Inbound",
+                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
+                },
+                {
+                    "direction": "Outbound",
+                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-front-rte"
+                }
+            ],
+            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-front-ctnr",
+            "name": "http-gtwy-front-ctnr",
+            "resources": [
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/apps/Deployment/http-gtwy-front-ctnr",
+                    "name": "http-gtwy-front-ctnr",
+                    "type": "apps/Deployment"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Secret/http-gtwy-front-ctnr",
+                    "name": "http-gtwy-front-ctnr",
+                    "type": "core/Secret"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/ServiceAccount/http-gtwy-front-ctnr",
+                    "name": "http-gtwy-front-ctnr",
+                    "type": "core/ServiceAccount"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/Role/http-gtwy-front-ctnr",
+                    "name": "http-gtwy-front-ctnr",
+                    "type": "rbac.authorization.k8s.io/Role"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/RoleBinding/http-gtwy-front-ctnr",
+                    "name": "http-gtwy-front-ctnr",
+                    "type": "rbac.authorization.k8s.io/RoleBinding"
+                }
+            ],
+            "type": "Applications.Core/containers"
+        },
+        {
+            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/gateways/http-gtwy-gtwy",
+            "name": "http-gtwy-gtwy",
+            "resources": [
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-back-rte",
+                    "name": "http-gtwy-back-rte",
+                    "type": "projectcontour.io/HTTPProxy"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-front-rte",
+                    "name": "http-gtwy-front-rte",
+                    "type": "projectcontour.io/HTTPProxy"
+                },
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-gtwy",
+                    "name": "http-gtwy-gtwy",
+                    "type": "projectcontour.io/HTTPProxy"
+                }
+            ],
+            "type": "Applications.Core/gateways"
+        },
+        {
+            "connections": [
+                {
+                    "direction": "Inbound",
+                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-back-ctnr"
+                }
+            ],
+            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte",
+            "name": "http-gtwy-back-rte",
+            "resources": [
+                {
+                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Service/http-gtwy-back-rte",
+                    "name": "http-gtwy-back-rte",
+                    "type": "core/Service"
+                }
+            ],
+            "type": "Applications.Core/httpRoutes"
+        }
     ]
 }
 ```
@@ -398,8 +429,58 @@ Response indicating Success would be
 
 ## Alternatives considered
 
-There are multiple ways of representing a graph. For instance, 
-having a connections list per resource instead of a seperate array of connections could make it easier to process for display. However, the above model was chosen since it uses minimal bandwidth. 
+There are multiple ways of representing a graph. We considered below model as an option since it is optimized for bandwidth. However, the model does not work well for pagination (to be added in future), which would be a requirement to support large applications.  
+
+
+```
+@doc("Describes the application architecture and its dependencies.")
+model ApplicationGraphResponse {
+  @doc("The connections between resources in the application graph.")
+  @extension("x-ms-identifiers",[])
+  connections: Array<ApplicationGraphConnection>;
+
+  @doc("The resources in the application graph.")
+  @extension("x-ms-identifiers", ["id"])
+  resources: Array<ApplicationGraphResource>;
+}
+
+@doc("Describes the connection between two resources.")
+model ApplicationGraphConnection {
+  @doc("The source of the connection.")
+  source: string;
+
+  @doc("The destination of the connection.")
+  destination: string;
+}
+
+@doc("Describes a resource in the application graph.")
+model ApplicationGraphResource {
+  @doc("The resource ID.")
+  id: string;
+
+  @doc("The resource type.")
+  type: string;
+
+  @doc("The resource name.")
+  name: string;
+
+  @doc("The resources that comprise this resource.")
+  @extension("x-ms-identifiers", ["id"])
+  resources: Array<ApplicationGraphResource>;
+}
+
+@doc("Describes an output resource that comprises an application graph resource.")
+model ApplicationGraphOutputResource {
+  @doc("The resource ID.")
+  id: string;
+
+  @doc("The resource type.")
+  type: string;
+
+  @doc("The resource name.")
+  name: string;
+}
+```
 
 
 ## Test plan
