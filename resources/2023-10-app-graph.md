@@ -50,7 +50,7 @@ The Applications.Core RP should be able to
 
 We should be able to handle connections that take a resourceID for destination as well as those which take a URL. 
 
-As requirement evolves, we would be able to add properties such as a repository link to a container or a health url and retrieve these as part fo application graph. This grapph object could then be consumed by react components to provide the desired UX experience. 
+As requirement evolves, we would be able to add properties such as a repository link to a container or a health url and retrieve these as part fo application graph. This graph object could then be consumed by react components to provide the desired UX experience. 
 
 
 ### API design
@@ -124,7 +124,7 @@ model ApplicationGraphResource {
   @extension("x-ms-identifiers",[])
   connections: Array<ApplicationGraphConnection>;
 
-  @doc("provisioningState of this rersource") 
+  @doc("provisioningState of this resource") 
   provisioningState?: string
 }
 
@@ -493,7 +493,7 @@ model ApplicationGraphOutputResource {
 
 ## Test plan
 
-We should add a E2E that deploys an application and tests if the ApplicationGraph object that can be retrieved using the new API os as expected. 
+We should add a E2E that deploys an application and tests if the ApplicationGraph object that can be retrieved using the new API as expected. 
 
 We should also add UTs as needed for all the functions introduced/changed.
 

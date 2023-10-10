@@ -568,3 +568,13 @@ magpieimage
 ApplicationGraph
 ApplicationGraphResponse
 ApplicationGraphConnection
+ApplicationResource
+ArmResourceActionSync
+UCPBaseParameters
+getGraph
+UTs
+E2E
+backendContainer
+gatewayUrl
+ApplicationGraphOutputResource
+enum
