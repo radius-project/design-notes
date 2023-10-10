@@ -50,7 +50,7 @@ The Applications.Core RP should be able to
 
 We should be able to handle connections that take a resourceID for destination as well as those which take a URL. 
 
-As requirement evolves, we would be able to add properties such as a repository link to a container or a health url and retrieve these as part fo application graph. This graph object could then be consumed by react components to provide the desired UX experience. 
+As requirement evolves, we would be able to add properties such as a repository link to a container or a health url and retrieve these as part of application graph. This graph object could then be consumed by react components to provide the desired UX experience. 
 
 
 ### API design

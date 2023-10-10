@@ -565,6 +565,8 @@ gtwy
 healthz
 httpGet
 magpieimage
+applicationName
+UX
 ApplicationGraph
 ApplicationGraphResponse
 ApplicationGraphConnection
@@ -577,4 +579,8 @@ E2E
 backendContainer
 gatewayUrl
 ApplicationGraphOutputResource
+ApplicationGraphResource
 enum
+Nithya
+Subramanian
+nithyatsu
