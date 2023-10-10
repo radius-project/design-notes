@@ -557,3 +557,14 @@ GetResource
 UpdateResource
 vpc
 requery
+backendRoute
+ctnr
+frontendContainer
+frontendRoute
+gtwy
+healthz
+httpGet
+magpieimage
+ApplicationGraph
+ApplicationGraphResponse
+ApplicationGraphConnection

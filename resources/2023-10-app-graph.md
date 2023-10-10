@@ -500,7 +500,7 @@ We should also add UTs as needed for all the functions introduced/changed.
 
 ## Monitoring
 
-Trace adn Metrics will be generated automatically for the new API. 
+Trace and Metrics will be generated automatically for the new API. 
 We should return appropriate errors so that logs are generated for these conditions.
 
 ## Development plan
