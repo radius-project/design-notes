@@ -1,6 +1,6 @@
 # Title
 
-* **Status**: Pending
+* **Status**: Approved
 * **Author**: Nithya Subramanian (@nithyatsu)
 
 ## Overview
@@ -125,7 +125,7 @@ model ApplicationGraphResource {
   connections: Array<ApplicationGraphConnection>;
 
   @doc("provisioningState of this rersource") 
-  provisioningState: string
+  provisioningState?: string
 }
 
 @doc("Describes an output resource that comprises an application graph resource.")
