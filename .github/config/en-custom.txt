@@ -600,3 +600,10 @@ BicepRecipeProperties
 oras
 facto
 datamodel
+ytimocin
+Yetkin
+Timocin
+templateVersion
+TemplateVersion
+RecipeInformation
+RecipeData
