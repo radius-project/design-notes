@@ -1,4 +1,4 @@
-# Title
+# Title Simulated Environment
 
 * **Status**: Pending/Approved
 * **Author**: Vinaya Damle (@vinayada1)
@@ -13,7 +13,7 @@ NA
 
 ## Objectives
 
-Introduce the concept of a simulated environment
+We would like the users to have the ability to see what resources would be deployed and visualize the application graph without actually deploying any resources. For this, we will introduce the concept of a simulated environment.
 
 > **Issue Reference:** https://github.com/radius-project/radius/issues/6336\
 
@@ -72,4 +72,4 @@ NA
 
 ## Open issues
 
-- Do we need simulated environments to be supported with recipes?
+- Do we need simulated environments to be supported with recipes? Yes
