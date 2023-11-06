@@ -584,3 +584,12 @@ enum
 Nithya
 Subramanian
 nithyatsu
+Hiremath
+Vishwanath
+vishwahiremat
+guid
+prem
+OutputResources
+ParseResource
+azurerm
+hashicorp
