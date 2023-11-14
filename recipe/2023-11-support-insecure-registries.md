@@ -47,9 +47,9 @@ I would like to see `rad bicep publish` command successfully publish bicep file 
 ### Design details
 Since we use ORAS client to communicate with the registry, it provides an option "plain-http" to allow insecure connections to registry without SSL check. `plainHttp` property should be set to `true` when client to the remote repository is created to support using insecure registries.
 
-#### Introduce "insecure-http" opt-in flag for users.
+#### Introduce "plain-http" opt-in flag for users.
 
-Users can use `insecure-http` flag with `rad bicep publish` command and `insecureHttp` property while defining bicep recipes to specify the registry used is insecure and allow connections to registry without SSL check. And based on this property `plainHttp` option is set on the remote repository client. 
+Users can use `plain-http` flag with `rad bicep publish` command and `plainHttp` property while defining bicep recipes to specify the registry used is insecure and allow connections to registry without SSL check. And based on this property `plainHttp` option is set on the remote repository client. 
 
 
 
@@ -57,7 +57,7 @@ Users can use `insecure-http` flag with `rad bicep publish` command and `insecur
 
 ***Model changes***
 
-Addition of optional property `insecureHttp` to BicepRecipeProperties (as it's only valid for template kind `bicep`).
+Addition of optional property `plainHttp` to BicepRecipeProperties (as it's only valid for template kind `bicep`).
 
 environments.tsp
 ```diff
@@ -67,7 +67,7 @@ model BicepRecipeProperties extends RecipeProperties {
   templateKind: "bicep";
 
 +  @doc("Allows an insecure connection to a Bicep registry without doing an SSL check. Used commonly for locally-hosted registries. Defaults to false (require SSL).")
-+  insecureHttp?: boolean;
++  plainHttp?: boolean;
 }
 
 @doc("The properties of a Recipe linked to an Environment.")
@@ -85,36 +85,36 @@ model RecipeGetMetadataResponse {
   parameters: {};
 
 +  @doc("Allows an insecure connection to a Bicep registry without doing an SSL check. Used commonly for locally-hosted registries. Defaults to false (require SSL).")
-+  insecureHttp?: boolean;
++  plainHttp?: boolean;
 }
 ```
 
 ***CLI changes***
 
-Add insecure-http flag to allow insecure connection to a Bicep registry without doing an SSL check.
+Add plain-http flag to allow insecure connection to a Bicep registry without doing an SSL check.
 #### Bicep Publish
 
 ```
-rad bicep publish --file ./redis-test.bicep --target br:localhost:5000/myregistry/redis-test:v1 --insecure-http
+rad bicep publish --file ./redis-test.bicep --target br:localhost:5000/myregistry/redis-test:v1 --plain-http
 ```
 #### Recipe Register 
 
 ```
-rad recipe register cosmosdb --template-kind bicep --template-path br:localhost:5000/myregistry/redis-test:v1 --resource-type Applications.Datastores/mongoDatabases --insecure-http
+rad recipe register cosmosdb --template-kind bicep --template-path br:localhost:5000/myregistry/redis-test:v1 --resource-type Applications.Datastores/mongoDatabases --plain-http
 ```
 
 #### Recipe List/Show
 Add a new column to recipe list/show output table.
 
-| NAME        | TYPE           | TEMPLATE KIND  | TEMPLATE VERSION | TEMPLATE | INSECURE-HTTP|
-| :--: |:--:| :--:| :--: | :--:| :--:|
-| cosmosdb      | Applications.Datastores/mongoDatabases | bicep | | localhost:5000.io/myregistry/redis-test:v1| true| 
+| NAME        | TYPE           | TEMPLATE KIND  | TEMPLATE VERSION | TEMPLATE |
+| :--: |:--:| :--:| :--: | :--:|
+| cosmosdb      | Applications.Datastores/mongoDatabases | bicep | | localhost:5000.io/myregistry/redis-test:v1|
 
 ***Bicep Changes***
 
 #### Registering recipe through bicep.
 
-Add `insecureHttp` property to use insecure registry.
+Add `plainHttp` property to use insecure registry.
 ```diff
 import radius as radius
 
@@ -139,7 +139,7 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
         recipe2: {
           templateKind: 'bicep'
           templatePath: 'localhost:5000/myregistry/mongo-test:v1' 
-+          insecureHttp: true
++          plainHttp: true
         }
       }
     }
@@ -163,12 +163,12 @@ This could be a quick solution involving minimal changes but it carries various 
 ## Test plan
 
 #### Unit Tests
--   Update environment conversion unit tests to validate insecureHttp property.
--   Add cli unit tests to validate insecure-http flag.
+-   Update environment conversion unit tests to validate plainHttp property.
+-   Add cli unit tests to validate plain-http flag.
 -   Update environment controller and config loader tests.
 
 #### Functional tests
-- 	Add a e2e test to verify insecure-http flag for `rad recipe register` and `rad bicep publish` commands
+- 	Add a e2e test to verify plain-http flag for `rad recipe register` and `rad bicep publish` commands
 -   Add a e2e test to deploy a recipe pushed to a locally hosted registry.
 
 ## Development plan
