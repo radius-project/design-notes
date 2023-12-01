@@ -1,6 +1,6 @@
 # slog for logging
 
-* **Status**: Open
+* **Status**: Draft
 * **Author**: Nithya (@nithyatsu)
 
 ## Background
@@ -21,9 +21,11 @@ Since Go now has its own structured logging library, it would be beneficial to s
 
 ### Goals
 
-1. Define log structure for Radius services. The fields should be the same as ones currently present, but with introduction of nested structure for better organization.
+1. Define log structure for Radius services. The fields should be the same as ones currently present, but with introduction of nested structure for better organization. 
 
-2. Implement the log structure 
+2. Implement the logging using slog
+   
+3. 
 
 ### Non-Goals
 
@@ -33,7 +35,7 @@ NA
 
 ## Design
 
-### library
+### Library
 Go's slog library 
 
 ### Log structure
@@ -42,9 +44,13 @@ We will retain current logging fields. Some of these will be nested into "additi
 |Field name| Field description|
 |---|---|
 
+### Leveling
+
+## Questions
 
 ## References
 
 | Title | Links |
 |---|---|
+
 
