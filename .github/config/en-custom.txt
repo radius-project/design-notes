@@ -593,3 +593,9 @@ OutputResources
 ParseResource
 azurerm
 hashicorp
+plainHttp
+typespec
+myregistry
+BicepRecipeProperties
+oras
+facto
