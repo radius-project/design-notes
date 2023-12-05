@@ -22,14 +22,14 @@ Currently, we support only Terraform registry and HTTP URLs as allowed module so
 
 ### Goals
 
-- If a supported module source for a Terraform recipe is provided, the recipe registration should succeed 
+- If a supported module source for a Terraform recipe is provided, the recipe registration should succeed. 
 - If an unsupported module source for a Terraform recipe is provided, the recipe registration should fail and return a detailed error message to the user.
 
 
 ### Non goals
 
 - Adding support and testing for additional module sources (Github, S3, etc). These will be addressed as needed based on customer feedback.
-- Changing behavior to support private module sources   
+- Adding support for private module sources.   
 
 ### User scenarios (optional)
 
@@ -39,7 +39,7 @@ As a Radius user, I want to define a Terraform recipe with a Terraform module te
 
 #### User story 2
 
-As a Radius user, I want to define a Terraform recipe with a Terraform module template path. My module source is not the supported Terraform registry or HTTP URLs (i.e. Github, local paths, S3 buckets, etc). When I try to register the recipe to my environment, I recieve an error message notifying me that I can only provide a Terraform module registry or HTTP URL as a valid module source using Radius. 
+As a Radius user, I want to define a Terraform recipe with a Terraform module template path. My module source is not the supported Terraform registry or HTTP URLs (i.e. Github, local paths, S3 buckets, etc). When I try to register the recipe to my environment, I receive an error message notifying me that I can only provide a Terraform module registry or HTTP URL as a valid module source using Radius. 
 
 ## Design
 
