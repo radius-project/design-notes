@@ -599,3 +599,4 @@ myregistry
 BicepRecipeProperties
 oras
 facto
+datamodel
