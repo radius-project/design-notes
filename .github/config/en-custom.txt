@@ -600,3 +600,12 @@ BicepRecipeProperties
 oras
 facto
 datamodel
+SRE
+emcompasses
+CloudWatch
+de-facto
+devs
+SDK
+hostable
+TypeScript
+architected
