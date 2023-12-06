@@ -58,7 +58,7 @@ resource container 'Applications.Core/containers@2023-10-01-preview' = {
       ports: {
         ....
       }
-      deploymentTimeout: 10
+      deploymentTimeoutSeconds: 10
     }
   }
 }
