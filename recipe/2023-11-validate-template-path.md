@@ -28,7 +28,8 @@ Currently, we support only Terraform registry and HTTP URLs as allowed module so
 
 ### Non goals
 
-- Adding support and testing for additional module sources (Github, S3, etc). These will be addressed as needed based on customer feedback.  
+- Adding support and testing for additional module sources (Github, S3, etc). These will be addressed as needed based on customer feedback.
+- Changing behavior to support private module sources   
 
 ### User scenarios (optional)
 
@@ -45,7 +46,7 @@ As a Radius user, I want to define a Terraform recipe with a Terraform module te
 ### Design details
 
 ### API design (if applicable)
-N/A. We are updating an existing API to include more validation, but this won't include any public-facing or user-facing changes. 
+N/A. We are updating an existing API to include more validation so this will potentially cause breaking changes if users try to run Terraform with an unsupported module source. However, we expect this to be the case as we're only allowing specific module sources. 
 
 
 #### Validate module sources as part of the CreateOrUpdateEnvironment API endpoint 
@@ -79,6 +80,7 @@ Unit testing:
 - Add tests in environment conversion for different module sources (and validate errors/successes)
 
 ## Security
+Since we're parsing module sources as an input from the user, this has the potential to introduce security issues (i.e. infinite loops, buggy code, etc). We'll be relying on existing libraries instead of writing our own parsers to address this concern. 
 
 ## Compatibility (optional)
 
