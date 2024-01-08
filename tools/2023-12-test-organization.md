@@ -107,6 +107,7 @@ NA
 
 - Move the tests to fit the directory structure in this proposal
 - Modify the github workflow to always run the non-cloud tests but require an approval to run the tests using cloud resources
+- Add notes to contributing documentation to guide future contributions
 
 ## Open issues
 
