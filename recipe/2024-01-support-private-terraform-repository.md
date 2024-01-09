@@ -76,7 +76,7 @@ E.g:
 templatePath: "git::https://{username}:{PERSONAL_ACCESS_TOKEN}@example.com.com/test-private-repo.git?ref=v1.2.0"
 ```
 
-Since adding sensitive information like tokens to the terraform configuration files which may be stored in version control can pose security issues. So use different ways to store the github credentials.
+Since adding sensitive information like tokens to the terraform configuration files which may be stored in version control can pose security issues. So we could use different ways to store the github credentials.
 
 Option 1 : Using Git Credential Store
 
@@ -89,7 +89,7 @@ or by adding this entry on the .gitconfig file on the cluster.
 [url "https://<username>:<personal-access-token>@dev.azure.com.com""]
 	insteadOf = https://dev.azure.com
 ```
-But it wont work well when we have multiple environments. As global .gitconfig file has the git credentials stores for all the environments and it may be from different accounts.
+But it wont work well when we have multiple environments. As global .gitconfig file has the git credentials stored for all the environments and the module repositories may be from different accounts.
 
 Option 2: Saving it as part of the environment resource.
 
@@ -131,7 +131,6 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
   }
 }
 ```
-
 But the majority of users frequently update their git personal access tokens (like once a day), and which means updating the environment resource every time the token is updated.
 
 
@@ -225,6 +224,8 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
   }
 }
 ```
+
+Details in the recipeConfig can be used in the terraform driver to prepend the module source with username:\<personal-access-token\>.
 
 ### API design (if applicable)
 
