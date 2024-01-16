@@ -47,8 +47,8 @@ Users need to a Git personal access token with very limited access (just read ac
 #### SSH key:
 SSH key can be used to provide access to private git repository. But it requires adding the generated ssh key to the users account.
 
-#### Service Principle(Only for Azure DevOps Git):
-We could use the Azure Service Principle details used for azure score to authenticate Azure DevOps Git. But most often users have diff tenant IDs for the production environment and for git.
+#### Service Principal(Only for Azure DevOps Git):
+We could use the Azure Service Principal details used for Azure scope to authenticate Azure DevOps Git. But most often users have diff tenant IDs for the production environment and for git.
 
 Personal Access Token with Username way of authentication is supported by git from most of the platforms(e.g Bitbucket,Gitlab,Github etc) and generic git repository URL format as template path can be used to while registering recipe to access the terraform modules from private git repository from any platform.
 
@@ -78,20 +78,7 @@ templatePath: "git::https://{username}:{PERSONAL_ACCESS_TOKEN}@example.com.com/t
 
 Since adding sensitive information like tokens to the terraform configuration files which may be stored in version control can pose security issues. So we could use different ways to store the github credentials.
 
-Option 1 : Using Git Credential Store
-
-Git needs to know when and where to use the token when checking out code from a private repository. We want git to automatically detect when Terraform modules are being loaded from a private repository and insert the token for the duration of the session. This can be done by running the below command.
-```
-git config --global url."https://<username>:<personal-access-token>@dev.azure.com.com".insteadOf https://dev.azure.com
-```
-or by adding this entry on the .gitconfig file on the cluster.
-```
-[url "https://<username>:<personal-access-token>@dev.azure.com.com""]
-	insteadOf = https://dev.azure.com
-```
-But it wont work well when we have multiple environments. As global .gitconfig file has the git credentials stored for all the environments and the module repositories may be from different accounts.
-
-Option 2: Saving it as part of the environment resource.
+Option 1: Saving it as part of the environment resource.
 
 Add a new property `recipeConfig` write-only to store the information about the git credentials, and have a custom action `getRecipeConfiglike` (like `list-secrets`) to get these details. 
 
@@ -131,10 +118,46 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
   }
 }
 ```
-But the majority of users frequently update their git personal access tokens (like once a day), and which means updating the environment resource every time the token is updated.
+But the majority of users frequently update their git personal access tokens (like once a day), and which means updating the environment resource every time the token is updated, also this raises potentials security issues storing the these details as part of environment. 
 
+Option 3 : Using kubernetes secret
 
-Option 4 : Using Applications.Core/secretStores
+Using existing kubernetes secret i.e asking the users to have the git credentials already stored in the kubernetes secret on the same cluster and use it in the recipeConfig.
+
+```diff
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'dsrp-resources-env-recipes-context-env'
+  location: 'global'
+  properties: {
+    compute: {
+      ...
+    }
+    providers: {
+      ...
+    }
++   recipeConfig: {
++     terraform: {
++       secrets: {
++         "dev.azure.com": {
++            secret: secretStore.id
++            namespace: <namespace>
++          }
++       }
++     }
++   }
+    recipes: {      
+      'Applications.Datastores/mongoDatabases':{
+        default: {
+          templateKind: 'terraform'
+          templatePath: 'https://dev.azure.com/test-private-repo'
+        }
+      }
+    }
+  }
+}
+```
+
+Option 3 : Using Applications.Core/secretStores
 
 Use secretStore to store the username and personal access token and add the secret to the new property recipeConfig in the environment.
 
@@ -186,52 +209,78 @@ resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
 }
 
 ```
-But todays secret store implementation is tied to application scope and in this case, secretStore needs to be created before application and environment creation. So we can only use the secretStore resource if we extend it to have global scope(extending to environment scope would create cyclic dependency between environment and secret store).
-
-Option 4 : Using kubernetes secret
-
-Using existing kubernetes secret i.e asking the users to have the git credentials already stored in the kubernetes secret on the same cluster and use it in the recipeConfig.
-
-```diff
-resource env 'Applications.Core/environments@2023-10-01-preview' = {
-  name: 'dsrp-resources-env-recipes-context-env'
-  location: 'global'
-  properties: {
-    compute: {
-      ...
-    }
-    providers: {
-      ...
-    }
-+   recipeConfig: {
-+     terraform: {
-+       secrets: {
-+         "dev.azure.com": {
-+            secret: secretStore.id
-+            namespace: <namespace>
-+          }
-+       }
-+     }
-+   }
-    recipes: {      
-      'Applications.Datastores/mongoDatabases':{
-        default: {
-          templateKind: 'terraform'
-          templatePath: 'https://dev.azure.com/test-private-repo'
-        }
-      }
-    }
-  }
-}
+SecretStore resource also provides an option to use the existing secret, which makes it better way store credentials. But todays secret store implementation is tied to application scope and in this case, secretStore needs to be created before application and environment creation. So we need to change scope of secret store resource to global (by removing the required flag for application property).
+And the referenced secret is retrieved from the secretStore in configLoader and secret details i.e personal-access-token and username as used to modify the template path to this format:
 ```
-
-Details in the recipeConfig can be used in the terraform driver to prepend the module source with username:\<personal-access-token\>.
+"git::https://{username}:{PERSONAL_ACCESS_TOKEN}@example.com.com/test-private-repo.git"
+```
+that will be used for recipe deployment.
 
 ### API design (if applicable)
+***Model changes***
+
+Addition of new property `recipeConfig` to environment properties.
+
+```diff
+@doc("Environment properties")
+model EnvironmentProperties {
+  @doc("The status of the asynchronous operation.")
+  @visibility("read")
+  provisioningState?: ProvisioningState;
+
+  @doc("The compute resource used by application environment.")
+  compute: EnvironmentCompute;
+
+  @doc("Cloud providers configuration for the environment.")
+  providers?: Providers;
+
+  @doc("Simulated environment.")
+  simulated?: boolean;
+
+  @doc("Specifies Recipes linked to the Environment.")
+  recipes?: RecipeProperties;
+
++  @doc("Specifies recipe configurations needed for the recipes.")
++  recipeConfig?: Record<Record<RecipeConfigProperties>>;
+
+  @doc("The environment extension.")
+  @extension("x-ms-identifiers", [])
+  extensions?: Array<Extension>;
+}
+
++model RecipeConfigProperties {
++  @doc(Specifies the secrets linked to a git platform)
++  terraform?: Record<Secrets>;
++}
+
++model Secrets {
++  @doc("The resource id for the secret containing the personal-access-token and username for git.")
++  secret?: string;
++}
+```
+
 
 ## Test plan
+#### Unit Tests
+-   Update environment conversion unit tests to validate recipeConfig property.
+-   Update environment controller unit tests.
+-   AAdding new unit tests in recipe config loader to validate recipeConfig changes.
+
+#### Functional tests
+- 	Add e2e test to verify recipe deployment using a terraform module stored in a private git repository.
 
 ## Development plan
+- Task 1:  
+    - Update Application.Core/secretStores to be a global scoped resource.
+    - Update unit tests and validating it doesn't break the existing functionality.
+- Task 2:
+    - Adding a new property recipeConfig to environment and making necessary changes to typespec, datamodel and conversions.
+    - Updating unit tests.
+- Task 3:
+    - Adding environment controller changes.
+    - Adding config loader changes to retrieve secrets.
+    - Update/Add unit tests
+- Task 4:
+    - Manual Validation and adding e2e tests to verify using private terraform repositories
 
-## Open issues
 
