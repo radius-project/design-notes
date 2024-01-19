@@ -99,7 +99,7 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
     }
 +   recipeConfig: {
 +     terraform: {
-+       secrets: {
++       gitCredentials: {
 +         "dev.azure.com": {
 +            username : username
 +            pat: token
@@ -137,7 +137,7 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
     }
 +   recipeConfig: {
 +     terraform: {
-+       secrets: {
++       gitCredentials: {
 +         "dev.azure.com": {
 +            secret: secretStore.id
 +            namespace: <namespace>
@@ -174,7 +174,7 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
     }
 +   recipeConfig: {
 +     terraform: {
-+       secrets: {
++       gitCredentials: {
 +         "dev.azure.com": {
 +            secret: secretStore.id
 +          }
@@ -241,7 +241,7 @@ model EnvironmentProperties {
   recipes?: RecipeProperties;
 
 +  @doc("Specifies recipe configurations needed for the recipes.")
-+  recipeConfig?: Record<Record<RecipeConfigProperties>>;
++  recipeConfig?: RecipeConfigProperties;
 
   @doc("The environment extension.")
   @extension("x-ms-identifiers", [])
@@ -250,11 +250,15 @@ model EnvironmentProperties {
 
 +model RecipeConfigProperties {
 +  @doc(Specifies the secrets linked to a git platform)
-+  terraform?: Record<Secrets>;
++  terraform?: Record<TerraformConfig>;
 +}
 
-+model Secrets {
-+  @doc("The resource id for the secret containing the personal-access-token and username for git.")
++model TerraformConfig{
++  gitCredentials?: Record<Secret>
++}
+
++model Secret {
++  @doc("The resource id for the secret containing credentials for git.")
 +  secret?: string;
 +}
 ```
@@ -278,7 +282,7 @@ model EnvironmentProperties {
     - Updating unit tests.
 - Task 3:
     - Adding environment controller changes.
-    - Adding config loader changes to retrieve secrets.
+    - Adding changes to terraform driver to retrieve secrets add it to template path.
     - Update/Add unit tests
 - Task 4:
     - Manual Validation and adding e2e tests to verify using private terraform repositories
