@@ -176,7 +176,10 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
 +     terraform: {
 +       gitCredentials: {
 +         "dev.azure.com": {
-+            secret: secretStore.id
++            secret: secretStoreAzureDevOps.id
++          },
++         "github.com": {
++            secret: secretStoreGithub.id
 +          }
 +       }
 +     }
@@ -265,11 +268,12 @@ model EnvironmentProperties {
 }
 
 +model RecipeConfigProperties {
-+  @doc(Specifies the secrets linked to a git platform)
++  @doc(Specifies the terraform config properties)
 +  terraform?: Record<TerraformConfig>;
 +}
 
 +model TerraformConfig{
++  @doc(Specifies git credentials information for terraform module repository.)  
 +  gitCredentials?: Record<Secret>
 +}
 
@@ -278,16 +282,24 @@ model EnvironmentProperties {
 +  secret?: string;
 +}
 ```
+In future if we want to support other types of authentication(e.g ssh), `gitCredentials` would include another level of properties to specify the kind of authentication used.
+
+```
+model TerraformConfig{
+  @doc(Specifies git credentials information for terraform module repository.)  
+  gitCredentials?: Record<Record<Secret>>
+}
+```
 
 
 ## Test plan
 #### Unit Tests
 -   Update environment conversion unit tests to validate recipeConfig property.
--   Update environment controller unit tests.
--   AAdding new unit tests in recipe config loader to validate recipeConfig changes.
+-   Update environment controller unit tests to add recipe config.
+-   Adding new unit tests in terraform driver validating recipe config changes and retrieving secrets.
 
 #### Functional tests
-- 	Add e2e test to verify recipe deployment using a terraform module stored in a private git repository.
+- Add e2e test to verify recipe deployment using a terraform module stored in a private git repository.
 
 ## Development plan
 - Task 1:  
