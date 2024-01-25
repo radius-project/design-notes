@@ -1,6 +1,6 @@
 # Adding support to extend the capabilities of secretStores to a global scope.
 
-* **Status**: Pending/Approved
+* **Status**: Pending
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview
@@ -43,15 +43,17 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
       ...
     }
    recipeConfig: {
-     terraform: {
-       gitCredentials: {
-         "dev.azure.com": {
-+            secret: secretStoreAzure.id
-          }
-          "github.com": {
-+            secret: secretStoreGithub.id
-          }
-       }
+      terraform: {
+        authentication:{
+          pat: {
+            "dev.azure.com": {
++             secret: secretStoreAzure.id
+            }
+            "github.com": {
++              secret: secretStoreGithub.id
+            } 
+          } 
+        }
      }
    }
     recipes: {      
@@ -68,7 +70,7 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
 
 
 ## Design
-Today we use Application.Core/secretstores resource to store secrets/credentials information for an application but we cannot use it here as secretStores is application scoped and expects to have an application created before we create a secretStore.
+Today we use Application.Core/secretstores resource to store secrets/credentials information for an application but we cannot use it in this scenario as secretStores is application scoped and expects to have an application created before we create a secretStore.
 
 And we cannot have secretStore created for environment scope in this scenario as we are adding the secret to the environment which creates cyclic dependency between environment and secretStore resource.
 
@@ -113,9 +115,7 @@ We could make secretStores as a global scoped resource by removing application a
       ]
     },
 ```
-With this change we can create a secret store resource before an application or environment is created.
-
-If user is creating a secretStore of kind kubernetes secret, it is deployed in application/environment namespace depending on the scope. But for global scope we can use the `resource` property (which is used to specify the secret ref of the existing secret) to provide namespace and secret name details in this format `<namespace>/<secretname>` . If the secretstore is created with global scope then we expect user to provide `resource` details.
+With this change we can create a secret store resource before an application or environment is created. But, if the user is creating a secretStore of kind kubernetes secret, it is deployed in application/environment namespace. But for secret resource with global scope use the `resource` property which is used to specify the secret ref of the existing secret to provide namespace and secret name details. User is expected to provide these details in `<namespace>/<secretName>` format for secretStore with global scope.
 
 ```diff
 resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
@@ -180,7 +180,67 @@ model SecretStoreProperties {
 }
 ```
 
+## Alternatives considered
 
+#### Adding default a namespace for global scoped secretstore resource.
+Add a default namespace `global-secretStores` to store the global scoped secretStores.
+
+```diff
+resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'github'
+  properties:{
+-  	app: app.id
+    type: 'generic'
+    data: {
+      'pat': {
+        value: '<personal-access-token>'
+      }
+      'username': {
+        value: '<username>'
+      }
+    }
+  }
+}
+```
+
+
+#### Adding a new property `namespace` 
+
+Add a new property `namespace` for kubernetes secret type.
+```diff
+resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'github'
+  properties:{
+-  	app: app.id
+    type: 'generic'
++   namespace: <namespace>
+    data: {
+      'pat': {
+        value: '<personal-access-token>'
+      }
+      'username': {
+        value: '<username>'
+      }
+    }
+  }
+}
+```
+for existing kubernetes secret
+```diff
+resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'github'
+  properties:{
+-  	app: app.id
+    type: 'generic'
++   namespace: <namespace>
++   resource: <secretName>
+    data: {
+      'pat': {}
+      'username': {}
+    }
+  }
+}
+```
 
 ## Test plan
 
@@ -188,15 +248,12 @@ Unit tests:
 - Update and add unit tests for changes in conversions for secret store.
 
 Functional Tests:
-- Add an e2e test to validate the creation of secret store with global scope.
-
-
+- Functional test for private repository support takes care of this scenario.
 
 ## Development plan
 
 Tasks:
 - Adding typespec changes and conversions to secretstores resource.
 - Adding unit tests for conversions.
-- Making sure the existing functionality doesnt break.
-- Adding secret store functional test with global scope.
+- Updating secretStores frontend controller to support global scope.
 
