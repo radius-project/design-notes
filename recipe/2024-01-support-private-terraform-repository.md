@@ -76,88 +76,10 @@ E.g:
 templatePath: "git::https://{username}:{PERSONAL_ACCESS_TOKEN}@example.com.com/test-private-repo.git?ref=v1.2.0"
 ```
 
-Since adding sensitive information like tokens to the terraform configuration files which may be stored in version control can pose security issues. So we could use different ways to store the github credentials.
+Since adding sensitive information like tokens to the terraform configuration files which may be stored in version control can pose security issues. So we could use different ways to store the git credentials.
 
-Option 1: Saving it as part of the environment resource.
+#### Using Applications.Core/secretStores to store private repository credentials
 
-Add a new property `recipeConfig` write-only to store the information about the git credentials, and have a custom action `getRecipeConfiglike` (like `list-secrets`) to get these details. 
-
-```diff
-+@secure()
-+param username string
-+@secure()
-+param token string
-resource env 'Applications.Core/environments@2023-10-01-preview' = {
-  name: 'dsrp-resources-env-recipes-context-env'
-  location: 'global'
-  properties: {
-    compute: {
-      ...
-    }
-    providers: {
-      ...
-    }
-+   recipeConfig: {
-+     terraform: {
-+       gitCredentials: {
-+         "dev.azure.com": {
-+            username : username
-+            pat: token
-+          }
-+       }
-+     }
-+   }
-    recipes: {      
-      'Applications.Datastores/mongoDatabases':{
-        default: {
-          templateKind: 'terraform'
-          templatePath: 'https://dev.azure.com/test-private-repo'
-        }
-      }
-    }
-  }
-}
-```
-But the majority of users frequently update their git personal access tokens (like once a day), and which means updating the environment resource every time the token is updated, also this raises potentials security issues storing the these details as part of environment. 
-
-Option 3 : Using kubernetes secret
-
-Using existing kubernetes secret i.e asking the users to have the git credentials already stored in the kubernetes secret on the same cluster and use it in the recipeConfig.
-
-```diff
-resource env 'Applications.Core/environments@2023-10-01-preview' = {
-  name: 'dsrp-resources-env-recipes-context-env'
-  location: 'global'
-  properties: {
-    compute: {
-      ...
-    }
-    providers: {
-      ...
-    }
-+   recipeConfig: {
-+     terraform: {
-+       gitCredentials: {
-+         "dev.azure.com": {
-+            secret: secretStore.id
-+            namespace: <namespace>
-+          }
-+       }
-+     }
-+   }
-    recipes: {      
-      'Applications.Datastores/mongoDatabases':{
-        default: {
-          templateKind: 'terraform'
-          templatePath: 'https://dev.azure.com/test-private-repo'
-        }
-      }
-    }
-  }
-}
-```
-
-Option 3 : Using Applications.Core/secretStores
 
 Use secretStore to store the username and personal access token and add the secret to the new property recipeConfig in the environment.
 
@@ -174,13 +96,17 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
     }
 +   recipeConfig: {
 +     terraform: {
-+       gitCredentials: {
-+         "dev.azure.com": {
-+            secret: secretStoreAzureDevOps.id
-+          },
-+         "github.com": {
-+            secret: secretStoreGithub.id
-+          }
++       authentication:{
++         git:{  
++           pat:{
++             "github.com":{
++               secret: secretStoreGithub.id
++             },
++             "dev.azure.com": {
++               secret: secretStoreAzureDevOps.id
++             },
++           }
++         }          
 +       }
 +     }
 +   }
@@ -269,12 +195,22 @@ model EnvironmentProperties {
 
 +model RecipeConfigProperties {
 +  @doc(Specifies the terraform config properties)
-+  terraform?: Record<TerraformConfig>;
++  terraform?: TerraformConfigProperties;
 +}
 
-+model TerraformConfig{
-+  @doc(Specifies git credentials information for terraform module repository.)  
-+  gitCredentials?: Record<Secret>
++model TerraformConfigProperties{
++  @doc(Specifies authentication information needed to use private terraform module repositories.)  
++  authentication?: AuthConfig
++}
+
++model AuthConfig{
++  @doc("Specifies authentication information needed to use private terraform module repositories from git module source")  
++  git?: GitAuthConfig
++}
+
++model GitAuthConfig{
++  @doc("Specifies the secret details of type personal access token for each different git platforms")  
++  pat?: Record<Secret>
 +}
 
 +model Secret {
@@ -282,15 +218,89 @@ model EnvironmentProperties {
 +  secret?: string;
 +}
 ```
-In future if we want to support other types of authentication(e.g ssh), `gitCredentials` would include another level of properties to specify the kind of authentication used.
 
-```
-model TerraformConfig{
-  @doc(Specifies git credentials information for terraform module repository.)  
-  gitCredentials?: Record<Record<Secret>>
+## Alternatives considered
+
+Here are couple of different designs considered for storing secrets.
+
+### Saving it as part of the environment resource.
+
+Add a new property `recipeConfig` write-only to store the information about the git credentials, and have a custom action `getRecipeConfiglike` (like `list-secrets`) to get these details. 
+
+```diff
++@secure()
++param username string
++@secure()
++param token string
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'dsrp-resources-env-recipes-context-env'
+  location: 'global'
+  properties: {
+    compute: {
+      ...
+    }
+    providers: {
+      ...
+    }
++   recipeConfig: {
++     terraform: {
++       gitCredentials: {
++         "dev.azure.com": {
++            username : username
++            pat: token
++          }
++       }
++     }
++   }
+    recipes: {      
+      'Applications.Datastores/mongoDatabases':{
+        default: {
+          templateKind: 'terraform'
+          templatePath: 'https://dev.azure.com/test-private-repo'
+        }
+      }
+    }
+  }
 }
 ```
+But the majority of users frequently update their git personal access tokens (like once a day), and which means updating the environment resource every time the token is updated, also this raises potentials security issues storing the these details as part of environment. 
 
+### Using kubernetes secret
+
+Using existing kubernetes secret i.e asking the users to have the git credentials already stored in the kubernetes secret on the same cluster and use it in the recipeConfig.
+
+```diff
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'dsrp-resources-env-recipes-context-env'
+  location: 'global'
+  properties: {
+    compute: {
+      ...
+    }
+    providers: {
+      ...
+    }
++   recipeConfig: {
++     terraform: {
++       gitCredentials: {
++         "dev.azure.com": {
++            secret: secretStore.id
++            namespace: <namespace>
++          }
++       }
++     }
++   }
+    recipes: {      
+      'Applications.Datastores/mongoDatabases':{
+        default: {
+          templateKind: 'terraform'
+          templatePath: 'https://dev.azure.com/test-private-repo'
+        }
+      }
+    }
+  }
+}
+```
 
 ## Test plan
 #### Unit Tests
