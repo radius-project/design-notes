@@ -45,14 +45,16 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
    recipeConfig: {
       terraform: {
         authentication:{
-          pat: {
-            "dev.azure.com": {
-+             secret: secretStoreAzure.id
+          git:{
+            pat: {
+              "dev.azure.com": {
++               secret: secretStoreAzure.id
+              }
+              "github.com": {
++                secret: secretStoreGithub.id
+              }
             }
-            "github.com": {
-+              secret: secretStoreGithub.id
-            } 
-          } 
+          }
         }
      }
    }
