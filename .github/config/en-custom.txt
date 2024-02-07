@@ -648,3 +648,7 @@ recipeConfig
 DevOps
 Bitbucket
 Gitlab
+lakshmimsft
+recipies
+terraformrc
+DigitalOcean
