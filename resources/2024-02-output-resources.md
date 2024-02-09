@@ -9,12 +9,12 @@ Output resources are the actual platform specific resources that get deployed in
 
 There are a couple of problems related to how we manage output resources today -
 
-1. Output resources do not have a ProvisioningStatus property. Instead, if any of the output resource deployment fails, we set the Provisioning state of the owning radius resource accordingly and do not store the output resources. With this approach, we lose the information on which output resources failed deployment since we aggregate failures into the owning Radius resource's provisioningStatus property. 
+1. Output resources do not have a ProvisioningStatus property. Instead, if any of the output resource deployment fails, we set the Provisioning state of the corresponding radius resource accordingly and do not store the output resources. With this approach, we lose the information on which output resources failed deployment since we aggregate failures into the owning Radius resource's provisioningStatus property. 
 
-2. We do not record any of the output resources as part of the radius resource whose deployment failed, although we deployed them with an errored status, leading to orphaned platform specific resources which should be manually cleaned up.
+2. We do not record any of the output resources as part of the radius resource whose deployment failed, although we deployed them with an errored status. This leads to orphaned resources which should be manually cleaned up.
 
 This design proposes addition of ProvisioningStatus to outputResources so that, 
-when we track these resources in case of both successful and failed deployment to avoid orphaning resources, there will be clearer indication of what lead to failed deployment to the user. 
+once we add changes to track these resources in case of both successful and failed deployment to avoid orphaning resources, there will be clearer indication of what lead to failed deployment to the user. 
 
 
 ## Terms and definitions
