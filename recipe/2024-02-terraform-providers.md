@@ -66,11 +66,18 @@ In a significant number of providers, as per documentation, environment variable
       ...
      providers: [...]
      env: {
-       key: value
-       secrets: {
-        source: secretStoreOCICred.id
+        'MY_ENV_VAR_1': 'my_value'
+        secrets: {                       // Individual Secrets from SecretStore
+        'MY_ENV_VAR_2': {
+            source: secretStoreConfig.id
+            key: 'envsecret.one'
+          }
+        'MY_ENV_VAR_3': {
+            source: secretStoreConfig.id
+            key: 'envsecret.two'
+          }
+        }
       }
-     }
 ```
 
 Environment variables apply to all providers configured in the environment. The system cannot set two separate values for the same environment variable for multiple provider configurations. In such cases, per provider documentation, there may be alternatives that users can avail (eg. For GCP, users can set  *credentials* field inside each instance of provider config as opposed to using env variable GOOGLE_APPLICATION_CREDENTIALS).
@@ -83,25 +90,36 @@ The system will allow for ability to set up multiple configurations for the same
  recipeConfig: {
     terraform: {
       ...
-      providers: ['azurerm': {  
-          subscriptionid: 1234
-          secrets: {
-            source: secretStoreAz.id
+      providers: [
+      {
+        name: 'azurerm',
+        properties: {
+          subscriptionid: 1234,
+          secrets: {                  // Individual Secrets from SecretStore
+            'my_secret_1': {
+              source: secretStoreAz.id
+              key: 'secret.one'
+            }
+            'my_secret_2': {
+               source: secretStoreAzPayment.id
+              key: 'secret.two'
+            }
           }
-        },
-        'azurerm': {
-        subscriptionid: 1234
-        alias: 'az-paymentservice'
-        secrets: {
-          source: secretStoreAzPayment.id
-        }         
-      }]
+        }
+      },
+      {
+        name: 'azurerm',
+        properties: {
+          subscriptionid: 1234,
+          alias: 'az-paymentservice'
+       }
+     }]
 ...       
 ```
 Configuration for providers as described in this document will take precedence over provider credentials stored in UCP (currently these include azurerm, aws, kubernetes providers). So, for eg. In the scenario where credentials for Azure are saved with UCP during Radius install and a Terraform recipe created by an operator declares 'azurerm' under the the *required_providers* block; If there exists a provider configuration under the *providers* block under *recipeConfig*, these would take precedence and used to build the Terraform configuration file instead of Azure credentials stored in UCP. 
 
 
-Example :
+### Example Bicep Input :
 ``` diff
 resource env 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'dsrp-resources-env-recipes-context-env'
@@ -113,55 +131,225 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
     providers: {
       ...
     }
-  recipeConfig: {
-    terraform: {
-      authentication:{
-        ...        
-      }
-+      providers: [azurerm: {        
-+          subscriptionid: 1234
-+          secrets: {
-+            source: secretStoreAz.id
+    recipeConfig: {
+      terraform: {
+        authentication:{
+          ...        
+        }
++       providers: [
++         {
++            name: 'azurerm',
++            properties: {          
++             subscriptionid: 1234,
++             secrets: {                  // Individual Secrets from SecretStore
++               'my_secret_1': {
++                  source: secretStoreAz.id
++                  key: 'secret.one'
++                }
++               'my_secret_2': {
++                  source: secretStoreAzPayment.id
++                  key: 'secret.two'
++               }
++             }
++            }
++          },
++          {
++            name: 'azurerm',
++            properties: {
++              subscriptionid: 1234,
++              alias: 'az-paymentservice',
++              secrets: {
++                source: secretStoreAzPayment.id
++              }
++            }
++          },
++          {
++            name: 'gcp',
++            properties: {
++              project: 1234,
++              regions: ['us-east1', 'us-west1']
++            }
++          },
++          {
++            name: 'oraclepass',
++            properties: {
++              database_endpoint: "...",
++              java_endpoint: "...",
++              mysql_endpoint: "..."
++            }
 +          }
-+        },
-+        'azurerm': {
-+         subscriptionid: 1234
-+         alias: 'az-paymentservice'
-+         secrets: {
-+           source: secretStoreAzPayment.id
-+         }         
-+       },
-+       'gcp': {
-+         project: 1234
-+         regions: ['us-east1', 'us-west1']
-+       },
-+       'oraclepass': {
-+         database_endpoint = "..."
-+         java_endpoint     = "..."
-+         mysql_endpoint    = "..."
-+       }]
-+     env: {
-+       key: value
-+       secrets: {
-+        source: secretStoreOCICred.id
++        ]
 +      }
-+     }
-    }
++      env: {
++        'MY_ENV_VAR_1': 'my_value'
++        secrets: {                       // Individual Secrets from SecretStore
++        'MY_ENV_VAR_2': {
++            source: secretStoreConfig.id
++            key: 'envsecret.one'
++          }
++        'MY_ENV_VAR_3': {
++            source: secretStoreConfig.id
++            key: 'envsecret.two'
++          }
++        }
++      }      
++    }
   }
-    recipes: {      
-      ...
-    }
+  recipes: {      
+    ...
   }
 }
+
+Option 2:
+This option provides grouping and efficiency to retrieve all details for a single provider. 
+
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'dsrp-resources-env-recipes-context-env'
+  location: 'global'
+  properties: {
+    compute: {
+      ...
+    }
+    providers: {
+      ...
+    }
+    recipeConfig: {
+      terraform: {
+        authentication:{
+          ...        
+        }
++       providers: {
++         'azurerm': [
++           {
++             subscriptionid: 1234,
++             secrets: {                  // Individual Secrets from SecretStore
++               'my_secret_1': {
++                  source: secretStoreAz.id
++                  key: 'secret.one'
++                }
++               'my_secret_2': {
++                  source: secretStoreAzPayment.id
++                  key: 'secret.two'
++               }
++             }
++          },
++          {
++             subscriptionid: 1234,
++             tenant_id: '745fg88bf-86f1-41af-'
++             alias: 'az-paymentservice', 
++          }]
++          'gcp': [
++            {
++              project: 1234,
++              regions: ['us-east1', 'us-west1']
++            }
++          ]
++          'oraclepass': [
++            {
++              database_endpoint: "...",
++              java_endpoint: "...",
++              mysql_endpoint: "..."
++            }
++          ]
++        }
++     }
++     env: {
++        'MY_ENV_VAR_1': 'my_value'
++        secrets: {                       // Individual Secrets from SecretStore
++        'MY_ENV_VAR_2': {
++            source: secretStoreConfig.id
++            key: 'envsecret.one'
++          }
++        'MY_ENV_VAR_3': {
++            source: secretStoreConfig.id
++            key: 'envsecret.two'
++          }
++        }
++      }   
++    }
+  }
+  recipes: {      
+    ...
+  }
+}
+
+
 ```
 
 
 Limitations: Customers may store sensitive data in other formats which may not be supported. eg. sensitive data is stored on files, which customers will not currently be able to load on disk in applications-rp where tf init/apply commands are run.
 Containerization work may alleviate this limitations. Further design work will be needed for towards this which is planned for the near future. 
 
-### API design (if applicable) (TBD)
+### API design
 
-TBD
+***Model changes providers***
+
+### Option 1:
+```
+Addition of new property to TerraformConfigProperties in `recipeConfig` under environment properties.
+
+model TerraformConfigProperties{
+  @doc(Specifies authentication information needed to use private terraform module repositories.)  
+  authentication?: AuthConfig
++ providers?: Array<ProviderConfig>
+}
+
+@doc("ProviderConfig specifies provider configurations needed for recipes")
+model ProviderConfig {
+ name: string
+ properties: ProviderConfigProperties
+}
+
+@doc("ProviderConfigProperties specifies provider configuration details needed for recipes")
+model ProviderConfigProperties extends Record<unknown> {
+  @doc("The secrets for referenced resource")
+  secrets?: Record<ProviderSecret>;
+}
+```
+### Option 2:
+
+```
+Addition of new property to TerraformConfigProperties in `recipeConfig` under environment properties.
+
+model TerraformConfigProperties{
+  @doc(Specifies authentication information needed to use private terraform module repositories.)  
+  authentication?: AuthConfig
+  providers?: Record<Array<ProviderConfigProperties>>
+}
+
+@doc("ProviderConfigProperties specifies provider configuration details needed for recipes")
+model ProviderConfigProperties extends Record<unknown> {
+  @doc("The secrets for referenced resource")
+  secrets?: Record<ProviderSecret>;
+}
+```
+***Model changes env***
+```
+Addition of new property to RecipeConfigProperties under environment properties.
+
+@doc("Specifies recipe configurations needed for the recipes.")
+model RecipeConfigProperties {
+  @doc("Specifies the terraform config properties")
+  terraform?: TerraformConfigProperties;
++ env?: EnvironmentVariables
+}
+
+@doc("EnvironmentVariables describes structure enabling environment variables to be set")
+model EnvironmentVariables extends Record<string>{
+  secrets?: Record<ProviderSecret>
+}
+
+@doc("Specifies the secret details")
+model ProviderSecret {
+  @doc("The resource id for the secret store containing credentials")
+  secretStore: string;
+  key: string;
+}
+```
+
+## Decision on Options 1 versus 2 above:
+We have decided to go ahead with Option 2 and discussed adding validation to check number of provider configurations to be a minimum of 1. Option 2 helps users keep track of all provider configurations for a provider in one place and lowers probabilty of, say, duplication of provider configurations if it is laid out in one list as in Option 1. Also, we can enforce some constraints on, say, minimum number of configurations for a provider. Option 2 is optimized for multiple provider configurations per provider and that may not apply for every provider configuration that users set up.
+
 
 ## Alternatives considered
 
