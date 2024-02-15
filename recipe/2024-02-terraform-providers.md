@@ -30,9 +30,9 @@ https://github.com/radius-project/radius/issues/6539
 
 
 ### Non goals
-1. Updates to Bicep Provider configuration.
-2. Authentication for providers hosted in private registries.
-3. Support for .terraformrc files.
+1. Updates to Bicep Provider configuration. The focus of this effort is targeted for Terraform provider support. Bicep provider support will be addressed as a separate initiative as warranted.
+2. Authentication for providers hosted in private registries. This is out of scope for the current design effort and will be addressed in the future as required.
+3. Support for .terraformrc files. These are CLI configuration files and not in scope of current effort to support multiple provider configuration to be used by recipes. ref: [link](https://developer.hashicorp.com/terraform/cli/config/config-file)
 
 ### User scenarios (optional)
 
@@ -157,10 +157,8 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
 +            name: 'azurerm',
 +            properties: {
 +              subscriptionid: 1234,
++              tenant_id: '745fg88bf-86f1-41af-'
 +              alias: 'az-paymentservice',
-+              secrets: {
-+                source: secretStoreAzPayment.id
-+              }
 +            }
 +          },
 +          {
@@ -345,10 +343,11 @@ model ProviderSecret {
   secretStore: string;
   key: string;
 }
+
 ```
 
 ## Decision on Options 1 versus 2 above:
-We have decided to go ahead with Option 2 and discussed adding validation to check number of provider configurations to be a minimum of 1. Option 2 helps users keep track of all provider configurations for a provider in one place and lowers probabilty of, say, duplication of provider configurations if it is laid out in one list as in Option 1. Also, we can enforce some constraints on, say, minimum number of configurations for a provider. Option 2 is optimized for multiple provider configurations per provider and that may not apply for every provider configuration that users set up.
+We have decided to go ahead with Option 2 and discussed adding validation to check number of provider configurations to be a minimum of 1. Option 2 helps users keep track of all provider configurations for a provider in one place and lowers probability of, say, duplication of provider configurations if it is laid out in one list as in Option 1. Also, we can enforce some constraints on, say, minimum number of configurations for a provider. Option 2 is optimized for multiple provider configurations per provider and that may not apply for every provider configuration that users set up.
 
 
 ## Alternatives considered
@@ -372,7 +371,21 @@ The work done here will be to read, decipher values and secrets and environment 
 
 ## Monitoring
 
-## Development plan (TBD)
+## Development plan
+We're breaking down the effort into smaller units in order to enable parallel work and faster delivery of this feature within a shorteneed sprint.
+The user stories created are as follows:
+The numbers indicate sequential order of work that can be done. Having said that, work for numbers 1 and 2 are going ahead in parallel and we will resolve conflicts as PRs get merged.
+1. Update Provider DataModel, TypeSpec, Convertor, json examples
+1. Update Environment Variables DataModel, TypeSpec, Convertor, json examples
+1. Documentation
+2. Build Provider Config (minus secrets)
+2. Process, update environment variables - minus secrets
+3. Functional Tests
+4. Update Secret DataModel, TypeSpec, Convertor, json examples
+4. Secret processing - Providers + Environment Variables
+
+
 
 ## Open issues/questions
 Do we consider first class support for GCP and other popular providers or continue with a generic approach??
+Answer-We should start with a generic approach to unlock everything, and then add first-class support where users request it later on. That we support everything, and then we can add convenience later on.
