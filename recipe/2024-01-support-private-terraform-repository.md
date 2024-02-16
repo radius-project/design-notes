@@ -28,8 +28,9 @@ This is important because organizations write their own Terraform modules and st
 - It should support git from any platforms(like Bitbucket, Gitlab, Azure DevOps Git etc.)
 
 ### Non goals
-- To Support other terraform module sources like S3, GCP, Mercurial repository.
-- Registering Terraform modules stored in repositories from different git accounts.
+- To Support other terraform module sources like S3, GCP, Mercurial repository. 
+Support for other sources will be implemented in future iterations.
+- To support recipes distributed across multiple private Git repositories in an environment.
 
 ### User scenarios (optional)
 
@@ -41,7 +42,7 @@ Today, we support only Terraform registry and HTTP URLs as allowed module source
 
 Git provides different ways to authenticate:
 
-#### Personal Access Token:
+#### Personal Access Token (Proposed option):
 Users need to a Git personal access token with very limited access (just read access) and also specify token validity. And this is used along with the username to clone the terraform module repository through HTTPS as part of `terraform init`.
 
 #### SSH key:
@@ -50,7 +51,6 @@ SSH key can be used to provide access to private git repository. But it requires
 #### Service Principal(Only for Azure DevOps Git):
 We could use the Azure Service Principal details used for Azure scope to authenticate Azure DevOps Git. But most often users have diff tenant IDs for the production environment and for git.
 
-Personal Access Token with Username way of authentication is supported by git from most of the platforms(e.g Bitbucket,Gitlab,Github etc) and generic git repository URL format as template path can be used to while registering recipe to access the terraform modules from private git repository from any platform.
 
 Generic Git Repository URL format:
 ```diff
