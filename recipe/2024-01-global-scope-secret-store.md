@@ -24,7 +24,7 @@ Today we have Application.Core/secretStores resource to securely manage secrets 
 - Enable support to extend the capabilities of secretStores to a global scope.
 
 ### Non goals
-
+- To move secret store resource as part of UCP.
 
 ### User scenarios (optional)
 
@@ -138,7 +138,7 @@ resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
 }
 ```
 
-### API design (if applicable)
+### API design
 
 #### Typespec changes
 
