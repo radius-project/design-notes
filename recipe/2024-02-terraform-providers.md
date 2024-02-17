@@ -13,6 +13,7 @@ This document  describes a proposal to support multiple providers, setup their p
 | Term     | Definition                                                                                                                                                                                                 |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Terraform Provider | A Terraform provider is a plugin that allows Terraform to interact with and manage resources of a specific infrastructure platform or service, such as AWS, Azure, or Google Cloud. |
+| alias | alias is a meta-argument that is defined by Terraform and available for all provider blocks. It is used when defining multiple configurations for the same provider and helps the user identify which configuration to use on a per-resource or per-module basis. Ref: [link](https://developer.hashicorp.com/terraform/language/providers/configuration#alias-multiple-provider-configurations)|
 
 
 ## Objectives
@@ -49,7 +50,8 @@ As an operator, I would like to manage cloud resources in different geographical
 Reviewing popular provider configurations (GCP, Oracle, Heroku, DigitalOcean, Docker etc.) a large number of provider configurations can be setup by handling a combination of key value pairs, key value pairs in nested objects, secrets and environment variables.
 
 ### Key-value pairs
-Key-value pairs will be parsed and saved to a Terraform configuration file.
+Attributes or settings, represented as key-value pairs are often used to define configuration parameters in provider configurations.
+We will parse and save these values in the Terraform configuration file, main.tf in a working directory, which the system creates today. 
 
 ### Secrets
 Secrets will be handled similarly to the approach described in document [Design document for Private Terraform Repository](https://github.com/radius-project/design-notes/blob/3644b754152edc97e641f537b20cf3d87a386c43/recipe/2024-01-support-private-terraform-repository.md) wherein Applications.Core/secretStores can point to an existing K8s secret.
@@ -340,7 +342,7 @@ model EnvironmentVariables extends Record<string>{
 @doc("Specifies the secret details")
 model ProviderSecret {
   @doc("The resource id for the secret store containing credentials")
-  secretStore: string;
+  source: string;
   key: string;
 }
 
@@ -354,25 +356,29 @@ We have decided to go ahead with Option 2 and discussed adding validation to che
 
 Mentioned under Limitations above, work to containerize running terraform jobs was considered as a precursor to this work. The time sensitivity for unblocking customers on ability to configure and use providers they use today was given a priority and current design held. Containerization will be taken up as a parallel effort in the near future.
 
-## Test plan (TBD)
+## Test plan (In Progress)
 
-#### Unit Tests (TBD)
--   Update environment conversion unit tests to validate providers, env type under recipeConfig.
--   Update environment controller unit tests for providers, env.
+#### Unit Tests
+- Update  conversion unit tests to validate providers, env type and later secrets under recipeConfig.
+- Update  controller unit tests for providers, env, secrets.
+- Unit tests for functions related to building provider config with new provider data when module is loaded.
+- Unit tests for secret retrieval and handling/building provider config.
+
+
 
 #### Functional tests
-- Add e2e test to verify recipe using multiple provider configuration is deployed.
-- (TBD) Discuss/List providers we want to test with.
+- Add e2e test to verify multiple provider configuration is created as expected.
+- (TBD) Discuss approach to validation of provider configuration: Is it possible to be static data and not a actual provider? Do we use provider like random?
 
 ## Security
 
 Largely following security considerations and secret handling described in design for private terraform modules: [Design document for Private Terraform Repository](https://github.com/radius-project/design-notes/blob/3644b754152edc97e641f537b20cf3d87a386c43/recipe/2024-01-support-private-terraform-repository.md)
-The work done here will be to read, decipher values and secrets and environment variables set by user in the *providers* block, to build internal terraform configuration file used by tf setenv, init and apply commands. 
+The work done here will be to read, decipher values and secrets and environment variables set by user in the *providers* block, to build internal terraform configuration file used by tf setenv, init and apply commands.
 
 ## Monitoring
 
 ## Development plan
-We're breaking down the effort into smaller units in order to enable parallel work and faster delivery of this feature within a shorteneed sprint.
+We're breaking down the effort into smaller units in order to enable parallel work and faster delivery of this feature within a sprint.
 The user stories created are as follows:
 The numbers indicate sequential order of work that can be done. Having said that, work for numbers 1 and 2 are going ahead in parallel and we will resolve conflicts as PRs get merged.
 1. Update Provider DataModel, TypeSpec, Convertor, json examples
@@ -384,7 +390,19 @@ The numbers indicate sequential order of work that can be done. Having said that
 4. Update Secret DataModel, TypeSpec, Convertor, json examples
 4. Secret processing - Providers + Environment Variables
 
+The objective is to deliver within a sprint. We will create unit tests for each task mentioned above as it is completed and test functionality.
+It will then be possible to deliver the feature in the following order:
+1. Building provider configuration based on provider configuration block
+2. Updating environment variables
+3. Updating provider configuration and environment variables with processing secrets.
 
+We've currently decided on Secret processing to be taken up following completion of building providing provider based on providers block and env variable block. The goal is to deliver as much functionality as possible within this sprint.
+
+## High Level Design details:
+Disclaimer: The following are early assessments and may change as we progress:
+No changes are anticipated to payload in Driver and Engine.
+The new types containing provider and environment variable data are contained within environment configuration which will be now passed into constructor of TerraformConfig as part of Private Terraform Module work. [link](https://github.com/radius-project/design-notes/blob/3644b754152edc97e641f537b20cf3d87a386c43/recipe/2024-01-support-private-terraform-repository.md) 
+Large amount of work will be within pkg/terraform/config where we process new providers and env blocks and update current processing for building provider configuration.
 
 ## Open issues/questions
 Do we consider first class support for GCP and other popular providers or continue with a generic approach??
