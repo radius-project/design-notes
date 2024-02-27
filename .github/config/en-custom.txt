@@ -649,7 +649,6 @@ DevOps
 Bitbucket
 Gitlab
 lakshmimsft
-recipies
 terraformrc
 DigitalOcean
 setenv
@@ -659,3 +658,8 @@ DataModel
 PRs
 TypeSpec
 TerraformConfig
+envVariables
+EnvironmentVariables
+amongst
+ProviderSecret
+SecretReference

@@ -27,7 +27,7 @@ https://github.com/radius-project/radius/issues/6539
 
 1. Enable users to use terraform recipes with multiple providers (including and outside of Azure, Kubernetes, AWS).
 2. Enable users to use terraform recipes with multiple configurations for the same provider using *alias*. 
-3. Enable provider configurations to be available for all recipies used in an environment.
+3. Enable provider configurations to be available for all recipes used in an environment.
 
 
 ### Non goals
@@ -65,21 +65,23 @@ In a significant number of providers, as per documentation, environment variable
 ...
  recipeConfig: {
     terraform: {
-      ...
-     providers: [...]
-     env: {
-        'MY_ENV_VAR_1': 'my_value'
-        secrets: {                       // Individual Secrets from SecretStore
-        'MY_ENV_VAR_2': {
-            source: secretStoreConfig.id
-            key: 'envsecret.one'
-          }
-        'MY_ENV_VAR_3': {
-            source: secretStoreConfig.id
-            key: 'envsecret.two'
-          }
-        }
+       ...
+       providers: [...]
+    env: {
+      'MY_ENV_VAR_1': 'my_value'
+    }   
+    envSecrets: {                       // Individual Secrets from SecretStore
+      'MY_ENV_VAR_2': {
+          source: secretStoreConfig.id
+          key: 'envsecret.one'
       }
+      'MY_ENV_VAR_3': {
+        source: secretStoreConfig.id
+        key: 'envsecret.two'
+      }
+    }
+  }
+ }  
 ```
 
 Environment variables apply to all providers configured in the environment. The system cannot set two separate values for the same environment variable for multiple provider configurations. In such cases, per provider documentation, there may be alternatives that users can avail (eg. For GCP, users can set  *credentials* field inside each instance of provider config as opposed to using env variable GOOGLE_APPLICATION_CREDENTIALS).
@@ -122,6 +124,8 @@ Configuration for providers as described in this document will take precedence o
 
 
 ### Example Bicep Input :
+**Option 1**: 
+
 ``` diff
 resource env 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'dsrp-resources-env-recipes-context-env'
@@ -199,10 +203,10 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
     ...
   }
 }
-
-Option 2:
+```
+**Option 2**:
 This option provides grouping and efficiency to retrieve all details for a single provider. 
-
+``` diff
 resource env 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'dsrp-resources-env-recipes-context-env'
   location: 'global'
@@ -276,7 +280,80 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
 
 ```
 
+**Option 3** - Environment Variables : With this option a question was raised if 'env' could be updated to 'envVariables'. We decided against it for consistency (with environment variables used in Applications.Core/Containers resource) and decided to keep the name as env as described in Option 2 above.
 
+``` diff
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'dsrp-resources-env-recipes-context-env'
+  location: 'global'
+  properties: {
+  ...
+  recipeConfig: {
+      ... 
+      terraform: {
+         ...
+         providers: [...]         // Same as Option 2
++     envVariables: {                     // ** Change from Option 2 **
++       'MY_ENV_VAR_1': 'my_value'
++        secrets: {                 // Individual Secrets from SecretStore
++           'MY_ENV_VAR_2': {
++              source: secretStoreConfig.id
++              key: 'envsecret.one'
++            }
++           'MY_ENV_VAR_3': {
++              source: secretStoreConfig.id
++              key: 'envsecret.two'
++           }
++        }
++      }   
++    }
+  }
+  recipes: {      
+    ...
+  }
+}
+```
+**Option 4** - Environment Variables: With the structure described in Option 2 for environment variables, we are unable to use a extends Record\<string\> as  described in the API design section:
+
+```
+model EnvironmentVariables extends Record<string>{
+  secrets?: Record<ProviderSecret>
+}
+```
+and in order to continue to maintain type strictness for EnvironmentVariables, we discussed the following design amongst others and are going ahead with:
+
+``` diff
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'dsrp-resources-env-recipes-context-env'
+  location: 'global'
+  properties: {
+  ...
+    recipeConfig: {
+      ... 
+      terraform: {
+         ...
+         providers: [...]         // Same as Option 2
++     env: {                
++         'MY_ENV_VAR_1': 'my_value'
++     } 
++     envSecrets: {      // Individual Secrets from SecretStore
++         'MY_ENV_VAR_2': {
++            source: secretStoreConfig.id
++            key: 'envsecret.one'
++         }
++        'MY_ENV_VAR_3': {
++            source: secretStoreConfig.id
++            key: 'envsecret.two'
++         }
++     }
++  }   
++}
+  recipes: {      
+    ...
+  }
+}
+
+```
 Limitations: Customers may store sensitive data in other formats which may not be supported. eg. sensitive data is stored on files, which customers will not currently be able to load on disk in applications-rp where tf init/apply commands are run.
 Containerization work may alleviate this limitations. Further design work will be needed for towards this which is planned for the near future. 
 
@@ -307,7 +384,6 @@ model ProviderConfigProperties extends Record<unknown> {
 }
 ```
 ### Option 2:
-
 ```
 Addition of new property to TerraformConfigProperties in `recipeConfig` under environment properties.
 
@@ -348,8 +424,81 @@ model ProviderSecret {
 
 ```
 
-## Decision on Options 1 versus 2 above:
-We have decided to go ahead with Option 2 and discussed adding validation to check number of provider configurations to be a minimum of 1. Option 2 helps users keep track of all provider configurations for a provider in one place and lowers probability of, say, duplication of provider configurations if it is laid out in one list as in Option 1. Also, we can enforce some constraints on, say, minimum number of configurations for a provider. Option 2 is optimized for multiple provider configurations per provider and that may not apply for every provider configuration that users set up.
+### Option 3:
+Providers section is same as Option 2
+
+***Model changes env***
+```
+Addition of new property to RecipeConfigProperties under environment properties.
+
+@doc("Specifies recipe configurations needed for the recipes.")
+model RecipeConfigProperties {
+  @doc("Specifies the terraform config properties")
+  terraform?: TerraformConfigProperties;
++ envVariables?: EnvironmentVariables
+}
+
+@doc("EnvironmentVariables describes structure enabling environment variables to be set")
+model EnvironmentVariables extends Record<unknown>{
+  secrets?: Record<RecipeSecret>
+}
+
+@doc("Specifies the secret details")
+model RecipeSecret {
+  @doc("The resource id for the secret store containing credentials")
+  source: string;
+  key: string;
+}
+
+```
+
+### Option 4: Final Design
+
+``` 
+Addition of new property to TerraformConfigProperties in `recipeConfig` under environment properties.
+
+model TerraformConfigProperties{
+  @doc(Specifies authentication information needed to use private terraform module repositories.)  
+  authentication?: AuthConfig
+  providers?: Record<Array<ProviderConfigProperties>>
+}
+
+@doc("ProviderConfigProperties specifies provider configuration details needed for recipes")
+model ProviderConfigProperties extends Record<unknown> {
+  @doc("The secrets for referenced resource")
+  secrets?: Record<SecretReference>;
+}
+```
+
+***Model changes env***
+``` 
+Addition of new property to RecipeConfigProperties under environment properties.
+
+@doc("Specifies recipe configurations needed for the recipes.")
+model RecipeConfigProperties {
+  @doc("Specifies the terraform config properties")
+  terraform?: TerraformConfigProperties;
++ env?: EnvironmentVariables
++ envSecrets?: Record<SecretReference>
+}
+
+@doc("EnvironmentVariables describes structure enabling environment variables to be set")
+model EnvironmentVariables extends Record<string>{}
+
+@doc("Specifies the secret details")
+model SecretReference {
+  @doc("The resource id for the secret store containing credentials")
+  source: string;
+  key: string;
+}
+
+```
+## Decision on Options above:
+We initially decided to go ahead with Option 2 and discussed adding validation to check number of provider configurations to be a minimum of 1. Option 2 helps users keep track of all provider configurations for a provider in one place and lowers probability of, say, duplication of provider configurations if it is laid out in one list as in Option 1. Also, we can enforce some constraints on, say, minimum number of configurations for a provider. Option 2 is optimized for multiple provider configurations per provider and that may not apply for every provider configuration that users set up.
+
+Notes: After initial work on implementation we encountered some questions and issues with EnvironmentVariables (listed in Options 3 and 4) above which we brought up in our design meetings and have updated the EnvironmentVariables API design and renamed ProviderSecret to SecretReference.
+The latest API design is described in Options 4. 
+
 
 
 ## Alternatives considered
