@@ -65,9 +65,38 @@ link to that issue instead.
 
 #### User story 2
 
+## User Experience (if applicable)
+<!--
+If the change impacts the user experience, provide expected interaction 
+flow we aim to achieve through this proposal.
+
+When users interact with Radius through the CLI, include sample 
+input commands and their corresponding output. Include a bicep/helm code 
+sample, if this proposal involves updates to that experience.
+-->
+
+**Sample Input:**
+<!--
+Provide a sample CLI command input and/or bicep/helm code.
+-->
+
+**Sample Output:**
+<!--
+Provide a sample output for the inputs provided above.
+-->
+
+**Sample Recipe Contract:**
+<!--
+Provide a sample of updated recipe contract, if this proposal 
+updates recipe contract (input parameters, outputs schema, etc)
+-->
+
 ## Design
 
+### High Level Design
 <!--
+High level overview of the data flow and key components.
+
 Provide a high-level description, using diagrams as appropriate, and top-level
 explanations to convey the architectural/design overview. Don’t go into a lot
 of details yet but provide enough information about the relationship between
@@ -77,7 +106,15 @@ treats the components as black boxes. Provide a pointer to a more detailed
 design document, if one exists. 
 -->
 
-### Design details
+### Architecture Diagram
+<!--
+Provide a diagram of the system architecture, illustrating how different
+components interact with each other in the context of this proposal.
+
+Include separate high level architecture diagram and component specific diagrams, wherever appropriate.
+-->
+
+### Detailed Design
 
 <!--
 This section should be detailed and thorough enough that another developer
@@ -95,12 +132,27 @@ questions section. If the product has a layered architecture, it's good to
 align these sections with the product's layers. This will help readers use
 their current understanding to understand your ideas.
 
-* Advantages of this design - Describe what's good about this plan relative to
-  other options. Does it feel easy to implement? Provide flexibility for
-  future work?
-* Disadvantages - Describe what's not ideal about this plan. If you don't
-  point these things out other people will do it for you. This is a good place
-  to cover risks.
+Discuss the rationale behind architectural choices and alternative options 
+considered during the design process.
+-->
+
+#### Advantages (of each option considered)
+<!--
+Describe what's good about this plan relative to other options. 
+Provides better user experience? Does it feel easy to implement? 
+Provides flexibility for future work?
+-->
+
+#### Disadvantages (of each option considered)
+<!--
+Describe what's not ideal about this plan. Does it lock us into a 
+particular design for future changes or is it flexible if we were to 
+pivot in the future. This is a good place to cover risks.
+-->
+
+#### Proposed Option
+<!--
+Describe the recommended option and provide reasoning behind it.
 -->
 
 ### API design (if applicable)
@@ -115,12 +167,29 @@ section. Write N/A here if not applicable.
 - Describe the new or modified Go APIs for any shared components.
 -->
 
-## Alternatives considered
-
+### CLI Design (if applicable)
 <!--
-Describe the alternative designs that were considered or should be considered.
-Give a justification for why alternative approaches should be rejected if
-possible. 
+Include if applicable – any design that changes Radius CLI
+arguments/commands. Write N/A here if not applicable.
+- Describe new commands in the CLI or changes to existing CLI commands.
+-->
+
+### Implementation Details
+<!--
+High level description of updates to each component. Provide information on 
+the specific sub-components that will be updated, for example, controller, processor, renderer,
+recipe engine, driver, to name a few.
+-->
+
+#### UCP (if applicable)
+#### Bicep (if applicable)
+#### Deployment Engine (if applicable)
+#### Core RP (if applicable)
+#### Portable Resources / Recipes RP (if applicable)
+
+### Error Handling
+<!--
+Describe the error scenarios that may occur and the corresponding recovery/error handling and user experience.
 -->
 
 ## Test plan
@@ -159,7 +228,7 @@ incompatibility with older CLIs, and include any breaking changes to
 behaviors or APIs.
 -->
 
-## Monitoring
+## Monitoring and Logging
 
 <!--
 Include the list of instrumentation such as metric, log, and trace to 
@@ -177,10 +246,24 @@ item. Don’t forget to include the Unit Test and functional test in your
 estimates.
 -->
 
-## Open issues
+## Open Questions
 
 <!--
 Describe (Q&A format) the important unknowns or things you're not sure about. 
 Use the discussion to answer these with experts after people digest the 
 overall design.
+-->
+
+## Alternatives considered
+
+<!--
+Describe the alternative designs that were considered or should be considered.
+Give a justification for why alternative approaches should be rejected if
+possible. 
+-->
+
+## Design Review Notes
+
+<!--
+Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
 -->
