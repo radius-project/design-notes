@@ -25,33 +25,47 @@ There are a few points that can be improved in the way these concepts work toget
 
 | Term | Definition |
 |---|---|
-| workspace | |
-| environment | |
-| scope | |
+| Workspace |Workspaces allow managing multiple Radius environments using a local, client-side, configuration file. |
+| Environment | Environments are server-side resources that exist within the Radius control-plane. Applications deployed to an environment will inherit the container runtime, configuration, Recipes, and other settings from the environment.|
+| Scope | Radius resource groups are used to organize Radius resources, such as applications, environments and portable resources.|
 
 
 ## Objectives
 
 ### Goals
 
-Enhance the user experience with `rad deploy` by making its interaction with various Radius concepts more intuitive.
+* Improve the deploy experience (rad deploy, rad run) with better default behaviors for common patterns (deploy app to multiple environments, deploy multiple apps to save environment).
+* Improve the ability of various CLI commands and the Dashboard (rad resource list) to work with resource groups, and to work across all resource groups.
+* Make resource groups more visible in our documentation, and provide recommendations towards common patterns.
 
 ### Non-Goals
 
-NA
+* (out of scope) Server-side changes (other than Dashboard).
 
 ### User scenarios
 
-* As a developer, I would prefer not to manually enter or set the group to which my application will be deployed each time. It would be beneficial if Radius could automatically select the group name, ensuring all related resources are grouped together and avoiding conflicts with resources from other applications. I should have the option to override this behavior when necessary.
+* As someone new to Radius, I am using the tutorials to make myself familiar with its concepts. I do not want to get into details, yet. 
 
-* As a developer, I would like to avoid the responsibility of selecting unique names for components within my application to prevent conflicts with other deployed applications.
+* I would like to deploy multiple applications to the same environment.
 
+* I would like to deploy a single application to multiple environments.
+  
 ## Design
 
-We aim to redesign the rad CLI commands, adopting a convention-over-configuration approach to determine the Radius resource group to be operated on. Consequently, 
+Today, we establish a default resource group during `rad init` process in `config.yaml`.  All of the `rad` cli commands operate on this resource group, unless a different resource group is specified using option `-g`.
+
+With respect to our user scenarios, this means, 
+
+* A new user has to understand managing Radius resource groups to be able to deploy a simple tutorial application.
+
+* The user has to pick unique resource names across all applications since they would all be deployed to the same resource group (default behavior).
+
+* The user has to create multiple resource groups and manage deploying the same application to different resource groups in order to have multiple copies of the application.
+
+In order to improve the default experience of `rad` commands, we want to adopt a convention-over-configuration approach in determining the Radius resource group to be operated on. This means,
 
 * we will not establish a default resource group during the 'rad init' process in config.yaml.
-* we will establish the convention that by default, an application ```<app-name>``` to be deployed using environment ```<env-name>``` will be a under the resource-group ```<app-name>-<env-name>```
+* we will establish the convention that by default, an application ```<app-name>``` to be deployed using environment ```<env-name>``` will be a under the resource-group ```<app-name>-<env-name>```. This resource group will be created if needed during the execution of the command.
 
 The workspace entry created as part of rad init will be as below: 
 
@@ -82,144 +96,117 @@ workspaces:
             environment: /planes/radius/local/resourceGroups/default/providers/Applications.Core/environments/default
 ```
 
-All CLI commands will be impacted due to this change.
+All CLI commands will be impacted due to this change. Most commands have to  support taking a mandatory resource group argument.
 
 
-### Example
+### Examples
 
+Consider a user new to Radius. As initial experiment, the user runs rad init and deploys a simple application simple-app using ```rad deploy simple-app.bicep```. Authors a second simple application my-simple-app, retaining names of some resource in the first bicep. ```rad deploy my-simple-app.bicep``` fails with message similar to
+
+```
+{
+    "code": "BadRequest",
+    "message": "Attempted to deploy existing resource 'frontendcontainer' which has a different application and/or environment. Options to resolve the conflict are: change the name of the 'frontendcontainer' resource in 'my-simple-app' application to create a new resource, or use '/planes/radius/local/resourcegroups/default/providers/Applications.Core/applications/simple-app' application and '' environment to update the existing resource 'frontendcontainerdns'.",
+    "target": "/planes/radius/local/resourceGroups/default/providers/Applications.Core/containers/frontendcontainer"
+}
+```
+
+----
 Consider a user wants to deploy two instances of `cool-app` application, into `production` and `qa` environments. 
 
-#### How can the user do it today
+##### How can the user do it today
 
-```
-1. rad init
-2. rad group create qa
-3. rad group switch qa
-4. rad env create qa 
+Ops creates environments that can be used to deploy applications.
+1. rad group create qa
+2. rad group switch qa
+3. rad env create qa 
+4. rad group create production
+5. rad group switch qa
+6. rad env create qa
+
+Dev deploys single application to production and qa
+1. rad group switch production
+2. rad env switch production
+3. rad deploy cool-app.bicep # app deployed to qa resource group 
+4. rad group switch qa
 5. rad env switch qa
-6. rad deploy cool-app
+6. rad deploy cool-app.bicep # app deployed to production resource group 
 
-7. rad group create production  #neccessary, since creating and using a new env alone wont change resource ids and there might be different rbac requirements
-8. rad group switch production
-9. rad env create production 
-10. rad env switch production
-11. rad deploy cool-app
-```
+##### How it would change
 
-#### How it would change
+Ops creates environments that can be used to deploy applications.
+1. rad group create qa
+2. rad group switch qa
+3. rad env create qa 
+4. rad group create production
+5. rad group switch production
+6. rad env create production
 
-```
-1. rad init # ability to enter "production" as default env's name, which would create this env in "all-environments" resource group. 
-```
-resulting config.yaml
-```
-workspaces:
-    default: default
-    items:
-        default:
-            connection:
-                context: radius-agent-aks
-                kind: kubernetes
-            environment: /planes/radius/local/resourceGroups/all-environments/providers/Applications.Core/environments/production
-```
-```
+Dev deploys single application to production and qa
+1. rad env switch production -g production
+2. rad deploy cool-app.bicep 
+`cool-app` being deployed using environment production in resource group cool-app-production ...
+:  
+3. rad env switch qa -g qa
+4. rad deploy cool-app.bicep 
+`cool-app` being deployed using environment qa in resource group cool-app-qa ...
+:
 
-2. rad env create qa -g all-environments
+------
 
-3. rad deploy cool-app
-   which env would you like to deploy to? [prefilled to /planes/radius/local/resourcegroups/all-environments/production] 
-   `cool-app` being deployed using environment production in resource group cool-app-production. 
-   Use rad deploy <app-name> -g <group-name> -e <env-name> 
-   to change the behavior. Proceed? [Y/n]
-   :
+Consider user wants to deploy 2 applications to ```production``` environment, each of the application has a container ```front-end```
 
-4. rad deploy cool-app
-   which env would you like to deploy to? [prefilled to production but set to /planes/radius/local/resourcegroups/all-environments/providers/applications.core/environments/qa] 
-   `cool-app` being deployed using environment qa in resource group cool-app-qa.
-   Use rad deploy <app-name> -g <group-name> -e <env-name> 
-   to change the behavior. Proceed? [Y/n] 
-   :
+##### How can the user do it today
 
-```
+Ops creates environments that can be used to deploy applications.
+1. rad group create production
+2. rad group switch production
+3. rad env create production
 
+Dev deploys application1 and application2 to production 
+1. rad group switch app1
+2. rad env switch production
+3. rad deploy cool-app.bicep # app deployed to app1 resource group 
+4. rad group switch app2 
+5. rad deploy cool-app.bicep # app deployed to production resource group 
+
+Note: step 4 is neccessary to avoid name collison between the applications since they both have a container ```front-end```. If the user had chosen to deploy app1 and app2 to default group, app2's deployment would have failed.
+
+##### How it would change
+
+Ops creates environments that can be used to deploy applications.
+1. rad group create production
+2. rad group switch production
+3. rad env create production
+
+Dev deploys app1 and app2 to production
+1. rad env switch production -g production
+2. rad deploy app1.bicep 
+`app1` being deployed using environment production in resource group app1-production ...
+:  
+3. rad deploy app2.bicep 
+`app2` being deployed using environment production in resource group app2-production ...
+:
+
+
+## Impact on CLI commands
 
 ### rad deploy 
 
-We might consider adopting a convention-over-configuration approach for deploying applications. Currently, we use the resource group specified in the configuration file as the deployment target for the application.
+As captured in previous sections, the rad deploy command would follow this high-level flow:
 
-Alternatively, we could deploy applications into a resource group that's dynamically created (unless it already exists) based on a convention, such as <app-name>-<env-name>. The environment name would be provided by the user (developer) and would reference an existing environment set up by operations.
-
-The rad deploy command would then follow this high-level flow:
-
-1. Retrieve the application name (from bicep)
-2. Prompt the user for the ID of the environment to deploy into
-3. PUT group ```/planes/radius/local/resourceGroups/<app-name>-<env-name>```
-4. PUT application as ```/planes/radius/local/resourceGroups/<app-name>-<env-name>/providers/Applications.Core/applications/<app-name>```
+1. Retrieve the application name (from bicep) and environment name from config.yaml
+2. PUT group ```/planes/radius/local/resourceGroups/<app-name>-<env-name>```
+3. PUT application as ```/planes/radius/local/resourceGroups/<app-name>-<env-name>/providers/Applications.Core/applications/<app-name>```
 
 If the application has already been deployed to this resource group, we would notify the user and confirm the application's patching.
 
-The deploy command should display an informational message capturing where the application is created such as namespace and resource group, request confirmation to proceed, and provide an informational message about the ```rad deploy app.bicep -g cool-group -e cool-env``` usage to enforce deployment into specific resource groups/environments.
+The deploy command should display an informational message capturing which resource group the application is created. Documents should cover the ```rad deploy app.bicep -g cool-group -e cool-env``` usage to enforce deployment into specific resource groups/environments.
 
 
 ### rad init
-
-#### Current flow
-
-```
-nithya@Nithyas-MacBook-Pro bug7052 % rad init
-                                              
-Setup application in the current directory?   
-  >  1. Yes                                   
-    2. No
-
-nithya@Nithyas-MacBook-Pro bug7052 % rad init
-                                                         
-Initializing Radius. This may take a minute or two...    
-                                                         
-✅ Use existing Radius 0.30.0 install on radius-agent-aks
-✅ Use existing environment default                      
-✅ Scaffold application bug7052                          
-✅ Update local configuration                            
- ```
-
-Key points that happen behind the scene:
-
-1. If it doesn't already exist, create a "default" environment.
-2. If it doesn't already exist, create a "default" resource group.
-3. Scaffold a default application, using the current directory's name.
-4. Update config.yaml and rad.yaml.
-
-This will be modified to:
-
-1. Request the name of the environment from the user and create an environment with that name under all-environments resource group
-2. Request user for application name.
-3. PUT group ```/planes/radius/local/resourceGroups/<app-name>-<env-name>```
-4. PUT application as ```/planes/radius/local/resourceGroups/<app-name>-<env-name>/providers/Applications.Core/applications/<app-name>```
-5. Continue to scaffold the application, using the current directory's name.
-6. Update both config.yaml and rad.yaml. No scope will be stored in any configuration file.
-
-
-#### New flow:
-
-```
-nithya@Nithyas-MacBook-Pro bug7052 % rad init
-
-Enter the name of your default environment: [staging] 
-                                              
-Setup application in the current directory?   
-  >  1. Yes                                   
-    2. No
-
-nithya@Nithyas-MacBook-Pro cool-app % rad init
-                                                         
-Initializing Radius. This may take a minute or two...    
-                                                         
-✅ Use existing Radius 0.30.0 install on radius-agent-aks
-✅ Use existing environment staging                      
-✅ Scaffold application cool-app in resource group cool-app-staging                         
-✅ Update local configuration                            
- ```
-
+                                                       
+rad init behavior will remain unchanged, expect it will not set a default resource group in config.yaml.
 
 ### rad group 
 
@@ -236,8 +223,8 @@ Since the idea of "default" scope is going away, all rad env commands will need 
 This could operate at two levels
 1. list all environments in a specified resource group
 ```rad env list -g cool-group```
-2. list all environments across resource groups
-```rad env list```
+2. list all environments across resource groups 
+```rad env list -A```
 
 #### rad env show
 #### rad env delete
