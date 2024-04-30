@@ -27,7 +27,7 @@ There are a few points that can be improved in the way these concepts work toget
 |---|---|
 | Workspace |Workspaces allow managing multiple Radius environments using a local, client-side, configuration file. |
 | Environment | Environments are server-side resources that exist within the Radius control-plane. Applications deployed to an environment will inherit the container runtime, configuration, Recipes, and other settings from the environment.|
-| Scope | Radius resource groups are used to organize Radius resources, such as applications, environments and portable resources.|
+| Scope | Radius resource groups (scopes) are used to organize Radius resources, such as applications, environments and portable resources.|
 
 
 ## Objectives
@@ -44,7 +44,7 @@ There are a few points that can be improved in the way these concepts work toget
 
 ### User scenarios
 
-* As someone new to Radius, I am using the tutorials to make myself familiar with its concepts. I do not want to get into details, yet. 
+* As someone new to Radius, I am using the tutorials to get familiar with its concepts. I do not want to get into details, yet. 
 
 * I would like to deploy multiple applications to the same environment.
 
@@ -56,7 +56,7 @@ Today, we establish a default resource group during `rad init` process in `confi
 
 With respect to our user scenarios, this means, 
 
-* A new user has to understand managing Radius resource groups to be able to deploy a simple tutorial application.
+* A new user has to understand and manage Radius resource groups to be able to deploy a simple tutorial application.
 
 * The user has to pick unique resource names across all applications since they would all be deployed to the same resource group (default behavior).
 
@@ -142,7 +142,7 @@ Ops creates environments that can be used to deploy applications.
 5. rad group switch production
 6. rad env create production
 
-Dev deploys single application to production and qa
+Dev deploys single application to production and qa environments
 1. rad env switch production -g production
 2. rad deploy cool-app.bicep 
 `cool-app` being deployed using environment production in resource group cool-app-production ...
@@ -179,7 +179,7 @@ Ops creates environments that can be used to deploy applications.
 2. rad group switch production
 3. rad env create production
 
-Dev deploys app1 and app2 to production
+Dev deploys app1 and app2 to production environment
 1. rad env switch production -g production
 2. rad deploy app1.bicep 
 `app1` being deployed using environment production in resource group app1-production ...
@@ -193,68 +193,60 @@ Dev deploys app1 and app2 to production
 
 ### rad deploy 
 
-As captured in previous sections, the rad deploy command would follow this high-level flow:
+As outlined in previous sections, the 'rad deploy' command would adhere to this high-level flow:
 
-1. Retrieve the application name (from bicep) and environment name from config.yaml
-2. PUT group ```/planes/radius/local/resourceGroups/<app-name>-<env-name>```
-3. PUT application as ```/planes/radius/local/resourceGroups/<app-name>-<env-name>/providers/Applications.Core/applications/<app-name>```
+* Extract the application name (from bicep) and environment name from ```config.yaml```.
+* PUT group at ```/planes/radius/local/resourceGroups/<app-name>-<env-name>```.
+* PUT application at ```/planes/radius/local/resourceGroups/<app-name>-<env-name>/providers/Applications.Core/applications/<app-name>```.
 
-If the application has already been deployed to this resource group, we would notify the user and confirm the application's patching.
-
-The deploy command should display an informational message capturing which resource group the application is created. Documents should cover the ```rad deploy app.bicep -g cool-group -e cool-env``` usage to enforce deployment into specific resource groups/environments.
-
+If the application has already been deployed to this resource group, we would inform the user about the application's patching. The deploy command should present an informational message indicating the resource group in which the application is created. Documentation should include the rad deploy app.bicep -g cool-group -e cool-env usage to enforce deployment into specific resource groups/environments.
 
 ### rad init
                                                        
-rad init behavior will remain unchanged, expect it will not set a default resource group in config.yaml.
+rad init will not set a default resource group in config.yaml.
 
 ### rad group 
 
-The ```rad group``` family of commands have no changes. ```rad group switch``` alone will become obsolete since it deals with setting the current scope as a configuation in config.yaml.
+```rad group switch``` will become obsolete since it deals with setting the current scope as a configuation in config.yaml.
 
 ### rad env 
-
-The ```rad env``` family of commands currently operate in the scope that is stored in config.yaml, unless a scope is explicitly specified using -g flag.   
-
-Since the idea of "default" scope is going away, all rad env commands will need a mandatory -g flag to specify the group.
-
-#### rad env list 
-
-This could operate at two levels
-1. list all environments in a specified resource group
-```rad env list -g cool-group```
-2. list all environments across resource groups 
-```rad env list -A```
 
 #### rad env show
 #### rad env delete
 #### rad env create
 
-The above commands require we specify the resource group using -g flag.
+Since the idea of "default" scope is going away, the aforementioned 'rad env' commands will require a mandatory -g flag to specify the group.
+
+#### rad env list 
+
+User should be able to request list of environments at two levels:
+1. list all environments in a specified resource group
+```rad env list -g cool-group```
+2. list all environments across all resource groups 
+```rad env list -A```
+
 
 ### rad workspace 
 
-workspace will not contain scope information and all workspace commands will be modified to reflect this. 
+workspace will not contain deafult scope and all workspace commands should be modified to reflect this. 
 
 ### rad app
-
-The ```rad app``` family of commands currently operate in the scope that is stored in config.yaml, unless a scope is explicitly specified using -g flag. 
 
 #### rad app graph app-name
 #### rad app show app-name  
 #### rad app delete app-name  
 
-We construct the resource group  = <env-name-from-config>-<app-name>.
-Then this resource group can be used while retaining rest of the above commands implementation.
+For aforementioned commands, we could construct resource group  = <app-name>-<env-name>. This resource group can be used while retaining rest of the implementation.
 
-The commands could retain -g flag, to specify a resource group explicitly.
+The commands could maintain the -g flag to accommodate applications deployed using behavior that deviates from the default.
 
 #### rad app list
 
-The list can be generated at the following levels:
+User should be able to request following list of applications:
 
 1. List all applications across all resource groups - this should be supported.
 2. List all applications within a specific resource group - this requires the -g flag to specify the resource group.
+3. List all applications deployed to specific environment - this requires the -e flag to specify the environment. This would query all applications across resource groups, and filter applications in an environment using pattern *-<env-name> for resource groups.
 
 ### rad resource 
 
@@ -262,9 +254,30 @@ The list can be generated at the following levels:
 
 The list can be generated at the following levels:
 
-1. List all resources in a given application and group. 
-2. List all resources in a given environment and group.
-3. List all resources across all applications and environment.
+1. List all resources of a given type across all groups.
+2. List all resources of a given type in a group. Requires a -g group flag.
+3. List all resources of a given type in a given application and group. Requires a -a application and -g group flags.
+
+### rad resource show, delete, expose, log 
+
+The aforementioned commands require a -g flag to specify group.
+
+### rad recipes
+
+### rad recipe show, list, register, unregister 
+
+These commands should support -g flag mandatorily if a -e is used to specify the environment name. If -e is not specified, default environmentID in config.yaml can be used.
+
+
+
+
+
+
+
+
+
+
+
 
 
 
