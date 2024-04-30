@@ -265,6 +265,11 @@ The aforementioned commands require a -g flag to specify group.
 
 These commands should support -g flag mandatorily if a -e is used to specify the environment name. If -e is not specified, default environmentID in config file can be used.
 
+## Impact on Dashboard
+
+It would be useful to have views of all environment, application, 
+resources in a single resource group and across resource groups.  
+
 ## Test plan
 
 As applicable we would add test cases to support the added -g flag. 
