@@ -265,9 +265,20 @@ The aforementioned commands require a -g flag to specify group.
 
 These commands should support -g flag mandatorily if a -e is used to specify the environment name. If -e is not specified, default environmentID in config file can be used.
 
-In summary, most CLI commands should support an additional mandatory -g flag, making user experience more verbose. 
+## Test plan
 
-We could support setting a default group which would be valid through a session for "read" actions.
+As applicable we would add test cases to support the added -g flag. 
+We also would modify existing tests to remove a default resource group assumption.
+
+
+## Development plan
+
+
+## Question
+
+This approach requires most CLI commands to support an additional mandatory -g flag, making user experience more verbose. 
+
+Would supporting a default group which would be valid through a session for "read" actions to make this experience better?
 
 
 
