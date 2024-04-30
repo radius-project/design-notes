@@ -612,3 +612,11 @@ parsers
 Shruthi
 Kumar
 sk
+willdavsmith
+IdP
+AzWI
+webhook
+IRSA
+Entra
+ClientSecret
+POC
