@@ -13,11 +13,10 @@ When a Radius user wants to deploy an application, a few concepts come into pict
 
 There are a few points that can be improved in the way these concepts work together:
 
-*	Today, when we rad init,  we make a “default” resource group which creates a single resource group perception for radius users. However, we would want multiple resource groups for multiple copies of same application, based on the scenario. For instance, a cool-app deployment to production and the same cool-app deployment to staging would not need the same RBAC and hence have to be two copies in two resource groups. Also, they have to be in different resource groups so that there are no resource-id conflicts. Would it be a better idea, to not create default group during rad init, and create/use a resource group based on what the users chooses as the application name and its environment [production, staging,[enter your own]]?
+*	Today, when we rad init,  we make a “default” resource group which creates a single resource group perception for radius users. However, we would want multiple resource groups for multiple copies of same application, based on the scenario. For instance, a cool-app deployment to production and the same cool-app deployment to staging would not need the same RBAC and hence have to be two copies in two resource groups. Also, they have to be in different resource groups so that there are no resource-id conflicts. Would it be a better idea, to not create default group during rad init, and create/use a resource group based on what the users chooses as the application name and its environment?
 
 
-*	Today, if we want two copies of same app, we want to create two resource group, have an environment in each of those resource group, have the user explicitly use rad group switch and rad env switch or specify the group and env using flags, to make a desirable deployment. Would it be a better idea to, instead of expecting users specify instructions explicitly, print a default behavior which is intuitive and deploy the app if user confirms?
-
+*	Today, if we want two copies of same app, we want to create two resource group, have an environment in each of those resource group, have the user explicitly use rad group switch and rad env switch or specify the group and env using flags, to make a desirable deployment. Would it be a better idea to, instead print a default behavior which is intuitive and deploy the app?
 
 *	Since only ResourceGroup  is part of resource ID, if we deploy multiple application to same resource group (ex: we do this in our functional tests) we have to ensure the resource names across applications are all unique. This limitation has no reason to be present in real world and is a hinderance since the developer has to make sure to choose names that are not already taken across applications. Again, we could create a resource group based on user scenario per instance of application using an agreed upon convention to solve this problem. 
 
@@ -27,7 +26,7 @@ There are a few points that can be improved in the way these concepts work toget
 |---|---|
 | Workspace |Workspaces allow managing multiple Radius environments using a local, client-side, configuration file. |
 | Environment | Environments are server-side resources that exist within the Radius control-plane. Applications deployed to an environment will inherit the container runtime, configuration, Recipes, and other settings from the environment.|
-| Scope | Radius resource groups (scopes) are used to organize Radius resources, such as applications, environments and portable resources.|
+| Scope | Radius resource groups (scopes) are used to organize Radius resources, such as applications, environments and portable resources. They are tied to RBAC.|
 
 
 ## Objectives
@@ -44,12 +43,16 @@ There are a few points that can be improved in the way these concepts work toget
 
 ### User scenarios
 
-* As someone new to Radius, I am using the tutorials to get familiar with its concepts. I do not want to get into details, yet. 
+* As a Radius beginner, I am utilizing the tutorials to acquaint myself with the minimal necessary concepts for deploying an application using Radius. I prefer not to delve into all the details at this stage.
 
 * I would like to deploy multiple applications to the same environment.
 
 * I would like to deploy a single application to multiple environments.
-  
+
+## User Experience (if applicable)
+
+Most of the CLI commands will change to accodomate the absense of a default resource group. "Impact on CLI commands" section captures the details.
+
 ## Design
 
 Today, we establish a default resource group during `rad init` process in `config.yaml`.  All of the `rad` cli commands operate on this resource group, unless a different resource group is specified using option `-g`.
@@ -193,12 +196,7 @@ Dev deploys app1 and app2 to production environment
 
 ### rad deploy 
 
-As outlined in previous sections, the 'rad deploy' command would adhere to this high-level flow:
-
-* Extract the application name (from bicep) and environment name from ```config.yaml```.
-* PUT group at ```/planes/radius/local/resourceGroups/<app-name>-<env-name>```.
-* PUT application at ```/planes/radius/local/resourceGroups/<app-name>-<env-name>/providers/Applications.Core/applications/<app-name>```.
-
+As outlined in previous sections, the key change to rad deploy command is that each application instance will be deployed to a unique resource group constructed on the fly, instead of using a "default" group set in config file.  
 If the application has already been deployed to this resource group, we would inform the user about the application's patching. The deploy command should present an informational message indicating the resource group in which the application is created. Documentation should include the rad deploy app.bicep -g cool-group -e cool-env usage to enforce deployment into specific resource groups/environments.
 
 ### rad init
@@ -228,7 +226,7 @@ User should be able to request list of environments at two levels:
 
 ### rad workspace 
 
-workspace will not contain deafult scope and all workspace commands should be modified to reflect this. 
+workspace will not contain default scope and all workspace commands should be modified to reflect this. 
 
 ### rad app
 
@@ -244,9 +242,8 @@ The commands could maintain the -g flag to accommodate applications deployed usi
 
 User should be able to request following list of applications:
 
-1. List all applications across all resource groups - this should be supported.
-2. List all applications within a specific resource group - this requires the -g flag to specify the resource group.
-3. List all applications deployed to specific environment - this requires the -e flag to specify the environment. This would query all applications across resource groups, and filter applications in an environment using pattern *-<env-name> for resource groups.
+1. List all applications across all resource groups.
+2. List all applications within a specific resource group. This requires the -g flag to specify the resource group.
 
 ### rad resource 
 
@@ -266,7 +263,11 @@ The aforementioned commands require a -g flag to specify group.
 
 ### rad recipe show, list, register, unregister 
 
-These commands should support -g flag mandatorily if a -e is used to specify the environment name. If -e is not specified, default environmentID in config.yaml can be used.
+These commands should support -g flag mandatorily if a -e is used to specify the environment name. If -e is not specified, default environmentID in config file can be used.
+
+In summary, most CLI commands should support an additional mandatory -g flag, making user experience more verbose. 
+
+We could support setting a default group which would be valid through a session for "read" actions.
 
 
 
