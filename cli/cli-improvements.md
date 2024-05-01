@@ -279,11 +279,9 @@ We also would modify existing tests to remove a default resource group assumptio
 ## Development plan
 
 
-## Question
+## Trade Offs
 
 This approach requires most CLI commands to support an additional mandatory -g flag, making user experience more verbose. 
-
-Would supporting a default group which would be valid through a session for "read" actions to make this experience better?
 
 
 
