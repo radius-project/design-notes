@@ -612,3 +612,12 @@ parsers
 Shruthi
 Kumar
 sk
+CrashLoopBackOff
+ErrImagePull
+ImagePullBackOff
+cpu
+replicaset
+replicasets
+reactively
+IsControlledBy
+OwnerReferences
