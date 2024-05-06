@@ -621,3 +621,4 @@ replicasets
 reactively
 IsControlledBy
 OwnerReferences
+boolean
