@@ -177,7 +177,7 @@ type DriverWithSecrets interface {
 type DriverWithSecrets interface {
   ...
 	// FindSecretIDs gets the secretStore resource IDs and keys for the recipe including module, provider, envSecrets.
-	FindSecretIDs(ctx context.Context, config recipes.Configuration, definition recipes.EnvironmentDefinition) (SecretIDs map[string][]string, error) // resourceSecretIDs is a map[SecretStoreId]ListOfKeysInSecretStoreId
+	FindSecretIDs(ctx context.Context, config recipes.Configuration, definition recipes.EnvironmentDefinition) (secretIDs map[string][]string, error) // secretIDs is a map of IDs of the secret stores, and the values are slices of the keys in corresponding secret store.
 }
 ```
 
@@ -203,7 +203,7 @@ type BaseOptions struct {
 
 // LoadSecrets function in SecretsLoader interface will populate resolved secrets based on the Ids returned from FindSecretIDs(). The result is passed as BaseOptions.Secrets to the Driver in Execute() call.
 type SecretsLoader interface {
-	LoadSecrets(map[string]string, ...)(secretData map[string]map[string]string, error) // secretData is a map of secretStoreID to map of [secretKey]value
+	LoadSecrets(secretIds map[string][]string, ...)(secretData map[string]map[string]string, error) // secretData is a map of secretStoreID to map of [secretKey]value
 }
 
 // When calling driver.Execute we pass in BaseOptions which is structured as:
