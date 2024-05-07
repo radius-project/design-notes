@@ -31,7 +31,7 @@ Describe data flow, specific function calls when using secrets to configure Terr
 
 ### Non goals
 
-The document is focussed on handling secrets for Terraform Providers, with Applications.Core/secretStores being the underlying resource for the secret store (which today supports Kubernetes secrets). Other sources and types of secretsStores are out of scope for this document. 
+The document is focussed on handling secrets for Terraform Providers, with `Applications.Core/secretStores` being the underlying resource for the secret store (which today supports Kubernetes secrets). Other sources and types of `secretsStores` are out of scope for this document. 
 
 ### User scenarios (optional)
 
@@ -139,6 +139,9 @@ The FindSecretIds function in the DriverWithSecrets interface is updated to retu
 
 The LoadSecrets method in the SecretLoader interface will be updated return secret data for multiple Ids returned from FindSecretIds().
 
+Note: There can be multiple secrets registered across different providers, but a particular recipe deployment may not require all of them. With the current design we are going to pass in data for all secrets for all providers to the driver and write the provider configurations to Terraform configuration file. 
+We have an open design question for tracking potential future changes to this design.
+
 #### Advantages (of each option considered)
 Retrieving secrets in the Engine and passing them into the Driver was discussed positively as a way forward. Looking ahead with Containerization, the Driver will have all the information it needs to be able to be spin off into a separate process.
 
@@ -155,36 +158,60 @@ N/A
 N/A
 
 ### Implementation Details
-###Recipes (Engine and Driver)
+### Recipes (Engine and Driver)
 
+Driver Updates:
 ```go
+//*** CURRENT ***//
 
+type DriverWithSecrets interface {
+  ...
+	// FindSecretIDs gets the secret store resource ID references associated with git private terraform repository source.
+	// In the future it will be extended to get secret references for provider secrets.
+	FindSecretIDs(ctx context.Context, config recipes.Configuration, definition recipes.EnvironmentDefinition) (string, error)
+}
+
+//*** NEW ***//
 
 // FindSecretIDs will be updated in current DriverWithSecrets interface to now return map of secretStoreIds and keys
 type DriverWithSecrets interface {
   ...
 	// FindSecretIDs gets the secretStore resource IDs and keys for the recipe including module, provider, envSecrets.
-	FindSecretIDs(ctx context.Context, config recipes.Configuration, definition recipes.EnvironmentDefinition) (map[string]string, error)
+	FindSecretIDs(ctx context.Context, config recipes.Configuration, definition recipes.EnvironmentDefinition) (SecretIDs map[string][]string, error) // resourceSecretIDs is a map[SecretStoreId]ListOfKeysInSecretStoreId
 }
+```
+
+Engine Updates
+
+```go
+//*** CURRENT ***//
+
+type SecretsLoader interface {
+	LoadSecrets(ctx context.Context, secretStore string) (v20231001preview.SecretStoresClientListSecretsResponse, error)
+}
+
+// BaseOptions is the base options for the driver operations.
+type BaseOptions struct {
+  ...
+
+	// Secrets specifies the module authentication information stored in the secret store.
+	Secrets v20231001preview.SecretStoresClientListSecretsResponse
+}
+
+
+//*** NEW ***//
 
 // LoadSecrets function in SecretsLoader interface will populate resolved secrets based on the Ids returned from FindSecretIDs(). The result is passed as BaseOptions.Secrets to the Driver in Execute() call.
 type SecretsLoader interface {
-	LoadSecrets(map[string]string, ...)(map[string]map[string]string, error){ // returns secretStoreId[key]value
+	LoadSecrets(map[string]string, ...)(secretData map[string]map[string]string, error) // secretData is a map of secretStoreID to map of [secretKey]value
 }
 
 // When calling driver.Execute we pass in BaseOptions which is structured as:
 type BaseOptions struct {
-	// Configuration is the configuration for the recipe.
-	Configuration recipes.Configuration
-
-	// Recipe is the recipe metadata.
-	Recipe recipes.ResourceMetadata
-
-	// Definition is the environment definition for the recipe.
-	Definition recipes.EnvironmentDefinition
+   ...
 
 	// Secrets specifies the module authentication information stored in the secret store.
-	Secrets map[string]map[string]string
+	Secrets map[string]map[string]string //Secrets is a map of secretStoreID to map of [secretKey]value
 }
 ```
 
@@ -222,7 +249,7 @@ Total: 1 Sprint
 
 ## Open Questions
 
-TBD
+We are expecting information on detailed scenarios from PMs on client use cases for Recipe Specific Configuration versus Env Level Provider Config which may get us to revisit design around passing secret data to the driver.
 
 ## Alternatives considered
 We could also update FindSecretIds() to return a list of SecretStoreIds and the LoadSecrets function retrieves all secrets for the SecretStore and passes the data to the driver.
@@ -231,4 +258,6 @@ We decided to limit the secret data sent to the Driver to only what the Driver w
 
 ## Design Review Notes
 1. Update design per discussion.Design can be more generic and need not follow Env ConfigStructure.
-2. PMs to discuss scenarios with customer, get clarity on use cases for  Recipe Provider Config versus Env Level Provider Config which may get us to revisit design.
+Earlier design included creating two new constructs to store RecipeSecretIds{} used to call the ListSecrets API and RecipeSecrets{} to store result of resolved Secret data. These closely mimicked the structure of environment recipe configuration structure. Based on design discussions, we simplified the function calls to be more generic and dropped use of the new constructs. 
+
+
