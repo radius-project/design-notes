@@ -53,10 +53,142 @@ Reviewing popular provider configurations (GCP, Oracle, Heroku, DigitalOcean, Do
 Attributes or settings, represented as key-value pairs are often used to define configuration parameters in provider configurations.
 We will parse and save these values in the Terraform configuration file, main.tf in a working directory, which the system creates today. 
 
+### Alias
+
+Aliases in Terraform allow users to manage multiple instances of the same provider with different configurations for a single module. 
+Ref links: 
+- [Alias Multiple Provider Configurations](https://developer.hashicorp.com/terraform/language/providers/configuration#alias-multiple-provider-configurations)
+- [Passing Providers Explicitly](https://developer.hashicorp.com/terraform/language/modules/develop/providers#passing-providers-explicitly)
+
+For a Terraform recipe, aliases needed by the module are declared in the required_providers block, where each alias is a unique provider configuration.
+eg.
+
+```
+terraform {
+  required_providers {
+    mycloud = {
+      source  = "mycorp/mycloud"
+      version = "~> 1.0"
+      configuration_aliases = [ mycloud.west_region, mycloud.east_region ]
+    }
+  }
+}
+// The `required_providers` block for this module specifies that it will need provider configuration for aliases west_region and east_region to deploy successfully.
+```
+
+The bicep configuration for Terraform providers described in the environment resource is typically written to `provider` block in the main.tf.json file. These provider configurations are then passed to the recipe module. For provider configurations without aliases, they are be passed to the module automatically by Terraform.
+
+However, when the recipe module specifies one or more aliases in the `required_providers` block (and the module does not contain the provider configuration details), the aliased provider configuration from the `provider` block needs to be passed explicitly to the module.
+
+This is done by updating the module block in the main.tf.json file with provider aliases.
+
+#### Use Case 1: Matching aliases between provider configuration and `required_provider` block: sample generated main.tf.json file
+
+With current design, we are able to update the module configuration block with provider aliases when a match is found.
+
+```json
+{
+    "terraform": {
+        "required_providers": {
+            "kubernetes": {
+                "source": "hashicorp/kubernetes",
+                "version": ">= 2.0"
+            },
+            "postgresql": {
+                "source": "cyrilgdn/postgresql",
+                "version": "1.16.0",
+                "configuration_aliases": [
+                    "postgresql.pgdb-test"
+                ]
+            }
+        }
+    },
+    "provider": {
+       "postgresql": [
+          {
+          "alias"    : "pgdb-test",
+          "host"     : "postgres.corerp-app.svc.cluster.local",
+          "port"     : 5432,
+          "username" : "postgresuser",
+          "password" : "*********",
+          "sslmode"  : "disable"
+          }
+       ],
+        "azurerm": [
+          {
+            "alias": "az_central",
+            "subscriptionid": 1234,
+            "tenant_id": "sample_tenant_id"
+          }
+        ]
+    },
+    "module": {
+        "defaultpostgres": {
+        //... 
+        "providers": {
+          "postgresql.pgdb-test": "postgresql.pgdb-test"
+        }
+      }
+    }
+}
+```
+
+#### Use Case 2: Terraform configuration allows passing of provider configurations with aliases different from those declared in `required_providers` block to the recipe module.
+
+In order to support this use case we will have to delve further to design how we enable users to map aliases in provider configuration to those declared in recipe modules in `required_providers` blocks across different recipes.
+
+Before proceeding ahead, it would be beneficial to gather more information about user scenarios to ensure we are addressing their needs effectively.
+
+example:
+
+```json
+{
+    "terraform": {
+        "required_providers": {
+            "aws": {
+                "source": "hashicorp/aws",
+                "version": ">= 3.0",
+                "configuration_aliases": [
+                    "aws.test1", "aws.test2"
+                ]
+            }
+        }
+    },
+    "provider": {
+        "aws": [
+            {
+                "alias": "aws-west",
+                "region": "us-west-1",
+                "access_key": "sample_access_key",
+                "secret_key": "sample_secret_key"
+            },
+            {
+                "alias": "aws-central",
+                "region": "us-central-1",
+                "access_key": "sample_access_key",
+                "secret_key": "sample_secret_key"
+            }
+        ]
+    },
+    "module": {
+        "examplemodule": {
+            // ...
+            "providers": {
+                "aws.test1": "aws.aws-west",       
+                "aws.test2": "aws.aws-central"
+            }
+        }
+    }
+}
+
+```
+
 ### Secrets
 Secrets will be handled similarly to the approach described in document [Design document for Private Terraform Repository](https://github.com/radius-project/design-notes/blob/3644b754152edc97e641f537b20cf3d87a386c43/recipe/2024-01-support-private-terraform-repository.md) wherein Applications.Core/secretStores can point to an existing K8s secret.
 
 The system will call the ListSecrets() api in Applications.Core namespace, retrieve contents of the secret and build the Terraform provider configuration.
+
+<u>Update</u>: Pls refer to [PR link](https://github.com/radius-project/design-notes/pull/39/files) for design document on implementing Secrets for Terraform Providers.
 
 ### Environment variables
 In a significant number of providers, as per documentation, environment variables are used one of the methods of saving sensitive credential data along with insensitive data. We allow the users to set environment variables for provider configuration. For sensitive information, we recommend the users save these values as secrets and point to them inside the env block.
