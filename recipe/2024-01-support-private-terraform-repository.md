@@ -155,11 +155,19 @@ resource existingSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
 }
 ```
 SecretStore resource also provides an option to use the existing secret, which makes it better way store credentials. But todays secret store implementation is tied to application scope and in this case, secretStore needs to be created before application and environment creation. So we need to change scope of secret store resource to global (by removing the required flag for application property).
-And the referenced secret is retrieved from the secretStore in terraform recipe driver by calling listSecretStores api and secret details i.e personal-access-token and username as used to modify the template path to the below format before writing it to the terraform config:
+
+And the referenced secret is retrieved from the secretStore and is added to the git config file as shown below. While deploying terraform recipe if it encounters the domain name of the module source, it automatically picks the credential information from the git config file.
+
+```diff
++ // Initialising git inside terraform execution directory.
++ // Cannot run "git config --file" command without having .git folder inside terraform execution directory.
++
++ git init
++
++ // Adding the git credentials to local git config file created by git init in the previous step.
++
++ git config --file <terraform_working_directory> url."https://{username}:{PERSONAL_ACCESS_TOKEN}@github.com".insteadOf https://github.com
 ```
-"git::https://{username}:{PERSONAL_ACCESS_TOKEN}@example.com.com/test-private-repo.git"
-```
-that will be used for recipe deployment.
 
 ### API design (if applicable)
 ***Model changes***
