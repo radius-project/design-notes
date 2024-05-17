@@ -184,15 +184,15 @@ example:
 
 ```
 
-Design meeting decision: We will proceed with implementing Use Case 1 at this time. This will accomodate for a large portion of the user needs.   
-We will revisit Use Case 2 in the future, based on user input and feedback.
+#### Decision after Design meeting: 
+We will proceed with implementing Use Case 1 at this time. This will accommodate for a large portion of user needs. We will revisit Use Case 2 in the future, based on user input and feedback.
 
 ### Secrets
 Secrets will be handled similarly to the approach described in document [Design document for Private Terraform Repository](https://github.com/radius-project/design-notes/blob/3644b754152edc97e641f537b20cf3d87a386c43/recipe/2024-01-support-private-terraform-repository.md) wherein Applications.Core/secretStores can point to an existing K8s secret.
 
 The system will call the ListSecrets() api in Applications.Core namespace, retrieve contents of the secret and build the Terraform provider configuration.
 
-<u>Update</u>: Pls refer to [PR link](https://github.com/radius-project/design-notes/pull/39/files) for design document on implementing Secrets for Terraform Providers.
+<u>Update</u>: Please refer to [PR link](https://github.com/radius-project/design-notes/pull/39/files) for design document on implementing Secrets for Terraform Providers.
 
 ### Environment variables
 In a significant number of providers, as per documentation, environment variables are used one of the methods of saving sensitive credential data along with insensitive data. We allow the users to set environment variables for provider configuration. For sensitive information, we recommend the users save these values as secrets and point to them inside the env block.
