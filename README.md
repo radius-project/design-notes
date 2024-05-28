@@ -48,6 +48,10 @@ If the design is approved:
   - One or more approvers will approve the pull-request so that it can be merged.
   - Merge the pull-request.
 
+Development work on implementing the design begins only after the design is approved.
+
+If there are updates come up during development work that need consideration and team review, please create a pull-request with proposed updates to the design. The design review process will be repeated for this new pull-request.
+
 If the design is not approved:
 
   - Please leave a comment on the pull-request explaining the major feedback and next steps for proceeding.
