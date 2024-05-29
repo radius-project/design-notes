@@ -156,17 +156,31 @@ resource existingSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
 ```
 SecretStore resource also provides an option to use the existing secret, which makes it better way store credentials. But todays secret store implementation is tied to application scope and in this case, secretStore needs to be created before application and environment creation. So we need to change scope of secret store resource to global (by removing the required flag for application property).
 
-And the referenced secret is retrieved from the secretStore and is added to the git config file as shown below. While deploying terraform recipe if it encounters the domain name of the module source, it automatically picks the credential information from the git config file.
+And the referenced secret is retrieved from the secretStore and is added to the git config file as a URL config as shown below. While deploying terraform recipe if it encounters the domain name of the module source, it automatically picks the credential information from the git config file.
 
 ```diff
-+ // Initialising git inside terraform execution directory.
-+ // Cannot run "git config --file" command without having .git folder inside terraform execution directory.
++ git config --global url."https://{username}:{PERSONAL_ACCESS_TOKEN}@github.com".insteadOf https://github.com
+```
+But we cannot use the global git config as different environments can have terraform recipes coming from different github accounts which leads to race condition. To overcome this issue we could create a local config inside terraform working directory and add conditional paths in the git global config to point to the local config.
+
+
+```diff
++ // Initialising git inside terraform working directory.
++ // Cannot run "git config --file" command without having .git folder inside terraform working directory.
 +
 + git init
 +
 + // Adding the git credentials to local git config file created by git init in the previous step.
 +
 + git config --file <terraform_working_directory> url."https://{username}:{PERSONAL_ACCESS_TOKEN}@github.com".insteadOf https://github.com
++
++// Add conditional git directory path in global config
++ git config --global includeIf."gitdir:<terraform working directory>/".path <terraform working directory>/.git/config
+```
+Conditional path config in the global git config is unset after the terraform recipe operation.
+```diff
++// Unset conditional git directory path in global config
++ git config --global --unset includeIf."gitdir:<terraform working directory>/".path
 ```
 
 ### API design (if applicable)
