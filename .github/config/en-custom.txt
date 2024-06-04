@@ -644,3 +644,7 @@ prototyped
 webhook
 onboarding
 daprrp
+recipeConfig
+DevOps
+Bitbucket
+Gitlab
