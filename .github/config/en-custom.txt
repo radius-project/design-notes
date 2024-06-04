@@ -648,3 +648,14 @@ recipeConfig
 DevOps
 Bitbucket
 Gitlab
+focussed
+secretsStores
+DriverWithSecrets
+FindSecretIds
+SecretStoreIds
+LoadSecrets
+SecretLoader
+ConfigStructure
+RecipeSecretIds
+RecipeSecrets
+lakshmimsft
