@@ -154,7 +154,7 @@ resource existingSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
   }
 }
 ```
-SecretStore resource also provides an option to use the existing secret, which makes it better way store credentials. But todays secret store implementation is tied to application scope and in this case, secretStore needs to be created before application and environment creation. So we need to change scope of secret store resource to global (by removing the required flag for application property).
+SecretStore resource also provides an option to use the existing secret, which makes it better way store credentials. But today's secret store implementation is tied to application scope and in this case, secretStore needs to be created before application and environment creation. So we need to change scope of secret store resource to global (by removing the required flag for application property).
 
 And the referenced secret is retrieved from the secretStore and is added to the git config file as a URL config as shown below. While deploying terraform recipe if it encounters the domain name of the module source, it automatically picks the credential information from the git config file.
 
