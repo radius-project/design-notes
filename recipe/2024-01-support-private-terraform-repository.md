@@ -25,7 +25,7 @@ This is important because organizations write their own Terraform modules and st
 
 ### Goals
 - Enable support to use terraform modules from private Git repositories.
-- It should support git from any platforms (like Bitbucket, Gitlab, Azure DevOps Git etc.)
+- It should support git from any platforms(like Bitbucket, Gitlab, Azure DevOps Git etc.)
 
 ### Non goals
 - To Support other terraform module sources like S3, GCP, Mercurial repository. 
@@ -182,6 +182,9 @@ Conditional path config in the global git config is unset after the terraform re
 +// Unset conditional git directory path in global config
 + git config --global --unset includeIf."gitdir:<terraform working directory>/".path
 ```
+***Sequence Diagram***
+
+![Alt text](./2024-01-support-private-terraform-repository/sequence_diagram.png)
 
 ### API design (if applicable)
 ***Model changes***
