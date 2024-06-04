@@ -38,7 +38,7 @@ As an operator I am responsible for maintaining Terraform recipes for use with R
 
 ## Design
 ### Design details
-Today, we support only Terraform registry and HTTP URLs as allowed module sources for Terraform recipe template paths. Git public repository are also supported by providing the HTTP URl to the module directory. But to support repositories we need a way to authenticate the git account where the modules are stored.
+Today, we support only Terraform registry and HTTP URLs as allowed module sources for Terraform recipe template paths. Git public repository are also supported by providing the HTTP URL to the module directory. But to support repositories we need a way to authenticate the git account where the modules are stored.
 
 Git provides different ways to authenticate:
 
