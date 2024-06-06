@@ -27,15 +27,16 @@ The goal of the scenario is to enable infrastructure operators to configure IRSA
 
 ### Goals
 
-* Radius users can configure AWS provider to use IRSA for authentication.
+* Radius users can configure AWS provider and enable Radius to use IRSA for authentication and deployment of application.
 * IRSA can be configured via interactive experience.
 * IRSA can be configured manually.
-* Radius users can deploy and manage AWS resources without using AWS access key id and seceret
+* Radius users can deploy and manage AWS resources without having to manage AWS access key id and secret
 
 ### Non-goals
 
 * Azure Managed Identity support
 * Azure Workload Identity support
+* Ability of radified applications to be able to use IRSA for authenticating AWS operations.
 
 ### User scenarios
 
@@ -43,14 +44,40 @@ As a user, I should be able to use IRSA to provide Radius with access to AWS res
 
 ## User Experience
 
-rad init should be updated with prompts that allow user to pick a configure  AWS IRSA. We would require account ID and region (for AWS provider) and roleARN for installing radius pods with IRSA support.
+rad init should be updated with prompts that allow user to pick a configure  AWS IRSA. We would require account ID and region (for AWS provider) and roleARN  (as AWS credential) for installing radius pods with IRSA support.
 
+### non interactive support
 rad install kubernetes --set global.aws.IRSAroleARN=<roleARN>
+
+### interactive rad init support
+```
+% rad init --full  
+Enter an environment name 
+>default 
+
+% rad init --full  
+Select your cloud provider                     
+1. Azure                                  
+> 2. AWS                                     
+3.[back] 
+
+% rad init --full  
+
+Select the identity for the AWS cloud provider 
+1. access key id and secret                               
+> 2. IRSA  
+
+% rad init --full  
+
+Enter the AWS RoleARN for configuring IRSA:
+```
+
+This RoleID, if provided should be used to annotate the radius service-accounts similar to the ucp service account definition. This when coupled with a cluster which has the pod identity webhook will inject the necessary environment variables into pods associated with the service account. 
 
 
 **Sample Output:**
 
-See above
+n/a
 
 **Sample Recipe Contract:**
 
@@ -145,6 +172,7 @@ IRSA is well established and works well with EKS as well as other cluster includ
 
 EKS Pod Identity makes the configuration simpler, but works only on EKS workloads. 
 
+[explain how they r different technically. user and  radius do anything diffrent? ]
 
 #### Disadvantages (of each option considered)
 
@@ -154,6 +182,12 @@ However, we can not alleviate this by using EKS pod identity since we want a ven
 #### Proposed Option
 
 we will document design details for Radius to support AWS IRSA.
+focussed on radius auth to aws ( not apps at this point)
+
+comparison with az workload identity - whats similar and whats unique.
+
+// how can we support multiple roles if we want to. issue: multitenancy.
+// comcast test versus prod - aws roles will be different. 
 
 ### API design
 
@@ -179,7 +213,7 @@ type AwsAccessKeyCredentialProperties struct {
 ```
 But since the environment variables in all pods are populated with neccessary information for IRSA, we do not need a specific credential for IRSA. 
 
-We have to update AWS provider  to allow AccessKeyID and SecretAccessKey to be optional.
+We have to update AWS provider to allow AccessKeyID and SecretAccessKey to be optional.
 
 ```
 ( I am not sure why we have the secrets here we need only account no and region to build scope)
@@ -209,29 +243,30 @@ Based on this new model we would update API calls. ( to double check)
 We might want to rename `rad credential register aws` command  to `rad credential register aws access-keys` and document this is not required for irsa.
 
 We will need to update the Radius Helm chart to allow the user to enable IRSA during installation with the `global.awsIRSA.roleARN` value. This must be passed to all charts through values and when the value is set service accounts should be annotated with roleARN. 
-# ----------------------------------------------------------------------------
 
 ### Implementation Details
 
 #### UCP
 
-UCP should be updated to craete a credential based on RoleARN and service access token, when teh environment variables are set. It should then authenticate with AWS using this.
+UCP is responsible for communicating with AWS to deploy AWS resources. Therefore ucp's service-account will be annotated with AWS RoleARN.
 
 #### Bicep
 
-n/a
+This document covers Radiu's ability to use IRSA as authentication method with AWS. Therfore we do not have to introduce any bicep changes.
 
 #### Deployment Engine
 
-Deployment Engine should be updated to craete a credential based on RoleARN and service access token, when teh environment variables are set. It should then authenticate with AWS using this.
+DE does not talk to AWS directly. Therefore no changes are required.
 
-#### Core RP
+#### Core RP  / Recipes RP
 
-?
+Terraform provider requires AWS credentials in order to deploy recipes.
+Therefore rp's service-account will be annotated with AWS RoleARN.
 
-#### Portable Resources / Recipes RP
 
-n/a
+Both UCP and RP should be updated to create a credential based on RoleARN and service access token, when the environment variables are set. It should then authenticate with AWS using this. We use aws-sdk-2 libraries already. Therefore we should be able to create the new AWS Credential type that is based on IRSA.
+
+#### Multi tenancy
 
 ### Error Handling
 
@@ -277,3 +312,8 @@ Update this section with the decisions made during the design review meeting. Th
 -->
 
 TODO
+
+UX design disparity wrt credentials for az versus aws.
+multitenancy
+credentails in db?
+pod identity
