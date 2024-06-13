@@ -218,8 +218,8 @@ At this point, we can use aws AssumeRole to manage resources using account speci
 
 ### API design
 
-
-we should add a AwsIRSACredentialsProperties struct {
+```
+type AwsIRSACredentialsProperties struct {
   // REQUIRED; base Role with which radius service-accounts are annotated.
 	RoleARN *string
 
@@ -232,8 +232,8 @@ we should add a AwsIRSACredentialsProperties struct {
 	// READ-ONLY; The status of the asynchronous operation.
 	ProvisioningState *ProvisioningState
 }
+```
 
-Add a AWSIRSAProvider 
 
 ```
 type IRSAProvider struct {
