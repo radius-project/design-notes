@@ -354,7 +354,7 @@ We will have the same monitoring and logging as today. We will not be adding any
 
 ## Development plan
 
-* Create POC for Radius + AWS (1 engineer, 0.5 sprint)  [complete] 
+* Create POC for Radius + AWS (1 engineer,1 sprint)  [complete] 
 * Create and review technical design (1 engineer, 0.5 sprint) [in progress]
 * Implement model changes (1 engineer, 0.5 sprint) 
 * Implement changes in UCP, and Recipes RP (1 engineer, 1 sprint)
