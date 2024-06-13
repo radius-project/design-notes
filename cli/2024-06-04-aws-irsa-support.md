@@ -313,7 +313,7 @@ We should update the Radius Helm chart to allow the user to enable IRSA during i
 #### UCP
 
 UCP is responsible for communicating with AWS to deploy AWS resources. Therefore ucp's service-account will be annotated with AWS RoleARN.
-Further UCP should be able to assume the role specified in the environment and use this to communicate with AWS.
+Further UCP should be able to assume the role specified in the environment and use this to communicate with AWS. The environment id will be available in the resource properties.
 
 #### Bicep
 
@@ -328,7 +328,9 @@ NA
 Terraform provider requires AWS credentials in order to deploy recipes.
 Therefore rp's service-account will be annotated with AWS RoleARN.
 
-RP should be able to assume the role specified in the environment and use this to communicate with AWS.
+RP should be able to assume the role specified in the environment and use this to communicate with AWS. 
+
+The environment id will be available in the application properties. Resources have application in resource properties. Both UCP and RP therefore should be able to fetch the roleARN 
 
 
 
