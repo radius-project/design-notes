@@ -93,7 +93,7 @@ Raj is a partner or a system integrator who helps enterprises integrate propriet
 [Radius Extenders](https://docs.radapp.io/guides/author-apps/custom/overview/#extenders) enables users to author custom resource types but they are weakly types. They allow you to pass in any property or secret and for cases where the developer/operator need to extend and reference a simple resource type definition. Extenders are for untyped/ weakly typed resources and do not provide a lot of customization for users wanting to have guardrails in their platforms with strongly typed resource definitions following a strict set of rules and restrictions. 
 
 ## Target customers
-<!-- Of the customers / personas listed in the doc, what subset are we delivering this scenario to serve? -->
+<!-- Of the customers / personas listed in the doc, what subset are we delivering this scenario to serve? --
 
 ## Existing customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
