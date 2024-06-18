@@ -10,8 +10,8 @@ One of the high value extensibility points in Radius is Recipes. We have receive
 ### Top level goals
 1. Enable users to author their applications with custom resource types in Radius without having to write Go code to integrate with Radius components and deploy their application seamlessly.
 2. Automatically enable Radius features such as Recipes, Connections, App graph, rad CLI for custom resource types.
-3. Enable users to contribute and open-source the custom resource types to the community.
-4. Radius uses the resource extensibility for its already built in resource types
+3. Enable users to contribute and open-source the custom resource types and recipes to the community. This will accelerate the adoption of Radius across the cloud native community.
+4. Radius uses the resource extensibility framework to  refactor its already built in resource types.
 
 ### Non-goals (out of scope)
 
@@ -21,9 +21,10 @@ One of the high value extensibility points in Radius is Recipes. We have receive
 **Enterprises**: Platform engineering teams or operations in enterprises focus on streamlining the developer-experience for their organization by defining a set of recommended practices for application teams and provide self-service capabilities for application teams/developers to use. Radius aids the platform engineering efforts with the help of Recipes where the platform engineers or operators define the infrastructure-as-code templates to create resources on demand when application is deployed. One of the major challenges that exists with the Recipes today is the limited number of resources supported. Radius doesn’t provide an extensibility model for users to bring their custom resources, define Recipes and deploy them.
 
 **Open-source community**: Building a sustainable open-source community is crucial to the success of any open-source project, including Radius. We need to cultivate an ecosystem for the open-source community to thrive, innovate and produce high quality work. Users from the community are motivated to contribute for different reasons:
-    -   They want to use the project at their work and need a feature, 
-    -   The project triggered their interests in the cloud native landscape
-    -   They want to code in a particular language E.g. :Go
+    -  They want to use the project at their work and need a feature, 
+    -  The project triggered their interests in the cloud native landscape and want to use the technology.
+    -  They want to code in a particular language E.g. :Go
+    -  They want to integrate their existing tools and technologies with the project
 
 Today Radius enables users to get started on contributing to Radius with good-first-issues but doesn’t have a model to promote contributions further. Since the beginning of its open source launch, Dapr created the components repository and invited users to build their own components to unblock their scenarios and in turn folks contributed to the project. Learning from Dapr, Radius needs to have the extensibility points defined for contributors to interact with the project so that they can build out the things that they need to enable their scenarios and in turn the community gets benefitted with those contributions.
 
@@ -93,7 +94,13 @@ Raj is a partner or a system integrator who helps enterprises integrate propriet
 [Radius Extenders](https://docs.radapp.io/guides/author-apps/custom/overview/#extenders) enables users to author custom resource types but they are weakly types. They allow you to pass in any property or secret and for cases where the developer/operator need to extend and reference a simple resource type definition. Extenders are for untyped/ weakly typed resources and do not provide a lot of customization for users wanting to have guardrails in their platforms with strongly typed resource definitions following a strict set of rules and restrictions. 
 
 ## Target customers
-<!-- Of the customers / personas listed in the doc, what subset are we delivering this scenario to serve? --
+<!-- Of the customers / personas listed in the doc, what subset are we delivering this scenario to serve? -->
+
+## Define the competition
+
+| Alternative | Why chosen? | Why not chosen? | What did customer switch? |
+|-------------|-------------|-----------------|---------------------------|
+
 
 ## Existing customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
