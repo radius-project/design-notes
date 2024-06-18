@@ -218,7 +218,7 @@ We will not be storing any secrets in Radius. The user will have to register the
 
 ## Compatibility
 
-We will be changing the `rad credential register azure` command to `rad credential register azure sp`. This will break any existing scripts that use this command.
+We will be changing the `rad credential register azure` command to `rad credential register azure sp`. This will break any existing scripts that use this command, including our functional tests.
 
 To use Azure Workload Identity with Radius, the user will have to re-install the Radius control plane.
 
