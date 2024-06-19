@@ -1,5 +1,8 @@
 # Resource Extensibility (User Defined Resource Types)
 
+* **Status**: Pending
+* **Author**: Reshma abdul Rahim (@reshrahim)
+
 ## Summary
 The cloud native landscape is changing and expanding at a rapid pace like never before. Many enterprises use a wide range of technologies together for achieving their cloud-native strategy.  For any technology that’s a newcomer and helps solve a problem in the cloud native landscape, users look for an easy and seamless way to integrate their existing tools and technologies and incrementally adopt the new technology to their strategy. For Radius, we have heard requests from our customers/community to support technologies that their applications are tightly coupled with E.g.: an internal messaging service or a technology they absolutely love E.g.: PostgreSQL/Kafka.
 
@@ -40,7 +43,7 @@ Today Radius enables users to get started on contributing to Radius with good-fi
 
 - Developers : Developers are responsible for building the cloud native applications. They are responsible for writing the code, designing and maintaining the applications.
 
-- Open-source contributors : Cloud native open-source contributors are developers who are interested in contributing to the cloud native projects. They are responsible for building the cloud native projects and contributing to the open-source projects. They can be any of the above personas who are interested in contributing to the cloud native projects. 
+- Open-source contributors : Cloud native open-source contributors can be any of the above personas who are interested in contributing to the cloud native projects. 
 
 ### Positive customer outcomes
 - Author and deploy : I can bring my own applications with custom resources/services and integrate with Radius seamlessly. I don’t have to write Go code to integrate with Radius components and can use simple spec to generate the resource definition and integrate with Radius 
@@ -88,6 +91,7 @@ Raj is a partner or a system integrator who helps enterprises integrate propriet
 <!-- What big questions must we answer in order to clarify our plan for this scenario.  When and how do you plan to answer those questions (prototype feature x, customer research, competitive research, etc) -->
 
 - Assumption: Users will find value in the extensibility feature and actively contribute to the community.
+- Assumption: Users will use extensibility in lieu of existing extenders because they want to take advantage of things like strong typing and validation in Radius
 
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
@@ -95,12 +99,6 @@ Raj is a partner or a system integrator who helps enterprises integrate propriet
 
 ## Target customers
 <!-- Of the customers / personas listed in the doc, what subset are we delivering this scenario to serve? -->
-
-## Define the competition
-
-| Alternative | Why chosen? | Why not chosen? | What did customer switch? |
-|-------------|-------------|-----------------|---------------------------|
-
 
 ## Existing customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
