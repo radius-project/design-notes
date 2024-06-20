@@ -123,16 +123,3 @@ Step 2
 
 ### Feature 3
 <!-- One or two sentence summary -->
-
-## Key dependencies and risks
-<!-- What dependencies must we take in order to enable this scenario? -->
-<!-- What other risks are you aware of that need to be mitigated. If you have a mitigation in mind, summarize here. -->
-<!-- Dependency Name – summary of dependency.  Issues/concerns/risks with this dependency -->
-<!-- Risk Name – summary of risk.  Mitigation plan if known. If it is not yet known, no problem. -->
-
-## Key assumptions to test and questions to answer
-<!-- If you are making assumptions that, if incorrect, would cause us to significantly alter our approach to this scenario, make them explicit here.  Also call out how / when you plan to validate key assumptions. -->
-<!-- What big questions must we answer in order to clarify our plan for this scenario.  When and how do you plan to answer those questions (prototype feature x, customer research, competitive research, etc) -->
-
-## Current state
-<!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
