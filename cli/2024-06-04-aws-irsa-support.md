@@ -153,7 +153,7 @@ Radius should support AWS IRSA.
 
 1. [Setup OIDC provider] (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) should be complete for the cluster. 
    
-2. `rad-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the annotated service-accounts in the specified namespace in specified cluster with the specified OIDC provider to be established. 
+2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the annotated service-accounts in the specified namespace in specified cluster with the specified OIDC provider to be established. 
   ```
   {
     "Version": "2012-10-17",
@@ -203,7 +203,7 @@ the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 
 **installation**
 
-User can enable IRSA for AWS by by choosing "IRSA" option by choosing IRSA during rad init and providing a RoleARN (`arn:aws:iam::123456789012:role/rad-role`). This stores the roleARN as credential. It also mounts the service-account token to ucp and rp pods as secret.
+User can enable IRSA for AWS by by choosing "IRSA" option by choosing IRSA during rad init and providing a RoleARN (`arn:aws:iam::123456789012:role/radius-role`). This stores the roleARN as credential. It also mounts the service-account token to ucp and rp pods as secret.
 
 
 ```
