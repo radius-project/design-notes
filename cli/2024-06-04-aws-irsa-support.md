@@ -112,7 +112,7 @@ During installation, Radius should allow user to enable IRSA for AWS while conif
 At a high level, the full flow to setup IRSA looks as below:
 
 1. configure the cluster with oidc provider. have the role-arn configured with desired policies ready.
-2. take steps to allow  `rad-role-arn` and `eks cluster : namespace: service` to trust each other using aws portal.
+2. take steps to allow  `radius-role-arn` and `eks cluster : namespace: service` to trust each other using aws portal.
 3. use [interactive](#user-story-1) approach or [non-interative](#user-story-2) to configure Radius to use IRSA
 4. during rad deploy, radius assumes the role that is configured in the credential. 
 
@@ -166,7 +166,7 @@ Radius should support AWS IRSA.
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
                 "StringEquals": {
-                    **"oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub"**: "system:serviceaccount:radius-system:ucp",
+                    <font color="red">"oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub"</font>: "system:serviceaccount:radius-system:ucp",
                     "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:aud": "sts.amazonaws.com"
                 }
             }
@@ -246,6 +246,7 @@ At this point, we can use aws AssumeRole to manage resources using environment s
 enum AWSCredentialKind {
   @doc("The AWS Access Key credential")
   AccessKey,
+
   @doc("The AWS IRSA credential")
   IRSA,
 }
