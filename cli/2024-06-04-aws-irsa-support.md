@@ -158,15 +158,36 @@ Radius should support AWS IRSA.
   {
     "Version": "2012-10-17",
     "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+        },
+        "Action": "sts:AssumeRoleWithWebIdentity",
+        "Condition": {
+          "StringEquals": {
+            "${OIDC_PROVIDER}:aud": "<AUDIANCE-NAME>",
+            "${OIDC_PROVIDER}:sub": "system:serviceaccount:<NAMESPACE>:<SERVICE-ACCOUNT>"
+          }
+        }
+      }
+    ]
+  }
+  ```
+Example:
+  ```
+  {
+    "Version": "2012-10-17",
+    "Statement": [
         {
             "Effect": "Allow",
             "Principal": {
-                "Federated": "**arn:aws:iam::817312594854:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866**"
+                "Federated": "arn:aws:iam::817312594854:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866"
             },
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
                 "StringEquals": {
-                    <font color="red">"oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub"</font>: "system:serviceaccount:radius-system:ucp",
+                    "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub": "system:serviceaccount:radius-system:ucp",
                     "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:aud": "sts.amazonaws.com"
                 }
             }
@@ -175,12 +196,7 @@ Radius should support AWS IRSA.
 }
   ```
 
-  Note: 
-  67DDAC18D8C44CEDCF1C9719A8E9B866 is the specific eks cluster instance.
-  The aud is the intended recipient of the token.
-  The sub is the entity that the token represents.
-
-  Parameteres specific to cluster is in bold.
+the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 
 
 #### Radius support
@@ -267,7 +283,6 @@ model AwsAccessKeyCredentialProperties extends AwsCredentialProperties {
 
 Based on this new model we have to update API calls. 
 
-
 ### CLI Design
 
 * `rad init --full` should be updated to ask the user to choose between AWS access keys and IRSA. If IRSA is chosen, the user should be able to input a AWS IAM Role ARN. As a result of rad init, 
@@ -341,19 +356,13 @@ We will have the same monitoring and logging as today. We will not be adding any
 
 ## Open Questions
 
-
-
 ## Alternatives considered 
 ### EKS Pod Identity 
 
 EKS Pod Identity was introduced in 2022 as a simplified approach for applications running on EKS to retrieve credentials. It uses the new EKS pod identity instead of OIDC provider for identity. Because of this, users have convenient APIs that allow managing pod identity. 
 Ref. [AWS EKS Pod Identity](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/). 
 
-Since the identity provider is tied to AWS, this solution cannot be used with Radius deployed on stand alone, aks or any other kubernetes cluster. 
-
 Its good to note that since this approach uses its own service principal, the setup involves different identity providers and configuration on aws. Radius should be however able to support this feature with minimal code changes, if any.  
-
-
 
 
 ## Design Review Notes
