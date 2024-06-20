@@ -5,7 +5,7 @@
 
 ## Overview
 
-A software workload such as a container-based application, service or script needs an identity to authenticate, access, and communicate with services that are distributed across different platforms and/or cloud providers. Radius uses AWS IAM (Identity and Access Management) credentials to deploy and access AWS resources today:
+A software workload such as a container-based application, service or script needs an identity to authenticate, access, and communicate with services that are distributed across different platforms and/or cloud providers. Radius uses static credentials (Access Key) to interact with AWS IAM (Identity and Access Management) so that we can deploy and access AWS resources today:
  
 ```
 rad credential register aws --access-key-id <access-key-id> --secret-access-key <secret-access-key>
@@ -18,6 +18,10 @@ IRSA (IAM Roles for Service Accounts) is used for authenticating applications ru
 The goal of the scenario is to enable infrastructure operators to configure IRSA support for the AWS provider in Radius to deploy and manage AWS resources.
 
 ## Terms and definitions
+| Term | Definition |
+|---|---|
+| OIDC | OIDC stands for OpenID Connect. It allows authentication of end-user(or workload)|
+|Role ARN| ARN associated with an AWS IAM role|
 
 
 ## Objectives
@@ -28,18 +32,76 @@ The goal of the scenario is to enable infrastructure operators to configure IRSA
 
 * Radius users can configure AWS provider and enable Radius to use IRSA for authentication and deployment of application.
 * IRSA can be configured via interactive experience.
-* IRSA can be configured manually.
+* IRSA can be configured with non-interactive commands.
 * Radius users can deploy and manage AWS resources without having to manage AWS access key id and secret
 
 ### Non-goals
 
 * Azure Managed Identity support
 * Azure Workload Identity support
+
+The above two are addressed in [Azure Workload Identitu Support](https://github.com/radius-project/design-notes/blob/main/cli/2024-04-azure-workload-identity.md)
+
 * Ability of radified applications to be able to use IRSA for authenticating AWS operations.
+
+This facilitates a user application to be able to configure its container to use IRSA to authenticate itself for communication with AWS. While the technology is IRSA, this feature is very different from enabling Radius to use IRSA to deploy resources.
 
 ### User scenarios
 
-As a user, I should be able to configure Radius with IRSA for managing AWS resources.
+#### User Story 1
+
+As a user I should be able to configure Radius AWS provider with IRSA through interactive experience.
+
+```
+% rad init --full  
+Enter an environment name 
+>default 
+
+% rad init --full  
+Select your cloud provider                     
+1. Azure                                  
+> 2. AWS                                     
+3.[back] 
+
+% rad init --full  
+
+Select the identity for the AWS cloud provider 
+1. IAM access key                              
+> 2. IAM Role for Service Account (IRSA)
+
+% rad init --full  
+
+Enter the IAM RoleARN for configuring IRSA: <role-arn-radius>
+```
+
+
+#### User story 2
+
+As a user I should be able to configure Radius AWS provider with IRSA using non interactive commands.
+
+1. Install the `rad` CLI.
+
+2. Install Radius using `rad install kubernetes`
+    ```
+    rad install kubernetes --set global.awsIRSA.enabled=true #default false
+    ```
+    If enabled, it should print a success/ failure message after updating the pod spec to mount the token. It should also print a information message to the complete of configuration by using rad credential register and rad env update.
+
+3. Create a Radius environment and add an AWS cloud provider.
+    ```
+    rad group create default
+
+    rad env create default
+    
+    rad env update default --aws-account-id <aws-account-id> --aws-region <aws-region> 
+    ```
+
+4. Register the role ARN using `rad credential register aws irsa`.
+    ```
+   rad credential register aws irsa --iam-role <roleARN>
+    ```
+
+Radius is now configured to use AWS IRSA for authentication.
 
 ## Design
 
@@ -51,9 +113,8 @@ At a high level, the full flow to setup IRSA looks as below:
 
 1. configure the cluster with oidc provider. have the role-arn configured with desired policies ready.
 2. take steps to allow  `rad-role-arn` and `eks cluster : namespace: service` to trust each other using aws portal.
-3. use  `rad init` to configure radius with role-arn credential. (or use rad credential later on)
-4. use `rad env update` to configure provider associated with the specific environment (`rad env update qa --aws-account-id <aws-account-id> --aws-region <aws-region>`). 
-5. during rad deploy, radius assumes the role that is configured in the credential. 
+3. use [interactive](#user-story-1) approach or [non-interative](#user-story-2) to configure Radius to use IRSA
+4. during rad deploy, radius assumes the role that is configured in the credential. 
 
 Since oidc is configured for a cluster and not specific to a role-arn, the solution can be extended to work in multi-tenancy once we have multi credentials support. 
 
@@ -61,20 +122,26 @@ More details about each step is covered in [Detailed Design](#detailed-design)
 
 IRSA works the same way on EKS as well as non-EKS clusters.  
 
-### Alternatives considered
-
-#### EKS Pod Identity 
-
-EKS Pod Identity was introduced in 2022 as a simplified approach for applications running on EKS to retrieve credentials. It uses the new EKS pod identity instead of OIDC provider for identity. Because of this, users have convenient APIs that allow managing pod identity. 
-Ref. [AWS EKS Pod Identity](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/). 
-
-Since the identity provider is tied to AWS, this solution cannot be used with Radius deployed on stand alone, aks or any other kubernetes cluster. 
-
-Its good to note that since this approach uses its own service principal, the setup involves different identity providers and configuration on aws. Radius should be however able to support this feature with minimal code changes, if any.  
-
-
 ### Architecture Diagram
 
+## User Experience/ CLI Design
+
+Following commands should be updated for AWS IRSA support
+
+`rad init` should be updated to allow configuring a AWS IRSA provider.
+
+`rad credential` command should be updated to register IAM RoleARN.
+
+`rad install kubernetes --set` should be able to enable IRSA. 
+
+
+**Sample Output:**
+
+n/a
+
+**Sample Recipe Contract:**
+
+n/a
 
 ### Detailed Design
 
@@ -85,6 +152,7 @@ Radius should support AWS IRSA.
 #### Prerequisite
 
 1. [Setup OIDC provider] (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) should be complete for the cluster. 
+   
 2. `rad-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the annotated service-accounts in the specified namespace in specified cluster with the specified OIDC provider to be established. 
   ```
   {
@@ -93,12 +161,12 @@ Radius should support AWS IRSA.
         {
             "Effect": "Allow",
             "Principal": {
-                "Federated": "arn:aws:iam::817312594854:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866"
+                "Federated": "**arn:aws:iam::817312594854:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866**"
             },
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
                 "StringEquals": {
-                    "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub": "system:serviceaccount:radius-system:ucp",
+                    **"oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub"**: "system:serviceaccount:radius-system:ucp",
                     "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:aud": "sts.amazonaws.com"
                 }
             }
@@ -107,9 +175,12 @@ Radius should support AWS IRSA.
 }
   ```
 
-  Note: 67DDAC18D8C44CEDCF1C9719A8E9B866 is the specific eks cluster instance.
+  Note: 
+  67DDAC18D8C44CEDCF1C9719A8E9B866 is the specific eks cluster instance.
   The aud is the intended recipient of the token.
   The sub is the entity that the token represents.
+
+  Parameteres specific to cluster is in bold.
 
 
 #### Radius support
@@ -140,7 +211,7 @@ User can enable IRSA for AWS by by choosing "IRSA" option by choosing IRSA durin
           /var/tls/cert from cert (ro)
 ```
 
-Note: Since AWS IRSA works by mounting the service-account token to pods, the pod spec will be patched and pods recreated if we choose to use rad register to register the roleARN after radius installation.
+Note: Since AWS IRSA works by mounting the service-account token to pods, the decision to use IRSA should be taken at install time. Credentials can be registered later on.
 
 **post installation**
 
@@ -173,6 +244,8 @@ At this point, we can use aws AssumeRole to manage resources using environment s
 ```
 @doc("AWS credential kind")
 enum AWSCredentialKind {
+  @doc("The AWS Access Key credential")
+  AccessKey,
   @doc("The AWS IRSA credential")
   IRSA,
 }
@@ -193,64 +266,19 @@ model AwsAccessKeyCredentialProperties extends AwsCredentialProperties {
 
 Based on this new model we have to update API calls. 
 
-## User Experience/ CLI Design
-
-`rad init` and `rad credential` commands should be updated to support AWS IRSA.
-Also, `rad install kubernetes --set` should be able to set a AWS role-arn. 
-
-### non interactive support
-rad install kubernetes --set global.aws.IRSA.enabled=true #default false
-
-if enabled, it should print a success/ failure message after updating the pod spec to mount the token. It should also print a information message to the complete of configuration by using rad credential register and rad env update.
-
-rad credential register aws --type <IRSA> --role <roleARN>
-rad credential register aws --type <access-key> --access-key-id <access-key-id> --secret-access-key <secret-access-key>
-
-rad env update --aws-account-id <aws-account-id> --aws-region <aws-region> 
-
-### interactive rad init support
-```
-% rad init --full  
-Enter an environment name 
->default 
-
-% rad init --full  
-Select your cloud provider                     
-1. Azure                                  
-> 2. AWS                                     
-3.[back] 
-
-% rad init --full  
-
-Select the identity for the AWS cloud provider 
-1. access key                              
-> 2. IRSA  
-
-% rad init --full  
-
-Enter the AWS RoleARN for configuring IRSA: <role-arn-radius>
-
-```
-
-
-Once radius is installed, we use rad env update to update the aws provider config
-```
-% rad env update --aws-account-id <aws-account-id> --aws-region <aws-region> 
-```
-
-**Sample Output:**
-
-n/a
-
-**Sample Recipe Contract:**
-
-n/a
 
 ### CLI Design
 
-`rad init --full` will need to be updated to ask the user to choose between AWS access keys and IRSA. rad credential register aws should now support two credential types, and associated parameters.
+* `rad init --full` should be updated to ask the user to choose between AWS access keys and IRSA. If IRSA is chosen, the user should be able to input a AWS IAM Role ARN. As a result of rad init, 
+   1. the helm charts should be updated with service-account token mounted as secret.
+   2. roleARN should be stored as a AWS credential
 
-We should update the Radius Helm chart to allow the user to enable IRSA during installation with the `rad install kubernets --set global.aws.IRSA.enabled=true` value. This must be passed to ucp and rp charts through values and when the value is set the pod spec should mount the service-account token.
+* `rad install kubernetes --set global.aws.IRSA.enabled=true` should add the neccessary pod spec to mount the service-account token.
+
+* `rad credential register aws --access-key-id <access-key-id> --secret-access-key <secret-access-key>` should be replaced with 
+`rad credential register aws secret --access-key-id <access-key-id> --secret-access-key <secret-access-key>`
+
+* `rad credential register aws irsa --iam-role <roleARN>` should be supported.
 
 ### Multi-tenancy
 
@@ -281,7 +309,9 @@ RP should be able to assume the role specified in the credential and use this to
 
 1. handle mismatch of credential type and arguments supplied.
 2. what if the cluster does not have a oidc provider configured?
-3. what if the user has aws credentials (secrets) configured and wants to switch to IRSA? we can print a informational message requesting user to delete the old credentials since we currently support only one credential. 
+3. what if the user has aws credentials (secrets) configured and wants to switch to IRSA? 
+   1. the user has to re-install radius to disable IRSA. This should print informational messages to unregister IRSA credential and re-register the access key credentials.
+   2. If there is a mismatch (pod spec has IRSA enabled, but credential type is not role-arn or vice-versa, deployment will fail. Enhance error message to suggest checking the right kind of credential is configured)
 
 ## Test plan
 
@@ -289,10 +319,11 @@ We should add a E2E to test the deployment of AWS resources using IRSA.
 
 ## Security
 
-
+AWS IRSA does not rely of user to rotate credentials for increased security. 
+Thus, it should be preferred credential type. User should configure the role associated with Radius setup following principle of least privilege, so that Radius has just the sufficient policies for managing the supported AWS resources.
 
 ## Compatibility
-
+NA
 
 ## Monitoring and Logging
 
@@ -305,7 +336,6 @@ We will have the same monitoring and logging as today. We will not be adding any
 * Implement model changes (1 engineer, 0.5 sprint) 
 * Implement changes in UCP, and Recipes RP (1 engineer, 1 sprint)
 * Implement CLI and Helm chart changes (1 engineer, 1 sprint) 
-  * with this all radius pods should ahve neccessary configurations injected.
 * End-to-end testing and documentation (1 engineer, 1 sprint) 
 
 ## Open Questions
@@ -313,8 +343,17 @@ We will have the same monitoring and logging as today. We will not be adding any
 
 
 ## Alternatives considered 
+### EKS Pod Identity 
 
-n/a
+EKS Pod Identity was introduced in 2022 as a simplified approach for applications running on EKS to retrieve credentials. It uses the new EKS pod identity instead of OIDC provider for identity. Because of this, users have convenient APIs that allow managing pod identity. 
+Ref. [AWS EKS Pod Identity](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/). 
+
+Since the identity provider is tied to AWS, this solution cannot be used with Radius deployed on stand alone, aks or any other kubernetes cluster. 
+
+Its good to note that since this approach uses its own service principal, the setup involves different identity providers and configuration on aws. Radius should be however able to support this feature with minimal code changes, if any.  
+
+
+
 
 ## Design Review Notes
 
