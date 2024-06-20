@@ -49,11 +49,6 @@
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
 
-# Scenario: TODO
-
-## Target customers
-<!-- Of the customers / personas listed in the doc, what subset are we delivering this scenario to serve? -->
-
 ## Details of customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
 
