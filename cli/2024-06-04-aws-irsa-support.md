@@ -269,11 +269,12 @@ enum AWSCredentialKind {
 ```
 
 ```
-model AwsAccessKeyCredentialProperties extends AwsCredentialProperties {
-  @doc("IRSA kind")
+model AwsIRSACredentialProperties extends AwsCredentialProperties {
+  @doc("Access Key kind")
   kind: AWSCredentialKind.IRSA;
- 
-  @doc("The roleARN")
+
+  @doc("RoleARN for AWS IRSA identity")
+  @secret
   roleARN: string;
 
   @doc("The storage properties")
