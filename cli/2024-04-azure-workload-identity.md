@@ -219,9 +219,13 @@ n/a
 #### Azwi mutating admission webhook is not installed in the cluster.
 At Radius install time if Radius detects that the AzWI mutating admission webhook is not installed on the cluster, we should return an error to the user: "Azure Workload Identity mutating admission webhook is not installed in the cluster. Please follow the guidance at aka.ms/rad-workload-identity to set up workload identity for Radius."
 
+[Issue Reference](https://github.com/radius-project/radius/issues/7714)
+
 ## Test plan
 
-We will change the Radius functional tests to use Azure workload identity instead of service principal identity. 
+We will change the Radius functional tests to use Azure workload identity instead of service principal identity.
+
+[Issue Reference](https://github.com/radius-project/radius/issues/7715)
 
 ## Security
 
