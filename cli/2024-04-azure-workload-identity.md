@@ -35,9 +35,8 @@ The goal of the scenario is to enable infrastructure operators to configure Azur
 
 ### Non-goals
 
-* Azure Managed Identity support
-    - "Managed Identity" in this context is a term describing the Azure feature that allows Azure resources to authenticate with Azure services. We will
-    not be supporting this feature for now because we would like to focus on Azure workload identity first, which is more cloud and Kubernetes cluster type agnostic.
+* **Azure Managed Identity support**
+    - Managed Identity support for AKS is a much older feature, and Workload Identity is the replacement. We're not planning to support Managed Identity, as any user should be able to upgrade to Workload Identity.
 
 * **AWS Workload Identity (IRSA) support**
     - Will be tracked as separate work: https://github.com/radius-project/radius/issues/7618
@@ -156,30 +155,42 @@ n/a
 
 ### API design
 
-```typespec
-@doc("The properties of Azure Workload Identity credential storage")
-model AzureWorkloadIdentityProperties extends AzureCredentialProperties {
-  @doc("Workload Identity kind")
-  kind: AzureCredentialKind.WorkloadIdentity;
-
-  @doc("clientId for WorkloadIdentity")
-  clientId: string;
-
-  @doc("tenantId for WorkloadIdentity")
-  tenantId: string;
-
-  @doc("The storage properties")
-  storage: CredentialStorageProperties;
+```diff
+enum AzureCredentialKind {
+  @doc("The Service Principal Credential")
+  ServicePrincipal,
++
++  @doc("The Workload Identity Credential")
++  WorkloadIdentity,
 }
+```
+
+```diff
++@doc("The properties of Azure Workload Identity credential storage")
++model AzureWorkloadIdentityProperties extends AzureCredentialProperties {
++  @doc("Workload Identity kind")
++  kind: AzureCredentialKind.WorkloadIdentity;
++
++  @doc("clientId for WorkloadIdentity")
++  clientId: string;
++
++  @doc("tenantId for WorkloadIdentity")
++  tenantId: string;
++
++  @doc("The storage properties")
++  storage: CredentialStorageProperties;
++}
 ```
 
 ### CLI Design
 
 `rad init --full` will need to be updated to ask the user to choose between service principal auth and Azure Workload Identity.
 
-We will need to update the `rad credential register azure` command to not require a client secret when registering the Entra ID Application Client ID.
+We will need to update the `rad credential register azure` command to include two subcommands - `sp` and `wi`. The existing logic for `rad credential register azure` will be moved to `rad credential register azure sp`. We will add a new `rad credential register azure wi` command to allow the user to register the Entra ID Application Client ID for Azure Workload Identity.
 
 We will need to update the Radius Helm chart to allow the user to enable Azure Workload Identity during installation with the `global.azureWorkloadIdentity.enabled` value. We will need to update the installation flow (for `rad init` and `rad install kubernetes`) to annotate the Radius control plane pods with the `azure.workload.identity/use: "true"` label if the user sets this value in the Helm chart.
+
+We will need to update the `rad credential show` command to show the Entra ID Application Client ID for Azure Workload Identity.
 
 ### Implementation Details
 
@@ -206,7 +217,7 @@ n/a
 ### Error Handling
 
 #### Azwi mutating admission webhook is not installed in the cluster.
-* At Radius install time if Radius detects that the AzWI mutating admission webhook is not installed on the cluster, we should return an error to the user: "Azure Workload Identity mutating admission webhook is not installed in the cluster. Please follow the guidance at aka.ms/rad-workload-identity to set up workload identity for Radius."
+At Radius install time if Radius detects that the AzWI mutating admission webhook is not installed on the cluster, we should return an error to the user: "Azure Workload Identity mutating admission webhook is not installed in the cluster. Please follow the guidance at aka.ms/rad-workload-identity to set up workload identity for Radius."
 
 ## Test plan
 
