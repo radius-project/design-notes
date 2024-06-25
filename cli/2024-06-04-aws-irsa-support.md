@@ -116,7 +116,7 @@ At a high level, the full flow to setup IRSA looks as below:
 3. use [interactive](#user-story-1) approach or [non-interative](#user-story-2) to configure Radius to use IRSA
 4. during rad deploy, radius assumes the role that is configured in the credential. 
 
-Since oidc is configured for a cluster and not specific to a role-arn, the solution can be extended to work in multi-tenancy once we have multi credentials support. 
+OIDC is configured for a cluster and not specific to a role-arn. Therefore, once we have support for multiple crdentials in Radius, the same solution would work for supporting multitenancy.
 
 More details about each step is covered in [Detailed Design](#detailed-design)
 
