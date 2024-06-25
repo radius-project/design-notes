@@ -232,6 +232,8 @@ Describe the error scenarios that may occur and the corresponding recovery/error
     - publish a recipe to private ghcr.io/radius-project/private-recipes/<recipe> 
     - Deploy the recipe as part of the functional test using github app token to authenticate ghcr. 
 
+## Security
+With this design we enable username-password based authentication for OCI compliant registries, we let the users manage secrets. For secret rotation users need to re deploy the Applications.Core/secretStore resource with updated credentials.
 
 ## Development plan
 
