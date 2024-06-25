@@ -42,7 +42,7 @@ The goal of the scenario is to enable infrastructure operators to configure IRSA
 
 The above two are addressed in [Azure Workload Identitu Support](https://github.com/radius-project/design-notes/blob/main/cli/2024-04-azure-workload-identity.md)
 
-* Ability of radified applications to be able to use IRSA for authenticating AWS operations.
+* Ability of radified applications to be able to use IRSA to connect to AWS resources.
 
 This facilitates a user application to be able to configure its container to use IRSA to authenticate itself for communication with AWS. While the technology is IRSA, this feature is very different from enabling Radius to use IRSA to deploy resources.
 
