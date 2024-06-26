@@ -5,7 +5,7 @@
 
 ## Summary
 <!-- A paragraph or two to summarize the Epic. Just define it in summary form so we all know what it is. -->
-Continuous deployment of cloud native applications and infrastructure is challenging for a number of reasons.  GitOps is a popular set of practices, implemented as popular tools, like Flux and ArgoCD, that mitigates these challenges for enterprise application teams that use git for source control and Kubernetes for orchestration of software containers.  GitOps provides a developer-centric experience by abstracting and automating many of the tasks required for deploying and operating Kubernetes and its underly dependent infrastructure. The core concept of GitOps is to rely on a git repository that serves as a single source of truth: i.e. it contains current declarative descriptions of the required infrastructure for a given production environment. It also contains a description of the workflow required to prevent drift between the repo and the production environment. It's like having cruise control for managing applications in production.
+Continuous deployment of cloud native applications and infrastructure is challenging for a number of reasons.  GitOps is a popular set of practices, implemented as popular tools, like Flux and ArgoCD, that mitigates these challenges for enterprise application teams that use git for source control and Kubernetes for orchestration of software containers.  GitOps provides a developer-centric experience by abstracting and automating many of the tasks required for deploying and operating Kubernetes and its underlying dependent infrastructure. The core concept of GitOps is to rely on a git repository that serves as a single source of truth: i.e. it contains current declarative descriptions of the required infrastructure for a given production environment. It also contains a description of the workflow required to prevent drift between the repo and the production environment. It's like having cruise control for managing applications in production.
 
 Enterprises that use GitOps and also want to use Radius do not currently have a clear path for how to use both technologies in an integrated and complementary way to enable a “better together” experience.
 
@@ -308,14 +308,13 @@ _Requirements resulting from this scenario:_
 ## Key investments
 <!-- List the features required to enable this scenario. -->
 
-### Feature 1
+### Feature 1: GitOps tooling can detect and understand Radius definition files
 <!-- One or two sentence summary -->
+GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file change in the git repo described above and must be able to read the `env.bicep` file as required to deploy the Radius app correctly.
 
-### Feature 2
+### Feature 2: GitOps tooling can execute Radius commands
 <!-- One or two sentence summary -->
-
-### Feature 3
-<!-- One or two sentence summary -->
+Once Radius definition file changes are detected and understood, GitOps tools (beginning with Flux and ArgoCD) must be able to execute deployments for the Radius resources defined in the git repo.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
