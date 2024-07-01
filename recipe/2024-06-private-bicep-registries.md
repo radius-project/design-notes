@@ -50,7 +50,7 @@ No change in the output
 
 ## Design
 ### Design details
-Currently, OCI-compliant registries are used to store Bicep recipes, with the ORAS client facilitating operations like publish and pull these recipes from the registries. ORAS provides package auth, enabling secure client authentication to remote registries. Private Registry credentials information i.e username and password must be stored in a Application.Core/secretStores resource and the secret resource ID is added to the recipe configuration.
+Currently, OCI-compliant registries are used to store Bicep recipes, with the ORAS client facilitating operations like publish and pull these recipes from the registries. ORAS provides package auth, enabling secure client authentication to remote registries. Private Registry credentials information i.e username and password must be stored in an `Application.Core/secretStores` resource and the secret resource ID is added to the recipe configuration.
 
 During the recipe deployment bicep driver checks for secrets information for that container registry the recipe deploying is stored on,  and creates an oras auth client to authenticate the private bicep registries.
 
@@ -154,6 +154,7 @@ model RecipeConfigProperties {
 
 +@doc(Configuration for Bicep Recipes. Controls how Bicep plans and applies templates as part of Recipe deployment.)
 +model BicepConfigProperties {
++
 +  @doc("Authentication information used to access private bicep registries, which is a map of registry hostname to secret config that contains credential information.")
 +  authentication?: Record<SecretConfig>;
 }
@@ -216,9 +217,19 @@ rad bicep publish --file ./redis-test.bicep --target br:ghcr.io/myregistry/redis
 - Update Bicep driver apis i.e execute, delete and getMetadata to use oras auth package for private registry authentication.
 
 ### Error Handling
-<!--
-Describe the error scenarios that may occur and the corresponding recovery/error handling and user experience.
--->
+
+- Authorization failure error:
+
+  This error can occur if users provide incorrect credential information or omit the Bicep recipe configuration for their private registry, we can add a new error code for this scenario `BicepRegistryAuthFailed`
+  
+  Incorrect credential information:
+  ```
+  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("failed to authenticate the bicep registry %s: %s", <private-oras-registry-name>, <error returned by the oras client>))
+  ```
+  Missing Bicep Recipe Config:
+  ```
+  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("missing recipe config for registry %s: %s", <private-oras-registry-name>, <error returned by the oras client>))
+  ```
 
 ## Test plan
 
@@ -233,7 +244,7 @@ Describe the error scenarios that may occur and the corresponding recovery/error
     - Deploy the recipe as part of the functional test using github app token to authenticate ghcr. 
 
 ## Security
-With this design we enable username-password based authentication for OCI compliant registries, we let the users manage secrets. For secret rotation users need to re deploy the Applications.Core/secretStore resource with updated credentials.
+With this design we enable username-password based authentication for OCI compliant registries, we let the users manage secrets. For secret rotation users need to re deploy the `Applications.Core/secretStores` resource with updated credentials.
 
 ## Development plan
 
