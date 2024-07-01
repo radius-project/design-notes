@@ -261,9 +261,7 @@ Once the installation is complete, the user can use rad env update to store rele
 rad env update qa --aws-account-id <aws-account-id> --aws-region <aws-region> 
 ```
 
-At this point, rp (for recipes) and ucp will "fetch" the configured credentials and then use AssumeRole to manage AWS resources.
-
-AWSCredentialProvider should be updated to support the new credential. This can then be used as part of Initializing the AWS Module with IRSA credentrials.
+UCP should "fetch" the configured credentials and then use AssumeRole to manage AWS resources. AWSCredentialProvider should be updated to support the new credential. This can then be used as part of initializing the AWS Module with IRSA credentials. RP should fetch the credential through UCP and utilize it with Terraform provider.  
 
 ```
   client := sts.NewFromConfig(cfg)
@@ -288,7 +286,7 @@ AWSCredentialProvider should be updated to support the new credential. This can 
 4. Behind the scenes, 
    1. the service-account token projected as a mounted volume contains the claims for the cluster and service account. AWS STS validates this token. 
    2. If the validation (authentication) succeeds, STS exchanges the service-account token for AWS credentials that can make the AWS API calls.
-   3. The IAM role is configured with a trust policy that permits the role to be assumed by the ucp and rp service accounts within the radius-system namespace of the cluster. This configuration enables radius services to provision AWS resources in accordance with the permissions defined in the role.
+   3. The IAM role is configured with a trust policy that permits the role to be assumed by the ucp and rp service accounts within the radius-system namespace of the cluster. This configuration enables radius services to provision AWS resources in accordance with the permissions defined by the role.
 
 ### API design
 
