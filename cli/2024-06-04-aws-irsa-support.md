@@ -267,7 +267,7 @@ At this point, rp (for recipes) and ucp will have code changes that can "fetch" 
 
 ### API design
 
-we have to add/modify aws-credentials.tsp as below and generate new model that supports AWS IRSA. 
+we have to add/modify aws-credentials.tsp as below and generate new model that supports AWS IRSA. We should add cli commands and options that utilize the new model.
 
 ```
 @doc("AWS credential kind")
