@@ -110,10 +110,11 @@ Users must choose whether or not to enable IRSA during Radius installation. Then
 
 At a high level, the full flow to setup IRSA looks as below:
 
-1. configure the cluster with oidc provider. have the role-arn configured with desired policies ready.
-2. take steps to allow  `radius-role-arn` and `eks cluster : namespace: service` to trust each other using aws portal.
-3. use [interactive](#user-story-1) approach or [non-interative](#user-story-2) to configure Radius to use IRSA
-4. during rad deploy, radius assumes the role that is configured in the credential. 
+1. configure the cluster with oidc provider. 
+2. have the role-arn configured with desired policies ready.
+3. take steps to allow  `radius-role-arn` and `eks cluster : namespace: service` to trust each other using aws portal.
+4. use [interactive](#user-story-1) approach or [non-interative](#user-story-2) to configure Radius to use IRSA.
+5. during rad deploy, radius assumes the role that is configured in the credential. 
 
 OIDC is configured for a cluster and not specific to a role-arn. Therefore, once we have support for multiple crdentials in Radius, the same solution would work for supporting multitenancy.
 
@@ -225,7 +226,7 @@ the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 
 #### Radius support
 
-**installation**
+**installation and setup**
 
 * use `rad install kubernetes --set global.aws.IRSA.enabled=true` to add the neccessary pod spec to mount the service-account token.
 
@@ -253,15 +254,15 @@ the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 * use `rad credential register aws irsa --iam-role <roleARN>` to register the roleARN that radius would assume for deploying and managing AWS resources.
 This command "PUT"s a Radius Credential Resource. As part of this, the credential gets stored as a kubernetes secret (similar to how Radius manages all credentials today).
 
-**post installation**
-
-Once the installation is complete, the user can use rad env update to store relevant information for deploying resources to accounts and region associated with specific radius environment. (This step is not newly introduced)
+* use rad env update to store relevant information for deploying resources to accounts and region associated with specific radius environment. (This step is not newly introduced)
 
 ```
 rad env update qa --aws-account-id <aws-account-id> --aws-region <aws-region> 
 ```
 
-UCP should "fetch" the configured credentials and then use AssumeRole to manage AWS resources. AWSCredentialProvider should be updated to support the new credential. This can then be used as part of initializing the AWS Module with IRSA credentials. RP should fetch the credential through UCP and utilize it with Terraform provider.  
+**post installation**
+
+Once the steps in instalation and setup is completed, UCP should be able to "fetch" the configured credentials and then use AssumeRole to manage AWS resources. AWSCredentialProvider should be updated to support the new credential. This can then be used as part of initializing the UCP AWS Module with IRSA credentials. RP should fetch the credential through UCP and utilize it with Terraform provider.  
 
 ```
   client := sts.NewFromConfig(cfg)
@@ -284,7 +285,7 @@ UCP should "fetch" the configured credentials and then use AssumeRole to manage 
 2. For deploying an AWS resource, it uses this roleARN and [stscreds](https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/stscreds/) library and constructs an AssumeRoleProvider.
 3. assumeRoleProvider communicates with AWS Security Token Service (STS) to assume the specified IAM role.
 4. Behind the scenes, 
-   1. the service-account token projected as a mounted volume contains the claims for the cluster and service account. AWS STS validates this token. 
+   1. the service-account token projected as a mounted volume contains the claims for the cluster and service account. AWS STS receives and validates this token. 
    2. If the validation (authentication) succeeds, STS exchanges the service-account token for AWS credentials that can make the AWS API calls.
    3. The IAM role is configured with a trust policy that permits the role to be assumed by the ucp and rp service accounts within the radius-system namespace of the cluster. This configuration enables radius services to provision AWS resources in accordance with the permissions defined by the role.
 
@@ -338,7 +339,13 @@ Currently, we support only one credential. However, for future, we might want to
 #### UCP
 
 UCP is responsible for communicating with AWS to deploy AWS resources. 
-UCP should be able to assume the role specified in the credential and use this to communicate with AWS since it has the service-token mounted.
+
+We should add support for the new Credential type in 
+/radius/pkg/ucp/frontend/aws/routes.go - func (m *Module) newAWSConfig(ctx context.Context) (aws.Config, error). 
+/Users/nithya/radius/radius/pkg/ucp/credentials/aws.go - func (p *AWSCredentialProvider) Fetch(ctx context.Context, planeName, name string) (*AWSCredential, error)
+
+Then UCP should be able to use these to retrieve the stored roleARN and assume it for managing AWS resources.
+
 
 #### Bicep
 
@@ -352,7 +359,7 @@ NA
 
 Terraform provider requires AWS credentials in order to deploy recipes.
 
-RP should be able to assume the role specified in the credential and use this to communicate with AWS since its pod will have the service-token mounted.
+RP should get Fetch the configured credential through UCP. Then it should use this in the Terraform provider to deploy AWS resources.
 
 ### Error Handling
 
@@ -399,7 +406,7 @@ The [Amazon EKS Pod Identity Webhook](https://github.com/aws/amazon-eks-pod-iden
 
  `eks.amazonaws.com/role-arn: arn:aws:iam::<account-number>:role/<role-name>`
 
-The webhook adds two additional configurations to the relevant pod:
+The webhook adds two additional configurations to the relevant pods that get created:
 1. Environment variables which the supporting AWS SDK read from automatically to detect IRSA role:
 Environment:
         :
