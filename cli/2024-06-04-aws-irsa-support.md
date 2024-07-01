@@ -106,7 +106,7 @@ Radius is now configured to use AWS IRSA for authentication.
 
 ### High Level Design for IRSA
 
-During installation, Radius should allow user to enable IRSA for AWS while conifguring AWS provider. Then the user should be able to enter the roleARN associated with desired policies which will be stored as the AWS credential.
+Users must choose whether or not to enable IRSA during Radius installation. Then the user should be able to enter the roleARN associated with desired policies which will be stored as the AWS credential.
 
 At a high level, the full flow to setup IRSA looks as below:
 
@@ -152,7 +152,9 @@ Radius should support AWS IRSA.
 
 1. [Setup OIDC provider] (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) should be complete for the cluster. 
    
-2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the annotated service-accounts in the specified namespace in specified cluster with the specified OIDC provider to be established. 
+2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the service-accounts (ucp and rp) in the specified namespace (radius-system) in specified cluster with the specified OIDC provider to be established. 
+
+
   ```
   {
     "Version": "2012-10-17",
@@ -165,7 +167,7 @@ Radius should support AWS IRSA.
         "Action": "sts:AssumeRoleWithWebIdentity",
         "Condition": {
           "StringEquals": {
-            "${OIDC_PROVIDER}:aud": "<AUDIANCE-NAME>",
+            "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
             "${OIDC_PROVIDER}:sub": "system:serviceaccount:<NAMESPACE>:<SERVICE-ACCOUNT>"
           }
         }
@@ -226,6 +228,7 @@ the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 ```
 
 * use `rad credential register aws irsa --iam-role <roleARN>` to register the roleARN that radius would assume for deploying and managing AWS resources.
+This command "PUT"s a Radius Credential Resource. As part of this, the credential gets stored as a kubernetes secret (similar to how Radius manages all credentials today).
 
 **post installation**
 
@@ -235,7 +238,7 @@ Once the installation is complete, the user can use rad env update to store rele
 rad env update qa --aws-account-id <aws-account-id> --aws-region <aws-region> 
 ```
 
-At this point, we can use aws AssumeRole to manage resources using environment specific account information. rp (for recipes) and ucp will have code changes that make sure of aws assumerole to be able to use the right credential specific to the radius environment for managing the aws resources.  
+At this point, rp (for recipes) and ucp will have code changes that can "fetch" the configured credentials and then use AssumeRole to manage AWS resources.
 
 ```
   client := sts.NewFromConfig(cfg)
@@ -258,9 +261,9 @@ At this point, we can use aws AssumeRole to manage resources using environment s
 2. For deploying an AWS resource, it uses this roleARN and [stscreds](https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/stscreds/) library and constructs an AssumeRoleProvider.
 3. assumeRoleProvider communicates with AWS Security Token Service (STS) to assume the specified IAM role.
 4. Behind the scenes, 
-   1. the service-account token projected as a mounted volume contains the claims for the cluster and service account. Thus, AWS is able to authenticate the request that has this token. 
-   2. If the authentication succeeds, STS exchanges the service-account token for AWS credentials that can make the AWS API calls.
-   3. The IAM role is configured with a trust policy that permits assumption by the ucp and rp service accounts within the radius-system namespace of the cluster. This configuration enables radius services to provision AWS resources in accordance with the permissions defined in the role.
+   1. the service-account token projected as a mounted volume contains the claims for the cluster and service account. AWS STS validates this token. 
+   2. If the validation (authentication) succeeds, STS exchanges the service-account token for AWS credentials that can make the AWS API calls.
+   3. The IAM role is configured with a trust policy that permits the role to be assumed by the ucp and rp service accounts within the radius-system namespace of the cluster. This configuration enables radius services to provision AWS resources in accordance with the permissions defined in the role.
 
 ### API design
 
@@ -386,7 +389,7 @@ Environment:
       Type:                    Projected (a volume that contains injected data from multiple sources)
     TokenExpirationSeconds:  86400
 
-If we chose to use the web-hook , we could have annotated the ucp, de and rp service-accounts with roleARN and installed web-hook. However, we did not choose this approach because -
+If we chose to use the web-hook , we could have annotated the ucp and rp service-accounts with roleARN and installed web-hook. However, we did not choose this approach because -
 * it requires roleARN to be injected at install time. Dealing with credentials should not require a service restart. 
 * when Radius starts supporting multi-tenancy, there is no support in the webhook to handle annotation of service-accounts with multiple role-arns.  
 
