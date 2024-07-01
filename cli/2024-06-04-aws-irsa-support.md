@@ -152,7 +152,7 @@ Radius should support AWS IRSA.
 
 1. [Setup OIDC provider] (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) should be complete for the cluster. 
    
-2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the service-accounts (ucp and rp) in the specified namespace (radius-system) in specified cluster with the specified OIDC provider to be established. 
+2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the service-accounts (ucp and applications-rp) in the specified namespace (radius-system) in specified cluster with the specified OIDC provider to be established. 
 
 
   ```
@@ -197,6 +197,29 @@ Example:
 }
   ```
 
+  ```
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::817312594854:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:sub": "system:serviceaccount:radius-system:applications-rp",
+                    "oidc.eks.us-west-2.amazonaws.com/id/67DDAC18D8C44CEDCF1C9719A8E9B866:aud": "sts.amazonaws.com"
+                }
+            }
+        },
+    ]
+}
+  ```
+
+
+
 the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 
 
@@ -232,13 +255,15 @@ This command "PUT"s a Radius Credential Resource. As part of this, the credentia
 
 **post installation**
 
-Once the installation is complete, the user can use rad env update to store relevant information for deploying resources to accounts and region associated with specific radius environment.
+Once the installation is complete, the user can use rad env update to store relevant information for deploying resources to accounts and region associated with specific radius environment. (This step is not newly introduced)
 
 ```
 rad env update qa --aws-account-id <aws-account-id> --aws-region <aws-region> 
 ```
 
-At this point, rp (for recipes) and ucp will have code changes that can "fetch" the configured credentials and then use AssumeRole to manage AWS resources.
+At this point, rp (for recipes) and ucp will "fetch" the configured credentials and then use AssumeRole to manage AWS resources.
+
+AWSCredentialProvider should be updated to support the new credential. This can then be used as part of Initializing the AWS Module with IRSA credentrials.
 
 ```
   client := sts.NewFromConfig(cfg)
