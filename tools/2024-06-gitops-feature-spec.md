@@ -237,7 +237,7 @@ GitOps tools (beginning with Flux and ArgoCD) must be able to execute rollback o
 
 ## Existing customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
-As an SRE, I am expected to make adjustments to the configuration of the Kubernetes cluster and the Radius Environment as needed. Today, I adjust the cluster as needed through my GitOps toolset, but I'm unable to do so for all the Radius-specific resources since Radius types and Bicep files are not currently readable by Flux or ArgoCD. This means that I have to manually manage the Radius instance I am providing for my developers and operators to use, which is a significant overhead for me to adopt and to provide value to my development counterparts
+As an SRE, I am expected to make adjustments to the configuration of the Kubernetes cluster and the Radius Environment as needed. Today, I adjust the cluster as needed through my GitOps toolset via patching solutions like [Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) in [Flux](https://fluxcd.io/flux/components/kustomize/ or [ArgoCD](https://argo-cd.readthedocs.io/en/stable/user-guide/kustomize/), but I'm unable to do so for all the Radius-specific resources since Radius types and Bicep files are not currently readable by Flux or ArgoCD. This means that I have to manually manage the Radius instance I am providing for my developers and operators to use, which is a significant overhead for me to adopt and to provide value to my development counterparts.
 
 ## Desired customer experience outcome
 <!-- <Write this as an “I statement” that expresses the new capability from customer perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly blah blah blah …. As a result <summarize positive impact on your work / business>  -->
@@ -267,6 +267,8 @@ patches:
 2. These 2 files are then committed to my configurational files to patch my Kubernetes cluster.
 
 > As an SRE, I'm very happy with this experience because I did not have to change anything in my normal workflow behavior and was able to leverage Flux and my normal YAML file workflow.
+
+> This is the current state for GitOps and Kustomize, thus should not require any new features to be implemented in Radius.
 
 **Option 2 Advanced SRE**
 
@@ -299,11 +301,11 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
 
 2. I can then commit this file to my repository and have Flux apply it to my Radius Environment.
 
-> As an SRE, I'm very happy with this experience because I did not have to do many steps to apply my parameter patch and while I had to learn some Bicep knowledge and Radius knowledge, I was able to ultimately leverage Flux mechanisms which I’m familiar with to apply my patches to the Kubernetes cluster.
+> As an SRE, I'm very happy with this experience because I did not have to do many steps to apply my parameter patch and while I had to learn some Bicep knowledge and Radius knowledge, I was able to ultimately leverage Flux mechanisms which I'm familiar with to apply my patches to the Kubernetes cluster.
 
 _Requirements resulting from this scenario:_
-- Flux must be able to detect the file change described above and must be able to read the env.bicep file as required to deploy the Radius app correctly 
-- Radius types and Bicep files must be able to be read by Flux which currently does not have that ability.
+- Flux and ArgoCD must be able to detect the file change described above and must be able to read the env.bicep file as required to deploy the Radius app correctly 
+- Radius types and Bicep files must be able to be read by Flux/ArgoCD which currently does not have that ability.
 
 ## Key investments
 <!-- List the features required to enable this scenario. -->
@@ -316,15 +318,28 @@ GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file ch
 <!-- One or two sentence summary -->
 Once Radius definition file changes are detected and understood, GitOps tools (beginning with Flux and ArgoCD) must be able to execute deployments for the Radius resources defined in the git repo.
 
+### Feature 3: The GitOps controllers must be aware of the patches applied to the Kubernetes cluster
+<!-- One or two sentence summary -->
+The GitOps controllers must be aware of the patches applied to the Kubernetes cluster and must be able to honor those patched configurations to avoid conflicts with the Radius resource definitions that have been checked in. This should be possible by leveraging the existing Kustomize mechanisms in Flux ([Kustomize controller](https://fluxcd.io/flux/components/kustomize/)) and ArgoCD ([Application controller](https://argo-cd.readthedocs.io/en/stable/developer-guide/architecture/components/#application-controller)).
+
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
 <!-- What other risks are you aware of that need to be mitigated. If you have a mitigation in mind, summarize here. -->
 <!-- Dependency Name – summary of dependency.  Issues/concerns/risks with this dependency -->
 <!-- Risk Name – summary of risk.  Mitigation plan if known. If it is not yet known, no problem. -->
 
+**Dependency: Flux, ArgoCD, etc.** - These GitOps tools/platforms must be able to detect the Radius definition files specified in the git repo and update the relevant Kubernetes clusters accordingly to deploy and manage Radius resources.
+
+**Risk: ability for GitOps tools to deploy and manage Radius resources** - The primary risk is whether Flux, ArgoCD, etc. can deploy and manage Radius resources as specified in the git repo. We will need to test this to ensure that it works as expected.
+
 ## Key assumptions to test and questions to answer
 <!-- If you are making assumptions that, if incorrect, would cause us to significantly alter our approach to this scenario, make them explicit here.  Also call out how / when you plan to validate key assumptions. -->
 <!-- What big questions must we answer in order to clarify our plan for this scenario.  When and how do you plan to answer those questions (prototype feature x, customer research, competitive research, etc) -->
 
+**Assumption:** The Flux and ArgoCD controllers can be made aware of the originally checked in Radius resource definitions and can appropriately apply patches to the Kubernetes cluster without conflicts. We will need to test this to ensure that it works as expected.
+
+**Assumption:** Patch configurations can be built into the Radius resource defintion schemas and can be applied by Flux and ArgoCD controllers. We will need to test this to ensure that it works as expected.
+
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
+N/A
