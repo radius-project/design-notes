@@ -1,6 +1,6 @@
 # Adding support for Private Bicep Registries
 
-* **Status**: Pending/Approved
+* **Status**: Pending
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview
@@ -21,41 +21,20 @@ To address this issue and enhance the usability of Radius for serious enterprise
 > **Issue Reference:** https://github.com/radius-project/radius/issues/6917
 
 ### Goals
-- Add support to publish bicep recipes to a private bicep registry.
 - Enable support to use bicep recipes stored in private bicep registries.
 - Support all OCI compliant private registries.
 
 ### Non goals
 
-- Workload identity based authentication(Will be covered as part of different design) 
-- Configure private OCI registry credentials in Radius via CLI and API.
+- Federated authentication(Azure workload identity/ AWS IRSA) for ACR and ECR.(will be part of initial feature release, its in investigation phase) 
+- Support to manage(configure/view) OCI registry credentials in Radius environment via CLI. (this is a future priority scenario and would not be in scope for the initial release)
 
 ### User scenarios (optional)
-As an operator I am responsible for maintaining Bicep recipes for use with Radius. Bicep recipes used contains sensitive information, proprietary configurations, or data that should not be shared publicly and its intended for internal use within our organization and have granular control over who can access, contribute to, or modify bicep recipes. So I store the recipes in a private bicep registry. And I would like to use these private registries as template-path while registering a bicep recipe.
+As an operator I am responsible for maintaining Bicep recipes for use with Radius. Bicep recipes used contains proprietary configurations, or data that should not be shared publicly and its intended for internal use within our organization and have granular control over who can access, contribute to, or modify bicep recipes. So I store the recipes in a private bicep registry. And I would like to use these private registries as template-path while registering a bicep recipe.
 
 
 ## User Experience (if applicable)
-**Sample Input:**
-Command to publish recipe to private bicep registry.
-```diff
--rad bicep publish --file ./redis-test.bicep --target br:ghcr.io/myregistry/redis-test:v1
-
-+rad bicep publish --file ./redis-test.bicep --target br:ghcr.io/myregistry/redis-test:v1 --username <user> --password <password>
-```
-
-**Sample Output:**
-
-No change in the output
-
-
-## Design
-### Design details
-Currently, OCI-compliant registries are used to store Bicep recipes, with the ORAS client facilitating operations like publish and pull these recipes from the registries. ORAS provides package auth, enabling secure client authentication to remote registries. Private Registry credentials information i.e username and password must be stored in an `Application.Core/secretStores` resource and the secret resource ID is added to the recipe configuration.
-
-During the recipe deployment bicep driver checks for secrets information for that container registry the recipe deploying is stored on,  and creates an oras auth client to authenticate the private bicep registries.
-
-
-e.g: creating a secret store with keys "username" and "password".
+Credential information is stored in `Application.Core/secretstore` resource, users are expected to provide `username` and `password` keys with the appropriate values in the secret store that will be used to authenticate private registry.
 
 ```
 resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
@@ -74,7 +53,7 @@ resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
   }
 }
 ```
-Update the recipe config in the environment to point to this secret resource id.
+`bicep` recipe config is added in the environment to stores bicep recipe configurations, update it to point to the `secretStore` with credential information.
 ```
 "recipeConfig": {
   "terraform": {
@@ -92,6 +71,22 @@ Update the recipe config in the environment to point to this secret resource id.
   }
 },
 ```
+
+
+## Design
+![Alt text](./2024-06-private-bicep-registries/overview.png)
+
+At a high level, data flow between radius components:
+- Engine calls bicep driver to get secret id of the resource that has credential(username/password) information.
+- Engine gets the secret values from the secret loader and calls driver to execute recipe deployment.
+- Bicep driver uses ORAS auth client to authenticate the private container registry and fetches the bicep file contents and calls UCP to deploy recipe.
+
+
+
+### Design details
+Currently, OCI-compliant registries are used to store Bicep recipes, with the ORAS client facilitating operations like publish and pull these recipes from the registries. ORAS provides package auth, enabling secure client authentication to remote registries. Private Registry credentials information i.e username and password must be stored in an `Application.Core/secretStores` resource and the secret resource ID is added to the recipe configuration.
+
+During the recipe deployment bicep driver checks for secrets information for that container registry the recipe deploying is stored on,  and creates an oras auth client to authenticate the private bicep registries.
 
 #### Different container registry providers provide different authenticate methods to login.
 
@@ -134,7 +129,19 @@ Password: Personal access token.
 Username: AWS
 Password: output of `aws ecr get-login-password --region region`
 ```
+While there are various container registry providers, each offering multiple authentication methods, by leveraging ORAS, we abstract away the need for provider-specific code to handle authentication. 
 
+ORAS auth client example to authenticate private registry using username and password,
+```
+	repo.Client = &auth.Client{
+		Client: retry.DefaultClient,
+		Credential: auth.StaticCredential("orasregistry.azurecr.io", auth.Credential{
+			Username: "<username>",
+			Password: "<password>",
+		}),
+	}
+	repo.Client = client
+```
 ### API design (if applicable)
 ***Model changes***
 
@@ -193,14 +200,6 @@ environment.bicep
 },
 ```
 
-### CLI Design
-
-`rad bicep publish` need to be updated to ask the user to provide credential information(i.e username and password) for the private bicep registry user is trying to publish the recipe to.
-
-```
-rad bicep publish --file ./redis-test.bicep --target br:ghcr.io/myregistry/redis-test:v1 --username <user> --password <password>
-```
-
 
 ### Implementation Details
 #### Portable Resources / Recipes RP (if applicable)
@@ -224,11 +223,11 @@ rad bicep publish --file ./redis-test.bicep --target br:ghcr.io/myregistry/redis
   
   Incorrect credential information:
   ```
-  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("failed to authenticate the bicep registry %s: %s", <private-oras-registry-name>, <error returned by the oras client>))
+  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("could not authenticate to the bicep registry %s, the credentials provided for username '%s' are incorrect: %s", <private-oras-registry-name>, <username> <error returned by the oras client>))
   ```
   Missing Bicep Recipe Config:
   ```
-  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("missing recipe config for registry %s: %s", <private-oras-registry-name>, <error returned by the oras client>))
+  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("could not authenticate to the bicep registry %s, missing credentials. : %s", <private-oras-registry-name>, <error returned by the oras client>))
   ```
 
 ## Test plan
@@ -260,10 +259,8 @@ With this design we enable username-password based authentication for OCI compli
     - Update the cli unit tests.
 - Task 3:
     - Manual Validation and adding e2e tests to verify using private bicep registries
-
+- Task 4:
+    - Adding developer documentation for private bicep registry support feature.
 
 ## Design Review Notes
-
-<!--
-Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
--->
+- Maintain the current design for the `rad bicep publish` command as it is, where users takes care of logging into private registry and radius uses the dockerfile based authentication to publish recipes to private registries.
