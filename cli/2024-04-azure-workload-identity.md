@@ -1,6 +1,6 @@
 # Radius Azure Workload Identity Support
 
-* **Status**: In Review
+* **Status**: Approved
 * **Author**: Will Smith (@willdavsmith)
 
 ## Overview
@@ -259,6 +259,4 @@ n/a
 
 ## Design Review Notes
 
-<!--
-Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
--->
+n/a
