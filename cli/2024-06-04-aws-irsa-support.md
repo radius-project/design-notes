@@ -82,7 +82,7 @@ As a user I should be able to configure Radius AWS provider with IRSA using non 
 
 2. Install Radius using `rad install kubernetes`
     ```
-    rad install kubernetes --set global.awsIRSA.enabled=true #default false
+    rad install kubernetes --set global.aws.irsa.enabled=true #default false
     ```
     If enabled, it should print a success/ failure message after updating the pod spec to mount the token. It should also print a information message to the complete of configuration by using rad credential register and rad env update.
 
@@ -392,9 +392,14 @@ We will have the same monitoring and logging as today. We will not be adding any
 * Create POC for Radius + AWS (1 engineer,1 sprint)  [complete] 
 * Create and review technical design (1 engineer, 0.5 sprint) [in progress]
 * Implement model changes (1 engineer, 0.5 sprint) 
+
+
+
 * Implement changes in UCP, and Recipes RP (1 engineer, 1 sprint)
 * Implement CLI and Helm chart changes (1 engineer, 1 sprint) 
 * End-to-end testing and documentation (1 engineer, 1 sprint) 
+
+
 
 ## Open Questions
 
