@@ -859,3 +859,6 @@ UDT
 UDTs
 encodings
 invariants
+Mycompany
+plaidResource
+resourceTypes
