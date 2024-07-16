@@ -34,7 +34,13 @@ As an operator I am responsible for maintaining Bicep recipes for use with Radiu
 
 
 ## User Experience (if applicable)
-Credential information is stored in `Application.Core/secretstore` resource, users are expected to provide `username` and `password` keys with the appropriate values in the secret store that will be used to authenticate private registry.
+Credential information is stored in `Application.Core/secretstore` resource, users are expected to provide keys based on the `type` of authentication used,  with the appropriate values in the secret store that will be used to authenticate private registry.
+| type     | Expected Keys                                                                                                                                                                                                 |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| basicAuthentication | username, password  |
+| azureFederatedIdentity | clientid, tenantId |
+| awsIRSA | | 
+
 
 ```
 resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
@@ -63,6 +69,7 @@ resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
     "authentication":{
       "test.azurecr.io":{
         "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/acrsecrets"
+        "type": "basicAuthentication"
       },
     }
   }
@@ -77,37 +84,40 @@ resource secretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
 ![Alt text](./2024-06-private-bicep-registries/overview.png)
 
 At a high level, data flow between radius components:
-- Engine calls bicep driver to get secret id of the resource that has credential(username/password) information.
+- Engine calls bicep driver to get secret id of the resource that has credential(e.g. username/password) information.
 - Engine gets the secret values from the secret loader and calls driver to execute recipe deployment.
 - Bicep driver uses ORAS auth client to authenticate the private container registry and fetches the bicep file contents and calls UCP to deploy recipe.
 
 
 
 ### Design details
-Currently, OCI-compliant registries are used to store Bicep recipes, with the ORAS client facilitating operations like publish and pull these recipes from the registries. ORAS provides package auth, enabling secure client authentication to remote registries. Private Registry credentials information i.e username and password must be stored in an `Application.Core/secretStores` resource and the secret resource ID is added to the recipe configuration.
+Currently, OCI-compliant registries are used to store Bicep recipes, with the ORAS client facilitating operations like publish and pull these recipes from the registries. ORAS provides package auth, enabling secure client authentication to remote registries. Private Registry credentials information  must be stored in an `Application.Core/secretStores` resource and the secret resource ID is added to the recipe configuration.
 
 During the recipe deployment bicep driver checks for secrets information for that container registry the recipe deploying is stored on,  and creates an oras auth client to authenticate the private bicep registries.
 
-#### Different container registry providers provide different authenticate methods to login.
+#### Username-Password based authentication
 
-***Azure***:
+Different container registry providers use the the username and password in various ways:
+
+**Azure**:
 
 Azure provides multiple ways to authenticate ACR using ORAS, we can use different types of credentials depending on the setup and preferences. Here are the main types of credentials to use:
 
-#### Admin User Credentials:
+*Admin User Credentials*:
+
 Users can enable the admin user and obtain these credentials from the Azure portal:
 ```
 Username : The ACR admin username.
 Password : The ACR admin password.
 ```
 
-#### Service Principal:
+*Service Principal*:
 ```
 Username: The service principal's client ID.
 Password: The service principal's client secret.
 ```
 
-#### Azure CLI Token:
+*Azure CLI Token*:
 ```
 Username: Use '00000000-0000-0000-0000-000000000000' (a placeholder indicating token-based authentication).
 Password: Use the token obtained from az acr login.
@@ -117,14 +127,15 @@ You can obtain the token using the Azure CLI:
 ```
 az acr login --name <registry-name> --expose-token
 ```
-***Github***:
+**Github**:
+
 Github uses personal access token as password to auth into ghcr.
 ```
 Username: Github username.
 Password: Personal access token.
 ```
 
-***AWS***:
+**AWS**:
 ```
 Username: AWS
 Password: output of `aws ecr get-login-password --region region`
@@ -142,6 +153,37 @@ ORAS auth client example to authenticate private registry using username and pas
 	}
 	repo.Client = client
 ```
+
+#### Authentication using Federated identity
+
+**Azure**:
+
+Users can leverage Azure Federated Identity to authenticate seamlessly. When Azure Federated Identity is set up on a Kubernetes cluster, it enables secure and managed authentication, allowing workloads running on the cluster to access ACR without needing to manage service principal credentials directly. This approach enhances security by eliminating the need for hardcoded credentials and simplifies the authentication process by relying on Azure Active Directory (AAD) token issuance for the cluster's managed identity.
+
+To authenticate ACR using Azure Federated credentials, we need to get the refresh token from ACR, and use it with ORAS auth client. The detailed steps are outlined below:
+
+- Retrieve the Azure Active Directory (AAD) token for the client ID configured with Azure Federated Identity.
+- Get refresh token from ACR by exchanging for the above AAD access token
+  ```
+  formData := url.Values{
+      "grant_type":   {"access_token"},
+      "service":      <acr-url>,
+      "tenant":       <tenant-id>,
+      "access_token": <aad-token>,
+    }
+    
+    // jsonResponse contains the refresh token from ACR.
+    jsonResponse, err := http.PostForm("https://<acr-url>/oauth2/exchange", formData)
+  ```
+- Use `RefreshToken` in ORAS auth client to authenticate private ACR.
+  ```
+  repo.Client = &auth.Client{
+		Client: retry.DefaultClient,
+		Credential: auth.StaticCredential(<acr-url>, auth.Credential{
+			RefreshToken: <refresh-token>,
+		}),
+	}
+  ```
 ### API design (if applicable)
 ***Model changes***
 
@@ -163,16 +205,65 @@ model RecipeConfigProperties {
 +model BicepConfigProperties {
 +
 +  @doc("Authentication information used to access private bicep registries, which is a map of registry hostname to secret config that contains credential information.")
-+  authentication?: Record<SecretConfig>;
++  authentication?: Record<RegistrySecretConfig>;
+}
+```
+`RegistrySecretConfig` contains registry credential information, we also want users to specify the type of credentials, e.g. username-password, federated credentials.
+
+Option 1: 
+
+Adding a `type` property to `RegistrySecretConfig`
+environment.tsp
+```
+@doc(RegistrySecretType represents the authentication type used to authenticate private Bicep registries.)
+enum RegistryAuthType {
+  @doc("basicAuthentication type is used to represent username and password based authentication and the secretstore resource is expected to have the keys 'username' and 'password'")
+  basicAuthentication
+
+  @doc("azureFederatedIdentity type is used to represent registry authentication using azure federated identity and the secretstore resource is expected to have the keys 'clientId' and 'tenantId'")
+  azureFederatedIdentity
+
+  @doc("awsIRSA type is used to represent registry authentication using AWS IRSA.")
+  awsIRSA
 }
 
-@doc("Personal Access Token (PAT) configuration used to authenticate to Git platforms.")
-model SecretConfig {
-  @doc("Secret represents the resource ID of the secret store that has credential information.")
+@doc("Registry Secret Configuration used to authenticate to private bicep registries.")
+model RegistrySecretConfig {
+  @doc("The ID of an Applications.Core/SecretStore resource containing credential information used to authenticate private container registry.The keys in the secretstore depends on the type.")
   secret?: string;
+
+  @doc(RegistryAuthType represents the authentication type used to authenticate private Bicep registries.)
+  type: RegistryAuthType
+}
+```
+Option 2:
+
+Adding support to the `Applications.Core/secretStores` resource to include additional types. Today `secretStores` resource only supports types `certificate` and `generic`.
+
+secretstores.tsp
+
+```diff
+@doc("The type of SecretStore data")
+enum SecretStoreDataType {
+  @doc("Generic secret data type")
+  generic,
+
+  @doc("Certificate secret data type")
+  certificate,
+
++  @doc("basicAuthentication type is used to represent username and password based authentication and the secretstore resource is expected to have the keys 'username' and 'password'")
++  basicAuthentication
++
++  @doc("azureFederatedIdentity type is used to represent registry authentication using azure federated identity and the secretstore resource is expected to have the keys 'clientId' and 'tenantId'")
++  azureFederatedIdentity
++
++  @doc("awsIRSA type is used to represent registry authentication using AWS IRSA.")
++  awsIRSA
 }
 
 ```
+I propose adding `type` property to the `RegistrySecretConfig` i.e Option 1, as with the current implementation of the secrets flow between engine-driver,  Option 2 lead to either having driver specific code in engine/secretLoader or driver making api call to corerp. 
+
 ***Bicep Example***
 
 environment.bicep
@@ -185,12 +276,15 @@ environment.bicep
     "authentication":{
       "test.azurecr.io":{
         "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/acr-secret"
+        "type": "azureFederatedIdentity"
       },
       "123456789012.dkr.ecr.us-west-2.amazonaws.com":{
-        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/aws-secret"
+        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/aws-secret",
+        "type":"awsIRSA"
       },
       "ghcr.io":{
-        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/ghcr-secret"
+        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/ghcr-secret",
+        "type": "basicAuthentication"
       },
     }
   }
@@ -255,12 +349,13 @@ With this design we enable username-password based authentication for OCI compli
     - Adding changes to bicep driver to use oras auth package to authenticate private bicep registries
     - Update/Add unit tests
 - Task 3:
-    - Adding cli changes for `rad bicep publish` to support private bicep registries.
-    - Update the cli unit tests.
-- Task 3:
-    - Manual Validation and adding e2e tests to verify using private bicep registries
+    - Adding changes to support Azure federated identity to authenticate ACR
+    - Testing ACR authentication using azure federated identity.
 - Task 4:
+    - Manual Validation and adding e2e tests to verify using private bicep registries
+- Task 5:
     - Adding developer documentation for private bicep registry support feature.
 
 ## Design Review Notes
 - Maintain the current design for the `rad bicep publish` command as it is, where users takes care of logging into private registry and radius uses the dockerfile based authentication to publish recipes to private registries.
+- Include details on how to handle different registry authentication types.  
