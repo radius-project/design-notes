@@ -5,9 +5,11 @@
 
 ## Summary
 <!-- A paragraph or two to summarize the Epic. Just define it in summary form so we all know what it is. -->
-Continuous deployment of cloud native applications and infrastructure is challenging for a number of reasons.  GitOps is a popular set of practices, implemented as popular tools, like Flux and ArgoCD, that mitigates these challenges for enterprise application teams that use git for source control and Kubernetes for orchestration of software containers.  GitOps provides a developer-centric experience by abstracting and automating many of the tasks required for deploying and operating Kubernetes and its underlying dependent infrastructure. The core concept of GitOps is to rely on a git repository that serves as a single source of truth: i.e. it contains current declarative descriptions of the required infrastructure for a given production environment. It also contains a description of the workflow required to prevent drift between the repo and the production environment. It's like having cruise control for managing applications in production.
+Continuous deployment of cloud native applications and infrastructure is challenging for a number of reasons.  GitOps is a popular set of practices, implemented as popular tools, like Flux and ArgoCD, that mitigates these challenges for enterprise application teams that use git for source control and Kubernetes for orchestration of software containers.  GitOps provides a developer-centric experience by abstracting and automating many of the tasks required for deploying and operating Kubernetes and its underlying dependent infrastructure. The core concept of GitOps is to rely on a git repository that serves as a single source of truth: i.e. it contains current declarative descriptions of the required infrastructure for a given production environment. It also contains a description of the workflow required to prevent drift between the repo and the production environment. It's like having cruise control for managing applications in production without needing to write custom scripts or maintain complex CD pipelines.
 
 Enterprises that use GitOps and also want to use Radius do not currently have a clear path for how to use both technologies in an integrated and complementary way to enable a “better together” experience.
+
+>It's important to note that GitOps mechanisms don't manage the CI (e.g. image build and app containerization) but they do manage the CD (e.g. deployment of the app to the cluster)
 
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
@@ -18,6 +20,7 @@ Enterprises that use GitOps and also want to use Radius do not currently have a 
 <!-- What are we explicitly not trying to accomplish? -->
 - We are not trying to replace GitOps tools or platforms.  We are trying to integrate Radius with existing GitOps tools and platforms.
 - We are not trying to replace GitOps practices.  We are trying to enable Radius to work well with GitOps practices.
+- We are not implementing dashboard visualizations for GitOps changes (i.e. as an Operator and as a Developer, I can visualize the changes tracked by my GitOps toolset on my Radius Dashboard) as a part of the initial scope of this project. We still need to flesh this out but the basic idea is the Radius dashboard can leverage the Notification Controller in Flux and ArgoCD to display to users inbound and outbound information of the source changes and cluster changes affecting their application and resources. In a future iteration of Radius GitOps integration, we will explore options and potential to leverage plugins in the Backstage ecosystem to provide this functionality.
 
 ## Customer profile and challenges
 <!-- Define the primary customer and the key problem / pain point we intend to address for that customer. If there are multiple customers or primary and secondary customers, call them out.   -->
@@ -32,9 +35,11 @@ Enterprises that use GitOps and also want to use Radius do not currently have a 
 
 ### Challenge(s) faced by the customer
 <!-- What challenges do the customer face? Why are they experiencing pain and why do current offerings not meet their need? -->
-Before the introduction of GitOps, enterprise application teams struggled with complex deployment processes; environment/application configuration drift; as well as difficulty following best practices for security and disaster recovery.  GitOps enables teams to define continuous deployment workflows and automation to simplify many of these tasks, which add significant value by increasing efficiency, security, creating better developer experiences, and allowing for faster deployments between code changes.
+Before the introduction of GitOps, enterprise application teams struggled with complex deployment processes; environment/application configuration drift; as well as difficulty following best practices for security and disaster recovery.  GitOps enables teams to define continuous deployment workflows and automation without having to write custom scripts or maintain complex CI/CD pipelines. GitOps tools simplify and perform many of these tasks, which add significant value by increasing efficiency, security, creating better developer experiences, and allowing for faster deployments between code changes.
 
 Radius offers additional complementary value for enterprise application teams, including a rich, declarative application description which enables the Radius application graph.  Radius also provides a clear separate of concerns via Recipes.  However, without integration of Radius and GitOps, plus clear guidance on how to use the two together, enterprises already invested in GitOps don't know how to use both GitOps and Radius for a better together experience.
+
+Additionally, in its current state GitOps works well within the Kubernetes sphere of influence but can't be applied to things outside of Kubernetes.  This is a limitation for enterprises that want to use GitOps to manage their entire application stack, including things like databases, storage, and other infrastructure.  To get the full benefit of GitOps, a user needs to combine things that can be controlled with GitOps with things that can't. Radius + Recipes can help here.
 
 <!-- What is the positive outcome for the customer if we deliver these features, i.e. what is the value proposition for the customer? Remember, this is customer-centric. -->
 
@@ -45,18 +50,15 @@ Radius offers additional complementary value for enterprise application teams, i
 <!-- One or two sentence summary -->
 My team uses GitOps to manage Kubernetes clusters and applications that run in those clusters.  All relevant configuration information is stored in a git repository that serves as the source of truth for both the application code and infrastructure configuration.  To use Radius, I need to include Radius as a dependency for my Kubernetes cluster, just as I would any other dependency, via my GitOps tools.
 
-### Scenario 2: As an operator or developer, I can deploy and manage Radius Environments, Recipes, applications, and resources via my GitOps toolset
+### Scenario 2: As an operator or developer, I can deploy and manage Radius Environments, Recipes, applications, resources, credentials, etc. via my GitOps toolset
 <!-- One or two sentence summary -->
-With Radius installed, as an Operator, I now define, deploy and manage a Radius environment and associate relevant Recipes to that environment. 
+With Radius installed, as an Operator, I now define, deploy and manage a Radius environment and associate relevant Recipes, Credentials, and other Radius objects to that environment. 
 
 As a Developer, my Operations counterpart has provided a Radius Environment plus Recipes to enable my Radius application development.  I have familiarized myself with Radius and have experimented with deploying my application to this environment using the Recipe.  After my app is deployed, I can view its graph in the Radius dashboard.  Everything is working well for me so far and I really appreciate these cool Radius features! 
 
 ### Scenario 3: As a Site Reliability Engineer (SRE), I can patch and edit the configuration in my Kubernetes cluster through my GitOps toolset.
 <!-- One or two sentence summary -->
 As an SRE, my Operations counterpart has provided a Kubernetes cluster, a Radius Environment running on that cluster and the infrastructure resources through Radius Recipes required for the Radius Applications that will run in that Radius Environment. I am expected to make adjustments to the configuration of the Kubernetes cluster and the Radius Environment as needed. I can do this through my GitOps toolset.
-
-### Stretch Goal: As an Operator and as a Developer, I can visualize the changes tracked by my GitOps toolset on my Radius Dashboard
-We still need to flesh this out but the basic idea is the Radius dashboard can leverage the Notification Controller in Flux and ArgoCD to display to users inbound and outbound information of the source changes and cluster changes affecting their application and resources.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -65,7 +67,7 @@ We still need to flesh this out but the basic idea is the Radius dashboard can l
 <!-- **Risk Name** – summary of risk.  Mitigation plan if known. If it is not yet known, no problem. -->
 Dependencies - Flux, ArgoCD, future GitOps tools/platforms. 
 
-The primary risk, per the question below, is whether an abstracted, generalizable extensibility model for GitOps is feasible.
+The primary risk, per the question below, is whether an abstracted, generalizable extensibility model for GitOps is feasible. Preliminary investigation tells us that it is feasible via a Kubernetes controller.
 
 ## Key assumptions to test and questions to answer
 <!-- If you are making assumptions that, if incorrect, would cause us to significantly alter our approach to this scenario, make them explicit here.  Also call out how / when you plan to validate key assumptions. -->
@@ -81,7 +83,7 @@ We as the Radius team understand that while Flux and ArgoCD might currently be t
 > The implementation settled on is generic enough to support GitOps on a wide level not narrowed down to just Flux or ArgoCD.
 
 ## Current state
-TBD
+N/A
 
 # Scenario 1: Install and configure Radius using GitOps
 
@@ -103,7 +105,7 @@ After this scenario is implemented, I can install and configure Radius with my G
 Step 2
 … -->
 1. With my editor of choice (such as VSCode) open the GitOps (Flux or ArgoCD) Source File  
-1. Add installation of Radius as a Kubernetes cluster dependency for my desired Radius version.
+1. Add installation of Radius as a Kubernetes cluster dependency for my desired Radius version (committing a new version number in the repo triggers an upgrade of the Radius control plane).
    1. Similar the params in the Flux schema defined here: [Helm Charts | Flux (fluxcd.io)](https://fluxcd.io/flux/components/source/helmcharts/)
 1. Commit the change to the git repo to submit my change and track it for future reference.
 1. GitOps tool will detect this repo change and update the relevant Kubernetes clusters 
@@ -120,7 +122,7 @@ The syntax for adding Radius as a Kubernetes cluster dependency must be:
 
 ## Key investments
 <!-- List the features required to enable this scenario. -->
-Based on current understanding, there should be no new features that need to be implemented in Radius for this scenario. The key investment is in testing the GitOps tooling to ensure that the syntax for adding Radius as a Kubernetes cluster dependency is consistent with customer expectations for defining such a dependency and is executable by Flux or ArgoCD.
+Based on current understanding, there should be no new features that need to be implemented in Radius for this scenario. The key investment is in testing the GitOps tooling to ensure that the syntax for adding Radius as a Kubernetes cluster dependency is consistent with customer expectations for defining such a dependency and is executable by Flux or ArgoCD. We need to validate that our Helm Charts are compatible with Flux and ArgoCD.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -154,7 +156,7 @@ Since my organization uses GitOps to manage Kubernetes clusters and applications
 <!-- <Write this as an “I statement” that expresses the new capability from customer perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly blah blah blah …. As a result <summarize positive impact on your work / business>  -->
 With the implementation of this scenario, I can deploy and manage Radius Environments, their associated Recipes, Applications, and Resources via my existing GitOps (Flux and ArgoCD) toolsets. This means that I don't have to author pipelines or manually run Radius commands to deploy Radius-managed resources. Instead, I can leverage a git repo as the source of truth for my Radius-managed resources and use my existing GitOps tooling to deploy and manage those resources. This ensures that my experience with managing Radius resources is consistent with how I normally use GitOps to manage Kubernetes clusters and applications.
 
-> There is no new Radius specific user experience for this scenario. Customers are only interacting with Flux or ArgoCD.
+> There is no new Radius specific user experience for this scenario. Customers are only interacting with Flux or ArgoCD. However, note that we're combining two different but existing user experiences (i.e. GitOps `git push` + Radius `app.bicep`).
 
 ### Detailed Customer Experience
  <!-- <List of steps the customer goes through from the start to the end of the scenario to provide more detailed view of exactly what the customer is able to do given the new capabilities>  -->
@@ -164,10 +166,10 @@ Step 2
 
 **Step 1: Define and deploy Radius Environment and Recipes**
 
-As an operator, I need to define and deploy a Radius Environment and associate relevant Recipes to that environment so that my development team can build and deploy their Radius applications.
+As an operator, I need to define and deploy a Radius Environment and associate relevant Recipes, Credentials, etc. to that environment so that my development team can build and deploy their Radius applications.
 
 1. Using my editor of choice, such as VSCode, I open an existing Radius environment file, `env.bicep`, from the online Radius samples repo. 
-1. I use Radius documentation to determine specific edits to my `env.bicep` file such as Kubernetes cluster and the appropriate cloud provider registrations. 
+1. I use Radius documentation to determine specific edits to my `env.bicep` file such as Kubernetes cluster and the appropriate cloud provider registrations and credentials. 
    1. I will create a Radius Environment resource and add all the information listed above. 
    1. I will then edit my Radius Environment resource to contain the properties required to register my Radius Recipe such as template path, template kind, etc.
 1. I then push my new `env.bicep` file to my git repository, as I would any other file. 
@@ -181,18 +183,19 @@ As an operator, I need to define and deploy a Radius Environment and associate r
 Now, as a developer, I need to make some changes to my application code. Specifically, I need to change the Radius Resource for my frontend UI. My frontend resource is already running in my Radius application but I need update the code for parsing user input. First, I'll update the required file where this function lives then I'll update my Radius Resource as follows: 
 
 1. With my editor of choice, such as VSCode, I open the existing `frontend` application file `helper.ts` and update my function `parseUsers` with the new required logic. 
-2. Then I push the changes to my git repository. 
-3. This triggers Flux/ArgoCD to detect the change and update the `frontend` resource with the new function. I use Flux/ArgoCD to monitor the health status of the Kubernetes cluster and immediately realize the pod associated with my `frontend` resource is failing.
+2. Then I push the changes to my git repository, which triggers my CI pipeline to rebuild and containerize my application. Note that the CI is outside of the scope of GitOps and this scenario.
+3. This triggers Flux/ArgoCD to detect the updated application image and update the `frontend` resource with the new function. I use ArgoCD to monitor the health status of the Kubernetes cluster and immediately realize the pod associated with my `frontend` resource is failing.
 4. I review my code change again and realize I created a bug in the function which is causing the resource to fail. 
 5. To resolve, I:
-   1. Use the Flux/ArgoCD rollback commands to restart my `frontend` resource pods with the previous code version so as not to disrupt my customers. 
+   1. Use the ArgoCD [rollback commands](https://argo-cd.readthedocs.io/en/release-2.7/user-guide/commands/argocd_app_rollback/) to restart my `frontend` resource pods with the previous code version so as not to disrupt my customers OR I use `git revert` to revert my code change and `git push` the revert to my git repository which then gets detected by my CI to rebuild the image and then gets redeployed by Flux.
    1. Proceed with a new code change to my `helper.ts` that resolves the bug, then push this change to my repository. 
-6. Flux/ArgoCD now deploys my bug fix and I can see in Flux/ArgoCD that the pod has restarted in a healthy state with my new code. 
+6. Flux/ArgoCD now redeploys my new application image containing the bug fix and I can see in Flux/ArgoCD that the pod has restarted in a healthy state with my new code. 
 
 > As a Developer, I'm very happy with this experience because I get the cool new features of Radius (like self-serve infrastructure deployment via Recipes and the App Graph/Dashboard) in addition to the features I already know and love in Flux, like health monitoring and rollback.
 
 __Requirements resulting from these scenarios:__ 
 - Flux/ArgoCD must be able to detect the file change described above and must be able to read the env.bicep file as required to deploy the Radius app correctly 
+- Flux/ArgoCD must be able to detect changes to the `.bicepconfig` file and execute bicep config updates
 - Radius types and Bicep files must be able to be read by Flux/ArgoCD which currently does not have that ability.
 - Flux/ArgoCD must be able to detect Radius resource types and execute Flux/ArgoCD commands against those types, including rollback *list of any other required Flux commands*.
 - Based on user feedback this could be just testing that commands such as dry run mechanisms work
@@ -202,7 +205,7 @@ __Requirements resulting from these scenarios:__
 
 ### Feature 1: GitOps tooling can detect and understand Radius definition files
 <!-- One or two sentence summary -->
-GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file change in the git repo described above and must be able to read the `env.bicep` file as required to deploy the Radius app correctly.
+GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file change in the git repo described above and must be able to read the `env.bicep` file (or any `*.bicep` and `.bicepconfig` files) as required to deploy the Radius app correctly.
 
 GitOps tools (beginning with Flux and ArgoCD) must be able to detect changes to Radius applications and other resource type definitions in the git repo and execute the appropriate deployment, etc. commands against those types, including rollback operations.
 
@@ -213,6 +216,10 @@ Once Radius definition file changes are detected and understood, GitOps tools (b
 ### Feature 3: GitOps tooling can rollback Radius resources
 <!-- One or two sentence summary -->
 GitOps tools (beginning with Flux and ArgoCD) must be able to execute rollback operations for Radius resources defined in the git repo.
+
+#### Feature 4: GitOps tooling can detect and execute resource deletions
+<!-- One or two sentence summary -->
+If a resource in a `.bicep` Radius definition file is deleted and the change is pushed to the repo, the GitOps tools (Flux and ArgoCD) should detect the change and trigger Radius to delete that resource. Note that this is not a behavior of bicep today but it's important for this usecase.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -243,7 +250,7 @@ As an SRE, I am expected to make adjustments to the configuration of the Kuberne
 <!-- <Write this as an “I statement” that expresses the new capability from customer perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly blah blah blah …. As a result <summarize positive impact on your work / business>  -->
 As an example, the application team will require 10 replica pods for their prod environment however this variable is currently set to 1. To fix this as a SRE, I should have 2 options:
 
-**Option 1**
+**Option 1: patch using current Kubernetes mechanisms**
 
 1. Using my editor of choice, VSCode, I'll make changes to the replica number for the pods through a YAML patch file that can contain the path to parameter annotations that effect the replica number of pods:
 
@@ -264,13 +271,13 @@ patches:
 ```
 
 2. This file points to replica-patch.yaml which contains parameters to change the replica number of pods to 10.
-2. These 2 files are then committed to my configurational files to patch my Kubernetes cluster.
+2. These 2 files are then committed to my configuration files to patch my Kubernetes cluster. Note that this means SREs can continue to patch resources that may have been previously deployed by Radius, using their current Kubernetes patch mechanisms (e.g. Kustomize).
 
 > As an SRE, I'm very happy with this experience because I did not have to change anything in my normal workflow behavior and was able to leverage Flux and my normal YAML file workflow.
 
 > This is the current state for GitOps and Kustomize, thus should not require any new features to be implemented in Radius.
 
-**Option 2 Advanced SRE**
+**Option 2: patch via modification of Radius definitions**
 
 1. Using my editor of choice, VSCode, I'll make changes to the replica number for the pods through changing the parameter of replica sets that my MongoDB recipe takes in as defined in its Radius Environment resource in `env.bicep`:
 
@@ -312,7 +319,7 @@ _Requirements resulting from this scenario:_
 
 ### Feature 1: GitOps tooling can detect and understand Radius definition files
 <!-- One or two sentence summary -->
-GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file change in the git repo described above and must be able to read the `env.bicep` file as required to deploy the Radius app correctly.
+GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file change in the git repo described above and must be able to read the `env.bicep` (or any `.bicep`) file as required to deploy the Radius app correctly.
 
 ### Feature 2: GitOps tooling can execute Radius commands
 <!-- One or two sentence summary -->
@@ -338,8 +345,18 @@ The GitOps controllers must be aware of the patches applied to the Kubernetes cl
 
 **Assumption:** The Flux and ArgoCD controllers can be made aware of the originally checked in Radius resource definitions and can appropriately apply patches to the Kubernetes cluster without conflicts. We will need to test this to ensure that it works as expected.
 
-**Assumption:** Patch configurations can be built into the Radius resource defintion schemas and can be applied by Flux and ArgoCD controllers. We will need to test this to ensure that it works as expected.
+**Assumption:** Patch configurations can be built into the Radius resource definition schemas and can be applied by Flux and ArgoCD controllers. We will need to test this to ensure that it works as expected.
 
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
 N/A
+
+## Notes
+
+### July 9, 2024
+- DONE: More specifics on the value of GitOps as well as limitations to Kubernetes
+- DONE: Clarify that can use GitOps to manage other Environment objects outside of Recipes
+- DONE: Move dashboard features to out of scope
+- DONE: Add resource deletion feature to Scenario 2
+- DONE Clarify the scope of gitops: it doesn't manage the CI (e.g. image build and app containerization) but it does manage the CD (e.g. deployment of the app to the cluster)
+- DONE: Track disaster recovery scenarios as a separate feature request: DONE - https://github.com/radius-project/radius/issues/7732
