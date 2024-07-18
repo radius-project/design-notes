@@ -93,7 +93,7 @@ N/A
 
 ## Details of customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
-As an infrastructure operator in an enterprise applications team that has to maintain complex Kubernetes clusters and the platforms that run on them, I need to ensure that my team can deploy and manage applications and infrastructure in a consistent and reliable way. Thus, we make use of GitOps to manage Kubernetes clusters and applications that run in those clusters. All relevant configuration information is stored in a git repository that serves as the source of truth for both the application code and infrastructure configuration. To use Radius, I need to include Radius as a dependency for my Kubernetes cluster, just as I would any other dependency, via my GitOps tools. Without clear guidance on how to do this, I am unsure how to use both GitOps and Radius for a better together experience.
+As an infrastructure operator in an enterprise applications team that has to maintain complex Kubernetes clusters and the platforms that run on them, I need to ensure that my team can deploy and manage applications and infrastructure in a consistent and reliable way. Thus, we make use of GitOps to manage Kubernetes clusters and applications that run in those clusters. All relevant configuration information is stored in git repositories that serve as the source of truth for both the application code and infrastructure configuration. Most commonly, infrastructure configuration and application code are house in separate repos. To use Radius, I need to include Radius as a dependency for my Kubernetes cluster, just as I would any other dependency, via my GitOps tools. Without clear guidance on how to do this, I am unsure how to use both GitOps and Radius for a better together experience.
 
 ## Desired customer experience outcome
 <!-- <Write this as an “I statement” that expresses the new capability from customer perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly blah blah blah …. As a result <summarize positive impact on your work / business>  -->
@@ -173,7 +173,7 @@ As an operator, I need to define and deploy a Radius Environment and associate r
    1. I will create a Radius Environment resource and add all the information listed above. 
    1. I will then edit my Radius Environment resource to contain the properties required to register my Radius Recipe such as template path, template kind, etc.
 1. I then push my new `env.bicep` file to my git repository, as I would any other file. 
-1. This triggers Flux or ArgoCD to detect the change, read the new `env.bicep` file, and deploy the Radius Environment as specified.
+1. This triggers Flux or ArgoCD to detect the change, read the new `env.bicep` file, and trigger Radius to deploy the Environment as specified.
 1. After Flux or ArgoCD initiates the Radius environment deployment, as I would normally do, I use Flux or ArgoCD to monitor deployment status and health status of the underlying Kubernetes cluster. 
 
 > As an operator, while Radius presents some new concepts, those concepts fit cleanly within my existing GitOps workflows so Radius is relatively low overhead for me to adopt and to provide value to my development counterparts.   
@@ -189,7 +189,7 @@ Now, as a developer, I need to make some changes to my application code. Specifi
 5. To resolve, I:
    1. Use the ArgoCD [rollback commands](https://argo-cd.readthedocs.io/en/release-2.7/user-guide/commands/argocd_app_rollback/) to restart my `frontend` resource pods with the previous code version so as not to disrupt my customers OR I use `git revert` to revert my code change and `git push` the revert to my git repository which then gets detected by my CI to rebuild the image and then gets redeployed by Flux.
    1. Proceed with a new code change to my `helper.ts` that resolves the bug, then push this change to my repository. 
-6. Flux/ArgoCD now redeploys my new application image containing the bug fix and I can see in Flux/ArgoCD that the pod has restarted in a healthy state with my new code. 
+6. Flux/ArgoCD now triggers a redeployment of my new application image containing the bug fix and I can see in Flux/ArgoCD that the pod has restarted in a healthy state with my new code. 
 
 > As a Developer, I'm very happy with this experience because I get the cool new features of Radius (like self-serve infrastructure deployment via Recipes and the App Graph/Dashboard) in addition to the features I already know and love in Flux, like health monitoring and rollback.
 
@@ -352,6 +352,10 @@ The GitOps controllers must be aware of the patches applied to the Kubernetes cl
 N/A
 
 ## Notes
+
+### July 16, 2024
+- DONE: address some nit comments regarding accuracy of the scenarios with regards to the role of Flux/GitOps in deployments.
+- TODO: drill deeper into Scenario 3 to specify whether we should support "patching the inputs" or "patching the outputs"
 
 ### July 9, 2024
 - DONE: More specifics on the value of GitOps as well as limitations to Kubernetes
