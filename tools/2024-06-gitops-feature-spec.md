@@ -244,74 +244,67 @@ If a resource in a `.bicep` Radius definition file is deleted and the change is 
 
 ## Existing customer problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a customer am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
-As an SRE, I am expected to make adjustments to the configuration of the Kubernetes cluster and the Radius Environment as needed. Today, I adjust the cluster as needed through my GitOps toolset via patching solutions like [Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) in [Flux](https://fluxcd.io/flux/components/kustomize/) or [ArgoCD](https://argo-cd.readthedocs.io/en/stable/user-guide/kustomize/), but I'm unable to do so for all the Radius-specific resources since Radius types and Bicep files are not currently readable by Flux or ArgoCD. This means that I have to manually manage the Radius instance I am providing for my developers and operators to use, which is a significant overhead for me to adopt and to provide value to my development counterparts.
+As an SRE, I am expected to make adjustments to the configuration of the Kubernetes cluster and the Radius Environment as needed. Today, I adjust the cluster as needed through my GitOps toolset via patching solutions like [Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) in [Flux](https://fluxcd.io/flux/components/kustomize/) or [ArgoCD](https://argo-cd.readthedocs.io/en/stable/user-guide/kustomize/), but I'm unable to do so for all the Radius-specific resources since Radius types and Bicep files are not currently readable by Flux or ArgoCD. This means that I have to manually manage the Radius instance I am providing for my developers and operators to use, which is a significant overhead for me to adopt and to provide value to my development counterparts. Additionally, access to modify the Radius Applications and Resources is not granted to me as an SRE, so I have to rely on my Operations counterpart to make these changes for me, which is a significant bottleneck in my workflow.
 
 ## Desired customer experience outcome
 <!-- <Write this as an “I statement” that expresses the new capability from customer perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly blah blah blah …. As a result <summarize positive impact on your work / business>  -->
-As an example, the application team will require 10 replica pods for their prod environment however this variable is currently set to 1. To fix this as a SRE, I should have 2 options:
+As an example, the application team will require 10 replica pods for their prod environment however this variable is currently set to 1 in the current [Bicep parameters](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameter-files?tabs=Bicep) file created by the operator or developer called `app.bicepparams`:
 
-**Option 1: patch using current Kubernetes mechanisms**
+````bicep
+using './app.bicep'
 
-1. Using my editor of choice, VSCode, I'll make changes to the replica number for the pods through a YAML patch file that can contain the path to parameter annotations that effect the replica number of pods:
+param replicaCount = 1
+````
 
-Example:
-
-```yaml
-apiVersion: kustomize...
-kind: Component
-resources:
-- backend/mongoDB.yaml
-patches:
-- target:
-    group: core.opera.prod
-    version: 1
-    kind: Application
-    name: backend
-  path: backend/replica-patch.yaml
-```
-
-2. This file points to replica-patch.yaml which contains parameters to change the replica number of pods to 10.
-2. These 2 files are then committed to my configuration files to patch my Kubernetes cluster. Note that this means SREs can continue to patch resources that may have been previously deployed by Radius, using their current Kubernetes patch mechanisms (e.g. Kustomize).
-
-> As an SRE, I'm very happy with this experience because I did not have to change anything in my normal workflow behavior and was able to leverage Flux and my normal YAML file workflow.
-
-> This is the current state for GitOps and Kustomize, thus should not require any new features to be implemented in Radius.
-
-**Option 2: patch via modification of Radius definitions**
-
-1. Using my editor of choice, VSCode, I'll make changes to the replica number for the pods through changing the parameter of replica sets that my MongoDB recipe takes in as defined in its Radius Environment resource in `env.bicep`:
+The above parameter is defined and used in the `app.bicep` file as follows:
 
 ```bicep
-resource env 'Applications.Core/environments@2023-10-01-preview' = {
-    name: 'prod'
-    properties: {
-      compute: {
-        kind: 'kubernetes'
-        resourceId: 'self'
-        namespace: 'default'
-      }
-      recipes: {
-        'Applications.Datastores/mongoDB':{
-          'mongoDB-bicep': {
-            templateKind: 'bicep'
-            templatePath: 'https://ghcr.io/USERNAME/recipes/myrecipe:1.1.0'
-            // Optionally set parameters for all resources calling this Recipe
-            parameters: {
-              replicaSet: 10
-            }
-          }
+import radius as radius
+
+@description('The app ID of your Radius Application. Set automatically by the rad CLI.')
+param application string
+param replicaCount int
+
+resource demo 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'demo'
+  properties: {
+    application: application
+    container: {
+      image: 'ghcr.io/radius-project/samples/demo:latest'
+      ports: {
+        web: {
+          containerPort: 3000
         }
       }
+      extensions: [
+      {
+        kind:  'manualScaling'
+        replicas: replicaCount
+      }
+    ]
     }
+  }
 }
 ```
 
-2. I can then commit this file to my repository and have Flux apply it to my Radius Environment.
+To fix this as a SRE, I can:
+
+1. Open the `app.bicepparams` file in my editor of choice and change the `replicaCount` parameter to 10.
+
+````bicep
+using './app.bicep'
+
+param replicaCount = 10
+````
+
+2. Commit and push the change to the git repository.
+
+2. Flux/ArgoCD detects the change and triggers Radius to redeploy the `demo` container resources with the new replica count.
 
 > As an SRE, I'm very happy with this experience because I did not have to do many steps to apply my parameter patch and while I had to learn some Bicep knowledge and Radius knowledge, I was able to ultimately leverage Flux mechanisms which I'm familiar with to apply my patches to the Kubernetes cluster.
 
 _Requirements resulting from this scenario:_
-- Flux and ArgoCD must be able to detect the file change described above and must be able to read the env.bicep file as required to deploy the Radius app correctly 
+- Flux and ArgoCD must be able to detect the file change described above and must be able to read the `app.bicep` and `app.bicepparams` files as required to deploy the Radius app correctly 
 - Radius types and Bicep files must be able to be read by Flux/ArgoCD which currently does not have that ability.
 
 ## Key investments
@@ -319,15 +312,11 @@ _Requirements resulting from this scenario:_
 
 ### Feature 1: GitOps tooling can detect and understand Radius definition files
 <!-- One or two sentence summary -->
-GitOps tools (beginning with Flux and ArgoCD) must be able to detect the file change in the git repo described above and must be able to read the `env.bicep` (or any `.bicep`) file as required to deploy the Radius app correctly.
+GitOps tools (beginning with Flux and ArgoCD) must be able to read and detect the `*.bicep` and `*.bicepparams` file changes in the git repo described above as required to trigger Radius to deploy resources correctly.
 
-### Feature 2: GitOps tooling can execute Radius commands
+### Feature 2: GitOps tooling can trigger Radius commands
 <!-- One or two sentence summary -->
-Once Radius definition file changes are detected and understood, GitOps tools (beginning with Flux and ArgoCD) must be able to execute deployments for the Radius resources defined in the git repo.
-
-### Feature 3: The GitOps controllers must be aware of the patches applied to the Kubernetes cluster
-<!-- One or two sentence summary -->
-The GitOps controllers must be aware of the patches applied to the Kubernetes cluster and must be able to honor those patched configurations to avoid conflicts with the Radius resource definitions that have been checked in. This should be possible by leveraging the existing Kustomize mechanisms in Flux ([Kustomize controller](https://fluxcd.io/flux/components/kustomize/)) and ArgoCD ([Application controller](https://argo-cd.readthedocs.io/en/stable/developer-guide/architecture/components/#application-controller)).
+Once Radius definition file changes are detected and understood, GitOps tools (beginning with Flux and ArgoCD) must be able to trigger Radius to execute deployments for the Radius resources defined in the git repo.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
