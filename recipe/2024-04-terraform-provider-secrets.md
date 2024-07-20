@@ -1,12 +1,16 @@
 # Handling of Secrets Data for Terraform Providers
 
 * **Status**: Pending
-* **Author**: lakshmimsft
+* **Author**: @lakshmimsft
 
 ## Overview
 
-We've described the design for support of multiple Terraform Providers in Radius in the following PR: [Design Document to support multiple Terraform Providers](https://github.com/radius-project/design-notes/pull/39/files) and implemented secret handling for Private Terraform modules [Ref PR link](https://github.com/radius-project/radius/pull/7306).
-This document  describes in detail the handling of secrets data between the Engine and Driver for Terraform Providers building on the above designs.
+As part our effort to support multiple Terraform Providers in Radius we're enabling users to input sensitive data into the provider configurations and environment variables using secrets.
+This document describes in detail the handling of secrets data between the Engine and Driver for Terraform Providers.
+
+References:
+[Design Document to support multiple Terraform Providers](https://github.com/radius-project/design-notes/blob/main/recipe/2024-02-terraform-providers.md).
+[Design document for Private Terraform Repository](https://github.com/radius-project/design-notes/blob/main/recipe/2024-01-support-private-terraform-repository.md)
 
 ## Terms and definitions
 
@@ -16,36 +20,26 @@ This document  describes in detail the handling of secrets data between the Engi
 
 ## Objectives
 
-**Reference for new type recipeConfig and handling of secrets for Private Terraform Repository:** [Design document for Private Terraform Repository](https://github.com/radius-project/design-notes/blob/3644b754152edc97e641f537b20cf3d87a386c43/recipe/2024-01-support-private-terraform-repository.md)
-
-**Secret Implementation for Private Terraform Repository:**[Secret Implementation for Private Terraform Repository](https://github.com/radius-project/radius/pull/7306)
-
-**Reference for support of multiple Terraform Providers in Radius:** [Design Document to support multiple Terraform Providers](https://github.com/radius-project/design-notes/pull/39/files)
-
 > **Issue Reference:** <!-- (If appropriate) Reference an existing issue that describes the feature or bug. -->
 https://github.com/radius-project/radius/issues/6539
 
 ### Goals
-
-Describe data flow, specific function calls when using secrets to configure Terraform Providers, building on design in the referred design documents.
+* Enable users to input data stored in secrets into Terraform provider configurations and run Terraform recipes.
+* The secrets will be stored in `Applications.Core/secretStores` underlying resource for the secret store (which today supports Kubernetes secrets).
 
 ### Non goals
-
-The document is focussed on handling secrets for Terraform Providers, with `Applications.Core/secretStores` being the underlying resource for the secret store (which today supports Kubernetes secrets). Other sources and types of `secretsStores` are out of scope for this document. 
+ Other source and types of `secretsStores` apart from `Applications.Core/secretStores` are out of scope for the current design.
+ There is an open issue to expand use-cases of Applications.Core/Secrets [here](https://github.com/radius-project/radius/issues/5520).
 
 ### User scenarios (optional)
 
 #### User story 1
 As an operator, I maintain a set of Terraform recipes for use with Radius. I have a set of provider configurations which are applicable across multiple recipes. These provider configurations now include secrets, which are injected into the Terraform configuration, allowing the Terraform process to access them as needed.
 
-
 ## User Experience (if applicable)
 
 **Sample Input:**
-
-This is pulled in from existing document:
-[Design Document to support multiple Terraform Providers](https://github.com/radius-project/design-notes/pull/39/files)
-
+ 
 ``` diff
 resource env 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'dsrp-resources-env-recipes-context-env'
@@ -229,9 +223,7 @@ and verify that upon returning an error, we do not return sensitive information 
 ## Security
 
 Secret data will be held in memory and be passed to the Driver which will inject these values into the Terraform configuration in working directory for Terraform. This directory is created when a Terraform recipe is set to be deployed and deleted once deployment of the Terraform recipe is completed.
-
 Secret data will not be persisted and secret data will not be logged by Radius.
-Terraform recipe authors should, in general, set the sensitive flag for any input and output variables that contain sensitive data.
 
 ## Compatibility (optional)
 N/A
