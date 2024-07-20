@@ -193,7 +193,7 @@ Now, as a developer, I need to make some changes to my application code. Specifi
    1. Proceed with a new code change to my `helper.ts` that resolves the bug, then push this change to my repository. 
 6. Flux/ArgoCD now triggers a redeployment of my new application image containing the bug fix and I can see in Flux/ArgoCD that the pod has restarted with my new code, but my application is still failing due to connectivity issues with a dependency of the `frontend` service that was added as a result of my code changes above. I realize that I need to update the `frontend` resource to include a new environment variable that points to the new dependency.
 7. In VSCode, I open the `frontend.bicep` Radius definition file and add the new environment variable to the `frontend` resource, then push the change to my git repository.
-8. Flux/ArgoCD detects the change and triggers Radius to redploy the `frontend` resource with the updated environment variable. I can now see in Flux/ArgoCD that the pod has restarted and is now healthy.
+8. Flux/ArgoCD detects the change and triggers Radius to redeploy the `frontend` resource with the updated environment variable. I can now see in Flux/ArgoCD that the pod has restarted and is now healthy.
 
 > As a Developer, I'm very happy with this experience because I get the cool new features of Radius (like self-serve infrastructure deployment via Recipes and the App Graph/Dashboard) in addition to the features I already know and love in Flux, like health monitoring and rollback.
 
