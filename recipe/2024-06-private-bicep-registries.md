@@ -7,7 +7,7 @@
 
 Today, infrastructure recipes are restricted to being stored on publicly accessible OCI-compliant registries. This limitation means that Radius does not support the use of privately-hosted Bicep recipes, nor does it provide a mechanism to configure authentication for accessing these private registries. This gap is a significant hindrance for organizations that develop their own infrastructure modules and prefer to store them in secure, privately-accessible repositories.
 
-To address this issue and enhance the usability of Radius for serious enterprise use cases, we propose adding support for private Bicep registries. This feature will enable Radius to authenticate and interact with private OCI-compliant registries, ensuring secure access to proprietary bicep recipes. 
+To address this issue and enhance the usability of Radius for serious enterprise use cases, we propose adding support for private Bicep registries. This feature will enable Radius to authenticate and interact with private OCI-compliant registries, ensuring secure access to proprietary bicep recipes.
 
 ## Terms and definitions
 
@@ -25,8 +25,6 @@ To address this issue and enhance the usability of Radius for serious enterprise
 - Support all OCI compliant private registries.
 
 ### Non goals
-
-- Federated authentication(Azure workload identity/ AWS IRSA) for ACR and ECR.(will be part of initial feature release, its in investigation phase) 
 - Support to manage(configure/view) OCI registry credentials in Radius environment via CLI. (this is a future priority scenario and would not be in scope for the initial release)
 
 ### User scenarios (optional)
@@ -39,7 +37,7 @@ Credential information is stored in `Application.Core/secretstore` resource, use
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | basicAuthentication | username, password  |
 | azureFederatedIdentity | clientid, tenantId |
-| awsIRSA | | 
+| awsIRSA | arn | 
 
 
 ```
@@ -155,7 +153,6 @@ ORAS auth client example to authenticate private registry using username and pas
 ```
 
 #### Authentication using Federated identity
-
 **Azure**:
 
 Users can leverage Azure Federated Identity to authenticate seamlessly. When Azure Federated Identity is set up on a Kubernetes cluster, it enables secure and managed authentication, allowing workloads running on the cluster to access ACR without needing to manage service principal credentials directly. This approach enhances security by eliminating the need for hardcoded credentials and simplifies the authentication process by relying on Azure Active Directory (AAD) token issuance for the cluster's managed identity.
@@ -184,6 +181,23 @@ To authenticate ACR using Azure Federated credentials, we need to get the refres
 		}),
 	}
   ```
+
+**AWS**:
+
+Similar to Azure Federated Identity, users can leverage AWS IAM Roles for Service Accounts (IRSA) to authenticate seamlessly to Amazon Elastic Container Registry (ECR). Users are expected to provide `arn` as secret in secretStore resources referenced in the recipe config.
+- Retrieve the ECR Authorization token using the `arn` configured with AWS IRSA.
+- And use that as a access token with ORAS auth client
+  ```
+  repo.Client = &auth.Client{
+		Client: retry.DefaultClient,
+		Credential: auth.StaticCredential(<ecr-url>, auth.Credential{
+			AccessToken: <ecr-auth-token>,
+		}),
+	}
+  ```
+
+
+
 ### API design (if applicable)
 ***Model changes***
 
@@ -262,7 +276,7 @@ enum SecretStoreDataType {
 }
 
 ```
-I propose adding `type` property to the `RegistrySecretConfig` i.e Option 1, as with the current implementation of the secrets flow between engine-driver,  Option 2 lead to either having driver specific code in engine/secretLoader or driver making api call to corerp. 
+I propose adding `type` property to the `RegistrySecretConfig` i.e Option 1, as with the current implementation of the secrets flow between engine-driver,  Option 2 lead to either having driver specific code in engine/secretLoader or driver an making api call to corerp to get secrets information. 
 
 ***Bicep Example***
 
@@ -323,6 +337,11 @@ environment.bicep
   ```
   NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("could not authenticate to the bicep registry %s, missing credentials. : %s", <private-oras-registry-name>, <error returned by the oras client>))
   ```
+- Invalid Secret keys
+  This issue arises when users provide invalid key in the secretstore for a specific registry authentication type.
+  e.g: for type `azureFederatedIdentity`, user provide invalid keys.
+  NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("Invalid secret keys provided for type %s. The required keys are %s and %s.", "azureFederatedIdentity","clientId","tenantId"))
+  ```
 
 ## Test plan
 
@@ -337,7 +356,8 @@ environment.bicep
     - Deploy the recipe as part of the functional test using github app token to authenticate ghcr. 
 
 ## Security
-With this design we enable username-password based authentication for OCI compliant registries, we let the users manage secrets. For secret rotation users need to re deploy the `Applications.Core/secretStores` resource with updated credentials.
+With this design we enable username-password and based authentication for OCI compliant registries, we let the users manage secrets. For secret rotation users need to re deploy the `Applications.Core/secretStores` resource with updated credentials.
+We also enable 
 
 ## Development plan
 
@@ -352,8 +372,11 @@ With this design we enable username-password based authentication for OCI compli
     - Adding changes to support Azure federated identity to authenticate ACR
     - Testing ACR authentication using azure federated identity.
 - Task 4:
-    - Manual Validation and adding e2e tests to verify using private bicep registries
+    - Adding changes to support AWS IRSA to authenticate ECR
+    - Testing ECR authentication using AWS IRSA.
 - Task 5:
+    - Manual Validation and adding e2e tests to verify using private bicep registries
+- Task 6:
     - Adding developer documentation for private bicep registry support feature.
 
 ## Design Review Notes
