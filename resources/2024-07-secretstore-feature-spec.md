@@ -21,11 +21,11 @@ As an application developer, I cannot reference a `secretStores` resource in the
 
 As an operator, I can define an `Applications.Core/secretStores` resource and deploy it along with an Environment so that the developers I support can securely leverage secrets I manage on their behalf for use in their application resources.
 
-As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers` resource defintion so that Radius will inject secrets as environment variables into my container at deploy time so that credentials can be provided to the container for authentication, etc.
+As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers` resource definition so that Radius will inject secrets as environment variables into my container at deploy time so that credentials can be provided to the container for authentication, etc.
 
-As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Extenders` or `Applications.Volumes` resource defintion so that I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
+As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Extenders` or `Applications.Volumes` resource definition so that I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
 
-As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Datastores/*` or `Applications.Messaging/*` resource defintion so that I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
+As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Datastores/*` or `Applications.Messaging/*` resource definition so that I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
 
 ### Detailed Customer Experience
  <!-- <List of steps the customer goes through from the start to the end of the scenario to provide more detailed view of exactly what the user is able to do given the new capabilities>  -->
