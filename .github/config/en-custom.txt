@@ -711,7 +711,7 @@ TokenExpirationSeconds
 amazonaws
 serviceaccount
 oidc
-
+assumeRoleProvider
 TokenExpirationSeconds
 amazonaws
 serviceaccount
