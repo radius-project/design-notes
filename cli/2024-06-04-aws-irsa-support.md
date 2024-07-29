@@ -153,7 +153,7 @@ Radius should support AWS IRSA.
 
 1. [Setup OIDC provider] (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) should be complete for the cluster. 
    
-2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the service-accounts (ucp and applications-rp) in the specified namespace (radius-system) in specified cluster with the specified OIDC provider to be established. 
+2. `radius-role` with desired policies should be created. Its trust relation should look similar to below. This establishes a trust relation between the service-accounts (ucp and applications-rp) in the specified namespace (radius-system by default) in specified cluster with the specified OIDC provider to be established. 
 
 
   ```
@@ -228,7 +228,7 @@ the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 
 **installation and setup**
 
-* use `rad install kubernetes --set global.aws.IRSA.enabled=true` to add the neccessary pod spec to mount the service-account token.
+* use `rad install kubernetes --set global.aws.irsa.enabled=true` to add the neccessary pod spec to mount the service-account token.
 
 ```
     Containers:
@@ -262,7 +262,7 @@ rad env update qa --aws-account-id <aws-account-id> --aws-region <aws-region>
 
 **post installation**
 
-Once the steps in instalation and setup is completed, UCP should be able to "fetch" the configured credentials and then use AssumeRole to manage AWS resources. AWSCredentialProvider should be updated to support the new credential. This can then be used as part of initializing the UCP AWS Module with IRSA credentials. RP should fetch the credential through UCP and utilize it with Terraform provider.  
+Once the steps in installation and setup is completed, UCP should be able to "fetch" the configured credentials and then use AssumeRole to manage AWS resources. AWSCredentialProvider should be updated to support the new credential. This can then be used as part of initializing the UCP AWS Module with IRSA credentials. RP should fetch the credential through UCP and utilize it with Terraform provider.  
 
 ```
   client := sts.NewFromConfig(cfg)
@@ -278,6 +278,18 @@ Once the steps in instalation and setup is completed, UCP should be able to "fet
   output, err := s3client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
   :
 
+```
+
+Below are the Terraform configuartions to be added for IRSA:
+Ref: https://registry.terraform.io/providers/hashicorp/aws/latest/docs#assuming-an-iam-role-using-a-web-identity
+
+```
+	awsIRSAProvider = "assume_role_with_web_identity"
+	awsRoleARN      = "role_arn"
+	sessionName     = "session_name"
+	tokenFile       = "web_identity_token_file"
+	tokenFilePath = "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
+	sessionPrefix = "radius-terraform-"
 ```
 
 **summary**
@@ -323,7 +335,7 @@ model AwsIRSACredentialProperties extends AwsCredentialProperties {
    1. the helm charts should be updated with service-account token mounted as secret.
    2. roleARN should be stored as a AWS credential.
 
-* `rad install kubernetes --set global.aws.IRSA.enabled=true` should add the neccessary pod spec to mount the service-account token.
+* `rad install kubernetes --set global.aws.irsa.enabled=true` should add the neccessary pod spec to mount the service-account token.
 
 * `rad credential register aws --access-key-id <access-key-id> --secret-access-key <secret-access-key>` should be replaced with 
 `rad credential register aws access-key --access-key-id <access-key-id> --secret-access-key <secret-access-key>`
