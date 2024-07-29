@@ -335,7 +335,7 @@ model AwsIRSACredentialProperties extends AwsCredentialProperties {
    1. the helm charts should be updated with service-account token mounted as secret.
    2. roleARN should be stored as a AWS credential.
 
-* `rad install kubernetes --set global.aws.irsa.enabled=true` should add the neccessary pod spec to mount the service-account token.
+* `rad install kubernetes --set global.aws.irsa.enabled=true` should add the necessary pod spec to mount the service-account token.
 
 * `rad credential register aws --access-key-id <access-key-id> --secret-access-key <secret-access-key>` should be replaced with 
 `rad credential register aws access-key --access-key-id <access-key-id> --secret-access-key <secret-access-key>`
@@ -354,7 +354,7 @@ UCP is responsible for communicating with AWS to deploy AWS resources.
 
 We should add support for the new Credential type in 
 /radius/pkg/ucp/frontend/aws/routes.go - func (m *Module) newAWSConfig(ctx context.Context) (aws.Config, error). 
-/Users/nithya/radius/radius/pkg/ucp/credentials/aws.go - func (p *AWSCredentialProvider) Fetch(ctx context.Context, planeName, name string) (*AWSCredential, error)
+/radius/pkg/ucp/credentials/aws.go - func (p *AWSCredentialProvider) Fetch(ctx context.Context, planeName, name string) (*AWSCredential, error)
 
 Then UCP should be able to use these to retrieve the stored roleARN and assume it for managing AWS resources.
 

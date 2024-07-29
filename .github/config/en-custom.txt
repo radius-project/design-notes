@@ -707,3 +707,12 @@ newAWSConfig
 nithya
 planeName
 POC
+TokenExpirationSeconds
+amazonaws
+serviceaccount
+oidc
+
+TokenExpirationSeconds
+amazonaws
+serviceaccount
+arns
