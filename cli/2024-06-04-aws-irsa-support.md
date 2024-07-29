@@ -113,10 +113,10 @@ At a high level, the full flow to setup IRSA looks as below:
 1. configure the cluster with oidc provider. 
 2. have the role-arn configured with desired policies ready.
 3. take steps to allow  `radius-role-arn` and `eks cluster : namespace: service` to trust each other using aws portal.
-4. use [interactive](#user-story-1) approach or [non-interative](#user-story-2) to configure Radius to use IRSA.
+4. use [interactive](#user-story-1) approach or [non-interactive](#user-story-2) to configure Radius to use IRSA.
 5. during rad deploy, radius assumes the role that is configured in the credential. 
 
-OIDC is configured for a cluster and not specific to a role-arn. Therefore, once we have support for multiple crdentials in Radius, the same solution would work for supporting multitenancy.
+OIDC is configured for a cluster and not specific to a role-arn. Therefore, once we have support for multiple credentials in Radius, the same solution would work for supporting multitenancy.
 
 More details about each step is covered in [Detailed Design](#detailed-design)
 
@@ -228,7 +228,7 @@ the user-specific details would be {ACCOUNT_ID} and {OIDC_PROVIDER}.
 
 **installation and setup**
 
-* use `rad install kubernetes --set global.aws.irsa.enabled=true` to add the neccessary pod spec to mount the service-account token.
+* use `rad install kubernetes --set global.aws.irsa.enabled=true` to add the necessary pod spec to mount the service-account token.
 
 ```
     Containers:
@@ -280,7 +280,7 @@ Once the steps in installation and setup is completed, UCP should be able to "fe
 
 ```
 
-Below are the Terraform configuartions to be added for IRSA:
+Below are the Terraform configurations to be added for IRSA:
 Ref: https://registry.terraform.io/providers/hashicorp/aws/latest/docs#assuming-an-iam-role-using-a-web-identity
 
 ```
