@@ -703,3 +703,4 @@ kustomize
 usecase
 gitops
 predefine
+KRM
