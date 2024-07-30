@@ -157,26 +157,33 @@ ORAS auth client example to authenticate private registry using username and pas
 
 Users can leverage Azure Federated Identity to authenticate seamlessly. When Azure Federated Identity is set up on a Kubernetes cluster, it enables secure and managed authentication, allowing workloads running on the cluster to access ACR without needing to manage service principal credentials directly. This approach enhances security by eliminating the need for hardcoded credentials and simplifies the authentication process by relying on Azure Active Directory (AAD) token issuance for the cluster's managed identity.
 
+[Enable Azure Workload Identity on Radius:](https://docs.radapp.io/guides/operations/providers/azure-provider/howto-azure-provider-wi/)
+```
+rad install kubernetes --set global.azureWorkloadIdentity.enabled=true
+```
+or by configuring azure provider with Azure Credential kind `Workload Identity` using `rad init --full` command.
+
 To authenticate ACR using Azure Federated credentials, we need to get the refresh token from ACR, and use it with ORAS auth client. The detailed steps are outlined below:
 
 - Retrieve the Azure Active Directory (AAD) token for the client ID configured with Azure Federated Identity.
-- Get refresh token from ACR by exchanging for the above AAD access token
+- Get refresh token from ACR by exchanging for the above AAD access token, set the 
   ```
   formData := url.Values{
-      "grant_type":   {"access_token"},
-      "service":      <acr-url>,
+      "grant_type":   {"refresh_token"},
+      "service":      test.azurecr.io,
       "tenant":       <tenant-id>,
       "access_token": <aad-token>,
+      "expires_in": <5 mins in seconds> 
     }
     
     // jsonResponse contains the refresh token from ACR.
-    jsonResponse, err := http.PostForm("https://<acr-url>/oauth2/exchange", formData)
+    jsonResponse, err := http.PostForm("https://test.azurecr.io/oauth2/exchange", formData)
   ```
-- Use `RefreshToken` in ORAS auth client to authenticate private ACR.
+- Use `RefreshToken` in ORAS auth client to authenticate private ACR.(Link to ORAS API docs for auth client : https://pkg.go.dev/oras.land/oras-go@v1.2.6/pkg/registry/remote/auth#Credential)
   ```
   repo.Client = &auth.Client{
 		Client: retry.DefaultClient,
-		Credential: auth.StaticCredential(<acr-url>, auth.Credential{
+		Credential: auth.StaticCredential(test.azurecr.io, auth.Credential{
 			RefreshToken: <refresh-token>,
 		}),
 	}
@@ -184,19 +191,23 @@ To authenticate ACR using Azure Federated credentials, we need to get the refres
 
 **AWS**:
 
-Similar to Azure Federated Identity, users can leverage AWS IAM Roles for Service Accounts (IRSA) to authenticate seamlessly to Amazon Elastic Container Registry (ECR). Users are expected to provide `arn` as secret in secretStore resources referenced in the recipe config.
-- Retrieve the ECR Authorization token using the `arn` configured with AWS IRSA.
+Similar to Azure Federated Identity, users can leverage AWS IAM Roles for Service Accounts (IRSA) to authenticate seamlessly to Amazon Elastic Container Registry (ECR). Users are expected to provide `rolearn` as secret in secretStore resources referenced in the recipe config.
+
+- Enable Azure Workload Identity on Radius:
+  ```
+  rad install kubernetes --set global.awsIRSA.enabled=true
+  ```
+  or by configuring aws provider with AWS Credential kind `IRSA` using `rad init --full` command.
+- Retrieve the ECR Authorization token using the `roleARN` configured with AWS IRSA.
 - And use that as a access token with ORAS auth client
   ```
   repo.Client = &auth.Client{
 		Client: retry.DefaultClient,
-		Credential: auth.StaticCredential(<ecr-url>, auth.Credential{
+		Credential: auth.StaticCredential(123456789012.dkr.ecr.us-west-2.amazonaws.com, auth.Credential{
 			AccessToken: <ecr-auth-token>,
 		}),
 	}
   ```
-
-
 
 ### API design (if applicable)
 ***Model changes***
@@ -234,22 +245,29 @@ enum RegistryAuthType {
   @doc("basicAuthentication type is used to represent username and password based authentication and the secretstore resource is expected to have the keys 'username' and 'password'")
   basicAuthentication
 
-  @doc("azureFederatedIdentity type is used to represent registry authentication using azure federated identity and the secretstore resource is expected to have the keys 'clientId' and 'tenantId'")
-  azureFederatedIdentity
+  @doc("azureWorkloadIdentity type is used to represent registry authentication using azure federated identity and the secretstore resource is expected to have the keys 'clientId' and 'tenantId'")
+  azureWorkloadIdentity
 
-  @doc("awsIRSA type is used to represent registry authentication using AWS IRSA.")
+  @doc("awsIRSA type is used to represent registry authentication using AWS IRSA(IAM Roles for Service accounts) and the secretstore resource is expected to have the keys 'roleARN'")
   awsIRSA
 }
 
 @doc("Registry Secret Configuration used to authenticate to private bicep registries.")
 model RegistrySecretConfig {
   @doc("The ID of an Applications.Core/SecretStore resource containing credential information used to authenticate private container registry.The keys in the secretstore depends on the type.")
-  secret?: string;
+  secretSource?: string;
 
   @doc(RegistryAuthType represents the authentication type used to authenticate private Bicep registries.)
   type: RegistryAuthType
 }
 ```
+Pros:
+- Works well with current recipe config secrets design.
+
+Cons:
+- Adding a new property to specify the `type` of container registry authentication.
+- Incorrect configurations (e.g: clientId is not provided as a secret key for type azureWorkloadIdentity) are not known until recipe deployment.
+
 Option 2:
 
 Adding support to the `Applications.Core/secretStores` resource to include additional types. Today `secretStores` resource only supports types `certificate` and `generic`.
@@ -268,40 +286,55 @@ enum SecretStoreDataType {
 +  @doc("basicAuthentication type is used to represent username and password based authentication and the secretstore resource is expected to have the keys 'username' and 'password'")
 +  basicAuthentication
 +
-+  @doc("azureFederatedIdentity type is used to represent registry authentication using azure federated identity and the secretstore resource is expected to have the keys 'clientId' and 'tenantId'")
-+  azureFederatedIdentity
++  @doc("azureWorkloadIdentity type is used to represent registry authentication using azure federated identity and the secretstore resource is expected to have the keys 'clientId' and 'tenantId'")
++  azureWorkloadIdentity
 +
 +  @doc("awsIRSA type is used to represent registry authentication using AWS IRSA.")
 +  awsIRSA
 }
-
 ```
+Pros:
+- Leveraging the existing property `type` in `Application.core/secretStores` to specify the kind of authentication.
+- Incorrect configurations(e.g: clientId is not provided as a secret key for type azureWorkloadIdentity) can be detected during the creation of the `Applications.Core/secretStore`.
+
+Cons:
+- This options lead to either having driver specific code in engine/secretLoader or driver an making api call to corerp to get secrets information.
+
 I propose adding `type` property to the `RegistrySecretConfig` i.e Option 1, as with the current implementation of the secrets flow between engine-driver,  Option 2 lead to either having driver specific code in engine/secretLoader or driver an making api call to corerp to get secrets information. 
 
 ***Bicep Example***
 
 environment.bicep
-```
-"recipeConfig": {
-  "terraform": {
-    ...
-  },
-  "bicep": {
-    "authentication":{
-      "test.azurecr.io":{
-        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/acr-secret"
-        "type": "azureFederatedIdentity"
-      },
-      "123456789012.dkr.ecr.us-west-2.amazonaws.com":{
-        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/aws-secret",
-        "type":"awsIRSA"
-      },
-      "ghcr.io":{
-        "secret": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/ghcr-secret",
-        "type": "basicAuthentication"
-      },
+```diff
+recipeConfig: {
+  terraform: {
+    authentication: {
+      git: {
+        pat: {
+          'github.com':{
+            secret: moduleSecrets.id
+          }
+        }
+      }
     }
-  }
+  },
+
++  bicep: {
++    authentication:{
++      test.azurecr.io:{
++        "secretSource": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/acr-secret"
++        "type": "azureFederatedIdentity"
++      },
++      123456789012.dkr.ecr.us-west-2.amazonaws.com:{
++        "secretSource": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/aws-secret",
++        "type":"awsIRSA"
++      },
++      ghcr.io:{
++        "secretSource": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/ghcr-secret",
++        "type": "basicAuthentication"
++      },
++    }
++  }
   "env": {
     ...
   }
@@ -340,6 +373,7 @@ environment.bicep
 - Invalid Secret keys
   This issue arises when users provide invalid key in the secretstore for a specific registry authentication type.
   e.g: for type `azureFederatedIdentity`, user provide invalid keys.
+  ```
   NewRecipeError("BicepRegistryAuthFailed", fmt.Sprintf("Invalid secret keys provided for type %s. The required keys are %s and %s.", "azureFederatedIdentity","clientId","tenantId"))
   ```
 
