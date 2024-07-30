@@ -101,18 +101,17 @@ Different container registry providers use the the username and password in vari
 
 Azure provides multiple ways to authenticate ACR using ORAS, we can use different types of credentials depending on the setup and preferences. Here are the main types of credentials to use:
 
+*Service Principal*(Recommended):
+```
+Username: The service principal's client ID.
+Password: The service principal's client secret.
+```
 *Admin User Credentials*:
 
 Users can enable the admin user and obtain these credentials from the Azure portal:
 ```
 Username : The ACR admin username.
 Password : The ACR admin password.
-```
-
-*Service Principal*:
-```
-Username: The service principal's client ID.
-Password: The service principal's client secret.
 ```
 
 *Azure CLI Token*:
@@ -386,12 +385,20 @@ recipeConfig: {
 
 #### Functional tests
 - Add e2e test to verify recipe deployment using a bicep stored in a private bicep registry.
+  - using basicAuthentication:
     - publish a recipe to private ghcr.io/radius-project/private-recipes/<recipe> 
     - Deploy the recipe as part of the functional test using github app token to authenticate ghcr. 
+  - using workload identity(this test should be added after [7715](https://github.com/radius-project/radius/issues/7715)):
+    - create a private acr and publish recipe to the acr created.
+    - Deploy the recipe as part of the functional test using azure workload identity authentication kind.
+  - using AWS IRSA(this test should be added after [7715](https://github.com/radius-project/radius/issues/7715)):
+    - create a private ecr and publish recipe to the ecr created.
+    - Deploy the recipe as part of the functional test using AWS IRSA authentication kind.
 
 ## Security
-With this design we enable username-password and based authentication for OCI compliant registries, we let the users manage secrets. For secret rotation users need to re deploy the `Applications.Core/secretStores` resource with updated credentials.
-We also enable 
+With this design we enable username-password, federated identity (for azure and aws) based authentication for OCI compliant registries. 
+Secret rotation is automatically managed when using AWS IRSA or Azure workload identity, where as for basicAuthentication users need to re deploy the `Applications.Core/secretStores` resource with updated credentials.
+
 
 ## Development plan
 
