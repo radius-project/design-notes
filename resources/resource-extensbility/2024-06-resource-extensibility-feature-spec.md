@@ -384,7 +384,7 @@ There are two types of users that we need to cater to:
         rad publish-bicep-types --file contoso.tsp --registry myregistry
         ```
     The `contoso.tsp` is complied into open api specs; the  index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
-
+    ```json
     {
         "experimentalFeaturesEnabled": {
             "extensibility": true,
@@ -397,7 +397,8 @@ There are two types of users that we need to cater to:
             "Contoso": "br:biceptypes.azurecr.io/contoso:latest"
         }
     }
-
+    ```
+    
 1. Create a app.bicep with plaid resource type
 
     ```bicep
