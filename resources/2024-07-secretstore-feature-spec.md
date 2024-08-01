@@ -3,10 +3,10 @@
 * **Status**: Pending
 * **Author**: Will Tsai (@willtsai)
 
-## Target customers
+## Target users
 **Developers and operators** who are building and managing microservice applications, are using Radius to deploy applications and wish to effortlessly and securely manage the secrets for use in their environments and applications.
 
-## Existing customer problem
+## Existing user problem
 
 Currently, Radius provides an `Applications.Core/secretStores` resource type that allows developers to store and retrieve secrets in a secure and reliable way. The `secretStores` resource type can be referenced and used by the following Radius resources today: 
 - `Applications.Core/gateways` to manage [TLS certificates for HTTPS connections](https://docs.radapp.io/guides/author-apps/networking/tls/)
@@ -16,8 +16,7 @@ As an operator, I can create a `secretStores` resource to securely manage secret
 
 As an application developer, I cannot reference a `secretStores` resource in the `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Core/volumes`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types to securely manage secrets for use in my application. Instead, I'm having to store my secrets in plain text within the `properties.secrets` field for each resource. This is a critical gap in the secret management capabilities of Radius that is hindering my ability to securely manage secrets for use in my containers.
 
-## Desired customer experience outcome
-<!-- <Write this as an “I statement” that expresses the new capability from customer perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly blah blah blah …. As a result <summarize positive impact on your work / business>  -->
+## Desired user experience outcome
 
 As an operator, I can define an `Applications.Core/secretStores` resource and deploy it along with an Environment so that the developers I support can securely leverage secrets I manage on their behalf for use in their application resources.
 
@@ -27,15 +26,33 @@ As a developer, I can reference an `Applications.Core/secretStores` in my `Appli
 
 As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Datastores/*` or `Applications.Messaging/*` resource definition so that I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
 
-### Detailed Customer Experience
- <!-- <List of steps the customer goes through from the start to the end of the scenario to provide more detailed view of exactly what the user is able to do given the new capabilities>  -->
-<!-- Step 1
-Step 2
-… -->
+### Detailed User Experience
 
 Step 1: Operator creates and deploys `Applications.Core/secretStores` resources containing the secret data required for authenticating into resources that their developers may use.
 
-```bicep
+```diff
+resource authcreds 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'authcreds'
+  properties:{
+    application: application
+    type: 'generic'
+    data: {
+      'username': {
+        value: username
+      }
+      'password': {
+        value: password
+      }
+      'uri': {
+        value: uri
+      }
+      'connectionString': {
+        value: connectionString
+      }
+    }
+  }
+},
+
 resource authcreds 'Applications.Core/secretStores@2023-10-01-preview' = {
   name: 'authcreds'
   properties:{
@@ -219,7 +236,7 @@ Add the ability for developers to reference values from their `Applications.Core
 
 ## Key assumptions to test and questions to answer
 <!-- If you are making assumptions that, if incorrect, would cause us to significantly alter our approach to this scenario, make them explicit here.  Also call out how / when you plan to validate key assumptions. -->
-<!-- What big questions must we answer in order to clarify our plan for this scenario.  When and how do you plan to answer those questions (prototype feature x, customer research, competitive research, etc) -->
+<!-- What big questions must we answer in order to clarify our plan for this scenario.  When and how do you plan to answer those questions (prototype feature x, user research, competitive research, etc) -->
 
 **Assumption: operators can create and deploy `Applications.Core/secretStores` resources.** We assume that operators create and manage secrets on behalf of developers, which are encapsulated in `Applications.Core/secretStores` resources. The developers can subsequently reference these resources in their application resources to securely manage secrets for use in their applications. We will validate this assumption by opening up this feature spec for discussion with the community.
 
