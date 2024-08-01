@@ -35,29 +35,7 @@ resource authcreds 'Applications.Core/secretStores@2023-10-01-preview' = {
   name: 'authcreds'
   properties:{
     application: application
-    type: 'generic'
-    data: {
-      'username': {
-        value: username
-      }
-      'password': {
-        value: password
-      }
-      'uri': {
-        value: uri
-      }
-      'connectionString': {
-        value: connectionString
-      }
-    }
-  }
-},
-
-resource authcreds 'Applications.Core/secretStores@2023-10-01-preview' = {
-  name: 'authcreds'
-  properties:{
-    application: application
-    type: 'credentials' // this can change based on detailed tech design
++    type: 'credentials' // this can change based on detailed tech design
     data: {
       'username': {
         value: username
