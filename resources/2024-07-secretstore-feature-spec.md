@@ -30,12 +30,12 @@ As a developer, I can reference an `Applications.Core/secretStores` in my `Appli
 
 Step 1: Operator creates and deploys `Applications.Core/secretStores` resources containing the secret data required for authenticating into resources that their developers may use.
 
-```diff
+```bicep
 resource authcreds 'Applications.Core/secretStores@2023-10-01-preview' = {
   name: 'authcreds'
   properties:{
     application: application
-+    type: 'credentials' // this can change based on detailed tech design
+    type: 'generic' // this can change based on detailed tech design
     data: {
       'username': {
         value: username
@@ -80,7 +80,9 @@ resource azurekeyvaultsecrets 'Applications.Core/secretStores@2023-10-01-preview
 
 Step 2: Developer references the `Applications.Core/secretStores` resource in their `Applications.Core/containers` resource definition to inject secrets as environment variables into their container at deploy time.
 
-```bicep
+> The example below follows the implementation that is currently proposed in https://github.com/radius-project/radius/pull/7744
+
+```diff
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
   name: 'demo'
   properties: {
@@ -88,8 +90,14 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
     container: {
       image: 'ghcr.io/radius-project/samples/demo:latest'
       env:{
-        // validate accuracy of referencing the values from the secret store
-        DB_CONNECTION: authcreds.properties.data.connectionString
++        DB_CONNECTION: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'username'
++            }
++          }
++        }
       }
       ports: {
         web: {
@@ -103,7 +111,7 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 
 Step 3: Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders` or `Applications.Volumes` resource definition to securely manage secrets for use in their application.
 
-```bicep
+```diff
 resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
   name: 'twilio'
   properties: {
@@ -113,14 +121,20 @@ resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
       name: 'twilio'
     }
     secrets: {
-        // validate accuracy of referencing the values from the secret store
-        password: authcreds.properties.data.password
++        password: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'password'
++            }
++          }
++        }
     }
   }
 }
 ```
 
-```bicep
+```diff
 resource volume 'Applications.Core/volumes@2023-10-01-preview' = {
   name: 'myvolume'
   properties: {
@@ -129,11 +143,38 @@ resource volume 'Applications.Core/volumes@2023-10-01-preview' = {
     resource: keyvault.id
     secrets: {
       mysecret: {
-        // validate accuracy of referencing the values from the secret store
-        name: azurekeyvaultsecrets.properties.data.name
-        version: azurekeyvaultsecrets.properties.data.version
-        alias: azurekeyvaultsecrets.properties.data.alias
-        encoding: azurekeyvaultsecrets.properties.data.encoding
++        name: {
++          valueFrom: {
++            secretRef: {
++              source: azurekeyvaultsecrets.id
++              key: 'name'
++            }
++          }
++        }
++        version: {
++          valueFrom: {
++            secretRef: {
++              source: azurekeyvaultsecrets.id
++              key: 'version'
++            }
++          }
++        }
++        alias: {
++          valueFrom: {
++            secretRef: {
++              source: azurekeyvaultsecrets.id
++              key: 'alias'
++            }
++          }
++        }
++        encoding: {
++          valueFrom: {
++            secretRef: {
++              source: azurekeyvaultsecrets.id
++              key: 'encoding'
++            }
++          }
++        }
       }
     }
   }
@@ -142,7 +183,7 @@ resource volume 'Applications.Core/volumes@2023-10-01-preview' = {
 
 Step 4: Developer references the `Applications.Core/secretStores` resource in their `Applications.Datastores/*` or `Applications.Messaging/*` resource definition to securely manage secrets for use in their application.
 
-```bicep
+```diff
 resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
   name: 'db'
   properties: {
@@ -157,15 +198,28 @@ resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
       { id: cosmosAccount.id }
     ]
     secrets: {
-        // validate accuracy of referencing the values from the secret store
-        connectionString: authcreds.properties.data.connectionString
-        password: authcreds.properties.data.password
++        connectionString: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'connectionString'
++            }
++          }
++        }
++        password: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'password'
++            }
++          }
++        }
     }
   }
 }
 ```
 
-```bicep
+```diff
 resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
   name: 'rabbitmq'
   properties: {
@@ -178,14 +232,20 @@ resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
     vHost: vHost
     username: rmqUsername
     secrets: {
-      // validate accuracy of referencing the values from the secret store
-      password: authcreds.properties.data.password
++      password: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'password'
++            }
++          }
++      }
     }
   }
 }
 ```
 
-Step 5: Developer deploys the resources to Radius and the secrets required for authentication are injected into the container, extender, volume, datastore, or messaging resource at deploy time.
+Step 5: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables or used as credentials for authentication into the extender, volume, datastore, or messaging resource at deploy time.
 
 ## Key investments
 <!-- List the features required to enable this scenario. -->
@@ -208,7 +268,9 @@ Add the ability for developers to reference values from their `Applications.Core
 <!-- Dependency Name – summary of dependency.  Issues/concerns/risks with this dependency -->
 <!-- Risk Name – summary of risk.  Mitigation plan if known. If it is not yet known, no problem. -->
 
-**Dependency: ability to reference values from `Applications.Core/secretStores`.** This feature is dependent on the ability to reference values from `Applications.Core/secretStores`, which should be doable given the existing functionality of referencing secret values for TLS Termination in `Applications.Core/gateways`. 
+**Dependency: ability to reference values from `Applications.Core/secretStores`.** This feature is dependent on the ability to reference values from `Applications.Core/secretStores`, which should be doable given the existing functionality of referencing secret values for TLS Termination in `Applications.Core/gateways`.
+
+> The TLS certificate data secret in `Applications.Core/gateways` is referenced today by `tls: { certificateFrom: secretstore.id }`. As a part of implementation we should evaluate if the `valueFrom: { secretRef: { ... } }` pattern proposed here is an acceptable deviation from the previous pattern implemented for `gateways`.
 
 **Risk: use of secrets in core and portable resources.** This pattern of referencing and leveraging secrets in core and portable resources might not be a common or desirable pattern for users. We will validate this by opening up this feature spec for discussion with the community.
 
