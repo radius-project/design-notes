@@ -398,7 +398,7 @@ There are two types of users that we need to cater to:
         }
     }
     ```
-    
+
 1. Create a app.bicep with plaid resource type
 
     ```bicep
@@ -429,4 +429,14 @@ As a platform engineer, I want to register the API's to the platform, provide do
     1. Typespec samples and documentation - Provide samples and documentation for the users to author the schema in typespec format
     1. Documentation for generating Radius-Bicep types - Reuse existing pipelines and GH workflows used in Radius to generate Radius types in Bicep as an example and provide documentation to the users on how to build and publish the custom resource types in Radius.
 
+Question - Documentation seems like a good starting point for users to get started on using custom resource types? What are other ways, should we provide sdk's to author the schema and generate the types?
 
+#### Maintain the custom platform
+
+As a platform engineer, I want to version and maintain the API's. Ease of support, sense of ownership (decision making)
+
+**Solution in Radius**
+
+* Versioning of the API's
+
+* Versioning of the bicep types
