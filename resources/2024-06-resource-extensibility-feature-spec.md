@@ -20,7 +20,7 @@ One of the high value extensibility points in Radius is Recipes. We have receive
 
 ### Non-goals (out of scope)
 
-We will cover the design and user experience for all the above solutions except for "Recipes for any resource" in this document to keep the scope of the work simple.
+We will not cover the design and user experience for "Recipes for any resource" in this document to keep the scope of the work simple.
 
 
 ## User profile and challenges

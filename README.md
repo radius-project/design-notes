@@ -75,4 +75,4 @@ The repository is organized into several sections, each corresponding to a speci
 
 ## Code of Conduct
 
-Please refer to our [Radius Community Code of Conduct](https://github.com/radius-project/radius/blob/main/CODE_OF_CONDUCT.md) 
+Please refer to our [Radius Community Code of Conduct](https://github.com/radius-project/radius/blob/main/CODE_OF_CONDUCT.md)
