@@ -129,7 +129,7 @@ As a platform engineer trying to build a custom platform for application develop
 | ------------- | ------------------ | ----------------- | 
 | Define the set of key technologies for the enterprise applications | Set of technologies that organizations intend to use for their applications based on the nature of technology, open-source support, documentation support, existing vendor relations, expertise in the team | Easy to use, troubleshoot, sense of service ownership |
 | Specify the contract for the key services in the application platform | Author a schema for the custom resources easily with auto guidance tools | Simple tools that enables the schema authoring, uniformity and consistency |
-| Iterating and testing the application platform | Providing a productive inner loop for development and testing  | Simple and easy way to iterate on changes, test and deploy them |
+| Iterating and testing the application platform | Productive inner loop for development and testing the application platform | Simple and easy way to iterate on changes, test and deploy them |
 | Ship the custom platform | Registering the API's to the platform, providing documentation, onboarding and support | intuitive, seamless, collaborative |
 | Maintain the custom platform | Versioning and maintaining the API's | Ease of support, sense of ownership (decision making) | 
 | Support for compliance and security | Compatibility and security policies | Trust the platform |
@@ -362,13 +362,14 @@ Hence, we need to support both the schema formats in Radius to support both user
         
         Radius complies the schema and registers the custom resource type Plaid in UCP
         
-        Question : Will Applications continue to be a resource provider to accept new resource types ? 
+        Question : Will we continue to accept new types like postgreSQL to `Applications` namespace
    
 #### Iterating and testing the application platform
 
- As a platform engineer, I want to provide a productive inner loop for development and testing the application platform. Simple and easy way to iterate on changes, test and deploy them
+ As a platform engineer, I need a productive inner loop for development and testing the application platform. Simple and easy way to iterate on changes, test and deploy them
 
 **Solution in Radius**
+
 1. Bicep tooling support to test and deploy the custom resource types - rad CLI support to generate and publish the Bicep types for the custom resources to the registry.
 1. Documentation to guide the users on how to test and deploy the custom resource types in Radius
 
