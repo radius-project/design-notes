@@ -375,7 +375,7 @@ Hence, we need to support both the schema formats in Radius to support both user
     1. Amy uses the radCLI to scaffold a yaml template definition
 
         ```bash
-        rad resource-provider init plaid --template-kind yaml
+        rad resource-provider init Applications --template-kind yaml
         ```
         A sample yaml file is created in the application folder.
 
