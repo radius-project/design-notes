@@ -208,7 +208,7 @@ Hence, we need to support both the schema formats in Radius to support both user
         ```bash
         rad resource-provider init contoso --template-kind typespec
         ```
-        A sample plaid.tsp file and manifest files are created in the application folder with all the typespec dependencies installed.
+        A sample contoso.tsp file and manifest files are created in the application folder with all the typespec dependencies installed.
 
         Question :Can we build on top of `tsp init` which is used to set up a typespec project with a sample template? The other option is to use `rad resource-provider new` to scaffold a template typespec definition and the user takes care of the typespec dependencies and setup which might be a confusing.
 
