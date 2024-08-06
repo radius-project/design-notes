@@ -1,6 +1,5 @@
 # Topic: TODO
 
-* **Status**: Pending/Approved
 * **Author**: Your name (@YourGitHubUserName)
 
 ## Topic Summary

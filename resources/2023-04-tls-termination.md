@@ -1,6 +1,5 @@
 # TLS termination
 
-* **Status**: Approved
 * **Author**: Young Bu Park (@youngbupark)
 
 ## Overview
