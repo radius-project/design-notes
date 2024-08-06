@@ -1,6 +1,5 @@
 # Planes APIs
 
-* **Status**: Approved
 * **Author**: `Ryan Nowak (@rynowak)`
 
 ## Overview

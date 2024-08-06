@@ -1,6 +1,5 @@
 # Terraform module versions
 
-* **Status**: Approved
 * **Author**: `Ryan Nowak (@rynowak)`
 
 ## Overview

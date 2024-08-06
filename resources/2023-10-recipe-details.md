@@ -1,6 +1,5 @@
 # Adding Recipe Information to the Resource
 
-* **Status**: Approved
 * **Author**: Yetkin Timocin (@ytimocin)
 
 ## Overview

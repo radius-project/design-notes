@@ -1,6 +1,5 @@
 # Kubernetes Integration
 
-* **Status**: Approved
 * **Author**: Ryan Nowak (`@rynowak`)
 
 ## Overview

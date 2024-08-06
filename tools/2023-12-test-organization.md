@@ -1,6 +1,5 @@
 # Organization of functional tests
 
-* **Status**: Approved
 * **Author**: Vinaya Damle (@vinayada1)
 
 ## Overview

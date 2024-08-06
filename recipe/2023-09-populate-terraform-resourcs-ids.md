@@ -1,6 +1,5 @@
 # Title
 
-* **Status**: Approved
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview
