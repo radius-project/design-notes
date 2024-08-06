@@ -1,6 +1,5 @@
 # Handling of Secrets Data for Terraform Providers
 
-* **Status**: Pending
 * **Author**: @lakshmimsft
 
 ## Overview
@@ -240,8 +239,7 @@ Unit Tests + Functional Test - (under 0.5 Sprint)
 Total: 1 Sprint
 
 ## Open Questions
-
-We are expecting information on detailed scenarios from PMs on client use cases for Recipe Specific Configuration versus Env Level Provider Config which may get us to revisit design around passing secret data to the driver.
+N/A
 
 ## Alternatives considered
 We could also update FindSecretIds() to return a list of SecretStoreIds and the LoadSecrets function retrieves all secrets for the SecretStore and passes the data to the driver.
@@ -251,5 +249,8 @@ We decided to limit the secret data sent to the Driver to only what the Driver w
 ## Design Review Notes
 1. Update design per discussion.Design can be more generic and need not follow Env ConfigStructure.
 Earlier design included creating two new constructs to store RecipeSecretIds{} used to call the ListSecrets API and RecipeSecrets{} to store result of resolved Secret data. These closely mimicked the structure of environment recipe configuration structure. Based on design discussions, we simplified the function calls to be more generic and dropped use of the new constructs. 
+
+2. With the current design we configure Terraform providers at the environment level. During a recipe execution, secret data will be processed for all provider configurations and passed to the Driver. During design discussions, it was brought up that it's possible for a specific recipe execution to not need all providers configured and therefore all data sent across and it led to possibility of a more granular approach - recipe specific provider configuration versus the current environment level provider configuration.
+We were looking to get some more input from PMs after discussions with clients on their scenarios. Per PM feedback, this is currently not being requested but can be revisited based on future input from clients.
 
 
