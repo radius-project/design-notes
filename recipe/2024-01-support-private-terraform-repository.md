@@ -1,6 +1,6 @@
 # Adding support for Terraform Modules from Private Git Repository
 
-* **Status**: Pending
+* **Status**: Approved
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview

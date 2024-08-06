@@ -1,6 +1,6 @@
 # Kubernetes Integration
 
-* **Status**: SUPER pending
+* **Status**: Approved
 * **Author**: Ryan Nowak (`@rynowak`)
 
 ## Overview

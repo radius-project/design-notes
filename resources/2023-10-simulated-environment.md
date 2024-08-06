@@ -1,6 +1,6 @@
 # Title Simulated Environment
 
-* **Status**: Pending/Approved
+* **Status**: Approved
 * **Author**: Vinaya Damle (@vinayada1)
 
 ## Overview

@@ -1,6 +1,6 @@
 # Support multiple Terraform Providers
 
-* **Status**: Pending
+* **Status**: Approved
 * **Author**: @lakshmimsft
 
 ## Overview
