@@ -1,6 +1,5 @@
 # Adding support to extend the capabilities of secretStores to a global scope.
 
-* **Status**: Pending
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview

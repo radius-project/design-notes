@@ -1,6 +1,5 @@
 # Recipes Test Plan
 
-- **Status**: Pending
 - **Author**: `Ryan Nowak (@rynowak)`
 - **Approver**: `Karishma Chawla (@kachawla)`
 

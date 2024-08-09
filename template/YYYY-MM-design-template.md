@@ -1,6 +1,5 @@
 # Title
 
-* **Status**: Pending/Approved
 * **Author**: Your name (@YourGitHubUserName)
 
 ## Overview
