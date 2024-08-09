@@ -743,3 +743,14 @@ usecase
 gitops
 predefine
 KRM
+
+secretsStores
+DriverWithSecrets
+FindSecretIds
+SecretStoreIds
+LoadSecrets
+SecretLoader
+ConfigStructure
+RecipeSecretIds
+RecipeSecrets
+lakshmimsft
