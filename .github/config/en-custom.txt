@@ -620,6 +620,8 @@ IRSA
 Entra
 ClientSecret
 POC
+scriptable
+subcommands
 CrashLoopBackOff
 ErrImagePull
 ImagePullBackOff

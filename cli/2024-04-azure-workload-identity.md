@@ -131,7 +131,7 @@ n/a
 
 ### High Level Design
 
-During installation, if the user enables the Azure Workload Identity feature, the Radius control plane (bicep-de, ucp, applications-rp) pods will be annotated with the `azure.workload.identity/use: "true"` label. The AzWi mutating admission webhook will see this label on the pods and will project a signed service account token to each of the pods. The signed service account token and the credential registered by the user will be used by Radius to authenticate with Azure.
+During installation, if the user enables the Azure Workload Identity feature, the Radius control plane (bicep-de, ucp, applications-rp) pods will be annotated with the `azure.workload.identity/use: "true"` label. The AzWI mutating admission webhook will see this label on the pods and will project a signed service account token to each of the pods. The signed service account token and the credential registered by the user will be used by Radius to authenticate with Azure.
 
 Please see https://azure.github.io/azure-workload-identity/docs/concepts.html for more information on how the AzWI mutating admission webhook works.
 
@@ -216,7 +216,7 @@ n/a
 
 ### Error Handling
 
-#### Azwi mutating admission webhook is not installed in the cluster.
+#### AzWI mutating admission webhook is not installed in the cluster.
 At Radius install time if Radius detects that the AzWI mutating admission webhook is not installed on the cluster, we should return an error to the user: "Azure Workload Identity mutating admission webhook is not installed in the cluster. Please follow the guidance at aka.ms/rad-workload-identity to set up workload identity for Radius."
 
 [Issue Reference](https://github.com/radius-project/radius/issues/7714)
