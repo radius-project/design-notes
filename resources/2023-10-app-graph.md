@@ -1,6 +1,5 @@
 # Title
 
-* **Status**: Approved
 * **Author**: Nithya Subramanian (@nithyatsu)
 
 ## Overview

@@ -2,9 +2,9 @@
 
 This `design-notes` repository contains design proposals, enhancements, and architectural decisions for Radius. It provides a consistent and controlled path to record changes and developments, ensuring clarity and transparency for all stakeholders in the Radius community.
 
-Design notes are used for evaluating the design of **planned** changes and additions to Radius. Do not use this repository for feature requests - please create an issue on the [main Radius repository](https://github.com/radius-project) instead. We create documents in this repo to describe **how** to accomplish something once we have agreement that it is appropriate for the project.
+Design notes are used for evaluating the design of **planned** changes and additions to Radius. Do not use this repository for feature requests - please create an issue on the [main Radius repository](https://github.com/radius-project) instead. We create documents in this repo to describe **why** and **how** to accomplish something once we have agreement that it is appropriate for the project.
 
-Minor changes such as documentation updates or small bug fixes may be reviewed and implemented directly via a GitHub issue. For larger changes, such as new feature design, a design note pull-request and review is required. These must get consensus from Radius maintainers and the community, and should follow the [design note template](./template/YYYY-MM-design-template.md) in this repository.
+Minor changes such as documentation updates or small bug fixes may be reviewed and implemented directly via a GitHub issue. For larger changes, such as new feature design, a design note pull-request and review is required. These must get consensus from Radius maintainers and the community. A scenario and feature specification following the [feature spec template](./template/YYYY-MM-feature-spec.md) should precede the [design note template](./template/YYYY-MM-design-template.md).
 
 For more information on how to contribute to Radius visit [CONTRIBUTING.md](https://github.com/radius-project/radius/blob/main/CONTRIBUTING.md).
 
@@ -47,6 +47,10 @@ If the design is approved:
   - Please respond to, and resolve all comments in the document explaining the resolution of the feedback. 
   - One or more approvers will approve the pull-request so that it can be merged.
   - Merge the pull-request.
+
+Development work on implementing the design begins only after the design is approved.
+
+If there are updates come up during development work that need consideration and team review, please create a pull-request with proposed updates to the design. The design review process will be repeated for this new pull-request.
 
 If the design is not approved:
 
