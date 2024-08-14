@@ -214,30 +214,69 @@ Hence, we need to support both the schema formats in Radius to support both user
 
     1. Deb authors the schema for plaid in typespec format
         
-        ```
-        import "@typespec/http";
+        ```typespec
         import "@typespec/rest";
-        import "@typespec/openapi3";
         import "@typespec/versioning";
-
+        import "@typespec/openapi";
+        import "@azure-tools/typespec-autorest";
+        import "@azure-tools/typespec-azure-core";
+        import "@azure-tools/typespec-azure-resource-manager";
+        import "@azure-tools/typespec-providerhub";
+        
         using TypeSpec.Http;
         using TypeSpec.Rest;
         using TypeSpec.Versioning;
+        using Autorest;
+        using Azure.ResourceManager;
+        using OpenAPI;
 
-        @service({title: "Contoso"})
-        @server("http://contoso.plaid.com", "endpoint for plaid service")
-        @versioned(Versions)
-        namespace Contoso;
+        namespace Contoso.Messaging;
 
-        @route("/planes/radius/Contoso.Messaging")
-        namespace plaid {
-            model plaid {
-                name:string;
-                description:string;
-                queue:string;
-            }
+        @doc("Plaid messaging service")
+        model Plaid {
+        @path
+        @doc("The name of the messaging service")
+        @key("PlaidName")
+        @segment("Plaid")
+        name: ResourceNameString;
         }
 
+        @doc("The secret values for the given Pliad resource")
+        model PlaidSecretsResult is PlaidSecrets;
+
+        @doc("The secret values for the given Plaid resource")
+        model PlaidSecrets {
+        @doc("The connection string used to connect to the Plaid messaging service")
+        connectionString?: string;
+
+        @doc("The password for this Plaid messaging service")
+        password?: string;
+
+        @doc("The URL used to connect to the Plaid messaging service")
+        url?: string;
+        }
+
+        @doc("Plaid messaging service properties")
+        model PlaidProperties {
+        ...EnvironmentScopedResource;
+
+        @doc("Secrets provided by resource")
+        secrets?: PlaidSecrets;
+
+        @doc("The host name of the target Plaid messaging service")
+        host?: string;
+
+        @doc("The port value of the target Plaid messaging service")
+        port?: int32;
+
+        @doc("The username for the Plaid messaging service")
+        username?: string;
+
+        @doc("List of the resource IDs that support the Plaid messaging service")
+        resources?: ResourceReference[];
+
+        ...RecipeBaseProperties;
+        }
         ```
 
     1. VSCode Type spec extension warns Deb on the errors and warnings as he types
@@ -250,38 +289,77 @@ Hence, we need to support both the schema formats in Radius to support both user
 
     1. Deb chooses a version for the schema
 
-        ```
-        import "@typespec/http";
+        ```typespec
         import "@typespec/rest";
-        import "@typespec/openapi3";
         import "@typespec/versioning";
-
+        import "@typespec/openapi";
+        import "@azure-tools/typespec-autorest";
+        import "@azure-tools/typespec-azure-core";
+        import "@azure-tools/typespec-azure-resource-manager";
+        import "@azure-tools/typespec-providerhub";
+        
         using TypeSpec.Http;
         using TypeSpec.Rest;
         using TypeSpec.Versioning;
+        using Autorest;
+        using Azure.ResourceManager;
+        using OpenAPI;
 
-        @service({title: "Contoso"})
-        @server("http://contoso.plaid.com", "endpoint for plaid service")
-        @versioned(Versions)
-        namespace Contoso;
+        namespace Contoso.Messaging;
 
-        @route("/planes/radius/Contoso.Messaging")
-        namespace plaid {
-            model plaid {
-                name:string;
-                description:string;
-                queue:string;
-            }
+        @doc("Plaid messaging service")
+        model Plaid {
+        @path
+        @doc("The name of the messaging service")
+        @key("PlaidName")
+        @segment("Plaid")
+        name: ResourceNameString;
         }
 
+        @doc("The secret values for the given Pliad resource")
+        model PlaidSecretsResult is PlaidSecrets;
+
+        @doc("The secret values for the given Plaid resource")
+        model PlaidSecrets {
+        @doc("The connection string used to connect to the Plaid messaging service")
+        connectionString?: string;
+
+        @doc("The password for this Plaid messaging service")
+        password?: string;
+
+        @doc("The URL used to connect to the Plaid messaging service")
+        url?: string;
+        }
+
+        @doc("Plaid messaging service properties")
+        model PlaidProperties {
+        ...EnvironmentScopedResource;
+
+        @doc("Secrets provided by resource")
+        secrets?: PlaidSecrets;
+
+        @doc("The host name of the target Plaid messaging service")
+        host?: string;
+
+        @doc("The port value of the target Plaid messaging service")
+        port?: int32;
+
+        @doc("The username for the Plaid messaging service")
+        username?: string;
+
+        @doc("List of the resource IDs that support the Plaid messaging service")
+        resources?: ResourceReference[];
+
+        ...RecipeBaseProperties;
+        }
         enum Versions {
-            v1,
+            2024-09-08-preview,
         }
         ```
    1. Deb registers the schema in Radius
     
         ```bash
-        rad resource-provider register contoso --template-kind typespec -e myenv -v v1
+        rad resource-provider register contoso --template-kind typespec -e myenv 
         ```
         Radius complies the schema and registers the custom resource type Plaid in UCP
 
@@ -383,16 +461,17 @@ There are two types of users that we need to cater to:
 
 1. Deb compiles the typespec schema 
     
-        ```bash
-        tsp compile
-        ```
-        The typespec schema is compiled and validated for any errors and warnings
+    ```bash
+    tsp compile
+    ```
+    The typespec schema is compiled and validated for any errors and warnings
 
 1. Deb publishes the bicep types to a registry
     
-        ```bash
-        rad publish-bicep-types --file contoso.tsp --registry myregistry
-        ```
+     ```bash
+    rad publish-bicep-types --file contoso.tsp --registry myregistry
+    ```
+    
     The `contoso.tsp` is complied into open api specs; the  index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
     ```json
     {
@@ -416,7 +495,7 @@ There are two types of users that we need to cater to:
     param plaidDescription string
     param plaidQueue string
 
-    resource plaid 'Contoso.Messaging/Plaid@v1' = {
+    resource plaid 'Contoso.Messaging/Plaid@' = {
         name: plaidName
         description: plaidDescription
         queue: plaidQueue
