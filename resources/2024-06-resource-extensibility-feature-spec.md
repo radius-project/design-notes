@@ -9,7 +9,7 @@ The cloud native landscape is changing and expanding at a rapid pace like never 
 
 We need to enable the open-source community to build and experiment with imperfect things. We need to provide an extensibility model that supports “Bring your own technology”, define and use it with Radius. This will help us to meet the community where they are and enable them to experiment and leverage their work as open-source contributions.
 
-One of the high value extensibility points in Radius is Recipes. We have received interests to create custom resource types, define Recipes for the custom resource types and use it in the Radius application. Today Radius Extenders helps in creating custom resource types, but they are untyped and have limitations. The goal of providing resource extensibility is to empower developers or infrastructure operators to author and run their applications with custom resource types seamlessly in Radius and use all the other features such as Recipes, connections and app graph with ease and flexibility.
+One of the high value extensibility points in Radius is Recipes. We have received interests to create custom resource types, define Recipes for the custom resource types and use it in the Radius application. Today Radius Extenders helps unblock users by modeling any kind of technology in an untyped way, but they are not first-class in the same way a custom type is. The goal of providing resource extensibility is to empower developers or infrastructure operators to author and run their applications with custom resource types seamlessly in Radius and use all the other features such as Recipes, connections and app graph with ease and flexibility.
 
 ### Top level goals
 
@@ -33,7 +33,7 @@ We will not cover the design and user experience for "Recipes for any resource" 
     -  They want to code in a particular language E.g. :Go
     -  They want to integrate their existing tools and technologies with the project
 
-Today Radius enables users to get started on contributing to Radius with good-first-issues but doesn’t have a model to promote contributions further. Since the beginning of its open source launch, Dapr created the components repository and invited users to build their own components to unblock their scenarios and in turn folks contributed to the project. Learning from Dapr, Radius needs to have the extensibility points defined for contributors to interact with the project so that they can build out the things that they need to enable their scenarios and in turn the community gets benefitted with those contributions.
+Today Radius enables users to get started on contributing to Radius with good-first-issues but doesn’t have a model to promote contributions further. Since the beginning of its open source launch, [Dapr](www.dapr.io) created the components repository and invited users to build their own components to unblock their scenarios and in turn folks contributed to the project. Learning from Dapr, Radius needs to have the extensibility points defined for contributors to interact with the project so that they can build out the things that they need to enable their scenarios and in turn the community gets benefitted with those contributions.
 
 ### User persona(s)
 <!-- Who is the target user? Include size/org-structure/decision makers where applicable. -->
@@ -114,7 +114,7 @@ Raj is a partner or a system integrator who helps enterprises integrate propriet
 
 ### Current state in Radius
 
-[Radius Extenders](https://docs.radapp.io/guides/author-apps/custom/overview/#extenders) enables users to author custom resource types but they are weakly types. They allow you to pass in any property or secret and for cases where the developer/operator need to extend and reference a simple resource type definition. Extenders are for untyped/ weakly typed resources and do not provide a lot of customization for users wanting to have guardrails in their platforms with strongly typed resource definitions following a strict set of rules and restrictions. 
+[Radius Extenders](https://docs.radapp.io/guides/author-apps/custom/overview/#extenders) enables users to author custom resource types but they are weakly typed. They allow you to pass in any property or secret and for cases where the developer/operator need to extend and reference a simple resource type definition. Extenders are for untyped/ weakly typed resources and do not provide a lot of customization for users wanting to have guardrails in their platforms with strongly typed resource definitions following a strict set of rules and restrictions. 
 
 ## Existing user problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a user am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
@@ -208,7 +208,7 @@ Hence, we need to support both the schema formats in Radius to support both user
         ```bash
         rad resource-provider init contoso --template-kind typespec
         ```
-        A sample plaid.tsp file and manifest files are created in the application folder with all the typespec dependencies installed.
+        A sample contoso.tsp file and manifest files are created in the application folder with all the typespec dependencies installed.
 
         Question :Can we build on top of `tsp init` which is used to set up a typespec project with a sample template? The other option is to use `rad resource-provider new` to scaffold a template typespec definition and the user takes care of the typespec dependencies and setup which might be a confusing.
 
@@ -375,7 +375,7 @@ Hence, we need to support both the schema formats in Radius to support both user
     1. Amy uses the radCLI to scaffold a yaml template definition
 
         ```bash
-        rad resource-provider init plaid --template-kind yaml
+        rad resource-provider init Applications --template-kind yaml
         ```
         A sample yaml file is created in the application folder.
 
