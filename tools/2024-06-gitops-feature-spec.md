@@ -1,6 +1,5 @@
 # Radius Integration with GitOps
 
-* **Status**: Approved
 * **Author**: Will Tsai (@willtsai)
 
 ## Summary

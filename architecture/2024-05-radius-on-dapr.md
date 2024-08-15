@@ -1,6 +1,5 @@
 # Radius on Dapr
 
-* **Status**: Pending/Approved
 * **Author**: Ryan Nowak (`@rynowak`)
 
 ## Overview
