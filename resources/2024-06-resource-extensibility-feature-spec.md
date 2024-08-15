@@ -394,7 +394,7 @@ Hence, we need to support both the schema formats in Radius to support both user
 
          ```
         namespace: 'Applications.Datastores'
-        apiVersion: 'v1'
+        apiVersion: '2024-09-10-preview'
         scope: '/planes/radius/Applications.Datastores'
         resourceTypes:
             'Applications.Datastores/postgreSQL':
@@ -421,10 +421,10 @@ Hence, we need to support both the schema formats in Radius to support both user
         ```bash
         rad resource-type add -rp Applications --template-kind yaml -e myenv -v v1
         ```
-        
+
         Radius complies the schema and registers the custom resource type Plaid in UCP
         
-        Question : Will we continue to accept new types like postgreSQL to `Applications` namespace
+ We will cover the open sourcing and contributing types like postgreSQL to `Applications` namespace in a separate document.
    
 #### Iterating and testing the application platform
 
