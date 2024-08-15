@@ -84,8 +84,8 @@ Raj is a service provider who works at Oracle Database and helps enterprises int
     - Mitigation: Work closely with the Bicep team to ensure that the merge is completed on time and that the necessary features are available to enable custom resource types in Radius .
 
 - Risk: Adoption and community engagement
-    - There is a risk that users may not fully embrace the extensibility feature or contribute custom resource types to the community.
-    - Mitigation: Actively engage with users, provide clear documentation, tutorials and resources, and foster a supportive and inclusive community to encourage adoption and contributions.
+    - There is a risk that users may not fully embrace the extensibility feature because its too complex or not powerful enough.
+    - Mitigation: Design with the guiding principle of making it simple and easy to use ; Actively engage with users early-on, provide clear documentation, tutorials and resources.
 
 - Risk: Compatibility and maintainability
     - As more custom resource types are added to Radius, there is a risk of compatibility issues and increased maintenance overhead.
@@ -167,6 +167,7 @@ In this document we will cover the solution approach for all the jobs except for
 ### Main job : Build a custom platform for application development
 
 #### Define the set of key technologies for the enterprise applications
+
 Enterprises choose technologies based on the nature of technology, open-source support, documentation support, existing vendor relations, expertise in the team. Organizations identify the key technologies that they intend to use for their applications independent of Radius. While Radius can provide the extensibility model to support the custom resource types, community supported assets, it is important to note that Radius cannot not dictate the technologies that the enterprises should use.
 
 #### Specify the contract for the key services in the application platform
@@ -175,7 +176,7 @@ As a platform engineer, I want to provide the custom platform with the following
 
 *Resource schema authoring*: Define a schema for the custom resource types that my application uses in Radius. The schema defines the structure and properties of the custom resource type. 
 
-*Auto guidance for schema authoring*: The resource schema authoring tool provides auto guidance and validation to help the user author the schema. The auto guidance tool provides suggestions and recommendations to the user based on the schema that they are authoring. 
+*Auto completion for schema authoring*: The resource schema authoring tool provides auto completion like intellisense in VSCode to help the user author the schema.
 
 *Consistency and uniformity in the schema*: The authored resource schema is consistent and uniform across all the custom resource types that the user defines.
 
