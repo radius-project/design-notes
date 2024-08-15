@@ -42,9 +42,9 @@ Today Radius enables users to get started on contributing to Radius with good-fi
 
 - IT Operators: IT operators are responsible for managing the infrastructure and ensuring that the applications are running smoothly. They are responsible for maintaining the infrastructure and providing support for the infrastructure. They are the primary users of Radius Recipes as they are responsible for defining the infrastructure-as-code templates for the applications.
 
-- System Reliability Engineers (SREs) : SREs are responsible for ensuring the reliability of the applications and services that are deployed in the cloud. They are responsible for maintaining the infrastructure and ensuring that the applications are running smoothly. They maintain the infrastructure-as-code templates and provide support for the applications that are deployed. 
+- System Reliability Engineers (SREs) : SREs are responsible for ensuring the reliability of the applications and services that are deployed in the cloud. They are responsible for maintaining the infrastructure and ensuring that the applications are running smoothly. They are the maintainers of Radius Recipes and provide support for the applications that are deployed. 
 
-- System integrators : System integrators are partners who help enterprises integrate proprietary services with cloud native applications. They are responsible for designing and building cloud native applications on behalf of their customers.
+- System integrators/Service Providers : System integrators/Service Providers are partners who help enterprises integrate proprietary services with cloud native applications. They are responsible for designing and building cloud native applications on behalf of their customers with the services they provide. They are looking to expand the adoption and support of their services via Radius.
 
 - Developers : Developers are responsible for building the cloud native applications. They are responsible for writing the code, designing and maintaining the applications.
 
@@ -56,7 +56,7 @@ Today Radius enables users to get started on contributing to Radius with good-fi
 
 - Recipes for user defined types: I can create Recipes for the custom resource types and deploy via Radius 
 
-- OSS contributions: I can create and contribute Recipes for the custom resource types for the community to use.
+- OSS contributions: I can create custom resource types and Recipes and open-source it for the community to use.
 
 ## Key scenarios
 
@@ -70,7 +70,7 @@ Amy is a system integrator who helps customers build cloud native applications o
 
 ### Scenario 3: Raj publishes Recipes for proprietary services
 
-Raj is a partner or a system integrator who helps enterprises integrate proprietary service for eg : Oracle database in their cloud native applications. Raj tries out Radius and wants to write Recipes to create an Oracle Database with a standard set of best practices and policies integrated. He works with a lot of customers who are wanting to use the Oracle Database recipe in their applications.
+Raj is a service provider who works at Oracle Database and helps enterprises integrate oracle database to their applications. Raj hears about Radius and wants to write Recipes to create an Oracle Database with a standard set of best practices and policies integrated. He wants to provide this Recipes to his customers for easy entry and integration with Radius.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -85,15 +85,15 @@ Raj is a partner or a system integrator who helps enterprises integrate propriet
 
 - Risk: Adoption and community engagement
     - There is a risk that users may not fully embrace the extensibility feature or contribute custom resource types to the community.
-    - Mitigation: Actively engage with users, provide clear documentation and resources, and foster a supportive and inclusive community to encourage adoption and contributions.
+    - Mitigation: Actively engage with users, provide clear documentation, tutorials and resources, and foster a supportive and inclusive community to encourage adoption and contributions.
 
 - Risk: Compatibility and maintainability
     - As more custom resource types are added to Radius, there is a risk of compatibility issues and increased maintenance overhead.
-    - Mitigation: Implement thorough testing and versioning strategies to ensure compatibility, and establish clear guidelines for maintaining custom resource types.
+    - Mitigation: Implement thorough testing and versioning strategies to ensure compatibility, and establish clear guidelines for maintainence and ownership of the custom resource types.
 
 - Risk: Security and trust
     - Allowing users to contribute custom resource types introduces potential security risks and the need to establish trust in the community-contributed code.
-    - Mitigation: Implement strict security measures, such as code reviews and vulnerability scanning, and establish a transparent review process for community contributions.
+    - Mitigation: Implement strict security measures with handling secrets, functional tests and establish a transparent review process for community contributions.
 
 ## Key assumptions to test and questions to answer
 <!-- If you are making assumptions that, if incorrect, would cause us to significantly alter our approach to this scenario, make them explicit here.  Also call out how / when you plan to validate key assumptions. -->
@@ -133,42 +133,41 @@ As a platform engineer trying to build a custom platform for application develop
 | Ship the custom platform | Registering the API's to the platform, providing documentation, onboarding and support | intuitive, seamless, collaborative |
 | Maintain the custom platform | Versioning and maintaining the API's | Ease of support, sense of ownership (decision making) | 
 | Support for compliance and security | Compatibility and security policies | Trust the platform |
-| Open-source custom resources | Repository and pipeline to validate, testing the infrastructure and publishing  | Desire to contribute, easy to use, low overhead /dependency to publish |
 
-As an IT operator and developer trying to build and maintain the application, I have the following jobs to be done and requirements to meet:
+As an IT operator managing the custom platform, I have the following jobs to be done and requirements to meet:
+
+#### Main job : Manage the custom application platform
+
+|  Related jobs | Functional aspects | Emotional aspects | 
+| ------------- | ------------------ | ----------------- |
+| Manage and deploy the custom resources in the application platform | Create a IaC template for the custom resource type with compliance and other policies | Easy to author, test and deploy |
+| Maintain the application over time | Versioning of the custom resources and enabling automatic upgrades | Less overhead to maintain |
+
+As a developer trying to build and maintain the application, I have the following jobs to be done and requirements to meet:
 
 #### Main job : Use the custom platform to build and maintain the application
 
 |  Related jobs | Functional aspects | Emotional aspects | 
 | ------------- | ------------------ | ----------------- | 
 | Use the custom app platform to build my application  | Learn, define and consume the APIs | Easy to use, adopt, low concept count | 
-| Manage and deploy the custom resources in the application platform| Create a IaC template for the custom resource type with compliance and other policies | Easy to author, test and deploy |  
-| Maintain the application over time | Versioning of the custom resources and enabling automatic upgrades | Less overhead to maintain |
+| Deploy the custom resources in the application platform| Deploy the custom resource type with compliance and other policies as part of the application | Easy to author, test and deploy |  
 | Troubleshoot the custom application platform | Tools or experiences in Dashboard that enables users to troubleshoot and manage the custom resources | Immediate access to key data for troubleshooting, simple and intuitive |
+
+#### Main job : Open source custom resources and contribute to the community
+
+|  Related jobs | Functional aspects | Emotional aspects | 
+| ------------- | ------------------ | ----------------- |
 | Open sourcing templates | Repository and pipeline to validate, testing the infrastructure and publishing  | Desire to contribute, easy to use, low overhead /dependency to publish |
+| Maintenance and support of open-source templates | Ownership and maintainence model of the open-source templates | Sense of ownership, contribution to the community |
+
+In this document we will cover the solution approach for all the jobs except for the open-sourcing and contributions of the custom resource types which will be covered in a child document. 
 
 ## Solution approach in Radius
 
 ### Main job : Build a custom platform for application development
 
 #### Define the set of key technologies for the enterprise applications
-Enterprises choose technologies based on the nature of technology, open-source support, documentation support, existing vendor relations, expertise in the team. Radius can provide the following to the users:
-
-*Community supported assets* : Community supported assets include the resource type definitions and IaC templates to deploy and manage resources in applications. Radius can enable the community to provide and use the assets for the prevalent cloud native technologies. This will help users to use pre-existing assets IaC templates and definitions in their applications without having to author them from scratch. 
-
-*Community supported assets meets their requirements* : Enterprises have a wide range of requirements for their applications based on the nature of the application, market, region, hosting models,compliance and security policies. Radius can enable the community to provide and use the resource type definitions and IaC templates that meet the requirements of the enterprises and meet them where they are. This will enable users to build what they want via Radius thus unblocking them to build their applications.
-
-*Maintenance and support for the community supported assets* : Radius can provide the necessary tools and services to maintain and support the community supported assets. This will help the community to contribute, maintain the assets and provide support to the users who are using the assets.
-
-**Solution in Radius**
-
-1. Resource extensibility for defining the custom resource types in Radius
-1. Recipes for the custom resource types
-1. Community supported resource type definitions
-1. Community supported Recipes
-1. Radius auto generates AWS, Azure Recipes from the definitions (Recipes for any resource) 
-
-We will cover the design and user experience for all the above solutions except for "Recipes for any resource" in this document to keep the scope of the work simple.
+Enterprises choose technologies based on the nature of technology, open-source support, documentation support, existing vendor relations, expertise in the team. Organizations identify the key technologies that they intend to use for their applications independent of Radius. While Radius can provide the extensibility model to support the custom resource types, community supported assets, it is important to note that Radius cannot not dictate the technologies that the enterprises should use.
 
 #### Specify the contract for the key services in the application platform
 
@@ -314,21 +313,6 @@ Hence, we need to support both the schema formats in Radius to support both user
         @key("PlaidName")
         @segment("Plaid")
         name: ResourceNameString;
-        }
-
-        @doc("The secret values for the given Pliad resource")
-        model PlaidSecretsResult is PlaidSecrets;
-
-        @doc("The secret values for the given Plaid resource")
-        model PlaidSecrets {
-        @doc("The connection string used to connect to the Plaid messaging service")
-        connectionString?: string;
-
-        @doc("The password for this Plaid messaging service")
-        password?: string;
-
-        @doc("The URL used to connect to the Plaid messaging service")
-        url?: string;
         }
 
         @doc("Plaid messaging service properties")
@@ -487,6 +471,11 @@ There are two types of users that we need to cater to:
         }
     }
     ```
+1. Create a recipe for the custom resource type Plaid
+
+    ```bash
+    rad recipe register plaid –resource-type “Contoso.Messaging/Plaid" --template-kind bicep --template-path "<myregistry>/plaid:latest"
+    ```
 
 1. Create a app.bicep with plaid resource type
 
@@ -495,10 +484,13 @@ There are two types of users that we need to cater to:
     param plaidDescription string
     param plaidQueue string
 
-    resource plaid 'Contoso.Messaging/Plaid@' = {
+    resource plaid 'Contoso.Messaging/Plaid@2024-08-09-preview' = {
         name: plaidName
-        description: plaidDescription
-        queue: plaidQueue
+        properties: {
+           recipe:{
+            name: 'plaid-dev'
+           }
+        }
     }
     ```
 1. Deb uses the rad CLI to deploy the application with the custom resource type Plaid
@@ -529,3 +521,5 @@ As a platform engineer, I want to version and maintain the API's. Ease of suppor
 * Versioning of the API's
 
 * Versioning of the bicep types
+
+
