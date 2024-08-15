@@ -1,6 +1,5 @@
 # Resource Extensibility (User Defined Resource Types)
 
-* **Status**: Pending
 * **Author**: Reshma abdul Rahim (@reshrahim)
 
 ## Summary
@@ -101,7 +100,7 @@ Raj is a service provider who works at Oracle Database and helps enterprises int
 
 - Assumption: Users will find value in the extensibility feature and actively contribute to the community.
 - Assumption: Users will use extensibility in lieu of existing extenders because they want to take advantage of things like strong typing and validation in Radius
-
+- Assumption: Service providers of proprietary services will find value in creating and publishing Recipes for their services hoping to increase the adoption of their services.
 ## Current state 
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
 
