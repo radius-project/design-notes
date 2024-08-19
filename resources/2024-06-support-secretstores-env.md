@@ -1,4 +1,4 @@
-# Title
+# Support secret stores in environment variables
 
 * **Status**: Pending/Approved
 * **Author**: Nick Beenham (@superbeeny)
@@ -22,17 +22,7 @@ be specific to this design context.
 
 ### Goals
 
-- Allow users to provide secrets to a container through environment variables
-
-### Non goals
-
-<!--
-Describe non-goals to identify something that we won’t be focusing on 
-immediately. We won’t be expending any effort on these matters. If there
-will be follow-ups after this work, list them here. If there are things
-we plan to do in the future, but are out of scope of this design, list
-them here.
--->
+- Allow users to provide Kubernetes secrets to a container through environment variables
 
 ### User scenarios (optional)
 
@@ -108,12 +98,7 @@ design document, if one exists.
 -->
 
 ### Architecture Diagram
-<!--
-Provide a diagram of the system architecture, illustrating how different
-components interact with each other in the context of this proposal.
-
-Include separate high level architecture diagram and component specific diagrams, wherever appropriate.
--->
+![Architecture Diagram](./2024-06-support-secretstores-env/secretstores-env.png)
 
 ### Detailed Design
 
@@ -156,6 +141,70 @@ pivot in the future. This is a good place to cover risks.
 Describe the recommended option and provide reasoning behind it.
 -->
 
+We first convert the versioned datamodel to a base datamodel that can handle secrets.
+
+```diff
+// toEnvDataModel: Converts from versioned datamodel to base datamodel
+func toEnvDataModel(e map[string]*EnvironmentVariable) (map[string]datamodel.EnvironmentVariable, error) {
+
+	m := map[string]datamodel.EnvironmentVariable{}
+
+	for key, val := range e {
+		if val == nil {
+			return nil, v1.NewClientErrInvalidRequest(fmt.Sprintf("Environment variable %s is nil", key))
+		}
+		if val.Value != nil && val.ValueFrom != nil {
+			return nil, v1.NewClientErrInvalidRequest(fmt.Sprintf("Environment variable %s has both value and secret value", key))
+		}
+
+		if val.Value != nil {
+			m[key] = datamodel.EnvironmentVariable{
+				Value: val.Value,
+			}
+		} else {
+			m[key] = datamodel.EnvironmentVariable{
+				ValueFrom: &datamodel.EnvironmentVariableReference{
+					SecretRef: &datamodel.EnvironmentVariableSecretReference{
+						Source: to.String(val.ValueFrom.SecretRef.Source),
+						Key:    to.String(val.ValueFrom.SecretRef.Key),
+					},
+				},
+			}
+
+		}
+
+	}
+	return m, nil
+}
+
+// fromEnvDataModel: Converts from base datamodel to versioned datamodel
+func fromEnvDataModel(e map[string]datamodel.EnvironmentVariable) map[string]*EnvironmentVariable {
+	m := map[string]*EnvironmentVariable{}
+
+	for key, val := range e {
+		if val.Value != nil {
+			m[key] = &EnvironmentVariable{
+				Value: val.Value,
+			}
+		} else {
+			m[key] = &EnvironmentVariable{
+				ValueFrom: &EnvironmentVariableReference{
+					SecretRef: &EnvironmentVariableSecretReference{
+						Source: to.Ptr(val.ValueFrom.SecretRef.Source),
+						Key:    to.Ptr(val.ValueFrom.SecretRef.Key),
+					},
+				},
+			}
+
+		}
+	}
+
+	return m
+}
+
+```
+
+
 ### API design 
 
 <!--
@@ -167,7 +216,9 @@ section. Write N/A here if not applicable.
 - Describe new commands in the CLI or changes to existing CLI commands.
 - Describe the new or modified Go APIs for any shared components.
 -->
-Updates to the container typespec
+Updates to the container typespec to allow for secret references in environment variables. This replaces the existing environment variable type of `map[string]string`  to allow for a secret reference.  
+
+**containers.tsp**
 ```diff
 @doc("Definition of a container")
 model Container {
@@ -215,25 +266,27 @@ model EnvironmentVariable {
 @doc("The reference to the variable")
 model EnvironmentVariableReference {
   @doc("The secret reference")
-  secretRef: EnvironmentVariableSecretReference;
+  secretRef: SecretReference;
 }
 
-@doc("The secret reference")
-model EnvironmentVariableSecretReference {
-  @doc("The secret source identifier")
+```
+
+We also need to move the `SecretReference` type to the common typespec so that it can be used in multiple places.
+
+**common.tsp**
+```diff
+@doc("This specifies a reference to a secret. Secrets are encrypted, often have fine-grained access control, auditing and are recommended to be used to hold sensitive data.")
+model SecretReference {
+  @doc("The ID of an Applications.Core/SecretStore resource containing sensitive data required for recipe execution.")
   source: string;
 
-  @doc("The secret key")
+  @doc("The key for the secret in the secret store.")
   key: string;
 }
 ```
 
-### CLI Design (if applicable)
-<!--
-Include if applicable – any design that changes Radius CLI
-arguments/commands. Write N/A here if not applicable.
-- Describe new commands in the CLI or changes to existing CLI commands.
--->
+
+
 
 ### Implementation Details
 <!--
@@ -242,16 +295,14 @@ the specific sub-components that will be updated, for example, controller, proce
 recipe engine, driver, to name a few.
 -->
 
-#### UCP (if applicable)
-#### Bicep (if applicable)
-#### Deployment Engine (if applicable)
+
 #### Core RP (if applicable)
-#### Portable Resources / Recipes RP (if applicable)
 
 ### Error Handling
 <!--
 Describe the error scenarios that may occur and the corresponding recovery/error handling and user experience.
 -->
+Error handling is covered within the functions and Radius errors are used where appropriate.
 
 ## Test plan
 
@@ -264,6 +315,9 @@ Describe any functionality that will create new testing challenges:
 - External assets that tests need to access
 - Features that do I/O or change OS state and are thus hard to unit test
 -->
+### Unit Tests
+- The addition of tests for the conversion functions from and to the versioned datamodel to the base datamodel.
+- Update functional tests to cover the new functionality.
 
 ## Security
 
@@ -280,6 +334,7 @@ Examples include:
 If this feature has no new challenges or changes to the security model
 then describe how the feature will use existing security features of Radius.
 -->
+The handling of secrets will remain within Kubernetes and Radius is only providing a way to reference these secrets in the environment variables of a container.
 
 ## Compatibility (optional)
 
@@ -288,6 +343,7 @@ Describe potential compatibility issues with other components, such as
 incompatibility with older CLIs, and include any breaking changes to
 behaviors or APIs.
 -->
+These will be breaking changes to the schema. Users will need to update the environment variables in their bicep files to use the new secret reference type.
 
 ## Monitoring and Logging
 
@@ -296,6 +352,7 @@ Include the list of instrumentation such as metric, log, and trace to
 diagnose this new feature. It also describes how to troubleshoot this feature
 with the instrumentation. 
 -->
+No additional monitoring or logging is required for this feature.
 
 ## Development plan
 
@@ -306,6 +363,13 @@ checked in at each point in the product and estimating the cost of each work
 item. Don’t forget to include the Unit Test and functional test in your
 estimates.
 -->
+Work completed in a pair programming session with a second developer. The work will be broken down into the following tasks:
+- Update the versioned datamodel to include the new secret reference type
+- Update the conversion functions to handle the new secret reference type
+- Update the containers typespec to include the new secret reference type
+- Update the common typespec to include the new secret reference type
+- Update the functional tests to cover the new functionality
+- Update the documentation to include the new functionality
 
 ## Open Questions
 
