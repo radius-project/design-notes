@@ -7,15 +7,6 @@
 
 Currently the only way to provide kubernetes secrets to a container is to mount them through a secret volume. This is not ideal for many use cases, especially when the secret is only needed in the environment variables of the container. This proposal aims to add support for secret stores to the environment variables of a container.
 
-## Terms and definitions
-
-<!--
-Include any terms, definitions, or acronyms that are used in
-this design document to assist the reader. They may or may not
-be part of the user-facing experience once implemented, and can
-be specific to this design context.
--->
-
 ## Objectives
 
 > **Issue Reference:** [Issue #5520](https://github.com/radius-project/radius/issues/5520)
@@ -96,6 +87,8 @@ that are not part of this feature (dependencies). This diagram generally
 treats the components as black boxes. Provide a pointer to a more detailed
 design document, if one exists. 
 -->
+The design of this new feature will require updates to the versioned datamodel, the conversion functions, the containers typespec and the common typespec.
+These will be breaking changes to the schema. Users will need to update the environment variables in their bicep files to use the new secret reference type. 
 
 ### Architecture Diagram
 ![Architecture Diagram](./2024-06-support-secretstores-env/secretstores-env.png)
@@ -121,6 +114,7 @@ their current understanding to understand your ideas.
 Discuss the rationale behind architectural choices and alternative options 
 considered during the design process.
 -->
+The design of this feature will require updates to the versioned datamodel, the conversion functions, the containers typespec and the common typespec to leverage the new secret reference type and provide support for secret stores in environment variables beyond the current support for environment variables with a string value.
 
 #### Advantages (of each option considered)
 <!--
@@ -128,6 +122,7 @@ Describe what's good about this plan relative to other options.
 Provides better user experience? Does it feel easy to implement? 
 Provides flexibility for future work?
 -->
+Advantages of this approach are that it allows users to provide secrets to a container through environment variables. This is a common use case and will make it easier for users to provide secrets to their containers. In using much of the existing functionality of Radius, this approach is also relatively simple to implement.
 
 #### Disadvantages (of each option considered)
 <!--
@@ -135,6 +130,7 @@ Describe what's not ideal about this plan. Does it lock us into a
 particular design for future changes or is it flexible if we were to 
 pivot in the future. This is a good place to cover risks.
 -->
+Disadvantages are that it will break existing bicep files that use environment variables. Users will need to update their bicep files to use the new secret reference type.
 
 #### Proposed Option
 <!--
@@ -294,6 +290,11 @@ High level description of updates to each component. Provide information on
 the specific sub-components that will be updated, for example, controller, processor, renderer,
 recipe engine, driver, to name a few.
 -->
+The renderer will need to be updated in several areas to handle the new secrets implementation.
+
+The function **GetDependencyIDs** will need to be updated to handle the new secret reference type. This function will need to determine if the environment variable is a secret reference or a string. The function will also need to determine whether the secret is a radius resource or a Kubernetes secret.
+
+The function **convertEnvVar** will need to be created to facilitate the conversion of `map[string]EnvironmentVariable` to `map[string]corev1.EnvVar`. The function will need to handle resolving the secret coming from a Kubernetes secret or a Radius resource ID.
 
 
 #### Core RP (if applicable)
