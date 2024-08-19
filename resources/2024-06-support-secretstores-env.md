@@ -271,7 +271,7 @@ model Container {
   workingDir?: string;
 }
 
-@doc("Envinronment variables type")
+@doc("Environment variables type")
 model EnvironmentVariable {
 
   @doc("The value of the environment variable")
