@@ -1,11 +1,13 @@
 # Support secret stores in environment variables
 
-* **Status**: Pending/Approved
 * **Author**: Nick Beenham (@superbeeny)
 
 ## Overview
 
 Currently the only way to provide kubernetes secrets to a container is to mount them through a secret volume. This is not ideal for many use cases, especially when the secret is only needed in the environment variables of the container. This proposal aims to add support for secret stores to the environment variables of a container.
+
+## Terms and Definitions
+Kubernetes secret: A Kubernetes object that stores sensitive data, such as passwords, OAuth tokens, and ssh keys. Putting this information in a secret is safer and more flexible than putting it verbatim in a pod definition or in a docker image. See the documentation [here](https://kubernetes.io/docs/concepts/configuration/secret/).
 
 ## Objectives
 
@@ -14,6 +16,10 @@ Currently the only way to provide kubernetes secrets to a container is to mount 
 ### Goals
 
 - Allow users to provide Kubernetes secrets to a container through environment variables
+
+### Non-Goals
+- (out-of-scope): Integration with other secret stores besides Kubernetes. This is tracked by other issues.
+- (out-of-scope): Other users for secrets besides envvars. This is tracked by other issues.
 
 ### User scenarios (optional)
 
@@ -27,8 +33,8 @@ link to that issue instead.
 #### User story 1
 As a radius user, I want to provide a secret to a container through an environment variable so that I can avoid mounting the secret as a volume. I want to be able to reference the secret within the application bicep file.
 
-```diff
-import radius as radius
+```bicep
+extension radius
 
 @description('The Radius Application ID. Injected automatically by the rad CLI.')
 param application string
@@ -72,6 +78,22 @@ resource secret 'Applications.Core/secretStores@2023-10-01-preview' = {
 }
 
 ```
+
+To reference a secret directly:
+  
+  ```bicep
+  env: {
+        DB_USER: { value: 'DB_USER' }
+        DB_PASSWORD: {
+          valueFrom: {
+            secretRef: {
+              source: 'myKubernetesSecret'
+            }
+          }
+        }
+      }
+```
+
 
 ## Design
 
@@ -335,7 +357,7 @@ Examples include:
 If this feature has no new challenges or changes to the security model
 then describe how the feature will use existing security features of Radius.
 -->
-The handling of secrets will remain within Kubernetes and Radius is only providing a way to reference these secrets in the environment variables of a container.
+The handling of secrets will remain within Kubernetes and Radius is only providing a way to reference these secrets in the environment variables of a container. This is an improvement over the current method of mounting secrets as volumes as it allows for more flexibility and security. Also, the secrets are stored in the Kubernetes secret store and are never exposed to the user.
 
 ## Compatibility (optional)
 
