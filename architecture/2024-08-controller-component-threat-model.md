@@ -4,13 +4,17 @@
 
 ## Overview
 
-This document aims to provide a threat model for the Radius Controller component. In this threat model, you will find potential security threats to the Controller component, an important part of Radius, and possible mitigations to the risks they pose. The document includes an analysis of the system, its assets, identified threats, and recommended security measures to protect the system.
+This document provides a threat model for the Radius Controller component. It identifies potential security threats to this critical part of Radius and suggests possible mitigations. The document includes an analysis of the system, its assets, identified threats, and recommended security measures to protect the system.
 
-This document will not include designs for the proposed measures to each threat.
+The Radius Controller component monitors changes (create, update, delete) in the definitions of Recipe and Deployment resources. Based on these changes, the appropriate controller takes the necessary actions. Below, you will find detailed information about the key parts of the Radius controllers and the objects they manage.
+
+## Terms and Definitions
 
 ## System Description
 
-The Controller component is where we keep our Kubernetes controllers, a validating webhook, and a few other important parts. We will dive into more details on the controller below.
+The Controller component consists of two Kubernetes controllers (Recipe and Deployment controllers), a validating webhook for changes in the Recipe object, and several other important parts. We will dive into more details on the controller below.
+
+The Controller component is a critical part of the Radius system, responsible for managing Kubernetes resources through custom controllers and webhooks. It ensures that the desired state of the system is maintained by continuously monitoring and reconciling resources.
 
 Note: If you would like to learn more about Kubernetes controllers, you can visit [this link](https://kubernetes.io/docs/concepts/architecture/controller/).
 
@@ -18,38 +22,40 @@ Note: If you would like to learn more about Kubernetes controllers, you can visi
 
 The Controller component consists of several key parts:
 
-- **Recipe and Deployment Controllers**: Custom Kubernetes controllers registered with the manager. Each controller is responsible for watching specific Kubernetes resources (Recipe and Radius Deployment) and reconciling their state.
-  - **Recipe Controller**: This controller specifically watches for changes in/additions of Recipe objects in the cluster. The controller calls UCPD to perform the following operations:
-    - The Recipe Controller creates/updates/deletes a Recipe object based on the input received from the Kubernetes API Server.
-    - The Recipe Controller creates/updates/deletes a Secret if it is requested by the Recipe object.
-  - **Deployment Controller**: This controller specifically watches for changes in Deployment objects in the cluster.
-    - The Deployment Controller creates/updates/deletes a Deployment object based on the input received from the Kubernetes API Server.
-    - The Deployment Controller creates/updates/deletes a Secret if it is requested by the Deployment object.
-- **Recipe Validating Webhook**: [Used if TLS certificates are provided] This webhook is triggered by the Kubernetes API in case of a change in a Recipe resource. Kubernetes API reaches out to this webhook in case of a creation, an update, or a deletion of a Recipe. Webhook validates the action, if it is a valid action, and responds to the Kubernetes API. For more information about webhooks, refer to the [official documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
+- **Recipe and Deployment Controllers**: Radius Kubernetes controllers registered with the manager. Each controller is responsible for watching specific Kubernetes resources (Recipe and Deployment) and reconciling their state.
+  - **Recipe Controller**: This controller specifically watches for additions of and changes in Recipe objects in the cluster. The controller calls UCPD to perform the following operations:
+    - Create, update, or delete a Recipe object based on the input received from the Kubernetes API Server.
+    - Create, update, or delete a Secret if it is requested by the Recipe object.
+  - **Deployment Controller**: This controller specifically watches for additions of and changes in Deployment objects in the cluster. The controller calls UCPD to perform the following operations:
+    - Create, update, or delete a Deployment object based on the input received from the Kubernetes API Server.
+    - Create, update, or delete a Secret if it is requested by the Deployment object.
+- **Recipe Validating Webhook**: [Used if TLS certificates are provided] This webhook is triggered by the Kubernetes API in case of a change in a Recipe resource. The Kubernetes API reaches out to this webhook in case of a creation, an update, or a deletion of a Recipe. The webhook tries to validate the action and responds to the Kubernetes API with an approval or a rejection. For more information about webhooks, refer to the [official documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
 - **Health Checks**: Health checks are implemented to monitor the status and performance of the controllers. They ensure that the controllers are functioning correctly and can take corrective actions if any issues are detected.
 
 ### Clients
 
-In this section we are going to be talking about different clients of the Controller component. Clients are systems that reach out to the Controller component to trigger an action. Here are the clients of the Controller component:
+In this section, we will discuss the different clients of the Controller component. Clients are systems that interact with the Controller component to trigger actions. Here are the clients of the Controller component:
 
-1. **Kubernetes API Server**: The primary client that interacts with the controller. It sends events related to resource changes (e.g., creation, update, or deletion of a Recipe and/or Deployment) to the controller manager. The controller watches for these events and reconciles the state of the resources accordingly.
-1. **Validating Webhook Clients**: If webhooks are enabled and registered, clients that interact with the Kubernetes API server (e.g., `kubectl`, other controllers) can trigger webhook calls.
-1. **Health Check Probes**: Kubernetes itself can act as a client by performing health and readiness checks on the controller manager.
-1. **Metrics Scrapers**: If metrics are enabled, Prometheus or other monitoring tools can scrape metrics from the controller manager.
+1. **Kubernetes API Server**: The primary client that interacts with the controller. It sends events related to resource changes (e.g., creation, update, or deletion of a Recipe or Deployment) to the controller manager. The controllers watch for these events and reconcile the state of the resources accordingly.
+2. **Validating Webhook Clients**: If webhooks are enabled and registered, clients that interact with the Kubernetes API server (e.g., `kubectl`, other controllers) can trigger webhook calls.
+3. **Health Check Probes**: Kubernetes itself can act as a client by performing health and readiness checks on the controller manager.
+4. **Metrics Scrapers**: If metrics are enabled, Prometheus or other monitoring tools can scrape metrics from the controller manager.
 
 ## Trust Boundaries
 
 We have a few different trust boundaries for the Controller component:
 
-- Kubernetes cluster,
-- Namespaces within the cluster.
+- **Kubernetes Cluster**: The overall environment where the Controller component operates and receives requests from the clients.
+- **Namespaces within the Cluster**: Logical partitions within the cluster to separate and isolate resources and workloads.
 
-The Controller component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCPD also lives inside the same namespace.
+The Controller component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCPD also resides within the same namespace.
 
 The Kubernetes API Server, which is the main interactor of the Controller component, runs in the `kube-system` namespace within the cluster.
 
-1. Different namespaces separate and isolate resources and workloads within the Kubernetes cluster.
-2. Access controls and other permissions are implemented to manage interactions between namespaces.
+### Key Points
+
+1. **Namespace Isolation**: Different namespaces separate and isolate resources and workloads within the Kubernetes cluster.
+2. **Access Controls**: Access controls and other permissions are implemented to manage interactions between namespaces.
 
 ## Assets and Security Objectives
 
@@ -111,7 +117,7 @@ The Kubernetes API Server, which is the main interactor of the Controller compon
 
 ![Controller Component via Microsoft Threat Modeling Tool](./2024-08-controller-component-threat-model/controller-component.png)
 
-1. **Resource Creation/Update/Delete**: When a user creates, updates, or deletes a Recipe or a Radius Deployment resource, the request is sent to the Kubernetes API server.
+1. **Resource Creation/Update/Delete**: When a user requests to create, update, or delete a Recipe or a Deployment object, the request is sent to the Kubernetes API server. A user can do this request by using `kubectl` command.
 1. **Webhook Validation/Mutation**: If a custom webhook is configured, the request is intercepted by the webhook for validation. The webhook ensures that the resource complies with the required policies. You can see the details of the Recipe Webhook implementation via [this link](https://github.com/radius-project/radius/blob/main/pkg/controller/reconciler/recipe_webhook.go#L46).
 1. **Controller Reconciliation**: When the action (create/update/delete) is validated by the Validating Webhook as discussed in the previous step, Kubernetes API reaches out to the Controller component and triggers the necessary action. Then, the controllers reconcile the resource's state to match the desired configuration.
 1. **Communication with UCPD**: Controller also calls UCPD in some cases when doing reconcilations. Here is the list of instances where Controller calls UCPD:
