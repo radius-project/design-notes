@@ -1,6 +1,6 @@
 # Adding support for Private Bicep Registries
 
-* **Status**: Pending
+* **Status**: Approved
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview
@@ -28,7 +28,7 @@ To address this issue and enhance the usability of Radius for serious enterprise
 - Support to manage(configure/view) OCI registry credentials in Radius environment via CLI. (this is a future priority scenario and would not be in scope for the initial release)
 
 ### User scenarios (optional)
-As an operator I am responsible for maintaining Bicep recipes for use with Radius. Bicep recipes used contains proprietary configurations, or data that should not be shared publicly and its intended for internal use within our organization and have granular control over who can access, contribute to, or modify bicep recipes. So I store the recipes in a private bicep registry. And I would like to use these private registries as template-path while registering a bicep recipe.
+As an operator I am responsible for maintaining Bicep recipes for use with Radius. My Bicep recipes contain proprietary configurations, or data that should not be shared publicly, and are intended for internal use within our organization and have granular control over who can access, contribute to, or modify bicep recipes. So I store the recipes in a private bicep registry. And I would like to use these private registries as template-path while registering a bicep recipe.
 
 
 ## User Experience (if applicable)
@@ -36,8 +36,8 @@ Credential information is stored in `Application.Core/secretstore` resource, use
 | type     | Expected Keys                                                                                                                                                                                                 |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | basicAuthentication | username, password  |
-| azureFederatedIdentity | clientid, tenantId |
-| awsIRSA | arn | 
+| azureFederatedIdentity | clientId, tenantId |
+| awsIRSA | roleARN | 
 
 
 ```
@@ -299,49 +299,101 @@ Pros:
 Cons:
 - This options lead to either having driver specific code in engine/secretLoader or driver an making api call to corerp to get secrets information.
 
-I propose adding `type` property to the `RegistrySecretConfig` i.e Option 1, as with the current implementation of the secrets flow between engine-driver,  Option 2 lead to either having driver specific code in engine/secretLoader or driver an making api call to corerp to get secrets information. 
+I propose leveraging the existing property `type` in `Application.core/secretStores` to specify the kind of authentication i.e Option 2, as it provides the ability to test incorrect secretstore configurations at environment creation.
 
 ***Bicep Example***
 
 environment.bicep
 ```diff
-recipeConfig: {
-  terraform: {
-    authentication: {
-      git: {
-        pat: {
-          'github.com':{
-            secret: moduleSecrets.id
+resource env 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'my-env'
+  properties: {
+    compute: {
+      kind: 'kubernetes'
+      namespace: 'my-namespace'
+    }
+    recipeConfig: {
+      terraform: {
+        authentication: {
+          git: {
+            pat: {
+              // The hostname of your git platform, such as 'dev.azure.com' or 'github.com'
+              'github.com':{
+                secret: secretStoreGit.id
+              }
+            }
           }
         }
       }
++      bicep: {
++        authentication:{
++          'test.azurecr.io':{
++            'secret': acrSecret.id
++          }
++          '123456789012.dkr.ecr.us-west-2.amazonaws.com':{
++            'secret': ecrSecret.id
++          }
++          'ghcr.io':{
++            'secret': ghcrSecret.id
++          }
++        }
++      }
     }
-  },
-
-+  bicep: {
-+    authentication:{
-+      test.azurecr.io:{
-+        "secretSource": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/acr-secret"
-+        "type": "azureFederatedIdentity"
-+      },
-+      123456789012.dkr.ecr.us-west-2.amazonaws.com:{
-+        "secretSource": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/aws-secret",
-+        "type":"awsIRSA"
-+      },
-+      ghcr.io:{
-+        "secretSource": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/secretStores/ghcr-secret",
-+        "type": "basicAuthentication"
-+      },
-+    }
-+  }
-  "env": {
-    ...
   }
-},
+}
+
+resource acrSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'acr-secret-store'
+  properties: {
+    resource: 'my-secret-namespace/github'
++    type: 'azureWorkloadIdentity'
+    data: {
+      clientId: {
+        value: 'test-client-id'
+      }
+      tenantId: {
+        value: 'test-tenant-id'
+      }
+    }
+  }
+}
+
+resource ecrSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'ecr-secret-store'
+  properties: {
+    resource: 'my-secret-namespace/github'
++    type: 'awsIRSA'
+    data: {
+      roleARN: {
+        value: 'role-arn'
+      }
+    }
+  }
+}
+
+resource ghcrSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'ghcr-secret-store'
+  properties: {
+    resource: 'my-secret-namespace/github'
++    type: 'basicAuthentication'
+    data: {
+      username: {
+        value: 'test-username'
+      }
+      password: {
+        value: 'test-password'
+      }
+    }
+  }
+}
+
 ```
 
 
+
 ### Implementation Details
+#### Core RP (if applicable)
+- Adding `basicAuthentication`,`awsIRSA`,`azureWorkloadIdentity` types to `Application.Core/secretStores` resource, and validate the secretStore configurations during the creation e.g `azureWorkloadIdentity` type should have keys `clientID` and `tenantID`. 
 #### Portable Resources / Recipes RP (if applicable)
 ***Bicep Driver***
 
@@ -354,6 +406,26 @@ recipeConfig: {
     }
     ```
 - Update Bicep driver apis i.e execute, delete and getMetadata to use oras auth package for private registry authentication.
+
+***Secrets Loader***
+- Updated the return type of secrets to include the secrets type, and also today in loadSecrets() we would return empty secrets map if the key list is empty, but we update it it return all the secret key-value pairs from secretStore resource if the key list is empty.
+
+```diff
+type SecretsLoader interface {
+
+// LoadSecrets loads secrets from secret stores based on input map of provided secret store IDs and secret keys.
+// It returns a map of secret data, where the keys are the secret store IDs and the values are maps of secret keys and their corresponding values.
+-	LoadSecrets(ctx context.Context, secretStoreIDs map[string][]string) (secretData map[string]map[string]string, err error)
+
++	LoadSecrets(ctx context.Context, secretStoreIDs map[string][]string) (secretData map[string]secretData, err error) 
+}
+
++type secretData struct{
++  type string
++  Data map[string]string
++}
+```
+
 
 ### Error Handling
 
