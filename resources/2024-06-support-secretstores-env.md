@@ -339,8 +339,14 @@ Describe any functionality that will create new testing challenges:
 - Features that do I/O or change OS state and are thus hard to unit test
 -->
 ### Unit Tests
+
 - The addition of tests for the conversion functions from and to the versioned datamodel to the base datamodel.
-- Update functional tests to cover the new functionality.
+- The addition of tests for the conversion functions from the base datamodel to the versioned datamodel.
+- Add tests to test for errors and negative test cases.
+
+### Functional Tests
+
+- Add tests to ensure that secrets can be referenced in environment variables.
 
 ## Security
 
@@ -409,6 +415,11 @@ Describe the alternative designs that were considered or should be considered.
 Give a justification for why alternative approaches should be rejected if
 possible. 
 -->
+The terraform resource provider also implemented a similar feature to this. There was a difference in design that needed to be resolved to maintain a consistent user experience across the two resource providers.
+
+The two options were discussed and it was decided that this implementation would be adopted for the following reasons.
+- This solution is more consistent with existing Kubernetes design patterns and is more user-friendly.
+- Secrets and environment variables are closely related in Kubernetes and it makes sense to allow users to reference secrets in environment variables. This design also allows for other types of references in the future.
 
 ## Design Review Notes
 
