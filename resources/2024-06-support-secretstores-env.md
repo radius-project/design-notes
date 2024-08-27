@@ -19,7 +19,7 @@ Kubernetes secret: A Kubernetes object that stores sensitive data, such as passw
 
 ### Non-Goals
 - (out-of-scope): Integration with other secret stores besides Kubernetes. This is tracked by other issues.
-- (out-of-scope): Other users for secrets besides envvars. This is tracked by other issues.
+- (out-of-scope): Other users for secrets besides environment variables. This is tracked by other issues.
 
 ### User scenarios (optional)
 
@@ -81,7 +81,7 @@ resource secret 'Applications.Core/secretStores@2023-10-01-preview' = {
 
 To reference a secret directly:
   
-  ```bicep
+```bicep
   env: {
         DB_USER: { value: 'DB_USER' }
         DB_PASSWORD: {
@@ -314,9 +314,9 @@ recipe engine, driver, to name a few.
 -->
 The renderer will need to be updated in several areas to handle the new secrets implementation.
 
-The function **GetDependencyIDs** will need to be updated to handle the new secret reference type. This function will need to determine if the environment variable is a secret reference or a string. The function will also need to determine whether the secret is a radius resource or a Kubernetes secret.
+The function `GetDependencyIDs` will need to be updated to handle the new secret reference type. This function will need to determine if the environment variable is a secret reference or a string. The function will also need to determine whether the secret is a radius resource or a Kubernetes secret.
 
-The function **convertEnvVar** will need to be created to facilitate the conversion of `map[string]EnvironmentVariable` to `map[string]corev1.EnvVar`. The function will need to handle resolving the secret coming from a Kubernetes secret or a Radius resource ID.
+The function `convertEnvVar` will need to be created to facilitate the conversion of `map[string]EnvironmentVariable` to `map[string]corev1.EnvVar`. The function will need to handle resolving the secret coming from a Kubernetes secret or a Radius resource ID.
 
 
 #### Core RP (if applicable)
