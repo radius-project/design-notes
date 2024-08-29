@@ -1,4 +1,4 @@
-# BicepDeployment Controller
+# Radius BicepDeployment Controller
 
 * **Author**: Will Smith (@willdavsmith)
 
@@ -85,8 +85,6 @@ Jon is an infrastructure operator for an enterprise company. His team manages a 
 #### Jon can deploy Radius resources defined in Bicep manifests using Kubernetes tools
 
 Now that he can see that Radius can deploy cloud resources defined in Bicep manifests, Jon wants to take advantage of Radius tooling, such as the App Graph, and fully "Rad-ify" his application. He writes a Bicep manifest that defines a Radius container that connects to the cloud resources, and uses the rad CLI to generate a custom resource from the Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the Radius resources defined in the Bicep manifest. Now, Jon can take advantage of Radius tooling, such as the Radius Dashboard and App Graph, to manage his application.
-
-#### Bran 
 
 ## User Experience
 <!--
