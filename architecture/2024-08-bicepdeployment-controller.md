@@ -12,7 +12,7 @@ team. Do not provide the design details in this, section - there is a
 dedicated section for that later in the document.
 -->
 
-Today, users of Radius (and importantly, future users of Radius) use many Kubernetes-specific tools in their production workflows, such as Flux and ArgoCD. The usage of these tools presents an issue when trying to integrate Radius - they can't deploy Radius resources directly since Radius resources are not Kubernetes objects. This design document proposes updates to Radius will allow users to deploy Radius resources by authoring Kubernetes CRDs, which will enable usage of Radius with GitOps tools as well as other Kubernetes-specific tools.
+Today, users of Radius and future adopters of Radius use many Kubernetes-specific tools in their production workflows. Most of these tools operate on Kubernetes resources exclusively - which presents a problem when trying to deploy resources defined in Bicep manifests. This design proposes the creation of a new Kubernetes controller (BicepDeployment controller) in Radius that will allow users to deploy resources defined in Bicep manifests using Kubernetes tooling.
 
 ## Terms and definitions
 
@@ -23,13 +23,11 @@ be part of the user-facing experience once implemented, and can
 be specific to this design context.
 -->
 
-**CRD (Custom Resource Definition)**: A Kubernetes resource that allows users to define their own resource types.
+**CRD (Custom Resource Definition)**: A definition for a Kubernetes resource that allows users to define their own resource types.
 
-**GitOps** A way to do Kubernetes cluster management and application delivery. It works by using Git as a single source of truth for declarative infrastructure and applications.
+**CR (Custom Resource)**: An instance of a CRD that represents a custom resource in Kubernetes.
 
-**Flux**: A GitOps tool that automates the deployment of applications to Kubernetes clusters.
-
-**ArgoCD**: Another GitOps tool that automates the deployment of applications to Kubernetes clusters.
+**Bicep**: A Domain Specific Language (DSL) for defining Azure resources, or when used with Radius, Azure resources, AWS resources, and Radius resources.
 
 ## Objectives
 
@@ -49,14 +47,14 @@ Describe goals to define why we are doing this work, how we will make
 priority decisions, and how we will determine success.
 -->
 
-**Goal: Users can use Kubernetes GitOps tools (Flux, ArgoCD) to deploy and manage resources defined in Bicep manifests**
-- With this work, users will be able to deploy Radius resources using GitOps tools by authoring Kubernetes CRDs that contain Bicep manifests. We will essentially be providing a "translation layer" between Kubernetes resources (that Flux and ArgoCD can understand) and Radius resources (that Radius can understand).
+**Goal: Users can use Kubernetes tooling to deploy and manage resources defined in Bicep manifests**
+- With this work, users will be able to deploy resources defined in Bicep using only Kubernetes. We will essentially be providing a "translation layer" between Kubernetes resources (that Kubernetes tools can understand) and Radius resources (that Radius can understand).
 
-**Goal: Users can deploy Radius resources using GitOps tools**
-- We will be supporting the full suite of Radius resources in the BicepDeployment resource, so users can deploy any Radius resource using GitOps tools.
+**Goal: Users can quickly generate a Kubernetes CR from Bicep using the Radius CLI**
+- We will provide a CLI command that generates the BicepDeployment resource from a Bicep manifest to make this feature easy to adopt.
 
-**Goal: Users can enable this feature without writing code of their own**
-- We will provide a CLI command that generates the BicepDeployment resource from a Bicep manifest and parameters file, so users can enable this feature without writing code of their own.
+**Goal: The behavior of BicepDeployment is consistent with user expectations for a Kubernetes-enabled tool**
+- We will follow user expectations for Kubernetes controllers and resources when designing the BicepDeployment controller and resource. This includes building in support for retries, status updates, and error handling.
 
 ### Non-goals
 
@@ -69,7 +67,7 @@ them here. Provide a brief explanation on why this is a non-goal.
 -->
 
 **Non-goal: Full support for GitOps**
-- We will not yet be implementing automatic generation of BicepDeployment resources from Bicep manifests or querying Git repositories. This design will be covered in a separate design document.
+- We will not yet be implementing automatic generation of BicepDeployment resources from Bicep manifests or querying Git repositories. This design will enable this work, and it will be covered in a future design document.
 
 ### User scenarios
 
@@ -80,26 +78,15 @@ If you have an existing issue that describes the user scenarios, please
 link to that issue instead.
 -->
 
-#### Jon can use GitOps to deploy a standard Radius environment for developer use
+#### Jon can deploy cloud (Azure or AWS) resources defined in Bicep manifests using Kubernetes tools
 
-Jon is an infrastructure operator who uses GitOps to automate the creation of developer Kubernetes clusters. Today, he publishes Kubernetes manifests to a GitHub repository, and a GitOps tool watches the repository and applies the manifests to the Kubernetes cluster. He wants to have a Radius environment and a set of recipes available on the clusters for his developers to use, since they are building applications using Radius.
+Jon is an infrastructure operator for an enterprise company. His team manages a production application that is deployed on Kubernetes and uses cloud resources. Jon wants to declare all dependencies for his application in Kubernetes manifests, including cloud resources. He installs Radius on his cluster and uses the rad CLI to generate a custom resource from his Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the cloud resources defined in the Bicep manifest. If he wants to update or delete the cloud resources, he can do so by re-applying the updated custom resource or deleting the custom resource.
 
-He first sets up the Radius Helm chart as a dependency in the cluster, and then runs the `rad bicep generate bicepdeployment env.bicep --parameters env.bicepparam` command on his machine to create an BicepDeployment resource that contains the template and parameters specified. He then commits the BicepDeployment resource to the Git repository.
+#### Jon can deploy Radius resources defined in Bicep manifests using Kubernetes tools
 
-When a developer creates a new development cluster using the configuration specified in Jon's GitHub repository with a GitOps tool, the BicepDeployment resource is applied on the cluster, and the Radius environment defined in the `env.bicep` Bicep manifest is deployed. The developer can then use the environment to deploy and test their applications using Radius.
+Now that he can see that Radius can deploy cloud resources defined in Bicep manifests, Jon wants to take advantage of Radius tooling, such as the App Graph, and fully "Rad-ify" his application. He writes a Bicep manifest that defines a Radius container that connects to the cloud resources, and uses the rad CLI to generate a custom resource from the Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the Radius resources defined in the Bicep manifest. Now, Jon can take advantage of Radius tooling, such as the Radius Dashboard and App Graph, to manage his application.
 
-#### Bran can use GitOps to deploy and manage a Radius application in production
-
-Bran is a developer who uses GitOps to automate the deployment of Radius applications to production Kubernetes clusters. His infrastructure team has set up a Radius installation and environment on the production cluster, and Bran wants to deploy his application using Radius. He has authored a Bicep manifest that defines the resources for his application and a Bicep parameters file that specifies the parameters for the manifest. He runs the `rad bicep generate bicepdeployment app.bicep --parameters app.bicepparam` command on his machine to create an BicepDeployment resource that contains the template and parameters specified. He then commits the BicepDeployment resource to the Git repository.
-
-When the GitOps tool watches the repository and applies the BicepDeployment resource to the production cluster, the Radius resources defined in the `app.bicep` Bicep manifest are deployed.
-
-#### Sam can use GitOps to patch a Radius application in production
-
-Sam is an SRE who is responsible for maintaining a Radius application in production. He notices that the application is experiencing performance issues and the number of application container replicas needs to be increased. He updates the Bicep parameters file for the application to specify the new number of replicas and runs the `rad bicep generate bicepdeployment app.bicep --parameters app.bicepparam` command on his machine to create an BicepDeployment resource that contains the updated parameters. He then commits the BicepDeployment resource to the Git repository.
-
-When the GitOps tool watches the repository and applies the BicepDeployment resource to the production cluster, the Radius resources defined in the `app.bicep` Bicep manifest are updated with the new parameters. The application container replicas are increased, and the performance issues are resolved.
-
+#### Bran 
 
 ## User Experience
 <!--
@@ -111,33 +98,50 @@ input commands and their corresponding output. Include a bicep/helm code
 sample, if this proposal involves updates to that experience.
 -->
 
+### Radius Container
+
 **Sample Input:**
 <!--
 Provide a sample CLI command input and/or bicep/helm code.
 -->
 
-#### `env.bicep`
+#### `app.bicep`
 ```bicep
 extension radius
 
-param k8sNamespace string
+param application string
+param tag string
+param port int
 
-resource env 'Applications.Core/environments@2023-10-01-preview' = {
-  name: 'env'
+resource container 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'container'
   properties: {
-    compute: {
-      kind: 'kubernetes'
-      namespace: k8sNamespace
+    application: application
+    container: {
+      image: 'ghcr.io/radius-project/samples/demo:${tag}'
+      ports: {
+        web: {
+          containerPort: port
+        }
+      }
     }
   }
 }
 ```
 
-#### `env.bicepparam`
+#### `app.bicepparam`
 ```bicep
-using './env.bicep'
+using 'app.bicep'
 
-param k8sNamespace string = 'demo'
+param application = ''
+param tag = ''
+```
+
+#### `appnetworking.bicepparam
+```bicep
+using 'app.bicep'
+
+param port = 3000
 ```
 
 **Sample Output:**
@@ -145,16 +149,16 @@ param k8sNamespace string = 'demo'
 Provide a sample output for the inputs provided above.
 -->
 ```
-> rad bicep generate bicepdeployment env.bicep --parameters env.bicepparam --out env.yaml
+> rad bicep generate-kubernetes app.bicep --parameters @app.bicepparam --parameters tag=latest --parameters appnetworking.bicepparam --outfile env.yaml
 
 Generating BicepDeployment resource...
 BicepDeployment resource generated at env.yaml
 
 To apply the BicepDeployment resource onto your cluster, run:
-kubectl apply -f env.yaml
+kubectl apply -f app.yaml
 ```
 
-#### `env.yaml`
+#### `app.yaml`
 ```yaml
 kind: BicepDeployment
 apiVersion: radapp.io/v1alpha3
@@ -165,21 +169,129 @@ spec:
   template: |
     extension radius
 
-    param k8sNamespace string
+    param application string
+    param tag string
+    param port int
 
-    resource env 'Applications.Core/environments@2023-10-01-preview' = {
-      name: 'env'
+    resource container 'Applications.Core/containers@2023-10-01-preview' = {
+      name: 'container'
       properties: {
-        compute: {
-          kind: 'kubernetes'
-          namespace: k8sNamespace
+        application: application
+        container: {
+          image: 'ghcr.io/radius-project/samples/demo:${tag}'
+          ports: {
+            web: {
+              containerPort: port
+            }
+          }
         }
       }
     }
   parameters: |
-    using './env.bicep'
+    application=''
+    tag='latest'
+    port=3000
+```
 
-    param k8sNamespace string = 'demo'
+### Bicep Module
+
+#### `main.bicep`
+```bicep
+param location string = resourceGroup().location
+param storageAccountName string
+
+// Import the storage module
+module storageModule 'storage.bicep' = {
+  name: 'storageModule'
+  params: {
+    location: location
+    storageAccountName: storageAccountName
+  }
+}
+
+// Output the storage account ID
+output storageAccountId string = storageModule.outputs.storageAccountId
+```
+
+#### `storage.bicep`
+```bicep
+// Define parameters
+param location string
+param storageAccountName string
+
+// Create a storage account
+resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {}
+}
+
+// Output the storage account ID
+output storageAccountId string = storageAccount.id
+```
+
+**Sample Output:**
+<!--
+Provide a sample output for the inputs provided above.
+-->
+```
+> rad bicep generate-kubernetes main.bicep --parameters storageAccountName=myaccount --outfile main.yaml
+
+Generating BicepDeployment resource...
+BicepDeployment resource generated at main.yaml
+
+To apply the BicepDeployment resource onto your cluster, run:
+kubectl apply -f main.yaml
+```
+
+#### `main.yaml`
+```yaml
+kind: BicepDeployment
+apiVersion: radapp.io/v1alpha3
+metadata:
+  name: env
+  namespace: radius-system
+spec:
+  template: |
+    param location string = resourceGroup().location
+    param storageAccountName string
+
+    // Import the storage module
+    module storageModule 'storage.bicep' = {
+      name: 'storageModule'
+      params: {
+        location: location
+        storageAccountName: storageAccountName
+      }
+    }
+
+    // Output the storage account ID
+    output storageAccountId string = storageModule.outputs.storageAccountId
+  modules:
+    - name: storageModule
+      template: |
+        param location string
+        param storageAccountName string
+
+        // Create a storage account
+        resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
+          name: storageAccountName
+          location: location
+          sku: {
+            name: 'Standard_LRS'
+          }
+          kind: 'StorageV2'
+          properties: {}
+        }
+
+        // Output the storage account ID
+        output storageAccountId string = storageAccount.id
+  parameters: |
+    storageAccountName=myaccount
 ```
 
 ## Design
@@ -199,25 +311,7 @@ design document, if one exists.
 
 This design proposes the creation of a new Kubernetes controller (BicepDeployment controller) packaged within the `radius-controller` service.
 
-The BicepDeployment controller will be implemented as a Kubernetes controller that watches and reconciles BicepDeployment resources on the cluster. The BicepDeployment controller will adhere to the following control loop for each of the BicepDeployment resources on the cluster:
-
-1. When a BicepDeployment resource is created or updated on the cluster, the controller will compile the Bicep template and parameters into ARM JSON. If there are any errors during the compilation, the controller will update the `status.phrase` and the `status.description` of the BicepDeployment resource to indicate that the deployment has failed.
-
-2. Check if we have an "operation" in progress. If so, check it's status.
-    1. If the operation is still in progress, then queue another reconcile (polling).
-	  2. If the operation completed successfully then update the status and continue processing (happy-path).
-	  3. If the operation failed then update the status and continue processing (retry).
-3. If the ApplicationDeployment is being deleted then process deletion.
-	  1. This may require us to start a DELETE operation. After that we can continue polling.
-    2. If the ApplicationDeployment is not being deleted then process this as a creation or update.
-	  3. This may require us to start a PUT operation. After that we can continue polling.
-  
-1. The controller will perform some simple lookups to Radius to determine if the provided template can be deployed. It will make two checks:
-    - Check if the template contains an empty `param environment`. If it does, the controller will query the Radius API to get an environment ID (must have exactly one environment if left unspecified like this) and deploy the template using that environment.
-    - Check if the template contains a `param application`. If it does, the controller will query the Radius API to get an application ID (must have exactly one application if left unspecified like this) and deploy the template using that application.
-2. The controller will send the ARM JSON to the Radius API to deploy the resources. If there are any errors during the deployment, the controller will update the `status.phrase` and the `status.description` of the BicepDeployment resource to indicate that the deployment has failed and include the error message.
-
-> TODO: We need to figure out deletion of specific resources within the template. Let's discuss in the design meeting.
+The BicepDeployment controller will be implemented as a Kubernetes controller that watches and reconciles BicepDeployment resources on the cluster. It will be responsible for compiling Bicep templates and parameters into ARM JSON and deploying the resources defined in the Bicep template to Radius. It will also be responsible for updating and deleting resources defined in the Bicep template.
 
 ### Architecture Diagram
 <!--
@@ -256,18 +350,21 @@ considered during the design process.
 The `BicepDeployment` resource will be a new Kubernetes CRD that will be used to contain the Bicep template and parameters for deploying Radius resources. The CRD will have the following fields:
 
 ```go
-// BicepDeploymentSpec defines the desired state of an BicepDeployment
+// BicepDeploymentSpec defines the desired state of a BicepDeployment
 type BicepDeploymentSpec struct {
   // Template is the Bicep template that defines the resources to deploy.
-  // +kubebuilder:validation:Required
   Template string `json:"template"`
 
   // Parameters is the Bicep parameters file that specifies the parameters for the template.
-  // +kubebuilder:validation:Optional
   Parameters string `json:"parameters"`
+
+  // Modules is a list of Bicep modules that are used in the template.
+  Modules []BicepDeploymentModule `json:"modules,omitempty"`
 }
 
-// BicepDeploymentPhrase is a string representation of the current status of an Bicep Deployment.
+// Deploy again and check output resources. if they are the same, then we are good to go. if there are resources that are missing, then delete them and update resources 
+
+// BicepDeploymentPhrase is a string representation of the current status of a Bicep Deployment.
 type BicepDeploymentPhrase string
 
 const (
@@ -290,53 +387,62 @@ const (
 // BicepDeploymentStatus defines the observed state of the Bicep Deployment.
 type BicepDeploymentStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Bicep Deployment. It corresponds to the Deployment's generation, which is updated on mutation by the API Server.
-	// +kubebuilder:validation:Optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 
 	// Scope is the resource ID of the scope.
-	// +kubebuilder:validation:Optional
 	Scope string `json:"scope,omitempty"`
 
 	// Resource is the resource ID of the deployment.
-	// +kubebuilder:validation:Optional
 	Resource string `json:"resource,omitempty"`
 
 	// Operation tracks the status of an in-progress provisioning operation.
-	// +kubebuilder:validation:Optional
 	Operation *ResourceOperation `json:"operation,omitempty"`
 
 	// Phrase indicates the current status of the Bicep Deployment.
-	// +kubebuilder:validation:Optional
 	Phrase BicepDeploymentPhrase `json:"phrase,omitempty"`
 
   // Description is a human-readable description of the status of the Bicep Deployment.
-  // +kubebuilder:validation:Optional
   Description string `json:"description,omitempty"`
+
+  // Resources is a list of resources that are created by the BicepDeployment.
+  Resources []BicepDeploymentResource `json:"resources,omitempty"`
 }
 ```
 
-#### `rad bicep generate bicepdeployment` Command
+#### `rad bicep generate-kubernetes` Command
 
-The `rad bicep generate bicepdeployment <bicep file>` command will be a new command that will generate an BicepDeployment resource when provided a Bicep template and (optionally) a Bicep parameters file. The command will take the following arguments:
+The `rad bicep generate-kubernetes` command will be a new command that will generate a Kubernetes custom resource when provided a Bicep template, modules, and parameters The command will take the following arguments:
 
-- `-p, --parameters`: The path to the Bicep parameters file
-- `-o, --output`: The path to the output file where the BicepDeployment resource will be written
-
-The command will read the Bicep template and parameters files and generate a BicepDeployment resource with the template and parameters set. The command will write the BicepDeployment resource to the output file.
+- `-p, --parameters`: The parameters for the Bicep template. Can be specified in the same way as [`rad deploy` parameters](https://edge.docs.radapp.io/reference/cli/rad_deploy/).
+- `-o, --outfile`: The path to the output file where the BicepDeployment resource will be written.
 
 #### BicepDeployment Controller
 
-The `radius-controller` will be updated to include a new controller that reconciles BicepDeployment resources. When an BicepDeployment resource is created or updated, the controller will compile the Bicep template and parameters into ARM JSON and send the ARM JSON to the Radius API to deploy the resources. The controller will update the `status.phrase` and the `status.description` of the BicepDeployment resource based on the status of the deployment (see `BicepDeploymentPhrase` above).
+The `radius-controller` will be updated to include a new controller that reconciles BicepDeployment resources. It will have the following control loop:
 
-The controller will also perform some simple lookups to Radius to determine if the provided template can be deployed. It will make two checks:
-- Check if the template contains an empty `param environment`. If it does, the controller will query the Radius API to get an environment ID (must have exactly one environment if left unspecified like this) and deploy the template using that environment.
-- Check if the template contains a `param application`. If it does, the controller will query the Radius API to get an application ID (must have exactly one application if left unspecified like this) and deploy the template using that application.
+ The BicepDeployment controller will adhere to the following control loop for BicepDeployment resources on the cluster:
 
-The controller will also be shipped with a Bicep binary which will allow it to compile Bicep templates and parameters into ARM JSON. The Bicep binary will be included in the `radius-controller` container image.
+1. Check if there is an in-progress operation. If so, check its status:
+    1. If the operation is still in progress, then queue another reconcile operation and continue processing.
+	  2. If the operation completed successfully, then update the `status.phrase` and `status.description` fields as succeeded. Set the contents of the `status.resources` to match the set of deployed resources. This operation is complete, so we can continue processing.
+	  3. If the operation failed, then update the `status.phrase` and `status.description` as failed and continue processing.
+2. If the BicepDeployment is being deleted, then process deletion:
+    1. Queue a DELETE operation for each of the resources in the `status.resources` list.
+    2. After all resources are deleted, update the `status.phrase` and `status.description` fields as deleted.
+3. If the BicepDeployment is not being deleted then process this as a create or update:
+    1. Compile the Bicep template, modules, and parameters into ARM JSON.
+    1. The controller will perform some simple lookups to Radius to determine if the provided template can be deployed:
+        - Check if the template contains an empty `param environment`. If it does, the controller will query the Radius API to get an environment ID (must have exactly one environment if left unspecified like this) and deploy the template using that environment.
+        - Check if the template contains an empty `param application`. If it does, the controller will query the Radius API to get an application ID. If there is exactly one application present, the controller will deploy the template using that application. If there are no applications, then the controller will create one.
+    2. Queue a PUT operation against the Radius API to deploy compiled ARM JSON.
+
+The controller will also be shipped with a Bicep binary and a `bicepconfig.json` which will allow it to compile Bicep templates and parameters into ARM JSON. The Bicep binary will be included in the `radius-controller` container image.
 
 ### Alternatives Considered
 
 - We could create a separate service for Bicep compilation.
+
+- We could move the compilation of Bicep to the user's CLI (client-side build vs. server-side build).
 
 ### API design (if applicable)
 
@@ -356,7 +462,7 @@ There will be no changes to the Radius API.
 
 #### CLI
 
-There will be a new CLI command `rad applicationdeployment generate` that will generate an BicepDeployment resource from a Bicep template and parameters file.
+There will be a new CLI command `rad bicep generate-kubernetes` that will generate a BicepDeployment resource from a Bicep template and parameters file.
 
 ### Error Handling
 <!--
@@ -437,7 +543,7 @@ Use the discussion to answer these with experts after people digest the
 overall design.
 -->
 
-Do we need to worry about developer vs SRE permission boundaries? e.g. developer can deploy an application but SRE can only edit the parameters?
+- Should we build the Bicep compilation into the controller or the CLI?
 
 ## Design Review Notes
 
