@@ -14,6 +14,10 @@ dedicated section for that later in the document.
 
 Today, users of Radius and future adopters of Radius use many Kubernetes-specific tools in their production workflows. Most of these tools operate on Kubernetes resources exclusively - which presents a problem when trying to deploy resources defined in Bicep manifests. This design proposes the creation of a new Kubernetes controller (BicepDeployment controller) in Radius that will allow users to deploy resources defined in Bicep manifests using Kubernetes tooling.
 
+## Today's Status
+
+TODO (willsmith)
+
 ## Terms and definitions
 
 <!--
@@ -27,7 +31,7 @@ be specific to this design context.
 
 **CR (Custom Resource)**: An instance of a CRD that represents a custom resource in Kubernetes.
 
-**Bicep**: A Domain Specific Language (DSL) for defining Azure resources, or when used with Radius, Azure resources, AWS resources, and Radius resources.
+**Bicep**: An infrastructure-as-code language that when used with Radius, can deploy Radius resources, Azure resources, and AWS resources.
 
 ## Objectives
 
@@ -67,7 +71,10 @@ them here. Provide a brief explanation on why this is a non-goal.
 -->
 
 **Non-goal: Full support for GitOps**
+
 - We will not yet be implementing automatic generation of BicepDeployment resources from Bicep manifests or querying Git repositories. This design will enable this work, and it will be covered in a future design document.
+
+**Non-goal: Re-implement Bicep CLI**
 
 ### User scenarios
 
@@ -133,12 +140,6 @@ using 'app.bicep'
 
 param application = ''
 param tag = ''
-```
-
-#### `appnetworking.bicepparam
-```bicep
-using 'app.bicep'
-
 param port = 3000
 ```
 
@@ -147,10 +148,10 @@ param port = 3000
 Provide a sample output for the inputs provided above.
 -->
 ```
-> rad bicep generate-kubernetes app.bicep --parameters @app.bicepparam --parameters tag=latest --parameters appnetworking.bicepparam --outfile env.yaml
+> rad bicep generate-kubernetes app.bicep --parameters @app.bicepparam --parameters tag=latest --parameters appnetworking.bicepparam --outfile app.yaml
 
 Generating BicepDeployment resource...
-BicepDeployment resource generated at env.yaml
+BicepDeployment resource generated at app.yaml
 
 To apply the BicepDeployment resource onto your cluster, run:
 kubectl apply -f app.yaml
@@ -165,21 +166,54 @@ metadata:
   namespace: radius-system
 spec:
   template: |
-    extension radius
-
-    param application string
-    param tag string
-    param port int
-
-    resource container 'Applications.Core/containers@2023-10-01-preview' = {
-      name: 'container'
-      properties: {
-        application: application
-        container: {
-          image: 'ghcr.io/radius-project/samples/demo:${tag}'
-          ports: {
-            web: {
-              containerPort: port
+    {
+      "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+      "languageVersion": "2.1-experimental",
+      "contentVersion": "1.0.0.0",
+      "metadata": {
+        "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+        "_EXPERIMENTAL_FEATURES_ENABLED": [
+          "Extensibility"
+        ],
+        "_generator": {
+          "name": "bicep",
+          "version": "0.29.47.4906",
+          "templateHash": "14156924711842038952"
+        }
+      },
+      "parameters": {
+        "application": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "port": {
+          "type": "int"
+        }
+      },
+      "imports": {
+        "Radius": {
+          "provider": "Radius",
+          "version": "latest"
+        }
+      },
+      "resources": {
+        "container": {
+          "import": "Radius",
+          "type": "Applications.Core/containers@2023-10-01-preview",
+          "properties": {
+            "name": "container",
+            "properties": {
+              "application": "[parameters('application')]",
+              "container": {
+                "image": "[format('ghcr.io/radius-project/samples/demo:{0}', parameters('tag'))]",
+                "ports": {
+                  "web": {
+                    "containerPort": "[parameters('port')]"
+                  }
+                }
+              }
             }
           }
         }
@@ -255,39 +289,107 @@ metadata:
   namespace: radius-system
 spec:
   template: |
-    param location string = resourceGroup().location
-    param storageAccountName string
-
-    // Import the storage module
-    module storageModule 'storage.bicep' = {
-      name: 'storageModule'
-      params: {
-        location: location
-        storageAccountName: storageAccountName
+    {
+      "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+      "languageVersion": "2.1-experimental",
+      "contentVersion": "1.0.0.0",
+      "metadata": {
+        "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+        "_EXPERIMENTAL_FEATURES_ENABLED": [
+          "Extensibility"
+        ],
+        "_generator": {
+          "name": "bicep",
+          "version": "0.29.47.4906",
+          "templateHash": "6135079585925108486"
+        }
+      },
+      "parameters": {
+        "test1": {
+          "type": "string"
+        },
+        "test2": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string",
+          "defaultValue": "[resourceGroup().location]"
+        },
+        "storageAccountName": {
+          "type": "string"
+        }
+      },
+      "resources": {
+        "storageModule": {
+          "type": "Microsoft.Resources/deployments",
+          "apiVersion": "2022-09-01",
+          "name": "storageModule",
+          "properties": {
+            "expressionEvaluationOptions": {
+              "scope": "inner"
+            },
+            "mode": "Incremental",
+            "parameters": {
+              "location": {
+                "value": "[parameters('location')]"
+              },
+              "storageAccountName": {
+                "value": "[parameters('storageAccountName')]"
+              }
+            },
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+              "languageVersion": "2.1-experimental",
+              "contentVersion": "1.0.0.0",
+              "metadata": {
+                "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+                "_EXPERIMENTAL_FEATURES_ENABLED": [
+                  "Extensibility"
+                ],
+                "_generator": {
+                  "name": "bicep",
+                  "version": "0.29.47.4906",
+                  "templateHash": "12114800836276126877"
+                }
+              },
+              "parameters": {
+                "location": {
+                  "type": "string"
+                },
+                "storageAccountName": {
+                  "type": "string"
+                }
+              },
+              "resources": {
+                "storageAccount": {
+                  "type": "Microsoft.Storage/storageAccounts",
+                  "apiVersion": "2021-04-01",
+                  "name": "[parameters('storageAccountName')]",
+                  "location": "[parameters('location')]",
+                  "sku": {
+                    "name": "Standard_LRS"
+                  },
+                  "kind": "StorageV2",
+                  "properties": {}
+                }
+              },
+              "outputs": {
+                "storageAccountId": {
+                  "type": "string",
+                  "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputs": {
+        "storageAccountId": {
+          "type": "string",
+          "value": "[reference('storageModule').outputs.storageAccountId.value]"
+        }
       }
     }
-
-    // Output the storage account ID
-    output storageAccountId string = storageModule.outputs.storageAccountId
-  modules:
-    - name: storageModule
-      template: |
-        param location string
-        param storageAccountName string
-
-        // Create a storage account
-        resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
-          name: storageAccountName
-          location: location
-          sku: {
-            name: 'Standard_LRS'
-          }
-          kind: 'StorageV2'
-          properties: {}
-        }
-
-        // Output the storage account ID
-        output storageAccountId string = storageAccount.id
   parameters: |
     storageAccountName=myaccount
 ```
