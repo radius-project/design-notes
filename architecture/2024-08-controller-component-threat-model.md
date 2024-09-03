@@ -1,4 +1,4 @@
-# Title
+# Radius Controller Component Threat Model
 
 - **Author**: ytimocin
 
@@ -14,6 +14,7 @@ The Radius Controller component monitors changes (create, update, delete) in the
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Admission Controllers | An admission controller is a piece of code that intercepts requests to the Kubernetes API server prior to persistence of the object, but after the request is authenticated and authorized. |
 | mTLS                  | Mutual Transport Layer Security (mTLS) allows two parties to authenticate each other during the initial connection of an SSL/TLS handshake.                                                 |
+| UCPD                  | Universal Control Plane Daemon for Radius                                                                                                                                                   |
 
 ## System Description
 
@@ -60,10 +61,11 @@ The Controller component lives inside the `radius-system` namespace in the Kuber
 
 The Kubernetes API Server, which is the main interactor of the Controller component, runs in the `kube-system` namespace within the cluster.
 
-### Key Points
+### Key Points of Namespaces
 
-1. **Namespace Isolation**: Different namespaces separate and isolate resources and workloads within the Kubernetes cluster.
-2. **Access Controls**: Access controls and other permissions are implemented to manage interactions between namespaces.
+1. **Isolation of Resources and Workloads**: Different namespaces separate and isolate resources and workloads within the Kubernetes cluster.
+2. **Access Controls and Permissions**: Access controls and other permissions are implemented to manage interactions between namespaces.
+3. **Separation of Concerns**: Namespaces support the separation of concerns by allowing different teams or applications to manage their resources independently, reducing the risk of configuration errors and unauthorized changes.
 
 ## Data Flow
 
@@ -88,6 +90,7 @@ The Kubernetes API Server, which is the main interactor of the Controller compon
         - Create the Radius Application if needed.
       - Fetch a Radius resource.
       - List Secrets of a Recipe resource.
+      - Create a Secret for a Recipe resource.
       - Delete a Recipe resource.
 
    2. Deployment Reconciler:
@@ -126,7 +129,7 @@ The Kubernetes API Server, which is the main interactor of the Controller compon
 
 ### Threats
 
-#### Impersonation of Radius Controllers to trigger resource access
+#### Threat: Impersonation of Radius Controllers to trigger resource access
 
 Risk: An attacker can impersonate the Radius Controllers to talk to UCPD.
 
@@ -135,13 +138,13 @@ Impact: The Controller Component and UCPD communicate in order to create/update/
 Mitigation:
 
 1. **mTLS**: mTLS should be (and is) enabled for communication between the Controller and the UCPD.
-2. **Network Policies**: We can add necessary policies that UCPD can only accept communication from the Controller and other important components that it is should be talking to.
+2. **Network Policies**: We can add necessary policies that UCPD can only accept communication from Radius components, Kubernetes API Server, and other important components that it is should be talking to.
 
-#### Compromised TLS Certificates and private keys of the Validating Webhook
+#### Threat: Compromised TLS Certificates and private keys of the Validating Webhook
 
 Risk: If the TLS certificates and the private keys used by the validating webhook are compromised, an attacker could impersonate the webhook server, intercepting the requests from the Kubernetes API Server or altering the responses.
 
-Impact: The validating webhook functions should return an approval or a validation error to the caller. The impersonater can return incorrect responses to the Kubernetes API Server which could affect the lifecycle of resources.
+Impact: The validating webhook functions should return an approval or a validation error to the caller. The impersonator can return incorrect responses to the Kubernetes API Server which could affect the lifecycle of resources.
 
 Risk: If the TLS certificates and the private keys used by the validating webhook are compromised, an attacker could enable unauthorized clients to communicate with the webhook.
 
@@ -154,22 +157,7 @@ Mitigation:
 3. **Strong Certificate Management**: Implement strong certificate management practices, including regular rotation of certificates, using short-lived certificates, and monitoring for certificate anomalies.
 4. **Secure Storage**: Store TLS certificates securely using secrets management solutions to prevent unauthorized access. The certificates and the private keys are being kept in a Secret object on Kubernetes.
 
-#### Compromised TLS Certificates and private keys of the Kubernetes API Server
-
-Risk: If the TLS certificates and private keys used by the Kubernetes API Server are compromised, an attacker could impersonate the Kubernetes API Server. This would allow the attacker to intercept, alter, or forge communication between the API Server and other components, including the Validating Webhook and Reconcilers. This could lead to unauthorized access, data breaches, and manipulation of cluster operations.
-
-Impact:
-
-1. The attacker could gain unauthorized access to sensitive data including the data it can get from the etcd if proper policies are not in place.
-2. The attacker can manipulate the operations of the cluster, causing unauthorized changes.
-
-Mitigation:
-
-1. **Network Policies**: Implement necessary Network Policies to ensure that communication between components is restricted to authorized components only. For example, the Validating Webhook should only accept requests from the original Kubernetes API Server.
-2. **Strong Certificate Management**: Implement strong certificate management practices, including regular rotation of certificates, using short-lived certificates, and monitoring for certificate anomalies.
-3. **Secure Storage**: Store TLS certificates securely using secrets management solutions to prevent unauthorized access. The certificates and the private keys are being kept in a Secret object on Kubernetes.
-
-#### Interception and manipulation of the communication between the webhook and the Kubernetes API Server
+#### Threat: Interception and manipulation of the communication between the webhook and the Kubernetes API Server
 
 **Risk:**
 
@@ -180,40 +168,23 @@ Mitigation:
 1. **mTLS (Mutual TLS)**: Implement mutual TLS to ensure that both the client (Kubernetes API Server) and the server (Validating Webhook) authenticate each other. This helps in verifying the authenticity of both parties and prevents unauthorized access. Note that mTLS is enabled for the communication between the Validating Webhook and the Kubernetes API Server in Radius as of now.
 2. **Network Policies**: Use Kubernetes Network Policies to restrict the network traffic between the Kubernetes API Server and the webhook. This limits the exposure of the webhook to only trusted sources. Reference: <https://kubernetes.io/docs/concepts/services-networking/network-policies/>.
 
-#### An attacker gaining access to etcd and manually changing resources
-
-Risk: If an attacker gains access to etcd, they can manually change resources stored in the etcd datastore. This could lead to unauthorized access, data breaches, and manipulation of cluster operations.
-
-Mitigation:
-
-1. **Access Controls for etcd**: Implement strict access controls for etcd to ensure that only authorized components can access and modify its data.
-2. **Network and Firewall Policies**: Add the necessary Network and Firewall Policies to filter access to the etcd.
-3. **Audit Logs**
-4. **Encryption**
-
-#### Dangerous data hidden in the Recipe or Deployment resource
-
-Risk: When an external interactor sends a create or update request for a Recipe or Deployment, there is a risk that the interactor could hide dangerous data within the resource. This hidden data could potentially exploit vulnerabilities in the system, leading to security breaches or system malfunctions.
-
-Mitigation:
-
-1. **Use of Kubernetes Parser**: Radius relies on the parser provided by Kubernetes, which is well-tested and maintained. This reduces the risk associated with parsing malicious data.
-2. **Avoid Custom Parsers**: By not using custom or third-party parsers, Radius avoids the additional risk and complexity associated with ensuring the security of these parsers.
-3. **Fuzz Testing**: If a custom parser were to be used, it would be essential to implement fuzz testing. Fuzz testing involves providing invalid, unexpected, or random data inputs to the parser to identify potential vulnerabilities. For more information on fuzz testing, refer to [OWASP Fuzzing](https://owasp.org/www-community/Fuzzing).
-
-#### Users with access to the webhook server modifying the behavior of the webhook server
+#### Threat: Users with access to the webhook server modifying the behavior of the webhook server
 
 Risk: Could an insider with access to the webhook server modify its behavior to approve malicious requests?
 
 Mitigation: Implement strict access controls, audit logs, and monitoring for changes to the webhook server configuration and code.
 
-#### Unauthorized access to the Kubernetes API Server
-
-- **Mitigation**: Implement strong authentication and authorization mechanisms, such as RBAC (Role-Based Access Control) and network policies to restrict access.
-
-#### Security vulnerabilities in the controller code
+#### Threat: Security vulnerabilities in the controller code
 
 - **Mitigation**: Conduct regular security audits and code reviews, and follow secure coding practices to minimize vulnerabilities.
+
+#### Threat: Webhook server being unavailable or slow to respond
+
+Description
+
+**Mitigation** Mitigations
+
+**Status** Status (External | Active | Planned)
 
 ## Open Questions
 
