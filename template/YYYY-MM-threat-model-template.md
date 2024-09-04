@@ -117,6 +117,13 @@ And example threat is talking about two servers: Server A and Server B. These se
 
 -->
 
+### Threat 1: Threat about a component
+
+**Description**
+**Impact**
+**Mitigation**
+**Status**
+
 ## Open Questions
 
 <!--

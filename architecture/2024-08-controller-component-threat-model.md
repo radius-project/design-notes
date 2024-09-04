@@ -32,15 +32,15 @@ Note: Kubernetes has [admission controllers](https://kubernetes.io/docs/referenc
 
 The Controller component consists of several key parts:
 
-- **Recipe and Deployment Controllers**: Kubernetes controllers registered with the manager. Each controller is responsible for watching specific Kubernetes resources (Recipe and Deployment in our case) and reconciling their state.
-  - **Recipe Controller**: This controller specifically watches for additions of and changes in Recipe objects in the cluster. The controller calls UCPD to perform the following operations:
-    - Create, update, or delete a Recipe object based on the input received from the Kubernetes API Server.
-    - Create, update, or delete a Secret if it is requested by the Recipe object.
-  - **Deployment Controller**: This controller specifically watches for additions of and changes in Deployment objects in the cluster. The controller calls UCPD to perform the following operations:
-    - Create, update, or delete a Deployment object based on the input received from the Kubernetes API Server.
-    - Create, update, or delete a Secret if it is requested by the Deployment object.
-- **Recipe Validating Webhook**: This webhook is triggered by the Kubernetes API Server in case of a create, update, or delete in a Recipe object. The webhook tries to validate the action and responds to the Kubernetes API with an approval or a rejection. For more information about webhooks, refer to the [official documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
-- **Health Checks**: Health checks are implemented to monitor the status and performance of the controllers. They ensure that the controllers are functioning correctly and can take corrective actions if any issues are detected.
+- **Recipe and Deployment Controllers**: These are reconciliation loops that watch for changes in Recipe and Deployment resources. These changes can include the addition, update, or deletion of these resources. Whenever one of the reconciliation loops detects a change, it attempts to move the state of the cluster to the desired state.
+  - **Recipe Controller**: This reconciliation loop specifically watches for changes in the Recipe resources. After detecting a change, it determines the type of change (addition, update, or deletion) and calls the UCPD to perform the necessary actions.
+    - If the change is a create or an update, the Controller calls UCPD to create or update the necessary resources (including secrets).
+    - If the change is a delete of a Recipe resource, the Controller calls UCPD to delete the resource and all related resources.
+  - **Deployment Controller**: This reconciliation loop specifically watches for changes in the Deployment resources. After detecting a change, it determines the type of change (addition, update, or deletion) and calls the UCPD to perform the necessary actions.
+    - If the change is a create or an update, the Controller calls UCPD to create or update the necessary resources (including secrets).
+    - If the change is a delete of a Deployment resource, the Controller calls UCPD to delete the resource and all related resources.
+- **Recipe Validating Webhook**: This webhook is triggered by the Kubernetes API Server when there is a change (create, update, or delete) in a Recipe resource. The webhook validates the action and responds to the Kubernetes API Server with an approval or a rejection. In our case, the validating webhook only checks if the recipe is one of the Radius portable resources in create or update cases. For more information about webhooks, refer to the [official documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
+- **Health Checks**: Health checks are implemented to monitor the status and performance of the Controller component as a whole, which includes both controllers and the validating webhook. They ensure that the controllers and the webhook are functioning correctly and can trigger corrective actions if any issues are detected.
 
 ### Clients
 
@@ -73,118 +73,165 @@ The Kubernetes API Server, which is the main interactor of the Controller compon
 
 ![Controller Component via Microsoft Threat Modeling Tool](./2024-08-controller-component-threat-model/controller-component.png)
 
-1. **Resource Creation/Update/Delete**: When a user requests to create, update, or delete a Recipe or Deployment object, the request is sent to the Kubernetes API Server. For example, this request can be made by a human interactor using the `kubectl` command. The Kubernetes API Server authenticates and authorizes the request before the admission controllers intercept it.
+1. **User creates/updates/deletes a Recipe or a Deployment resource**: When a user requests to create, update, or delete a Recipe or a Deployment resource, the request is handled by the Kubernetes API Server. One way, and probably the most common way, a user can do this request is by running a **kubectl** command. Kubernetes takes care of the authentication and the authorization of the user and its request(s) so we (Radius) don't need to worry about anything here.
 
-2. **Validating Webhook**: The only type of admission controller we have in Radius is the validating webhook for the Recipe resource. The validating webhook ensures that the Recipe object is one of the Radius portable resources. If the operation and the object is validated, then it is persisted to the **etcd**. You can see the details of the Recipe Webhook implementation via [this link](https://github.com/radius-project/radius/blob/main/pkg/controller/reconciler/recipe_webhook.go#L46).
+2. **Validating Webhook**: The only type of admission controller we have in Radius is the validating webhook for the Recipe resource. The validating webhook ensures that the Recipe object to be created or updated is one of the Radius portable resources. Whenever Kubernetes API Server receives a request to create or update a Recipe object, it communicates the proposed changes with the validating webhook. If the validating webhook validates the changes, then it is persisted to the **etcd** by the Kubernetes API Server.
 
-3. **Controller Reconciliation**: When the action (create/update/delete) is validated by the Validating Webhook (applicable only to the Recipe resource and not to the Deployment resource) as discussed in the previous step, the Kubernetes controllers we have (Recipe and Deployment Reconcilers) watch for changes via the Kubernetes API Server. The controllers then reconcile the resource's state to match the desired configuration specified in the resource definition. This involves ensuring that the actual state of the cluster matches the desired state, making any necessary adjustments to achieve this.
+   1. Possible threats:
+      1. A bad actor pretending to be the Kubernetes API Server and communicating with the Validating Webhook. This is not a real threat since validating webhook only returns an approval or a rejection to the proposed changes. It is not doing any updates to the resources. That is the reason there is no real threat here.
+      2. A bad actor pretending to be the Validating Webhook and receiving the requests from the Kubernetes API Server.
 
-4. **Communication with UCPD**: Controller also calls UCPD when doing reconcilations. Here is the list of instances where Controller calls UCPD:
+3. **Recipe and Deployment Reconcilers**: When there is a request to create, update, or delete a Recipe or a Deployment resource, after being validated if the resource is a Recipe resource, the next step is the reconcilation of the resource by the appropriate reconciler. In the Controller component, there are two reconcilers: Recipe and Deployment. These reconcilers are loops that watch the changes in the Recipe and Deployment resources. Whenever there is a change, the reconcilers take the necessary actions to move the actual state to the desired state. These necessary actions include communication with the UCPD to create, update, and/or delete necessary resources.
 
-   1. Recipe Reconciler:
-
-      - Poll operations like create, update, or delete a Recipe resource.
-      - Resolve dependencies for a Recipe resource:
-        - Get the Radius environment the Recipe is associated with.
-        - Create the Radius Resource Group if needed.
-        - Create the Radius Application if needed.
-      - Fetch a Radius resource.
-      - List Secrets of a Recipe resource.
-      - Create a Secret for a Recipe resource.
-      - Delete a Recipe resource.
-
-   2. Deployment Reconciler:
-
-      - Poll operations like create, update, or delete a Deployment resource.
-      - Resolve dependencies for a Deployment resource:
-        - Get the Radius environment the Deployment is associated with.
-        - Create the Radius Resource Group if needed.
-        - Create the Radius Application if needed.
-      - Fetch a Recipe resource.
-      - List Secrets of a Recipe resource.
-
-5. **Communication with Kubernetes API Server**: Controller also calls the Kubernetes API Server when doing reconcilations. Here is the list of instances where Controller calls the Kubernetes API Server:
-
-   1. Recipe Reconciler:
-
-      - Fetch a Recipe object.
-      - Send events related to the operations.
-      - Update a Recipe object:
-        - Status update.
-        - Addition and removal of a Finalizer.
-      - Delete a Secret object that is associated with the Recipe.
-      - Create a Secret object to associate with the Recipe if needed.
-
-   2. Deployment Reconciler:
-
-      - Fetch a Deployment object.
-      - Send events related to the operations.
-      - Update a Deployment object:
-        - Status update.
-        - Addition and removal of a Finalizer.
-      - Delete a Secret object associated with a Deployment that is no longer needed.
-      - Fetch a Secret object.
-      - Create or Update a Secret object and associate it with a Deployment object.
-      - List Deployments filtered with specific Recipe objects.
+   1. Communication:
+      1. Controller and UCPD:
+         1. Poll long-running operations (create, update, or delete) for a Recipe or a Deployment resource.
+         2. Create a Radius Resource Group if needed.
+         3. Create a Radius Application if needed.
+         4. Get a Radius resource like the Environment that is associated with the resource.
+         5. Create/Update/Delete a Recipe or a Deployment resource.
+         6. Create/Update/Delete a Secret for a Recipe or a Deployment resource.
+      2. Controller and the Kubernetes API Server:
+         1. Fetch a Recipe or a Deployment object.
+         2. Send events related to the operations running.
+         3. Update a Recipe or a Deployment object.
+         4. Create/Update/Delete a Secret associated with a Recipe or a Deployment object.
+         5. List Deployments by filtering them by a specific Recipe object.
+   2. Possible threats:
+      1. The controller component should have the minimum necessary Role-Based Access Control permissions to perform its tasks. It shouldn't have the permissions that it is not supposed to use.
+      2. A bad actor pretending to be UCPD, in case of compromised certificates, may lead to inconsistent resource data. The question is if a bad actor can create a process in the `radius-system` namespace that is going to pretend to be UCPD.
+      3. In case of compromised certificates of the Controller component, a bad actor can pretend to be the Controller and make requests to the UCPD and Kubernetes API Server.
 
 ### Threats
 
-#### Threat: Impersonation of Radius Controllers to trigger resource access
+#### Threat: A bad actor pretending to be the Controller component to communicate with UCPD
 
-Risk: An attacker can impersonate the Radius Controllers to talk to UCPD.
+In case of compromised certificates and private key, an attacker can pretend to be the Controller component to communicate with UCPD.
 
-Impact: The Controller Component and UCPD communicate in order to create/update/delete necessary resources and these resources can also be cloud resources. This can lead to loss of resources or creation/update of existing resources.
+**Impact**: Controller Component and UCPD communicate in order to create/update/delete necessary resources. The impact of this threat would be unwanted operations on the resources.
 
-Mitigation:
+**Mitigation**:
 
-1. **mTLS**: mTLS should be (and is) enabled for communication between the Controller and the UCPD.
-2. **Network Policies**: We can add necessary policies that UCPD can only accept communication from Radius components, Kubernetes API Server, and other important components that it is should be talking to.
+1. **mTLS**:
 
-#### Threat: Compromised TLS Certificates and private keys of the Validating Webhook
+   - **Description**: Ensure that mutual TLS is enabled for communication between the Controller and UCPD. This ensures that both parties authenticate each other, preventing unauthorized entities from impersonating the Controller.
+   - **Status**: Active
 
-Risk: If the TLS certificates and the private keys used by the validating webhook are compromised, an attacker could impersonate the webhook server, intercepting the requests from the Kubernetes API Server or altering the responses.
+2. **Strong Certificate Management**:
 
-Impact: The validating webhook functions should return an approval or a validation error to the caller. The impersonator can return incorrect responses to the Kubernetes API Server which could affect the lifecycle of resources.
+   - **Description**: Implement strong certificate management practices, including regular rotation of certificates, using short-lived certificates, and monitoring for certificate anomalies. This reduces the risk of certificate compromise.
+   - **Status**:
 
-Risk: If the TLS certificates and the private keys used by the validating webhook are compromised, an attacker could enable unauthorized clients to communicate with the webhook.
+3. **Secure Storage**:
 
-Impact: Unauthorized clients wouldn't have any affect in the lifecycle of resources because, even if the webhook returns an approval or a rejection to the unauthorized client, the unauthorized client should also have access to the Kubernetes API Server to further trigger changes in the resource.
+   - **Description**: Store TLS certificates and private keys securely using secrets management solutions to prevent unauthorized access. Ensure that these secrets are encrypted and access is restricted to authorized components only.
+   - **Status**:
 
-Mitigation:
+4. **RBAC (Role-Based Access Control)**:
 
-1. **mTLS (Mutual TLS)**: Implement mutual TLS to ensure that both the client (Kubernetes API Server) and the server (Validating Webhook) authenticate each other. This helps in verifying the authenticity of both parties and prevents unauthorized access. Note that mTLS is enabled for the communication between the Validating Webhook and the Kubernetes API Server in Radius as of now.
-2. **Network Policies**: Implement necessary Network Policies to ensure that communication between components is restricted to authorized components only. In this case, the Validating Webhook and the Kubernetes API Server should only accept requests from each other.
-3. **Strong Certificate Management**: Implement strong certificate management practices, including regular rotation of certificates, using short-lived certificates, and monitoring for certificate anomalies.
-4. **Secure Storage**: Store TLS certificates securely using secrets management solutions to prevent unauthorized access. The certificates and the private keys are being kept in a Secret object on Kubernetes.
+   - **Description**: Implement strict RBAC policies to ensure that only authorized components and users have the necessary permissions to access and manage the Controller and UCPD. This minimizes the risk of unauthorized access.
+   - **Status**:
 
-#### Threat: Interception and manipulation of the communication between the webhook and the Kubernetes API Server
+5. **Audit Logs**:
 
-**Risk:**
+   - **Description**: Enable detailed audit logging for all interactions between the Controller and UCPD. Regularly review these logs to detect any unauthorized or suspicious activities.
+   - **Status**:
 
-1. An attacker could intercept and manipulate the communication between the webhook and the Kubernetes API Server. This could lead to unauthorized access, data breaches, or manipulation of admission decisions, potentially compromising the security and integrity of the Kubernetes cluster.
+#### Threat: A bad actor pretending to be the the Validating Webhook to communicate with the Kubernetes API Server
 
-**Mitigation:**
+If the TLS certificates and the private key used by the validating webhook are compromised, an attacker could impersonate the webhook server, intercepting the requests from the Kubernetes API Server or altering the responses. Another risk could be that the attacker could enable unauthorized clients to communicate with the webhook.
 
-1. **mTLS (Mutual TLS)**: Implement mutual TLS to ensure that both the client (Kubernetes API Server) and the server (Validating Webhook) authenticate each other. This helps in verifying the authenticity of both parties and prevents unauthorized access. Note that mTLS is enabled for the communication between the Validating Webhook and the Kubernetes API Server in Radius as of now.
-2. **Network Policies**: Use Kubernetes Network Policies to restrict the network traffic between the Kubernetes API Server and the webhook. This limits the exposure of the webhook to only trusted sources. Reference: <https://kubernetes.io/docs/concepts/services-networking/network-policies/>.
+**Impact**: The validating webhook functions return an approval or a validation error to the caller. The impersonator can return incorrect responses to the Kubernetes API Server which could affect the lifecycle of resources.
+
+Unauthorized clients wouldn't have any affect in the lifecycle of resources because, even if the webhook returns an approval or a rejection to the unauthorized client, the unauthorized client should also have access to the Kubernetes API Server to further trigger changes in the resource.
+
+**Mitigation**:
+
+1. **mTLS (Mutual TLS)**:
+
+   - **Description**: Ensure that mutual TLS is enabled for communication between the Validating Webhook and the Kubernetes API Server. This ensures that both parties authenticate each other, preventing unauthorized entities from impersonating the Controller.
+   - **Status**: Active
+
+2. **Strong Certificate Management**:
+
+   - **Description**: Implement strong certificate management practices, including regular rotation of certificates, using short-lived certificates, and monitoring for certificate anomalies. This reduces the risk of certificate compromise.
+   - **Status**:
+
+3. **Secure Storage**:
+
+   - **Description**: Store TLS certificates and private keys securely using secrets management solutions to prevent unauthorized access. Ensure that these secrets are encrypted and access is restricted to authorized components only.
+   - **Status**:
+
+4. **RBAC (Role-Based Access Control)**:
+
+   - **Description**: Implement strict RBAC policies to ensure that only authorized components and users have the necessary permissions to accessthe Validating Webhook (in this case; Kubernetes API Server). This minimizes the risk of unauthorized access.
+   - **Status**:
+
+5. **Audit Logs**:
+
+   - **Description**: Enable detailed audit logging for all interactions between the Validating Webhook and the Kubernetes API Server. Regularly review these logs to detect any unauthorized or suspicious activities.
+   - **Status**:
+
+6. **Network Policies**:
+
+   - **Description**: Implement necessary network policies to ensure that communication only from the Kubernetes API Server is accepted by the Validating Webhook.
+   - **Status**:
 
 #### Threat: Users with access to the webhook server modifying the behavior of the webhook server
 
-Risk: Could an insider with access to the webhook server modify its behavior to approve malicious requests?
+A user with access to the webhook server can modify its behavior to approve malicious requests, which can be reconciled in the next step of the data flow. Reconciliation loops can also trigger resource updates or even deletions by calling UCPD with the malicious requests.
 
-Mitigation: Implement strict access controls, audit logs, and monitoring for changes to the webhook server configuration and code.
+**Impact**:
+
+1. **Unauthorized Operations**: With the approval of malicious requests, unauthorized operations could be performed on user resources, including the creation, update, or deletion of resources.
+2. **Resource Deletion**: Malicious modifications could lead to the deletion of existing resources, causing potential data loss and service disruption.
+
+**Mitigation**:
+
+1. **Audit Logs**:
+
+   - **Description**: Implement detailed audit logging to track which user performs which operation on the webhook server. Regularly review these logs to detect any unauthorized or suspicious activities.
+   - **Status**:
+
+2. **RBAC (Role-Based Access Control)**:
+
+   - **Description**: Implement strict RBAC policies to ensure that only authorized users have the necessary permissions to access and modify the webhook server. This minimizes the risk of unauthorized access and modifications.
+   - **Status**:
 
 #### Threat: Security vulnerabilities in the controller code
 
-- **Mitigation**: Conduct regular security audits and code reviews, and follow secure coding practices to minimize vulnerabilities.
+Security vulnerabilities in the controller code can be exploited by attackers to gain unauthorized access, escalate privileges, or disrupt the normal operations of the Kubernetes cluster. These vulnerabilities can arise from things like coding errors, insecure coding practices, or outdated dependencies.
+
+**Impact**:
+
+1. **Unauthorized Access**: Exploiting vulnerabilities in the controller code can allow attackers to gain unauthorized access to the system.
+2. **Privilege Escalation**: Attackers can escalate their privileges within the cluster, gaining access to sensitive resources and data.
+3. **Data Breaches**: Sensitive information can be exposed, leading to data breaches.
+
+**Mitigation**:
+
+1. **Code Reviews**:
+
+   - **Description**: Implement a thorough code review process to ensure that code changes are reviewed and approved by multiple team members.
+   - **Status**:
+
+2. **Dependency Management**:
+
+   - **Description**: Regularly update and manage dependencies to ensure that the controller code is using the latest, most secure versions of libraries and frameworks. We can also use tools like dependabot to make sure to update to the most recent and secure version of the dependencies we are using.
+   - **Status**: Active
+
+3. **Static Analysis Tools**:
+
+   - **Description**: Use static analysis tools to automatically scan the code for potential security vulnerabilities and coding errors. These tools can be added to the CI/CD pipelines that we already have in place.
+   - **Status**: Active/Planned
 
 #### Threat: Webhook server being unavailable or slow to respond
 
-Description
+If the webhook server becomes unavailable or slow to respond, it can lead to delays or failures in processing requests. This may not be a direct security issue but it can affect the overall reliability of the system.
 
-**Mitigation** Mitigations
+**Impact**:
 
-**Status** Status (External | Active | Planned)
+**Mitigation**:
 
 ## Open Questions
 
