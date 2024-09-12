@@ -18,13 +18,13 @@ The Radius Controller component monitors changes (create, update, delete) in the
 
 ## System Description
 
-The Controller component enables users to manage Radius resources through the Kubernetes API. Users define their application using existing Kubernetes resource types like `Deployment` and the `Recipe` CRD provided by Radius. The job of the controller is to ensure that the desired state of the system is maintained in both Radius and Kubernetes by continuously monitoring and reconciling resources.
+The Controller component enables users to manage Radius resources through the Kubernetes API. Users define their applications using existing Kubernetes resource types like `Deployment` and/or the `Recipe` CRD provided by Radius. The job of the controller is to ensure that the desired state of the system is maintained in both Radius and Kubernetes by continuously monitoring and reconciling resources.
 
-The Controller component consists of two Kubernetes controllers (Recipe and Deployment controllers), a validating webhook for changes in the Recipe object, and several other important parts. We will dive into more details on the controller below.
+The Controller component consists of two Kubernetes controllers, Recipe and Deployment controllers, a validating webhook for changes in the Recipe object, and several other important parts. We will dive into more details on the controller below.
 
 Note: If you would like to learn more about Kubernetes controllers, you can visit [this link](https://kubernetes.io/docs/concepts/architecture/controller/).
 
-Note: Kubernetes has [admission controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) that intercept requests to the Kubernetes API Server before the persistence of the object. Admission controllers may be **validating**, **mutating**, or both. Here is a simple diagram of the flow from the command entered by the user to the persistence of the object to etcd.
+Note: Kubernetes has [admission controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) that intercept requests to the Kubernetes API Server before the persistence of the object. Admission controllers may be **validating** (please note that we have a validating webhook in Radius), **mutating**, or both. Here is a simple diagram of the flow from the command entered by the user to the persistence of the object to etcd.
 
 ![Admission Controllers' Flow](./2024-08-controller-component-threat-model/admission-controllers-flow.png)
 
@@ -48,7 +48,7 @@ The Controller component consists of several key parts:
 
 1. **Computing the Hash of the Deployment Configuration**: [Link to code](https://github.com/radius-project/radius/blob/8151a96665b7f5bcd6474f5e33aff35d01adfa5a/pkg/controller/reconciler/annotations.go#L78).
 
-   1. **Purpose**: The purpose of computing the hash of the deployment configuration resource is to determine if the deployment is up-to-date or needs an update.
+   1. **Purpose**: The purpose of computing the hash of the configuration of the deployment resource is to compare and determine if the deployment is up-to-date or needs an update.
    2. **Library**: The library used to calculate the hash of the deployment configuration is the crypto library, which is one of the standard libraries of Go: [Link to library](https://pkg.go.dev/crypto@go1.23.1).
    3. **Type**: [SHA1](https://www.rfc-editor.org/rfc/rfc3174.html). Note: "SHA-1 is cryptographically broken and should not be used for secure applications." [Link to warning](https://pkg.go.dev/crypto/sha1@go1.23.1).
 
