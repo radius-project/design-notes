@@ -62,7 +62,21 @@ Include a diagram of the system architecture, showing how different components i
 
 ## Threats
 
-<!-- This is where we talk about data flows and its threats with detailed threats and mitigations. -->
+<!-- 
+
+Use this section to list possible security threats.
+
+For an primer on types of threats please see: https://en.wikipedia.org/wiki/STRIDE_model
+
+Good threats are specific to the design and implementation of the system.
+
+Good: `A malicious user could spoof the 'user id' field and request another user's data leading to unauthorized information disclosure.`
+
+Bad: `If we have a bug, a user might see data they are not authorized to see.`
+
+For each threat copy-paste and fill-out the template below. DO NOT omit fields if you are unsure of the answers.
+
+-->
 
 ### Threat 1: Threat about a component
 
