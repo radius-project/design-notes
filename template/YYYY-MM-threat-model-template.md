@@ -80,10 +80,10 @@ For each threat copy-paste and fill-out the template below. DO NOT omit fields i
 
 ### Threat 1: Threat about a component
 
-**Description**
-**Impact**
-**Mitigation**
-**Status**
+**Description:** <!-- Provide a clear and specific description of the threat, including any malicious actions or system conditions that would cause a vulnerability. -->
+**Impact:** <!-- Provide a clear and specific description of the impact if this threat were exploited. -->
+**Mitigation:** <!-- Describe the existing or possible mitigations in place for this threat. -->
+**Status: ** <!-- Describe the status of each mitigation. Is this mitigation already in place (active or planned)? If this mitigation on-by-default or does it require setup by the user?  -->
 
 ## Open Questions
 
