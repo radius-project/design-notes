@@ -802,3 +802,4 @@ carte
 customizable
 implementers
 azureWorkloadIdentity
+untrusted
