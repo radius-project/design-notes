@@ -405,7 +405,7 @@ resource ghcrSecret 'Applications.Core/secretStores@2023-10-01-preview' = {
         ...
     }
     ```
-- Update Bicep driver apis i.e execute, delete and getMetadata to use oras auth package for private registry authentication.
+- Update Bicep driver APIs i.e execute, delete and getMetadata to use oras auth package for private registry authentication.
 
 ***Secrets Loader***
 - Updated the return type of secrets to include the secrets type, and also today in loadSecrets() we would return empty secrets map if the key list is empty, but we update it it return all the secret key-value pairs from secretStore resource if the key list is empty.
@@ -493,5 +493,5 @@ Secret rotation is automatically managed when using AWS IRSA or Azure workload i
     - Adding developer documentation for private bicep registry support feature.
 
 ## Design Review Notes
-- Maintain the current design for the `rad bicep publish` command as it is, where users takes care of logging into private registry and radius uses the dockerfile based authentication to publish recipes to private registries.
+- Maintain the current design for the `rad bicep publish` command as it is, where users takes care of logging into private registry and radius uses the docker file based authentication to publish recipes to private registries.
 - Include details on how to handle different registry authentication types.  
