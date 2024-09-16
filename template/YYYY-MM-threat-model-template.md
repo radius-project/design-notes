@@ -6,6 +6,8 @@
 
 <!--
 Provide a succinct high-level description of the system, feature, or component being analyzed. Explain why a threat model is being created for this system, feature, or component. This section should be one to three paragraphs long and understandable by someone outside the Radius team.
+
+Provide links to supporting documentation like feature specs and design documents rather than duplicating information.
 -->
 
 ## Terms and Definitions
@@ -50,6 +52,12 @@ Provide a detailed description of the system or feature being modeled. Include i
 
 ## Trust Boundaries
 
+<!-- Define the limits within which components can interact without additional security checks. They help identify where security controls are needed to protect against threats. -->
+
+## Assumptions
+
+<!-- Outline the conditions presumed to be true for the threat model. These assumptions set the context and scope, highlighting what is considered secure and what is not evaluated. -->
+
 ## Data Flows
 
 <!--
@@ -62,7 +70,7 @@ Include a diagram of the system architecture, showing how different components i
 
 ## Threats
 
-<!-- 
+<!--
 
 Use this section to list possible security threats.
 
@@ -83,7 +91,31 @@ For each threat copy-paste and fill-out the template below. DO NOT omit fields i
 **Description:** <!-- Provide a clear and specific description of the threat, including any malicious actions or system conditions that would cause a vulnerability. -->
 **Impact:** <!-- Provide a clear and specific description of the impact if this threat were exploited. -->
 **Mitigation:** <!-- Describe the existing or possible mitigations in place for this threat. -->
-**Status: ** <!-- Describe the status of each mitigation. Is this mitigation already in place (active or planned)? If this mitigation on-by-default or does it require setup by the user?  -->
+**Status:** <!-- Describe the status of each mitigation. Is this mitigation already in place (active or planned)? If this mitigation on-by-default or does it require setup by the user?  -->
+
+<!--
+
+And example threat is talking about two servers: Server A and Server B. These servers talk to each other to trigger some actions.
+
+### Threat 1: Spoofing Server A could cause information disclosure
+
+**Description:** An attacker can spoof Server A by tampering with the configuration in the Server B. Server B will start sending requests to the fake Server A which will cause information disclosure.
+
+**Impact:** All data that should be sent to the Server A by Server B will be available to the fake Server A including payloads, headers, and other sensitive information.
+
+**Mitigation:**
+
+1. Regularly rotate and manage server credentials.
+2. Use Role-Based Access Control (RBAC) to limit permissions and enforce the principle of least privilege.
+3. Monitor and audit API server access logs for suspicious activities.
+
+**Status:**
+
+- Credential rotation and management: Active
+- RBAC implementation: Active
+- Monitoring and auditing: Active
+
+-->
 
 ## Open Questions
 
