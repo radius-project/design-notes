@@ -1,6 +1,5 @@
 # Title
 
-* **Status**: Pending
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview

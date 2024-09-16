@@ -1,6 +1,5 @@
 # Adding Support for publishing recipes to insecure registries
 
-* **Status**: Pending
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
 ## Overview

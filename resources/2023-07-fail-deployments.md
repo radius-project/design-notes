@@ -1,6 +1,5 @@
 # Radius should do a better job classifying container deployment failures
 
-* **Status**: In Progress
 * **Author**: Vinaya Damle (@vinayada1)
 
 ## Overview

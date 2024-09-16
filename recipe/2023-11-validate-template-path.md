@@ -1,6 +1,5 @@
 # Validation for Terraform Recipe Template Paths
 
-* **Status**: Pending
 * **Author**: Shruthi Kumar (@sk593)
 
 ## Overview

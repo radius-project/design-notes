@@ -2,7 +2,6 @@
 
 **Note: This design doc has been ported over from an old design doc and might not match the template completely**
 
-* **Status**: Pending
 * **Author**: Vinaya Damle (vinayada)
 
 ## Overview
