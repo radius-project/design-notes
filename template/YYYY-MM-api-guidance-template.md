@@ -1,4 +1,4 @@
-# Title: Guidance for API Design: \<Topic\>
+# Title: API Design Guidance: \<Topic\>
 
 **Author**: Your Name (@YourGitHubUserName)
 
@@ -25,7 +25,7 @@ Describe goals to define what this guidance will achieve.
 ## Non goals
 
 <!--
-Describe non-goals to identify something that this guidance will not address.  If there are things we plan to prescribe in the future, but are out of scope of this guidance, list them here. Provide a brief explanation on why this is a non-goal.
+Describe non-goals to identify aspects that this guidance will not address.  If there are things we plan to prescribe in the future, but are out of scope of this guidance, list them here. Provide a brief explanation on why this is a non-goal.
 -->
 
 ## Options
@@ -71,6 +71,15 @@ Provide a detailed explanation of this approach, including how it works, when it
 
 <!--
 Provide a detailed explanation of this approach, including how it works, when it should be applied.
+-->
+
+#### API Design
+
+<!--
+- Describe applicable REST APIs in detail for this option.
+  e.g. API Path and Sample request and response.
+- Describe any applicable commands in the CLI.
+- Describe Go APIs for any shared components as applicable.
 -->
 
 #### Advantages
