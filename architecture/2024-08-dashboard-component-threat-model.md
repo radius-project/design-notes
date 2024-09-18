@@ -21,6 +21,10 @@ It provides visual and textual representation of user's applications, environmen
 
 The Dashboard component is an SPA built as [Backstage](https://backstage.io/) plugin. It is a client of Radius API. It queries the graph of an application or a list of environment and constructs a visual representation of the response. 
 
+////////
+How customers get access to dashboard. Dashboard i not exposed publicly by default. Decisions to expose to internet / outside user is a decision from user. 
+/////////
+
 ### Architecture
 
 The Dashboard component consists of mainly two parts:
@@ -34,9 +38,19 @@ Both the plugin and rad-components are rendered as React Single Page Application
 The data for rendering plugin is obtained by calling different Radius APIs.
 At present, Dashboard can only present the Radius application metadata visually. It has no capability to Create, Modify, Update or Delete any of the Radius application resources. 
 
+///
+add more about backstage architecture SPA, backend, database (sqlite - we chose simplest since we dont use it). plugins go into SPA and backend extensions. 
+
+sevurity model should capture known and specific security issues that customer needs to face while using the system. 
+///
+
 ### Implementation Details
 
 The Radius Dashboard is developed as a Backstage Plugin, making it dependent on the Backstage framework for both display and backend functionality. For detailed information on Backstage's threat model, refer to the [Backstage Threat Model](https://backstage.io/docs/overview/threat-model/).
+
+//
+instance of dashboard as a radius + kubernetes plugin
+//
 
 Additionally, we introduced `rad-components` public package to provide graph and node components, which are implemented using React Flow.
 
@@ -48,11 +62,15 @@ We do not store any secrets for Dashboard.
 
 #### Data Serialization / Formats
 
-NA
+None
+
+### Cryptography 
+
+None
 
 ### Clients
 
-The primary user of Dashboard is a Dev/Ops persona. At present, we dont have any other Backstage plugin that cloud be a Radius Dashboard client but that could change in future. 
+The primary user of Dashboard is browser.(link to backstage roles/ model) At present, we dont have any other Backstage plugin that cloud be a Radius Dashboard client but that could change in future. 
 
 ## Trust Boundaries
 
@@ -69,10 +87,17 @@ This threat model assumes that:
 1. The Radius installation is not tampered with.
 2. The Kubernetes cluster that Radius is installed on is not compromised.
 3. It is the responsibility of the Kubernetes cluster to authenticate users. Administrators and users with sufficient privileges can perform their required tasks. Radius cannot prevent actions taken by an administrator.
+///
+add about access, public facing, https
+//
 
 ## Data Flow
 
 ### Diagram
+///
+take out everything behind UCP
+add dashboard db (sqlite on disk, not accessible and no useful info)
+///
 
 ![Radius Dashboard](2024-08-dashboard-component-threat-model/dashboard_tm.png)
 
@@ -83,7 +108,7 @@ This threat model assumes that:
 5. Dashboard SPA contructs the visuals using backstage, rad-component components and data in API response and responds with appropriate page to the user. 
 
 ### Threats
-
+Asumption : backstage auth works. 
 #### Threat: DoS
 
 A user can access Dashboard repeatedly or write a script to fetch the page in a loop.
@@ -91,15 +116,21 @@ A user can access Dashboard repeatedly or write a script to fetch the page in a 
 **Impact**:
 
 1. **DoS**: Due to the volume of requests Dashboard as well as the UCP, AppCore-RP components involved could run out of resource to serve a legitimate request.
+////
+These users are trusted to the extent that they are not expected to compromise the availability of Backstage
+///
    
 **Mitigation**:
+
 
 1. **Audit Logs**:
 
    - **Description**: Explore audit logging capabilities of BAckstage to track which user performs which operation on the server. Regularly review these logs to detect any unauthorized or suspicious activities.
-   - **Status**:
 
-2. **User Logins**:
+**Status**:
+   
+
+1. **User Logins**:
 
    - **Description**: Utilize Backstage Login to provide credentials to authorized users only. 
 
@@ -109,6 +140,9 @@ A user can access Dashboard repeatedly or write a script to fetch the page in a 
 
 A malicious user can utilize the graph of application to stage effective attack by targeting a component that has most dependency.
 
+//
+while we dont expose any secrets in db, users might still want tosecure data based on dev roles.
+////
 **Mitigation**:
 
 1. **Audit Logs**:
@@ -120,7 +154,9 @@ A malicious user can utilize the graph of application to stage effective attack 
 
    - **Description**: Utilize Backstage Login to provide credentials to authorized users only. 
 
-#### Threat: third party packages used could have vulnerabilities
+
+
+not in threat model - more of a security posture#### Threat: third party packages used could have vulnerabilities
 
 Since we use many node packages, we would update these time to time with automated scripts like Dependabot to make sure we are not using packages with vulnerabilities.
 
@@ -144,3 +180,9 @@ Update this section with the decisions and feedback from the threat model review
 ## References
 
 https://backstage.io/docs/overview/threat-model/
+
+
+
+
+
+- add kuberentes specifics - tamper pod/ configs of db, db of db effective
