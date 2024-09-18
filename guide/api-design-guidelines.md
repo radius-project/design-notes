@@ -57,13 +57,13 @@ Reference:
 Radius enables users to securely store sensitive data, such as passwords, OAuth tokens, and SSH keys, in [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
 The secrets are stored in secret store resource [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/)
 
-SecretReference and SecretConfig are entities prescribed to ensure sensitive information is handled securely and consistently across different components and resources in Radius. The following are their definitions along with usage examples:
+`SecretReference` and `SecretConfig` are entities prescribed to ensure sensitive information is handled securely and consistently across different components and resources in Radius. The following are their definitions along with usage examples:
 
 ### SecretReference Model
 
 <a href="#secret-model" name="secret-model">:white_check_mark:</a> **DO** follow this structure when adding support for secrets to resources or components in Radius.
 
-```diff
+```
 
 @doc("This specifies a reference to a secret. Secrets are encrypted, often have fine-grained access control, auditing and are recommended to be used to hold sensitive data.")
 model SecretReference {
@@ -78,11 +78,12 @@ model SecretReference {
 
 #### Usage of SecretReference in EnvironmentVariables:
 
-<a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **DO** The above model for Secrets should be utilized for handling sensitive information through environment variables. This solution is in alignment with Kubernetes design patterns. The structure also allows for environment variables to refer to other resources such as ConfigMaps, Pod Fields etc. in the future. 
+<a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **DO** The above model for Secrets should be utilized for handling sensitive information through environment variables. 
+This solution is in alignment with Kubernetes design patterns. The structure also allows for environment variables to refer to other resources such as ConfigMaps, Pod Fields etc. in the future. 
 Examples include cases where environment variables containing sensitive information are injected into a container or used in a Terraform execution process.
 
 
-```diff
+```
 
 @doc("environment")
 env?: Record<EnvironmentVariable>;
@@ -107,7 +108,7 @@ model EnvironmentVariableReference {
 
 #### Example in Bicep
 
-```diff
+```bicep
 
 env: {
   DB_USER: { value: 'DB_USER' }
@@ -128,7 +129,7 @@ env: {
 
 <a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** follow this structure when a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
 
-```diff
+```
 
 @doc("Secret Configuration used to authenticate to external systems.")
 model SecretConfig {
@@ -142,7 +143,7 @@ model SecretConfig {
 
 <a href="#secretconfig-ext" name="secretconfig-ext">:white_check_mark:</a> **DO** In the following example SecretConfig is used to manage authentication for accessing private Terraform modules from Git repository sources.
 
-```diff
+```
 
 @doc("Authentication information used to access private Terraform modules from Git repository sources.")
 model GitAuthConfig {
@@ -154,7 +155,7 @@ model GitAuthConfig {
 
 #### Example in Bicep
 
-```diff
+```bicep
 
 recipeConfig: {
   ...
