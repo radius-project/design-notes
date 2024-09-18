@@ -417,10 +417,10 @@ type SecretsLoader interface {
 // It returns a map of secret data, where the keys are the secret store IDs and the values are maps of secret keys and their corresponding values.
 -	LoadSecrets(ctx context.Context, secretStoreIDs map[string][]string) (secretData map[string]map[string]string, err error)
 
-+	LoadSecrets(ctx context.Context, secretStoreIDs map[string][]string) (secretData map[string]secretData, err error) 
++	LoadSecrets(ctx context.Context, secretStoreKeysFilter map[string][]string) (secretData map[string]SecretData, err error)
 }
 
-+type secretData struct{
++type SecretData struct{
 +  type string
 +  Data map[string]string
 +}
