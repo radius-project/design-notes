@@ -139,7 +139,7 @@ resource extender 'Applications.Core/extenders@2023-10-01-preview' = {
   }
 }
 ```
-The properties in the extender resource are free form key value pairs. The user can pass in any text as SKU as there are no validation. In a mature enterprise, platform engineers or IT operators want to control the SKU a developer can pass in and provision. They would allow a set of SKU's that are allowed and restrict the user from passing in any other SKU. User defined types will enable the platform engineer to define the resource type definition in a strong typed way with guardrails and validation rules adhering to their organizational policies and compliance. 
+The properties in the extender resource are free form key value pairs. The user can pass in any text as SKU as there are no validation. In a mature enterprise, platform engineers or IT operators want to control the SKU a developer can pass in and provision. They would allow a set of SKU's that are allowed and restrict the user from passing in any other SKU. User defined types will enable the platform engineer to define the resource type definition in a strong typed way with guardrails and validation rules adhering to their organizational policies. 
 
 ### Other existing solutions
 
