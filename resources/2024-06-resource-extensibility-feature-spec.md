@@ -4,7 +4,7 @@
 
 ## Summary
 
-Radius is a core component of the internal developer platform for enterprises building cloud native applications. Many enterprises use a wide range of technologies together for achieving their cloud-native strategy. For any technology that’s a newcomer and helps solve a problem in the cloud native landscape, users look for an easy and seamless way to integrate their existing tools and technologies and incrementally adopt the new technology to their strategy.  For Radius, we have heard requests from our users/community to support technologies that their applications are tightly coupled with E.g.: an internal messaging service or a technology they absolutely love E.g.: PostgreSQL/Kafka. Today, Radius provides `Applications.Core/extenders` to model any kind of service in an untyped way but they pose limitations for sophisticated enterprises in terms of guardrails and validation that users want to have on their developer platform. Additionally we need to enable the open-source community to build and experiment with imperfect things in Radius. This will help us to meet the community where they are and enable them to experiment and leverage their work as open-source contributions. We need to provide an extensibility model that supports “Bring your own technology”, define and unblock your scenario with Radius. 
+Radius is a core component of the internal developer platform for enterprises building cloud native applications. Many enterprises use a wide range of technologies together for achieving their cloud-native strategy. For any technology that’s a newcomer and helps solve a problem in the cloud native landscape, users look for an easy and seamless way to integrate their existing tools and technologies and incrementally adopt the new technology to their strategy.  For Radius, we have heard requests from our users/community to support technologies that their applications are tightly coupled with E.g.: an internal messaging service or a technology they absolutely love E.g.: PostgreSQL/Kafka. Today, Radius provides [`Applications.Core/extenders`](https://docs.radapp.io/guides/author-apps/custom/overview/) to model any kind of service in an untyped way but they pose limitations for sophisticated enterprises in terms of guardrails and validation that users want to have on their developer platform. Additionally we need to enable the open-source community to build and experiment with imperfect things in Radius. This will help us to meet the community where they are and enable them to experiment and leverage their work as open-source contributions. We need to provide an extensibility model that supports “Bring your own technology”, define and unblock your scenario with Radius. 
 
 One of the high value extensibility points in Radius is Recipes. We have received interests to create custom resource types, define Recipes for the custom resource types and use it in the Radius application. The goal of providing resource extensibility is to empower platform engineers and infrastructure operators to extend Radius and build custom platform with organizational requirements on custom resources and empower developers to and run their applications with custom resources seamlessly in Radius and use all the other features such as Recipes, connections and app graph with ease and flexibility. This feature specification document details on the requirements and the user experience for defining and deploying a custom user defined resource type in Radius.
 
@@ -22,9 +22,9 @@ These new user defined resource types can be :
 
 - Commonly used application components but not yet built into Radius E.g.: PostgreSQL, Kafka etc
 - Enterprise specific services that are tightly coupled with the applications eg: on-prem messaging services, internal databases etc
-- Other microservices abstraction that are not yet built into Radius E.g.: Service mesh
+- Other microservices abstraction that are not yet built into Radius E.g: Networking scopes, service meshes etc
 
-We did the Jobs to be done analysis to gather granular requirements and user needs for the user defined types. More details in the appendix section below
+We did the Jobs to be done analysis to gather granular requirements and user needs for the user defined types. More details in the appendix section [below](#user-jobs-to-be-done)
 
 ### Top level goals
 
@@ -32,9 +32,9 @@ The top level goals for the user defined resource types are:
 
 1. Enable Platform engineers to author and register a user defined resource type without having to write Go code to integrate with Radius components and deploy their application seamlessly.
 2. Enable Platform engineers and IT operators to build, test, deploy, collaborate and maintain the custom resource types.
-2. Enable IT operators and Application developers to automatically leverage  Radius features such as Recipes, Connections, App graph, rad CLI for custom resource types.
-3. Enable Open-source contributors to contribute and open-source the custom resource types and recipes to the community. This will accelerate the adoption of Radius across the cloud native community.
-4. Enable Radius project to leverage the user defined types solution to refactor its already built in resource types.
+3. Enable IT operators and Application developers to automatically leverage  Radius features such as Recipes, Connections, App graph, rad CLI for custom resource types.
+4. Enable Open-source contributors to contribute and open-source the custom resource types and recipes to the community. This will accelerate the adoption of Radius across the cloud native community.
+5. Enable Radius project to leverage the user defined types solution to refactor its already built in resource types.
 
 ### Non-goals (out of scope)
 
@@ -88,6 +88,8 @@ Amy is a system integrator who helps customers build cloud native applications o
 ### Scenario 3: Raj publishes Recipes for proprietary services
 
 Raj is a service provider who works at Oracle Database and helps enterprises integrate oracle database to their applications. Raj hears about Radius and wants to write Recipes to create an Oracle Database with a standard set of best practices and policies integrated. He wants to provide this Recipes to his customers for easy entry and integration with Radius.
+
+To keep the scope of the document simple, we will focus on the first scenario in this document. The other scenarios will be covered in the child documents.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -411,4 +413,3 @@ As a developer trying to build and maintain the application, I have the followin
 | Open sourcing templates | Repository and pipeline to validate, testing the infrastructure and publishing  | Desire to contribute, easy to use, low overhead /dependency to publish |
 | Maintenance and support of open-source templates | Ownership and maintainence model of the open-source templates | Sense of ownership, contribution to the community |
 
-In this document we will cover the solution approach for all the jobs except for the open-sourcing and contributions of the custom resource types which will be covered in a child document. 
