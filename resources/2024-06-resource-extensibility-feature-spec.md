@@ -12,7 +12,7 @@ One of the high value extensibility points in Radius is Recipes. We have receive
 
 Our vision for user defined resource types is to enable users to define and deploy any resource type beyond the built in resource types in Radius. User defined types will provide the following:
 
-- Platform engineers can easily define and deploy their custom services as user-defined resource types in Radius, adhering to organizational policies within their developer platforms.
+- Platform engineers can easily define and deploy their services as user-defined resource types in Radius, adhering to organizational policies within their developer platforms.
 - Platform engineers, IT operators, and developers are able to seamlessly collaborate and maintain the new resource types within user platforms.
 - Open-source community contributors have more opportunities to contribute to Radius, enabling them to add new resource types and Recipes, and making these assets available for the community.
 - Community contributed assets - new resource type definitions and Recipes are easily discoverable and ready for consumption across the community. This will accelerate the adoption of Radius across the cloud native community.
@@ -174,43 +174,50 @@ We need to support both the schema formats to author a user defined type in Radi
 
 #### User experience
 
+##### Terminologies and concepts
+
+| Terminology | Description | Example |
+|-------------|-------------|---------|
+|Resource type | A service or technology that can be modeled as a resource | Eg : PostgreSQL or AWS S3 or Internal messaging service |
+|Resource provider | Resource provider refers to a group of resource types under a common namespace. Resource providers are entities that implement the group of resource types | Eg: Contoso.Messaging or Applications.Core |
+
 **Note: The user experience detailed below is an illustrative example of how the user interacts with the feature. The actual user experience may vary based on the implementation. It will be covered in the child feature spec documents**
 
 1. Deb is a platform engineer at Contoso open to use typespec and wants to author a custom resource Plaid in Radius
 
-**Pre-requisites**: User has typespec compiler/CLI installed
+    **Pre-requisites**: User has typespec compiler/CLI installed
 
     1. Deb uses the radCLI to scaffold a template typespec definition
 
         ```bash
-        rad resource-type init  --template-kind typespec
+        rad resource-provider init Contoso.Messaaging --template-kind typespec
         ```
-        A sample resource scheme template `contoso.tsp` is scaffolded and all the typespec dependencies are installed by Radius.
+        Radius scaffolds a typespec project for the resource provider `Contoso.Messaging` with individual typespec files for the resource types. 
 
     1. Deb authors a typespec schema for the Plaid resource type in typespec format
             
         ```typespec
-        import Radius;
-        using Radius;
-        
-        namespace Contoso.Messaging;
-                
-        @doc("Plaid messaging service")
-        model PlaidResource {
-        @doc("The name of the messaging service")
-        name: string;
-        }
-        @doc("Plaid messaging service properties")
-        model PlaidProperties {
-            @doc("The host name of the target Plaid messaging service")
-            host?: string;
-            @doc("The port value of the target Plaid messaging service")
-            port?: int32;
-            @doc("The username for the Plaid messaging service")
-            username?: string;
-        }
+            import Radius;
+            using Radius;
+            
+            namespace Contoso.Messaging;
+                    
+            @doc("Plaid messaging service")
+            model PlaidResource {
+            @doc("The name of the messaging service")
+            name: string;
+            }
+            @doc("Plaid messaging service properties")
+            model PlaidProperties {
+                @doc("The host name of the target Plaid messaging service")
+                host?: string;
+                @doc("The port value of the target Plaid messaging service")
+                port?: int32;
+                @doc("The username for the Plaid messaging service")
+                username?: string;
+            }
         ```
-    Radius automatically generates the boiler plate code for the CRUDL operations for the custom resource type Plaid.
+        Radius automatically generates the boiler plate code for the CRUDL operations for the custom resource type Plaid.
 
     1. VSCode Type spec extension warns Deb on the errors and warnings as he types
         
@@ -246,21 +253,7 @@ We need to support both the schema formats to author a user defined type in Radi
                 @doc("2024-09-01-preview")
                 v2024_09_01_preview: "2024-09-01-preview"
             }
-            ```
-
-    1. Deb registers the schema in Radius
-        
-        ```bash
-        rad resource-type register contoso --template-kind typespec -e myenv 
         ```
-        Radius complies the schema and registers the custom resource type Plaid in UCP
-
-    1. Deb lists the resources types he has in his environment
-
-        ```bash
-        rad resource-type list -e myenv
-        ```
-        Radius lists the custom resource types that Deb has registered in his environment
 
     1. Deb compiles the typespec schema 
         
@@ -269,10 +262,24 @@ We need to support both the schema formats to author a user defined type in Radi
         ```
         The typespec schema is compiled and validated for any errors and warnings
 
+    1. Deb registers the schema in Radius
+        
+        ```bash
+        rad resource-provider register Contoso.Messaaging --template-kind typespec -e myenv 
+        ```
+        Radius complies the schema and registers the custom resource type Plaid in UCP
+
+    1. Deb lists the resources types he has in his environment
+
+        ```bash
+        rad resource-provider list -e myenv
+        ```
+        Radius lists the resource providers that Deb has registered in his environment
+
     1. Deb publishes the bicep types to a registry
         
         ```bash
-        rad publish-bicep-types --file contoso.tsp --registry myregistry
+        rad publish-bicep-types Contoso.Messaging --registry myregistry
         ```
         
         The `contoso.tsp` is complied into open API specs; the index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
@@ -324,7 +331,7 @@ We need to support both the schema formats to author a user defined type in Radi
     1. Amy uses the rad CLI to scaffold a `yaml` template definition
 
         ```bash
-        rad resource-type init postgreSQL --template-kind yaml
+        rad resource-provider init Application.Datastores --template-kind yaml
         ```
         A sample yaml file is created in the application folder.
 
@@ -384,7 +391,7 @@ We need to support both the schema formats to author a user defined type in Radi
    1. Amy registers the postgreSQL schema to an existing provider in Radius
     
         ```bash
-        rad resource-type add -namespace Applications.Datastores --template-kind yaml -e myenv -v v1
+        rad resource-type create Applications.Datastore/postgreSQL --template-kind yaml -e myenv 
         ```
     The schema is registered to existing namespace `Application.Datastores` in Radius. This experience will be deep dived when we design the contribution experience for the user defined types. We will cover the maturity model and end-end experience of the community repository creation for user defined types, pipeline validation, testing, publishing and discovery of the custom resource types to the community.
 
