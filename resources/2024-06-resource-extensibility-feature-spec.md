@@ -175,7 +175,7 @@ We need to support both the schema formats to author a user defined type in Radi
 
 #### User experience
 
-**Note: The user experience detailed below is an illustrative example of how the user interacts with the feature. The actual user experience may vary based on the implementation. It will be covered in the child design documents**
+**Note: The user experience detailed below is an illustrative example of how the user interacts with the feature. The actual user experience may vary based on the implementation. It will be covered in the child feature spec documents**
 
 1. Deb is a platform engineer at Contoso open to use typespec and wants to author a custom resource Plaid in Radius
 
@@ -391,9 +391,9 @@ We need to support both the schema formats to author a user defined type in Radi
 
 ## High level feature Areas
 
-### Typespec support for authoring user defined types
+### TypeSpec support for authoring user defined types
 
-This feature area covers the typespec authoring experience for the user defined types. The goal is to scaffold a simple schema template for the user with minimal user inputs required to create a user defined type and deploy it in Radius. This will cover the building a Radius typespec library for user defined types and the user experience for API versioning, autocompletion, error validation on breaking changes in the user-defined type schema etc.
+This feature area covers the typespec authoring experience for the user defined types. The goal is to scaffold a simple schema template for the user with minimal user inputs required to create a user defined type and deploy it in Radius. This will cover the building a Radius typespec library for user defined types and the user experience for API versioning, autocompletion, error validation on breaking changes in the user-defined type schema etc. There will be a deep dive on the typespec authoring experience in the child feature specification document.
 
 ### Registration and Deployment of the user defined types
 
