@@ -457,6 +457,6 @@ As a developer trying to build and maintain the application, I have the followin
 
 | Topic | Description |
 |-------|-------------|
-| Resource extensibility feature spec | This document covers the high level requirements and user experience for defining and deploying a custom user defined resource type in Radius. The document covers top level goals, user profile and challenges, key scenarios, proposed solution, high level feature areas |
-| Resource schema authoring | This document will cover the detailed user experience for authoring the schema for the custom resource types in Radius. The document will cover the schema authoring format, user experience for authoring the schema in typespec and openAPI format, API versioning, auto completion, error validation, testing and validation of the schema |
-| Contribution and open-sourcing of the custom resource types | This document will cover the contribution experience for the user defined types in Radius. The document will cover the maturity model and end-end experience of the community repository creation for user defined types, pipeline validation, testing, publishing and discovery of the custom resource types to the community |
+| Resource extensibility feature spec | This document covers the high level requirements and user experience for defining and deploying a custom user defined resource type in Radius. |
+| Resource schema authoring | The document will cover the user experience for authoring the schema in typespec and openAPI format, API versioning, auto completion, error validation, testing and validation of the schema |
+| Contribution and open-sourcing of the custom resource types | The document will cover the maturity model and end-end experience of the community repository creation for user defined types, pipeline validation, testing, publishing and discovery of the custom resource types to the community |
