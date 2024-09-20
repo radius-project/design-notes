@@ -169,7 +169,7 @@ Define a schema for the user-defined type that my application uses in Radius. Th
 | Schema Format | Why chose? | Why not to chose? | 
 |---------------|------------|-------------------|
 | Typespec | Developer friendly; Maintenance and upgrades are easier; Errors and guidance violations at development time  | Microsoft developed language; May not be widely adopted by the cloud-native communities ; Yet another language to adopt | 
-| OpenAPI YAML/JSON | More common and standard format across the open-source communities ; K8s CRD's follow the structure of Open API  | Managing versions and ensuring backward compatibility is challenging |
+| OpenAPI YAML/JSON | More common and standard format across the open-source communities ; K8s CRDs follow the structure of Open API  | Managing versions and ensuring backward compatibility is challenging |
 
 We need to support both the schema formats to author a user defined type in Radius in order to support both user groups.
 
