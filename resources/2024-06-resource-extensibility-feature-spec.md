@@ -10,13 +10,12 @@ One of the high value extensibility points in Radius is Recipes. We have receive
 
 ### Vision 
 
-Our vision for user defined resource types is to enable users to define and deploy any resource type beyond the built in resource types in Radius. User defined types will : 
+Our vision for user defined resource types is to enable users to define and deploy any resource type beyond the built in resource types in Radius. User defined types will provide the following:
 
-- Simplify the authoring and registration of a user defined resource type in Radius. 
-- Enable seamless experience to collaborate and maintain the new resource types within the user platform.
-- Provide more opportunities for the open-source community to contribute on Radius and open-source the custom resource type definitions and Recipes.
-- Enable the open-source community to discover new resource type definitions and Recipes across the community.
-- Enable enterprises to incorporate secure guardrails, policies and compliance for developer platforms extending Radius 
+- Platform engineers can easily define and deploy their custom services as user-defined resource types in Radius, adhering to organizational policies within their developer platforms.
+- Platform engineers, IT operators, and developers are able to seamlessly collaborate and maintain the new resource types within user platforms.
+- Open-source community contributors have more opportunities to contribute to Radius, enabling them to add new resource types and Recipes, and making these assets available for the community.
+- Community contributed assets - new resource type definitions and Recipes are easily discoverable and ready for consumption across the community. This will accelerate the adoption of Radius across the cloud native community.
 
 These new user defined resource types can be :
 
@@ -33,7 +32,7 @@ The top level goals for the user defined resource types are:
 1. Enable Platform engineers to author and register a user defined resource type without having to write Go code to integrate with Radius components and deploy their application seamlessly.
 2. Enable Platform engineers and IT operators to build, test, deploy, collaborate and maintain the custom resource types.
 3. Enable IT operators and Application developers to automatically leverage  Radius features such as Recipes, Connections, App graph, rad CLI for custom resource types.
-4. Enable Open-source contributors to contribute and open-source the custom resource types and recipes to the community. This will accelerate the adoption of Radius across the cloud native community.
+4. Enable Open-source contributors to contribute and open-source the custom resource types and recipes to the community. 
 5. Enable Radius project to leverage the user defined types solution to refactor its already built in resource types.
 
 ### Non-goals (out of scope)
@@ -184,7 +183,7 @@ We need to support both the schema formats to author a user defined type in Radi
     1. Deb uses the radCLI to scaffold a template typespec definition
 
         ```bash
-        rad resource-type init contoso --template-kind typespec
+        rad resource-type init  --template-kind typespec
         ```
         A sample resource scheme template `contoso.tsp` is scaffolded and all the typespec dependencies are installed by Radius.
 
