@@ -4,7 +4,7 @@
 
 ## Summary
 
-Radius is a core component of the internal developer platform for enterprises building cloud native applications. Many enterprises use a wide range of technologies together for achieving their cloud-native strategy. For any technology that’s a newcomer and helps solve a problem in the cloud native landscape, users look for an easy and seamless way to integrate their existing tools and technologies and incrementally adopt the new technology to their strategy.  For Radius, we have heard requests from our users/community to support technologies that their applications are tightly coupled with E.g.: an internal messaging service or a technology they absolutely love E.g.: PostgreSQL/Kafka. Today, Radius provides [`Applications.Core/extenders`](https://docs.radapp.io/guides/author-apps/custom/overview/) to model any kind of service in an untyped way but they pose limitations for sophisticated enterprises in terms of guardrails and validation that users want to have on their developer platform. Additionally we need to enable the open-source community to build and experiment with imperfect things in Radius. This will help us to meet the community where they are and enable them to experiment and leverage their work as open-source contributions. We need to provide an extensibility model that supports “Bring your own technology”, define and unblock your scenario with Radius. 
+Radius is a core component of the internal developer platform for enterprises building cloud native applications. Many enterprises use a wide range of technologies together for achieving their cloud-native strategy. For any technology that’s a newcomer and helps solve a problem in the cloud native landscape, users look for an easy and seamless way to integrate their existing tools and technologies and incrementally adopt the new technology to their strategy. For Radius, we have heard requests from our users/community to support technologies that their applications are tightly coupled with E.g.: an internal messaging service or a technology they absolutely love E.g.: PostgreSQL/Kafka. Today, Radius provides [`Applications.Core/extenders`](https://docs.radapp.io/guides/author-apps/custom/overview/) to model any kind of service in an untyped way but they pose limitations for sophisticated enterprises in terms of guardrails and validation that users want to have on their developer platform. Additionally we need to enable the open-source community to build and experiment with imperfect things in Radius. This will help us to meet the community where they are and enable them to experiment and leverage their work as open-source contributions. We need to provide an extensibility model that supports “Bring your own technology”, define and unblock your scenario with Radius. 
 
 One of the high value extensibility points in Radius is Recipes. We have received interests to create custom resource types, define Recipes for the custom resource types and use it in the Radius application. The goal of providing resource extensibility is to empower platform engineers and infrastructure operators to extend Radius and build custom platform with organizational requirements on custom resources and empower developers to and run their applications with custom resources seamlessly in Radius and use all the other features such as Recipes, connections and app graph with ease and flexibility. This feature specification document details on the requirements and the user experience for defining and deploying a custom user defined resource type in Radius.
 
@@ -160,62 +160,47 @@ As a platform engineer, I want to build a custom platform for application develo
 
 ## Proposed solution
 
-### Authoring the user-defined type
+### Authoring, Registering and Deploying the user-defined types in Radius
 
-*Resource schema authoring*: Define a schema for the custom resource types that my application uses in Radius. The schema defines the structure and properties of the custom resource type. 
+Define a schema for the custom resource types that my application uses in Radius. The schema defines the structure and properties of the custom resource type. The resource schema authoring tool provides auto completion like intellisense in VSCode to help the user author the schema. The authored resource schema is consistent and uniform across all the custom resource types that the user defines.
 
-*Auto completion for schema authoring*: The resource schema authoring tool provides auto completion like intellisense in VSCode to help the user author the schema.
-
-*Consistency and uniformity in the schema*: The authored resource schema is consistent and uniform across all the custom resource types that the user defines.
-
-#### Schema authoring format*
+#### Schema authoring format
 
 | Schema Format | Why chose? | Why not to chose? | 
 |---------------|------------|-------------------|
 | Typespec | Developer friendly; Maintenance and upgrades are easier; Errors and guidance violations at development time  | Microsoft developed language; May not be widely adopted by the cloud-native communities ; Yet another language to adopt | 
 | OpenAPI YAML/JSON | More common and standard format across the open-source communities ; K8s CRD's follow the structure of Open API  | Managing versions and ensuring backward compatibility is challenging |
 
-To cater to both user user groups, we need to support both the schema formats to author a user defined type in Radius.
+We need to support both the schema formats to author a user defined type in Radius in order to support both user groups.
 
 #### User experience
 
-Deb is a platform engineer at Contoso open to use typespec and wants to author a custom resource Plaid in Radius
+**Note: The user experience detailed below is an illustrative example of how the user interacts with the feature. The actual user experience may vary based on the implementation. It will be covered in the child design documents**
+
+1. Deb is a platform engineer at Contoso open to use typespec and wants to author a custom resource Plaid in Radius
 
 **Pre-requisites**: User has typespec compiler/CLI installed
 
- 1. Deb uses the radCLI to scaffold a template typespec definition
+    1. Deb uses the radCLI to scaffold a template typespec definition
 
-    ```bash
-    rad resource-namespace init contoso --template-kind typespec
-    ```
-    A sample resource scheme template `contoso.tsp` is scaffolded and all the typespec dependencies are installed by Radius.
+        ```bash
+        rad resource-type init contoso --template-kind typespec
+        ```
+        A sample resource scheme template `contoso.tsp` is scaffolded and all the typespec dependencies are installed by Radius.
 
-1. Deb decides on the following inputs and properties for the Plaid resource type and updates the schema
-
-    | User input | Required | Description |
-    |------------|----------|-------------|
-    | Resource namespace | Yes | The namespace for the resource types |
-    | Basic data model of the resource type| Yes | The properties of the resource type |
-    | Version of the schema | Yes | The version of the schema |
-    | Connections of the resource type | Yes | The connections of the resource type |
-    | Output of the resource type | Yes | The output of the resource type |
-    | Opt-in for Recipes | No | Whether the resource type is provisioned using Recipes. This enabled by default to provision via Recipes |
-    | belongsTo | No | Belongs to an application or environment. This is enabled by default to belong to a application|
-
-    A sample schema for the Plaid resource type in typespec format
-        
-    ```typespec
-
+    1. Deb authors a typespec schema for the Plaid resource type in typespec format
+            
+        ```typespec
         import Radius;
         using Radius;
+        
         namespace Contoso.Messaging;
-            
+                
         @doc("Plaid messaging service")
         model PlaidResource {
         @doc("The name of the messaging service")
         name: string;
         }
-
         @doc("Plaid messaging service properties")
         model PlaidProperties {
             @doc("The host name of the target Plaid messaging service")
@@ -224,150 +209,205 @@ Deb is a platform engineer at Contoso open to use typespec and wants to author a
             port?: int32;
             @doc("The username for the Plaid messaging service")
             username?: string;
-        }
-            < insert output and connections>
-    ```
-     Radius automatically generates the boiler plate code for the CRUDL operations for the custom resource type Plaid.
-
-1. VSCode Type spec extension warns Deb on the errors and warnings as he types
-     
-    ![alt text](2024-06-resource-extensbility/errors.png)
-
-1. Deb uses intellisense to autocomplete the schema and properties
-
-    ![alt text](2024-06-resource-extensbility/intellisense.png)
-
-1. Deb chooses a version for the schema
-
-    ```typespec
-        import Radius;
-        using Radius;
-        namespace Contoso.Messaging;
-            
-        @doc("Plaid messaging service")
-        model PlaidResource {
-            @doc("The name of the messaging service")
-            name: string;
-        }
-
-        @doc("Plaid messaging service properties")
-        model PlaidProperties {
-            @doc("The host name of the target Plaid messaging service")
-            host?: string;
-            @doc("The port value of the target Plaid messaging service")
-            port?: int32;
-            @doc("The username for the Plaid messaging service")
-            username?: string;
-        }
-        < insert output and connections>
-        enum versions {
-             @doc("2024-09-01-preview")
-            v2024_09_01_preview: "2024-09-01-preview"
         }
         ```
+    Radius automatically generates the boiler plate code for the CRUDL operations for the custom resource type Plaid.
 
-1. Deb registers the schema in Radius
-    
-    ```bash
-    rad resource-namespace register contoso --template-kind typespec -e myenv 
-    ```
-    Radius complies the schema and registers the custom resource type Plaid in UCP
+    1. VSCode Type spec extension warns Deb on the errors and warnings as he types
+        
+        ![alt text](2024-06-resource-extensbility/errors.png)
 
-1. Deb lists the resources types he has in his environment
+    1. Deb uses intellisense to autocomplete the schema and properties
 
-    ```bash
-    rad resource-type list -e myenv
-    ```
-    Radius lists the custom resource types that Deb has registered in his environment
- 
-### Iterating and testing the application platform
+        ![alt text](2024-06-resource-extensbility/intellisense.png)
 
- As a platform engineer, I need a productive inner loop for development and testing the application platform. Simple and easy way to iterate on changes, test and deploy them
+    1. Deb chooses a version for the schema
 
-#### User experience
+        ```typespec
+            import Radius;
+            using Radius;
+            namespace Contoso.Messaging;
+                
+            @doc("Plaid messaging service")
+            model PlaidResource {
+                @doc("The name of the messaging service")
+                name: string;
+            }
 
-1. Deb compiles the typespec schema 
-    
-    ```bash
-    tsp compile
-    ```
-    The typespec schema is compiled and validated for any errors and warnings
+            @doc("Plaid messaging service properties")
+            model PlaidProperties {
+                @doc("The host name of the target Plaid messaging service")
+                host?: string;
+                @doc("The port value of the target Plaid messaging service")
+                port?: int32;
+                @doc("The username for the Plaid messaging service")
+                username?: string;
+            }
+            enum versions {
+                @doc("2024-09-01-preview")
+                v2024_09_01_preview: "2024-09-01-preview"
+            }
+            ```
 
-1. Deb publishes the bicep types to a registry
-    
-     ```bash
-    rad publish-bicep-types --file contoso.tsp --registry myregistry
-    ```
-    
-    The `contoso.tsp` is complied into open api specs; the index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
-    ```json
-    {
-        "experimentalFeaturesEnabled": {
-            "extensibility": true,
-            "extensionRegistry": true,
-            "dynamicTypeLoading": true
-        },
-        "extensions": {
-            "radius": "br:biceptypes.azurecr.io/radius:latest",
-            "aws": "br:biceptypes.azurecr.io/aws:latest"
-            "Contoso": "br:biceptypes.azurecr.io/contoso:latest"
+    1. Deb registers the schema in Radius
+        
+        ```bash
+        rad resource-type register contoso --template-kind typespec -e myenv 
+        ```
+        Radius complies the schema and registers the custom resource type Plaid in UCP
+
+    1. Deb lists the resources types he has in his environment
+
+        ```bash
+        rad resource-type list -e myenv
+        ```
+        Radius lists the custom resource types that Deb has registered in his environment
+
+    1. Deb compiles the typespec schema 
+        
+        ```bash
+        tsp compile
+        ```
+        The typespec schema is compiled and validated for any errors and warnings
+
+    1. Deb publishes the bicep types to a registry
+        
+        ```bash
+        rad publish-bicep-types --file contoso.tsp --registry myregistry
+        ```
+        
+        The `contoso.tsp` is complied into open api specs; the index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
+        ```json
+        {
+            "experimentalFeaturesEnabled": {
+                "extensibility": true,
+                "extensionRegistry": true,
+                "dynamicTypeLoading": true
+            },
+            "extensions": {
+                "radius": "br:biceptypes.azurecr.io/radius:latest",
+                "aws": "br:biceptypes.azurecr.io/aws:latest"
+                "Contoso": "br:biceptypes.azurecr.io/contoso:latest"
+            }
         }
-    }
-    ```
-1. Create a recipe for the custom resource type Plaid
+        ```
+    1. Create a recipe for the custom resource type Plaid
 
-    ```bash
-    rad recipe register plaid –resource-type “Contoso.Messaging/Plaid" --template-kind bicep --template-path "<myregistry>/plaid:latest"
-    ```
+        ```bash
+        rad recipe register plaid-dev –resource-type “Contoso.Messaging/Plaid" --template-kind bicep --template-path "<myregistry>/plaid:latest"
+        ```
 
-1. Create a app.bicep with plaid resource type
+    1. Create a app.bicep with plaid resource type
 
-    ```bicep
-    param plaidName string
-    param plaidDescription string
-    param plaidQueue string
+        ```bicep
+        param plaidName string
+        param plaidDescription string
+        param plaidQueue string
 
-    resource plaid 'Contoso.Messaging/Plaid@2024-08-09-preview' = {
-        name: plaidName
-        properties: {
-           recipe:{
-            name: 'plaid-dev'
-           }
+        resource plaid 'Contoso.Messaging/Plaid@2024-08-09-preview' = {
+            name: plaidName
+            properties: {
+            recipe:{
+                name: 'plaid-dev'
+            }
+            }
         }
-    }
-    ```
-1. Deb uses the rad CLI to deploy the application with the custom resource type Plaid
+        ```
+    1. Deb uses the rad CLI to deploy the application with the custom resource type Plaid
 
-    ```bash
-    rad deploy app.bicep 
-    ```
-The application is deployed with the custom resource type Plaid in Radius. Deb can iterate on the changes, compile and test the application with the custom resource type.
+        ```bash
+        rad deploy app.bicep 
+        ```
+    The application is deployed with the custom resource type Plaid in Radius. Deb can iterate on the changes, compile and test the application with the custom resource type.
 
-#### Maintain the custom platform
+2. Amy is a system integrator who is familiar with OpenAPI schema format and wants to author a custom resource PostgreSQL in Radius
 
-As a platform engineer, I want to version and maintain the API's. 
+    1. Amy uses the radCLI to scaffold a `yaml` template definition
 
-#### User experience
+        ```bash
+        rad resource-type init postgreSQL --template-kind yaml
+        ```
+        A sample yaml file is created in the application folder.
 
-* Versioning of the API's
+    1. Amy authors the schema for plaid in typespec format
+        
+        ```
+        namespace: 'Applications.Datastores'
+        apiVersion: 'v1'
+        scope: '/planes/radius/Applications.Datastores'
+        resourceTypes:
+            'Applications.Datastores/postgreSQL':
+                name: 'Name of the resource'
+                description: 'PostgreSQL' 
+                properties: 
+                required: ['host', 'env', 'secrets']
+                host:
+                    type: 'string'
+                    description: 'Hostname'
+                env:
+                    type: 'string'
+                    description: 'Radius environment'
+                app:
+                    type: 'string'
+                    description: 'Radius application'
+                secrets:
+                    connectionstring:
+                    type: 'string'
+                    description: 'Connection string for PostgreSQL'
+        ```
 
+    1. Amy adds a version for the schema
 
+         ```
+        namespace: 'Applications.Datastores'
+        apiVersion: '2024-09-10-preview'
+        scope: '/planes/radius/Applications.Datastores'
+        resourceTypes:
+            'Applications.Datastores/postgreSQL':
+                name: 'Name of the resource'
+                description: 'PostgreSQL' 
+                properties: 
+                required: ['host', 'env', 'secrets']
+                host:
+                    type: 'string'
+                    description: 'Hostname'
+                env:
+                    type: 'string'
+                    description: 'Radius environment'
+                app:
+                    type: 'string'
+                    description: 'Radius application'
+                secrets:
+                    connectionstring:
+                    type: 'string'
+                    description: 'Connection string for PostgreSQL'
+        ```
+   1. Amy registers the postgreSQL schema to an existing provider in Radius
+    
+        ```bash
+        rad resource-type add -namespace Applications.Datastores --template-kind yaml -e myenv -v v1
+        ```
+    The schema is registered to existing namespace `Application.Datastores` in Radius. This experience will be deep dived when we design the contribution experience for the user defined types. We will cover the maturity model and end-end experience of the community repository creation for user defined types, pipeline validation, testing, publishing and discovery of the custom resource types to the community.
 
-* Versioning of the bicep types
+## High level feature Areas
 
+### Typespec support for authoring user defined types
 
-## Features
+This feature area covers the typespec authoring experience for the user defined types. The goal is to scaffold a simple schema template for the user with minimal user inputs required to create a user defined type and deploy it in Radius. This will cover the building a Radius typespec library for user defined types and the user experience for API versioning, autocompletion, error validation on breaking changes in the user-defined type schema etc.
 
-### Typespec support for user defined types
+### Registration and Deployment of the user defined types
 
-### Registration of the user defined type
+This feature area covers the registration of the user defined types in Radius. This feature would cover defining API's for the user defined types, updating UCP routing logic, implementing the dynamic resource provider for the user defined types, Bicep support for the generated typespec, deployment engine support for the user defined types, testing and validation of the user defined types. 
 
-### Deploy the user defined type
+### Validation of Radius features for user defined types
+
+Once UDT id enabled end-end in Radius, the Radius features such as Recipes, Connections, App graph, rad CLI are expected to work automatically. This feature area covers the testing and validation of the Radius features for the user defined types.
 
 ### Documentation
 
  End-end-documentation for the custom resource types - Radius provides documentation to the users on how to author, test and deploy the custom resource types in Radius.
     1. Typespec samples and documentation - Provide samples and documentation for the users to author the schema in typespec format
+    1. Guidance on API versioning - Provide guidance on how to version the custom resource types in Radius
     1. Documentation for generating Radius-Bicep types - Reuse existing pipelines and GH workflows used in Radius to generate Radius types in Bicep as an example and provide documentation to the users on how to build and publish the custom resource types in Radius.
 
 ## Appendix
@@ -412,4 +452,3 @@ As a developer trying to build and maintain the application, I have the followin
 | ------------- | ------------------ | ----------------- |
 | Open sourcing templates | Repository and pipeline to validate, testing the infrastructure and publishing  | Desire to contribute, easy to use, low overhead /dependency to publish |
 | Maintenance and support of open-source templates | Ownership and maintainence model of the open-source templates | Sense of ownership, contribution to the community |
-
