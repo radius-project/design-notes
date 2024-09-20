@@ -104,7 +104,7 @@ To keep the scope of the document simple, we will focus on the first scenario in
 
 - Risk: Compatibility and maintainability
     - As more custom resource types are added to Radius, there is a risk of compatibility issues and increased maintenance overhead.
-    - Mitigation: Implement thorough testing and versioning strategies to ensure compatibility, and establish clear guidelines for maintainence and ownership of the custom resource types.
+    - Mitigation: Implement thorough testing and versioning strategies to ensure compatibility, and establish clear guidelines for maintenance and ownership of the custom resource types.
 
 - Risk: Security and trust
     - Allowing users to contribute custom resource types introduces potential security risks and the need to establish trust in the community-contributed code.
@@ -139,14 +139,14 @@ resource extender 'Applications.Core/extenders@2023-10-01-preview' = {
   }
 }
 ```
-The properties in the extender resource are free form key value pairs. The user can pass in any text as SKU as there are no validation. In a mature enterprise, platform engineers or IT operators want to control the SKU a developer can pass in and provision. They would allow a set of SKU's that are allowed and restrict the user from passing in any other SKU. User defined types will enable the platform engineer to define the resource type definition in a strong typed way with guardrails and validation rules adhering to their organizational policies. 
+The properties in the extender resource are free form key value pairs. The user can pass in any text as SKU as there are no validation. In a mature enterprise, platform engineers or IT operators want to control the SKU a developer can pass in and provision. They would allow a set of SKUs that are allowed and restrict the user from passing in any other SKU. User defined types will enable the platform engineer to define the resource type definition in a strong typed way with guardrails and validation rules adhering to their organizational policies. 
 
 ### Other existing solutions
 
 | Solution | Description | Challenges |
 |----------|-------------|------------|
-| Kubernetes CRD's | Kubernetes Custom Resource Definitions (CRDs) are a way to extend the Kubernetes API and create custom resource types. CRDs allow users to define their own resource types and controllers to manage those resources. CRDs are widely used in the Kubernetes ecosystem to create custom resources for various use cases. | Complicated to author CRDs ; Versioning and Maintenance ; Ensuring backward compatibility |
-| Crossplane XRD's | Built on top of Kubernetes CRD's  |  |
+| Kubernetes CRD| Kubernetes Custom Resource Definitions (CRDs) are a way to extend the Kubernetes API and create custom resource types. CRDs allow users to define their own resource types and controllers to manage those resources. CRDs are widely used in the Kubernetes ecosystem to create custom resources for various use cases. | Complicated to author CRDs ; Versioning and Maintenance ; Ensuring backward compatibility |
+| Crossplane XRD| Built on top of Kubernetes CRDs  |  |
 
 ## Existing user problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a user am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
@@ -162,7 +162,7 @@ As a platform engineer, I want to build a custom platform for application develo
 
 ### Authoring, Registering and Deploying the user-defined types in Radius
 
-Define a schema for the custom resource types that my application uses in Radius. The schema defines the structure and properties of the custom resource type. The resource schema authoring tool provides auto completion like intellisense in VSCode to help the user author the schema. The authored resource schema is consistent and uniform across all the custom resource types that the user defines.
+Define a schema for the user-defined type that my application uses in Radius. The schema defines the structure and properties of the custom resource type. The resource schema authoring tool provides guidance on auto completion like IntelliSense in VSCode to help the user author the schema. 
 
 #### Schema authoring format
 
@@ -217,7 +217,7 @@ We need to support both the schema formats to author a user defined type in Radi
         
         ![alt text](2024-06-resource-extensbility/errors.png)
 
-    1. Deb uses intellisense to autocomplete the schema and properties
+    1. Deb uses IntelliSense to autocomplete the schema and properties
 
         ![alt text](2024-06-resource-extensbility/intellisense.png)
 
@@ -276,7 +276,7 @@ We need to support both the schema formats to author a user defined type in Radi
         rad publish-bicep-types --file contoso.tsp --registry myregistry
         ```
         
-        The `contoso.tsp` is complied into open api specs; the index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
+        The `contoso.tsp` is complied into open API specs; the index.json and types.json files are generated and published to the registry for the custom resource type Plaid and the new resource provider is added to `bicepconfig.json`
         ```json
         {
             "experimentalFeaturesEnabled": {
@@ -322,7 +322,7 @@ We need to support both the schema formats to author a user defined type in Radi
 
 2. Amy is a system integrator who is familiar with OpenAPI schema format and wants to author a custom resource PostgreSQL in Radius
 
-    1. Amy uses the radCLI to scaffold a `yaml` template definition
+    1. Amy uses the rad CLI to scaffold a `yaml` template definition
 
         ```bash
         rad resource-type init postgreSQL --template-kind yaml
@@ -393,11 +393,11 @@ We need to support both the schema formats to author a user defined type in Radi
 
 ### TypeSpec support for authoring user defined types
 
-This feature area covers the typespec authoring experience for the user defined types. The goal is to scaffold a simple schema template for the user with minimal user inputs required to create a user defined type and deploy it in Radius. This will cover the building a Radius typespec library for user defined types and the user experience for API versioning, autocompletion, error validation on breaking changes in the user-defined type schema etc. There will be a deep dive on the typespec authoring experience in the child feature specification document.
+This feature area covers the typespec authoring experience for the user defined types. The goal is to scaffold a simple schema template for the user with minimal user inputs required to create a user defined type and deploy it in Radius. This will cover building a Radius typespec library for user defined types and the user experience for API versioning, autocompletion, error validation on breaking changes in the user-defined type schema etc. There will be a deep dive on the typespec authoring experience in the child feature specification document.
 
 ### Registration and Deployment of the user defined types
 
-This feature area covers the registration of the user defined types in Radius. This feature would cover defining API's for the user defined types, updating UCP routing logic, implementing the dynamic resource provider for the user defined types, Bicep support for the generated typespec, deployment engine support for the user defined types, testing and validation of the user defined types. 
+This feature area covers the registration of the user defined types in Radius. This feature would cover defining APIs for the user defined types, updating UCP routing logic, implementing the dynamic resource provider for the user defined types, Bicep support for the generated typespec, deployment engine support for the user defined types, testing and validation of the user defined types. 
 
 ### Validation of Radius features for user defined types
 
@@ -408,7 +408,7 @@ Once UDT id enabled end-end in Radius, the Radius features such as Recipes, Conn
  End-end-documentation for the custom resource types - Radius provides documentation to the users on how to author, test and deploy the custom resource types in Radius.
     1. Typespec samples and documentation - Provide samples and documentation for the users to author the schema in typespec format
     1. Guidance on API versioning - Provide guidance on how to version the custom resource types in Radius
-    1. Documentation for generating Radius-Bicep types - Reuse existing pipelines and GH workflows used in Radius to generate Radius types in Bicep as an example and provide documentation to the users on how to build and publish the custom resource types in Radius.
+    1. Documentation for generating Radius-Bicep types - Reuse existing pipelines and GitHub workflows used in Radius to generate Radius types in Bicep as an example and provide documentation to the users on how to build and publish the custom resource types in Radius.
 
 ## Appendix
 
@@ -423,8 +423,8 @@ As a platform engineer trying to build a custom platform for application develop
 | Define the set of key technologies for the enterprise applications | Set of technologies that organizations intend to use for their applications based on the nature of technology, open-source support, documentation support, existing vendor relations, expertise in the team | Easy to use, troubleshoot, sense of service ownership |
 | Specify the contract for the key services in the application platform | Author a schema for the custom resources easily with auto guidance tools | Simple tools that enables the schema authoring, uniformity and consistency |
 | Iterating and testing the application platform | Productive inner loop for development and testing the application platform | Simple and easy way to iterate on changes, test and deploy them |
-| Ship the custom platform | Registering the API's to the platform, providing documentation, onboarding and support | intuitive, seamless, collaborative |
-| Maintain the custom platform | Versioning and maintaining the API's | Ease of support, sense of ownership (decision making) | 
+| Ship the custom platform | Registering the APIs to the platform, providing documentation, onboarding and support | intuitive, seamless, collaborative |
+| Maintain the custom platform | Versioning and maintaining the APIs | Ease of support, sense of ownership (decision making) | 
 | Support for compliance and security | Compatibility and security policies | Trust the platform |
 
 As an IT operator managing the custom platform, I have the following jobs to be done and requirements to meet:
@@ -451,4 +451,12 @@ As a developer trying to build and maintain the application, I have the followin
 |  Related jobs | Functional aspects | Emotional aspects | 
 | ------------- | ------------------ | ----------------- |
 | Open sourcing templates | Repository and pipeline to validate, testing the infrastructure and publishing  | Desire to contribute, easy to use, low overhead /dependency to publish |
-| Maintenance and support of open-source templates | Ownership and maintainence model of the open-source templates | Sense of ownership, contribution to the community |
+| Maintenance and support of open-source templates | Ownership and maintenance model of the open-source templates | Sense of ownership, contribution to the community |
+
+### Phasing of the feature specification documents
+
+| Topic | Description |
+|-------|-------------|
+| Resource extensibility feature spec | This document covers the high level requirements and user experience for defining and deploying a custom user defined resource type in Radius. The document covers top level goals, user profile and challenges, key scenarios, proposed solution, high level feature areas |
+| Resource schema authoring | This document will cover the detailed user experience for authoring the schema for the custom resource types in Radius. The document will cover the schema authoring format, user experience for authoring the schema in typespec and openAPI format, API versioning, auto completion, error validation, testing and validation of the schema |
+| Contribution and open-sourcing of the custom resource types | This document will cover the contribution experience for the user defined types in Radius. The document will cover the maturity model and end-end experience of the community repository creation for user defined types, pipeline validation, testing, publishing and discovery of the custom resource types to the community |
