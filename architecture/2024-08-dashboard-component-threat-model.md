@@ -26,7 +26,9 @@ The Dashboard component is an SPA built as [Backstage](https://backstage.io/) pl
 
 ![Dashboard Architecture](2024-08-dashboard-component-threat-model/dashboard-arch.png)
 
-Given that the Radius Dashboard is developed as a Backstage plugin, it is essential to first examine the Backstage architecture. Backstage provides a core Backstage SPA, core Backstage backend and the ability to configure a desired database. The core functionality can be enhanced using plugins. In order to deploy Radius dashboard as a backstage plugin, we have a Radius SPA plugin that binds with core Backstage SPA, a Radius backend plugin that binds with core Backstage backend. Since we do not need a database, we configured Radius Dashboard App to use a lightweight sqlite db. This stores no data.
+Given that the Radius Dashboard is developed as a Backstage plugin, it is essential to first examine the Backstage architecture. Backstage provides a core Single Page Application (SPA), a core backend, and the ability to configure a desired database. The core functionality can be enhanced using plugins.
+
+To deploy the Radius Dashboard as a Backstage plugin, we have implemented a Radius SPA plugin that integrates with the core Backstage SPA, and a Radius backend plugin that integrates with the core Backstage backend. While the backend can technically be accessed directly, our setup restricts this access. We configured the Radius Dashboard App to use a lightweight, in-memory SQLite database, which stores no data and is not accessible directly from outside.
 
 This application is run as dashboard pod in radius-system namespace along with other Radius pods. 
 
@@ -42,7 +44,7 @@ app-config.dashboard.yaml has settings for dashboard installation as part of Rad
 
 We have used these files to configure our application to
 
-1. be allowed to communicate using Radius API. The data for rendering Radius visuals is obtained by calling different Radius APIs. 
+1. allow communication using Radius API. The data for rendering Radius visuals is obtained by calling different Radius APIs. 
 
 ```
 app-config.local.yaml:
@@ -86,7 +88,7 @@ backend:
   listen: ':7007'
 ```
 
-3.  use sqlite DB. This is light weight, stored on disk, not accessible and contains no useful information.
+1.  use sqlite DB. This is light weight, not accessible to users directly and contains no useful information.
   
 ```
 app-config.yaml :
@@ -97,7 +99,7 @@ backend:
     connection: ':memory:'
 ```
 
-At present, Dashboard can only present the Radius application metadata visually. It has no ability to Create, Modify, Update or Delete any of the Radius application resources. This eliminates the scope of threats that require "write" action.
+At present, Dashboard can only present the Radius application metadata visually. It has no ability to Create, Modify, Update or Delete any of the Radius application resources. This eliminates the scope of threats that require "write" action using the Dashboard portal.
 
 #### Storage of secrets
 
@@ -130,7 +132,7 @@ We have a few different trust boundaries for the Dashboard component:
 
 The Dashboard component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCPD also resides within the same namespace.
 
-The webapp is accessible to various configured users. Quoting from Backstage threat model, these users could belong to one of these trust levels:
+The webapp portal is accessible to various configured users. Quoting from Backstage threat model, these users could belong to one of these trust levels:
 
 **An internal user** is an authenticated user that generally belongs to the organization of a particular Backstage deployment. These users are trusted to the extent that they are not expected to compromise the availability of Backstage, but they are not trusted to not compromise data confidentiality or integrity.
 
@@ -172,8 +174,8 @@ This threat model assumes that:
 1. User types the backstage url and accesses Radius plugin
 2. Request reaches the dashboard pod in `radius-system` namespace in kubernetes cluster.
 3. The dashboard service sends a Radius API request to UCP.
-4. UCP works with ApplicationCore-RP and sends response back to Dashboard SPA.
-5. Dashboard SPA contructs the visuals using backstage, rad-component components and data in API response and responds with appropriate page to the user. 
+4. UCP works with ApplicationsCore-RP and sends response back to Dashboard SPA.
+5. Dashboard SPA contructs the visuals using components from backstage core, rad-component and data in API response and responds with appropriate page to the user. 
 
 ### Threats
  
@@ -205,7 +207,7 @@ Active. Operators are expected to configure the system and limit access to Dashb
 
 **Description**
 
-Access to app graph can provide information on dependency between app components.
+Access to app graph through the portal can provide information on dependency between app components.
 
 **Impact**:
 
@@ -213,7 +215,7 @@ A malicious user can utilize the app graph to stage effective attack by targetin
 
 **Mitigation**:
 
-1. Access to Dashboard should be provided to trusted users. While we dont expose any secrets in db, users should still enable authentication and secure access to data based on roles.
+1. Access to Dashboard portal should be provided to trusted users. While we dont expose any secrets in db, users should still enable authentication and secure access to data based on roles.
    
 **Status**:
 
@@ -228,17 +230,32 @@ Active. Operators are expected to configure the [Backstage  permissions system](
 #### Threat 3: Spoofing dashboard service-account can cause DoS 
 **Description**
 
-If an unauthorized user or malicious actor gains admin role on the cluster,
-he can create services with dashboard service-account to send Radius API requests.
+If an unauthorized user or malicious actor gtampers with cluster,
+he can create services with dashboard service-account to send Radius API requests. 
 
 **Impact**:
 
-A malicious user can utilize Radius API and delete an application or 
-its components or create too many resources. 
+A malicious user can utilize Radius API and create too many resources. 
+
+This is because dashboard service-account is allowed get, list, and post requests to UCP
+
+```
+metadata:
+  name: dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: dashboard
+    app.kubernetes.io/part-of: radius
+rules:
+  - apiGroups: ['api.ucp.dev']
+    resources: ['*']
+    # dashboard needs get, list, and post privileges for api.ucp.dev
+    verbs: ['*']
+```
 
 **Mitigation**:
 
-1. Tampering with the dashboard service-account or creating malicious services would require access to modify the radius-system namespace. Our threat model assumes that the operator has limited access to the radius-system namespace using Kubernetes' existing RBAC mechanism.
+Tampering with the dashboard service-account or creating malicious services would require access to modify the radius-system namespace. Our threat model assumes that the operator has limited access to the radius-system namespace using Kubernetes' existing RBAC mechanism.
    
 **Status**:
 
