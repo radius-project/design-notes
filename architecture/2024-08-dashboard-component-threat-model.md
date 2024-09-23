@@ -41,18 +41,8 @@ app-config.local.yaml has settings for dev environment and merges and overlays t
 app-config.dashboard.yaml has settings for dashboard installation as part of Radius installation. This again merges and overlays the configs in app-config.yaml. 
 
 We have used these files to configure our application to
-1.  use sqlite DB. This is light weight, stored on disk, not accessible and contains no useful information.
-  
-```
-app-config.yaml :
 
-backend:
-  database:
-    client: better-sqlite3
-    connection: ':memory:'
-```
-
-2. be allowed to communicate using Radius API. The data for rendering Radius visuals is obtained by calling different Radius APIs. 
+1. be allowed to communicate using Radius API. The data for rendering Radius visuals is obtained by calling different Radius APIs. 
 
 ```
 app-config.local.yaml:
@@ -79,7 +69,7 @@ kubernetes:
           url: https://kubernetes.default.svc.cluster.local
 ```
 
-3. not expose backend directly.
+2. not expose backend directly.
 
 ```
 app-config.yaml
@@ -94,6 +84,17 @@ backend:
   # The listener can also be expressed as a single <host>:<port> string. In this case we bind to
   # all interfaces, the most permissive setting. The right value depends on your specific deployment.
   listen: ':7007'
+```
+
+3.  use sqlite DB. This is light weight, stored on disk, not accessible and contains no useful information.
+  
+```
+app-config.yaml :
+
+backend:
+  database:
+    client: better-sqlite3
+    connection: ':memory:'
 ```
 
 At present, Dashboard can only present the Radius application metadata visually. It has no ability to Create, Modify, Update or Delete any of the Radius application resources. This eliminates the scope of threats that require "write" action.
