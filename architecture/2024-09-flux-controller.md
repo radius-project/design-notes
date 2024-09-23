@@ -54,9 +54,11 @@ priority decisions, and how we will determine success.
 -->
 
 **Goal: Users can publish Radius resources to Git repositories and use Flux to deploy them to Kubernetes clusters.**
+
 Users of Radius who are already using Flux for their Kubernetes resources should be able to use Flux to deploy Radius environments, applications, and other resources as well. This will allow users to manage their entire infrastructure and application stack using GitOps practices.
 
 **Goal: Users of Radius + Flux can patch their applications using bicepparams.**
+
 Users that are running Radius applications on Kubernetes clusters using Flux should be able to patch their applications using bicepparams.
 
 ### Non goals
@@ -70,7 +72,12 @@ them here. Provide a brief explanation on why this is a non-goal.
 -->
 
 **Non-goal: Support for other GitOps tools**
+
 This design is focused on supporting Flux. Support for other GitOps tools (such as ArgoCD) is out of scope for this design and will be considered in a future design. The design principles outlined here may be applicable to other GitOps tools, but the implementation details will be specific to Flux.
+
+**Non-goal: Re-implement Bicep compiler features.**
+
+The Bicep compiler is a separate component that is responsible for compiling Bicep manifests into ARM templates. This design is doing as much as possible to leverage the existing Bicep compiler and not re-implement its features.
 
 ### User scenarios
 
@@ -81,25 +88,7 @@ If you have an existing issue that describes the user scenarios, please
 link to that issue instead.
 -->
 
-#### Jon can use GitOps to deploy a standard Radius environment for developer use
-
-Jon is an infrastructure operator who uses GitOps to automate the creation of developer Kubernetes clusters. Today, he publishes Kubernetes manifests to a GitHub repository, and a GitOps tool watches the repository and applies the manifests to the Kubernetes cluster. He wants to have a Radius environment and a set of recipes available on the clusters for his developers to use, since they are building applications using Radius.
-
-He first creates a GitHub repository that contains the cluster configuration and the Bicep manifests for the Radius environment. He includes the installation of Radius and the registration of Radius environment and recipes for the developers to use. He then configures the GitOps tool to watch the repository and apply the manifests to the Kubernetes cluster.
-
-When a developer creates a new development cluster using the configuration specified in Jon's GitHub repository with a GitOps tool, Radius is automatically installed and the environment and recipes are pre-configured. The developer can then use the environment to deploy and test their applications using Radius.
-
-#### Bran can use GitOps to deploy and manage a Radius application in production
-
-Bran is a developer who uses GitOps to automate the deployment of Radius applications to production Kubernetes clusters. His infrastructure team has set up a Radius installation and environment on the production cluster, and Bran wants to deploy his application using Radius. He has authored a Bicep manifest that defines the resources for his application and a Bicep parameters file that specifies the parameters for the manifest. He commits the Bicep manifest and parameters file to a Git repository.
-
-When the GitOps tool watches the repository and applies the Bicep manifest and parameters file to the production cluster, the Radius resources defined in the Bicep manifest are deployed. The application is deployed and Bran can manage the application using GitOps practices.
-
-#### Sam can use GitOps to patch a Radius application in production
-
-Sam is an SRE who is responsible for maintaining a Radius application in production. He notices that the application is experiencing performance issues and the number of application container replicas needs to be increased. He updates the Bicep parameters file for the application to specify the new number of replicas, and commits the changes to a Git repository.
-
-When the GitOps tool watches the repository and applies the BicepDeployment resource to the production cluster, the Radius resources defined in the Bicep manifest are updated with the new parameters. The application container replicas are increased, and the performance issues are resolved.
+Please see the [Radius + GitOps Feature Spec]() for user scenarios. This design is focused on the technical implementation details required to support Flux in Radius.
 
 ## Design
 
@@ -116,7 +105,7 @@ treats the components as black boxes. Provide a pointer to a more detailed
 design document, if one exists. 
 -->
 
-This design proposes a new component, the Flux Controller, that integrates Radius with Flux. It will be implemented as a Kubernetes Controller following the [flux source watcher](https://fluxcd.io/flux/gitops-toolkit/source-watcher/) extensibility pattern. This controller will be responsible for reacting to changes to `.bicep` and `.bicepparam` files in the Flux source controller, compiling the Bicep manifests, and creating or updating `BicepDeployment` resources on the Kubernetes cluster. These `BicepDeployment` resources will in turn be managed by the BicepDeployment Controller, which will be responsible for interacting with Radius directly to deploy and manage these resources.
+This design proposes a new Radius controller, the Radius Flux Controller, that subscribes to notifications from the Flux Source Controller when `.bicep` and `.bicepparam` files are updated in the source git repository. The controller will then compile the Bicep manifests and create, update, or delete `BicepDeployment` resources on the Kubernetes cluster as necessary.
 
 ### Architecture Diagram
 <!--
@@ -152,9 +141,11 @@ considered during the design process.
 
 #### Flux Controller
 
-> Note: this feature area hasn't been fully designed yet. This is a placeholder for the detailed design. Let's brainstorm in the design meeting if we have time.
+TODO
 
-The Radius Flux Controller will be a Kubernetes controller, based on the [Flux source watcher](https://fluxcd.io/flux/gitops-toolkit/source-watcher/) pattern to watch for changes to `.bicep` and `.bicepparam` files in the Flux source controller. When a change is detected, the controller will compile the Bicep manifests and create or update `BicepDeployment` resources on the Kubernetes cluster. The controller is responsible for compiling Bicep manifests, so it will need to construct a "file system" that the Bicep compiler can use to resolve dependencies. We will need to think about how to handle these resources in an async manner, probably using a pattern and control loop similar to the [Flux Kustomize Controller](https://fluxcd.io/flux/components/kustomize/) design.
+The Radius Flux Controller will be a Kubernetes controller, based on the [Flux source watcher](https://fluxcd.io/flux/gitops-toolkit/source-watcher/) pattern to watch for changes to `.bicep` and `.bicepparam` files in the Flux source controller. When a change is detected, the controller will compile the Bicep manifests and create or update `BicepDeployment` resources on the Kubernetes cluster. The controller is responsible for compiling Bicep manifests, so it will need to construct a "file system" that the Bicep compiler can use to resolve dependencies.
+
+if the bicep file was there, and now it's not, delete the exising CRD
 
 #### Advantages (of each option considered)
 <!--
