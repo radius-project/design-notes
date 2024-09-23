@@ -39,7 +39,6 @@ This document offers prescriptive guidance labeled as follows:
 
 :no_entry: **DO NOT** adopt this pattern. If you feel you need an exception, present your reason at a design review discussion **prior** to implementation.
 
-
 ## API Foundation:
 
 Radius provides an HTTP-based API that deploys and manages cloud-native applications as well as on-premise or cloud resources.
@@ -124,7 +123,6 @@ env: {
 
 ```
 
-
 ### SecretConfig Model
 
 <a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** follow this structure when a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
@@ -170,5 +168,3 @@ recipeConfig: {
 }
 
 ```
-
-
