@@ -145,10 +145,9 @@ The properties in the extender resource are free form key value pairs. The user 
 | Solution | Description | Challenges |
 |----------|-------------|------------|
 | Kubernetes CRD| Kubernetes Custom Resource Definitions (CRDs) are a way to extend the Kubernetes API and create custom resource types. CRDs allow users to define their own resource types and controllers to manage those resources. CRDs are widely used in the Kubernetes ecosystem to create custom resources for various use cases. | Complicated to author CRDs ; Versioning and Maintenance ; Ensuring backward compatibility |
-| Crossplane XRD| Built on top of Kubernetes CRDs  |  |
+| Crossplane XRD| Composite resource definitions(XRDs) in turn creates Kubernetes CRDs and requires fewer configurations | Too much YAML ; still tedious to write; debugging and troubleshooting claims os challenging (following the chain of references ) |
 
-## Existing user problem
-<!-- <Write this in first person. You basically want to summarize what “I” as a user am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on your work and or business.> -->
+## User requirements
 
 As a platform engineer, I want to build a custom platform for application development with the following requirements 
 
@@ -179,7 +178,7 @@ We need to support both the schema formats to author a user defined type in Radi
 | Terminology | Description | Example |
 |-------------|-------------|---------|
 |Resource type | A service or technology that can be modeled as a resource | Eg : PostgreSQL or AWS S3 or Internal messaging service |
-|Resource provider | Resource provider refers to a group of resource types under a common namespace. Resource providers are entities that implement the group of resource types | Eg: Contoso.Messaging or Applications.Core |
+|Resource provider | Resource provider refers to a group of resource types under a common namespace. Resource providers are also entities that implement the group of resource types | Eg: Contoso.Messaging or Applications.Core |
 
 **Note: The user experience detailed below is an illustrative example of how the user interacts with the feature. The actual user experience may vary based on the implementation. It will be covered in the child feature spec documents**
 
@@ -265,14 +264,14 @@ We need to support both the schema formats to author a user defined type in Radi
     1. Deb registers the schema in Radius
         
         ```bash
-        rad resource-provider register Contoso.Messaaging --template-kind typespec -e myenv 
+        rad resource-provider register Contoso.Messaaging --template-kind typespec  
         ```
         Radius complies the schema and registers the custom resource type Plaid in UCP
 
     1. Deb lists the resources types he has in his environment
 
         ```bash
-        rad resource-provider list -e myenv
+        rad resource-provider list 
         ```
         Radius lists the resource providers that Deb has registered in his environment
 
