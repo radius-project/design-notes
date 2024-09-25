@@ -88,7 +88,7 @@ If you have an existing issue that describes the user scenarios, please
 link to that issue instead.
 -->
 
-Please see the [Radius + GitOps Feature Spec]() for user scenarios. This design is focused on the technical implementation details required to support Flux in Radius.
+Please see the [Radius + GitOps Feature Spec](https://github.com/radius-project/design-notes/blob/main/tools/2024-06-gitops-feature-spec.md) for user scenarios. This design is focused on the technical implementation details required to support Flux in Radius.
 
 ## Design
 
@@ -115,7 +115,7 @@ components interact with each other in the context of this proposal.
 Include separate high level architecture diagram and component specific diagrams, wherever appropriate.
 -->
 
-![Architecture Diagram](2024-09-gitops-flux/architecture.png)
+![Architecture Diagram](2024-09-flux-controller/architecture.png)
 
 ### Detailed Design
 
@@ -141,11 +141,10 @@ considered during the design process.
 
 #### Flux Controller
 
-TODO
-
 The Radius Flux Controller will be a Kubernetes controller, based on the [Flux source watcher](https://fluxcd.io/flux/gitops-toolkit/source-watcher/) pattern to watch for changes to `.bicep` and `.bicepparam` files in the Flux source controller. When a change is detected, the controller will compile the Bicep manifests and create or update `BicepDeployment` resources on the Kubernetes cluster. The controller is responsible for compiling Bicep manifests, so it will need to construct a "file system" that the Bicep compiler can use to resolve dependencies.
 
-if the bicep file was there, and now it's not, delete the exising CRD
+Some edge cases to consider:
+* If the bicep file was there, and now it's not, delete the exising CRD
 
 #### Advantages (of each option considered)
 <!--
@@ -264,6 +263,8 @@ Describe (Q&A format) the important unknowns or things you're not sure about.
 Use the discussion to answer these with experts after people digest the 
 overall design.
 -->
+
+Should we package the `radius-flux-controller` in-process with the `radius-controller` or outside of it?
 
 ## Alternatives considered
 
