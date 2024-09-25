@@ -50,13 +50,17 @@ Reference:
 - [Radius API](https://docs.radapp.io/concepts/technical/api/)
 - [Radius Architecture](https://docs.radapp.io/concepts/technical/architecture/)
 
+## Guidelines
+
+### Resource Property Design
+
 <a href="#secrets" name="secrets"></a>
-### SECRETS
+### Secrets
 
 Radius enables users to securely store sensitive data, such as passwords, OAuth tokens, and SSH keys, in [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
 The secrets are stored in secret store resource [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/)
 
-`SecretReference` and `SecretConfig` are entities prescribed to ensure sensitive information is handled securely and consistently across different components and resources in Radius. The following are their definitions along with usage examples:
+Our TypeSpec definitions provide the `SecretReference` and `SecretConfig` model types to standardize usage. These are prescribed to ensure sensitive information is handled securely and consistently across different components and resources in Radius. The following are their definitions along with usage examples:
 
 ### SecretReference Model
 
@@ -75,12 +79,15 @@ model SecretReference {
 
 ```        
 
-#### Usage of SecretReference in EnvironmentVariables:
+#### Usage of SecretReference
 
-<a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **DO** The above model for Secrets should be utilized for handling sensitive information through environment variables. 
+<a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **DO** use the `SecretReference` type to reference a single (scalar) secret value in a resource property. Resource properties should reference a `Applications.Core/secretStores` instead of directly containing secret data.
+
+This pattern simplifies the overall design of Radius by reducing the number of places where we store secret data. 
 This solution is in alignment with Kubernetes design patterns. The structure also allows for environment variables to refer to other resources such as ConfigMaps, Pod Fields etc. in the future. 
 Examples include cases where environment variables containing sensitive information are injected into a container or used in a Terraform execution process.
 
+#### Example TypeSpec Definition
 
 ```
 
@@ -105,7 +112,7 @@ model EnvironmentVariableReference {
 
 ```
 
-#### Example in Bicep
+#### Example Bicep Definition
 
 ```bicep
 
@@ -137,9 +144,13 @@ model SecretConfig {
 
 ```        
 
-#### Using SecretConfig for Git repository access
+#### Usage of SecretConfig
 
-<a href="#secretconfig-ext" name="secretconfig-ext">:white_check_mark:</a> **DO** In the following example SecretConfig is used to manage authentication for accessing private Terraform modules from Git repository sources.
+<a href="#secretconfig-ext" name="secretconfig-ext">:white_check_mark:</a> **DO** use the SecretConfig type to reference a structured set of secret values in a resource property. Resource properties should reference a Applications.Core/secretStores instead of directly containing secret data.
+
+This pattern simplifies the overall design of Radius by reducing the number of places where we store secret data.
+
+#### Example TypeSpec Definition
 
 ```
 
@@ -151,7 +162,7 @@ model GitAuthConfig {
 
 ```
 
-#### Example in Bicep
+#### Example Bicep Definition
 
 ```bicep
 
