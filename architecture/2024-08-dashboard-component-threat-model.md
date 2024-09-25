@@ -13,48 +13,37 @@ It provides visual and textual representation of user's applications, environmen
 
 | Term                  | Definition      |
 | --------------------- | ----------------------------- |
-| mTLS | Mutual Transport Layer Security (mTLS) allows two parties to authenticate each other during the initial connection of an SSL/TLS handshake. |
-| UCPD | Universal Control Plane Daemon for Radius |
+| UCP | Universal Control Plane for Radius |
 | DoS | Denial of Service |
-| SPA | Single Page Application (SPA): Typically a React application that contains the logic for most user interactions within the React components. SPAs do not require reloading the page from the server during user interactions. |
+| React Application | A web application built using the React library, which allows for the creation of dynamic and interactive user interfaces through a component-based architecture|
 
 ## System Description
 
-The Dashboard component is an SPA built as [Backstage](https://backstage.io/) plugin. It is a client of Radius API. It queries the graph of an application or a list of environment and constructs a visual representation of the response.
+The Dashboard component is an instance of [Backstage](https://backstage.io/). We customize Backstage by installing a Radius plugin and the community-supported Kubernetes plugin. The Dashboard is a client of the Radius API. It queries the graph of an application or a list of environment and constructs a visual representation of the response.
 
 ### Architecture
 
 ![Dashboard Architecture](2024-08-dashboard-component-threat-model/dashboard-arch.png)
 
-Given that the Radius Dashboard is developed as a Backstage plugin, it is essential to first examine the Backstage architecture. Backstage provides a core Single Page Application (SPA), a core backend, and the ability to configure a desired database. The core functionality can be enhanced using plugins.
+Since we are shipping an instance of Backstage, it is essential to first examine the Backstage architecture. Backstage provides a core Single Page Application (SPA), a core backend, and the ability to configure a desired database. The core functionality can be enhanced using plugins.
 
-To deploy the Radius Dashboard as a Backstage plugin, we have implemented a Radius SPA plugin that integrates with the core Backstage SPA, and a Radius backend plugin that integrates with the core Backstage backend. While the backend can technically be accessed directly, our setup restricts this access. We configured the Radius Dashboard App to use a lightweight, in-memory SQLite database, which stores no data and is not accessible directly from outside.
+We have implemented a Radius SPA plugin that integrates with the core Backstage SPA, and a Radius backend plugin that integrates with the core Backstage backend. While the backend can technically be accessed directly, our setup restricts this access. We configured the Radius Dashboard App to use a lightweight, in-memory SQLite database, which stores no data and is not accessible directly from outside.
 
 This application is run as dashboard pod in radius-system namespace along with other Radius pods. 
 
 ### Implementation Details
 
-The Radius Dashboard is developed as a Backstage Plugin, making it dependent on the Backstage framework for both display and backend functionality. For detailed information on Backstage's threat model, refer to the [Backstage Threat Model](https://backstage.io/docs/overview/threat-model/).
+The Radius Dashboard is an instance of Backstage, making it dependent on the Backstage framework for both display and backend functionality. For detailed information on Backstage's threat model, refer to the [Backstage Threat Model](https://backstage.io/docs/overview/threat-model/).
 
-The application uses three config files: app-config.yaml, app-config.local.yaml,
+The application uses two config files: app-config.yaml, 
 app-config.dashboard.yaml. 
 
-app-config.local.yaml has settings for dev environment and merges and overlays the configs in app-config.yaml. 
-app-config.dashboard.yaml has settings for dashboard installation as part of Radius installation. This again merges and overlays the configs in app-config.yaml. 
+app-config.dashboard.yaml has settings for dashboard installation as part of Radius installation. This merges and overlays the configs in app-config.yaml. 
 
 We have used these files to configure our application to
 
 1. allow communication using Radius API. The data for rendering Radius visuals is obtained by calling different Radius APIs. 
 
-```
-app-config.local.yaml:
-backend:
-  # Allow the backend to make requests to the local Kubernetes cluster.
-  reading:
-    allow:
-      - host: localhost:8001
-      - host: 127.0.0.1:8001
-```
 ```
 app-config.dashboard.yaml
 
@@ -88,7 +77,7 @@ backend:
   listen: ':7007'
 ```
 
-1.  use sqlite DB. This is light weight, not accessible to users directly and contains no useful information.
+3.  use sqlite DB. This is light weight, not accessible to users directly and contains no useful information.
   
 ```
 app-config.yaml :
@@ -122,25 +111,19 @@ The primary user of Dashboard is browser. At present, we dont have any other Bac
 We have a few different trust boundaries for the Dashboard component:
 
 - **Kubernetes Cluster**: The overall environment where the Dashboard component operates and serves clients.
-- **Namespaces within the Cluster**: Logical partitions within the cluster to separate and isolate resources and workloads.
+- **Namespaces within the Cluster**: Logical partitions within the cluster to separate and isolate resources and workloads. 
 
-#### Key Points of Namespaces
+The Dashboard component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCP also resides within the same namespace.
 
-1. **Isolation of Resources and Workloads**: Different namespaces separate and isolate resources and workloads within the Kubernetes cluster.
-2. **Access Controls and Permissions**: Access controls and other permissions are implemented to manage interactions between namespaces.
-3. **Separation of Concerns**: Namespaces support the separation of concerns by allowing different teams or applications to manage their resources independently, reducing the risk of configuration errors and unauthorized changes.
+Namespaces within Kubernetes can help set Role-Based Access Control (RBAC) policies.
 
-The Dashboard component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCPD also resides within the same namespace.
+The webapp portal is accessible to various configured users. Summarizing from [Backstage threat model](https://backstage.io/docs/overview/threat-model/), these users could belong to one of these trust levels:
 
-The webapp portal is accessible to various configured users. Quoting from Backstage threat model, these users could belong to one of these trust levels:
+**Internal users** and **Operators**:** are trusted team members who use or maintain an instance of Backstage.
 
-**An internal user** is an authenticated user that generally belongs to the organization of a particular Backstage deployment. These users are trusted to the extent that they are not expected to compromise the availability of Backstage, but they are not trusted to not compromise data confidentiality or integrity.
+**A builder** is an internal or external code contributor and end up having a similar level of access as operators. 
 
-**An operator**:** is a user responsible for configuring and maintaining an instance of Backstage. Operators are fully trusted, since they operate the system and database and therefore have root access to the host system. Additional measures can be taken by adopters of Backstage in order to restrict or observe the access of this group, but that falls outside of the current scope of Backstage.
-
-**A builder** is an internal or external code contributor and end up having a similar level of access as operators. When installing Backstage plugins you should vet them just like any other package from an external source. While it’s possible to limit the impact of for example a supply chain attack by splitting the deployment into separate services with different plugins, the Backstage project itself does not aim to prevent these kinds of attacks or in any other way sandbox or limit the access of plugins.
-
-**An external user** is a user that does not belong to the other two groups, for example a malicious actor outside of the organization. The security model of Backstage currently assumes that this group does not have any direct access to Backstage, and it is the responsibility of each adopter of Backstage to make sure this is the case.
+**An external user** is a user that does not belong to the above two groups, for example a malicious actor outside of the organization. The security model of Backstage currently assumes that this group does not have any direct access to Backstage, and it is the responsibility of each adopter of Backstage to make sure this is the case.
 
 Users that are signed-in in to Backstage generally have full access to all information and actions. If more fine-grained control is required, the permissions system should be enabled and configured to restrict access as necessary.
 
@@ -191,6 +174,8 @@ Due to the volume of requests Dashboard as well as the UCP, AppCore-RP component
    
 **Mitigation**:
 
+Add Radius documentation to capture the below mitigation steps if and when the user chooses to make Backstage available for multiple users.
+
 1. Access to Dashboard should be provided to trusted users.  The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary.
    
 **Status**:
@@ -215,6 +200,8 @@ A malicious user can utilize the app graph to stage effective attack by targetin
 
 **Mitigation**:
 
+Add Radius documentation to capture the below mitigation steps if and when the user chooses to make Backstage available for multiple users.
+
 1. Access to Dashboard portal should be provided to trusted users. While we dont expose any secrets in db, users should still enable authentication and secure access to data based on roles.
    
 **Status**:
@@ -230,7 +217,7 @@ Active. Operators are expected to configure the [Backstage  permissions system](
 #### Threat 3: Spoofing dashboard service-account can cause DoS 
 **Description**
 
-If an unauthorized user or malicious actor gtampers with cluster,
+If an unauthorized user or malicious actor tampers with cluster,
 he can create services with dashboard service-account to send Radius API requests. 
 
 **Impact**:
@@ -255,7 +242,7 @@ rules:
 
 **Mitigation**:
 
-Tampering with the dashboard service-account or creating malicious services would require access to modify the radius-system namespace. Our threat model assumes that the operator has limited access to the radius-system namespace using Kubernetes' existing RBAC mechanism.
+Tampering with the dashboard service-account or creating malicious services would require access to modify the radius-system namespace. Our threat model assumes that the operator has limited access to the radius-system namespace using Kubernetes' existing RBAC mechanism. We should also revisit the threat model and provide a more robust set of authorization controls when granular authorization policies are added to Radius.
    
 **Status**:
 
@@ -271,7 +258,7 @@ If an unauthorized user or malicious actor gathers data used to construct the pa
 
 **Mitigation**:
 
-1. Dashboard is not intended to be public-facing. If a decision is taken to make it public, it should be configured to use HTTPS and The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary.
+1. Dashboard is not intended to be public-facing. If a decision is taken to make it public, it should be configured to use HTTPS and The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary. We should capture this as a neccessary step if user chooses to expose Dashboard over internet.
    
 **Status**:
 
@@ -283,9 +270,18 @@ they should configure Dashboard to use HTTPS if it is public-facing.
 
 ## Action Items
 
-1. Dashboard should be accessed only on HTTPS if it should be available outside cluster. Currently, we can access the application on http but since we only access the application on localhost using =kubernetes port-forward, this is OK. 
- 
-2. Enable authentication on Dashboard. This could be tied to RBAC support on Radius, since we might want the same users to be allowed dashboard logins by default with permissions configured using Backstage permission system.
+
+1. We should provide Radius documentation that captures below guidelines to be followed if a customer chooses to allow Dashboard access to multiple users and/ or make dashboard public facing. 
+
+   1. Dashboard should be accessed only on HTTPS if it should be available outside cluster. Currently, we can access the application on http but since we only access the application on localhost using kubernetes port-forward, this is OK. 
+    
+   2. Enable authentication on Dashboard. This could be tied to RBAC support on Radius, since we might want the same users to be allowed dashboard logins by default with permissions configured using Backstage permission system.
+
+   3. The Backstage permissions system should be enabled and configured to restrict access as necessary. 
+   
+[#105](https://github.com/radius-project/dashboard/issues/105) logged to capture this effort.
+   
+1. Revisit threat model when we have RBAC support in Radius and fine tune permissions on Dashboard resources.
 
 ## Review Notes
 
