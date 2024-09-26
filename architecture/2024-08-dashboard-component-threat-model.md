@@ -113,11 +113,10 @@ We have a few different trust boundaries for the Dashboard component:
 - **Kubernetes Cluster**: The overall environment where the Dashboard component operates and serves clients.
 - **Namespaces within the Cluster**: Logical partitions within the cluster to separate and isolate resources and workloads. 
 
-The Dashboard component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCP also resides within the same namespace.
+The Dashboard component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCP also resides within the same namespace.Namespaces within Kubernetes can help set Role-Based Access Control (RBAC) policies.
 
-Namespaces within Kubernetes can help set Role-Based Access Control (RBAC) policies.
-
-The webapp portal is accessible to various configured users. Summarizing from [Backstage threat model](https://backstage.io/docs/overview/threat-model/), these users could belong to one of these trust levels:
+Also, the dashboard webapp portal is accessible to various configured users.
+Users that are signed-in in to Backstage generally have full access to all information and actions. If more fine-grained control is required, the permissions system should be enabled and configured to restrict access as necessary. Summarizing from [Backstage threat model](https://backstage.io/docs/overview/threat-model/), the users could belong to one of these trust levels:
 
 **Internal users** and **Operators**:** are trusted team members who use or maintain an instance of Backstage.
 
@@ -125,7 +124,7 @@ The webapp portal is accessible to various configured users. Summarizing from [B
 
 **An external user** is a user that does not belong to the above two groups, for example a malicious actor outside of the organization. The security model of Backstage currently assumes that this group does not have any direct access to Backstage, and it is the responsibility of each adopter of Backstage to make sure this is the case.
 
-Users that are signed-in in to Backstage generally have full access to all information and actions. If more fine-grained control is required, the permissions system should be enabled and configured to restrict access as necessary.
+Users should be given access based on the trust level he/she belongs to using the Backstage permissions system.
 
 This web application is not intended to be public-facing; it is available on the intranet for use by both development and operations personnel working on a radified application using kubernetes port-forward
 ```
@@ -178,13 +177,13 @@ Add Radius documentation to capture the below mitigation steps if and when the u
 
 1. Access to Dashboard should be provided to trusted users.  The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary.
    
-**Status**:
+***Status***:
 
 Active. Operators are expected to configure the system and limit access to Dashboard portal. 
 
 2. Audit logs should be enabled to monitor and report on suspicious user activity. 
 
-**Status**
+***Status***
 
 [In Progress](https://github.com/backstage/backstage/issues/23950)
 
@@ -204,13 +203,13 @@ Add Radius documentation to capture the below mitigation steps if and when the u
 
 1. Access to Dashboard portal should be provided to trusted users. While we dont expose any secrets in db, users should still enable authentication and secure access to data based on roles.
    
-**Status**:
+***Status***:
 
 Active. Operators are expected to configure the [Backstage  permissions system](https://backstage.io/docs/permissions/overview) to restrict access as necessary. 
 
 2. Audit logs should be enabled to monitor and report on suspicious user activity. 
 
-**Status**
+***Status***
 
 [In Progress](https://github.com/backstage/backstage/issues/23950)
 
@@ -244,7 +243,7 @@ rules:
 
 Tampering with the dashboard service-account or creating malicious services would require access to modify the radius-system namespace. Our threat model assumes that the operator has limited access to the radius-system namespace using Kubernetes' existing RBAC mechanism. We should also revisit the threat model and provide a more robust set of authorization controls when granular authorization policies are added to Radius.
    
-**Status**:
+***Status***:
 
 Active. Operators are expected to secure their cluster and limit access to the radius-system namespace. 
 
@@ -260,13 +259,14 @@ If an unauthorized user or malicious actor gathers data used to construct the pa
 
 1. Dashboard is not intended to be public-facing. If a decision is taken to make it public, it should be configured to use HTTPS and The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary. We should capture this as a neccessary step if user chooses to expose Dashboard over internet.
    
-**Status**:
+***Status***:
 
 Active. Operators are expected to limit access to Dashboard portal. Further, 
 they should configure Dashboard to use HTTPS if it is public-facing.
 
 ## Open Questions
 
+None
 
 ## Action Items
 
