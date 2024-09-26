@@ -803,3 +803,5 @@ customizable
 implementers
 azureWorkloadIdentity
 untrusted
+SecretConfig
+ConfigMaps
