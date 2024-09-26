@@ -778,3 +778,8 @@ contrib
 carte
 customizable
 implementers
+DoS
+ConfigStructuresqlite
+ApplicationsCore
+con
+ApplicationsCore-RP 
