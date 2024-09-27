@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document provides a threat model for the Radius Dashboard component. It identifies potential security threats to this part of Radius and suggests possible mitigations. The document includes an analysis of the system, its assets, identified threats, and recommended security measures to protect the system.
+This document provides a threat model for the Radius Dashboard component. It identifies potential security threats to this part of Radius and suggests possible mitigation. The document includes an analysis of the system, its assets, identified threats, and recommended security measures to protect the system.
 
 The Radius Dashboard component provides the frontend experience for Radius. 
 It provides visual and textual representation of user's applications, environments and recipes.
@@ -157,7 +157,7 @@ This threat model assumes that:
 2. Request reaches the dashboard pod in `radius-system` namespace in kubernetes cluster.
 3. The dashboard service sends a Radius API request to UCP.
 4. UCP works with ApplicationsCore-RP and sends response back to Dashboard SPA.
-5. Dashboard SPA contructs the visuals using components from backstage core, rad-component and data in API response and responds with appropriate page to the user. 
+5. Dashboard SPA constructs the visuals using components from backstage core, rad-component and data in API response and responds with appropriate page to the user. 
 
 ### Threats
  
@@ -169,7 +169,7 @@ A client can access Dashboard repeatedly or fetch the page in a loop.
 
 **Impact**
 
-Due to the volume of requests Dashboard as well as the UCP, AppCore-RP components involved in serving the request could run out of resource to serve a legitimate request.
+Due to the volume of requests Dashboard as well as the UCP, ApplicationsCore-RP components involved in serving the request could run out of resource to serve a legitimate request.
    
 **Mitigation**:
 
@@ -201,7 +201,7 @@ A malicious user can utilize the app graph to stage effective attack by targetin
 
 Add Radius documentation to capture the below mitigation steps if and when the user chooses to make Backstage available for multiple users.
 
-1. Access to Dashboard portal should be provided to trusted users. While we dont expose any secrets in db, users should still enable authentication and secure access to data based on roles.
+1. Access to Dashboard portal should be provided to trusted users. While we do not expose any secrets in db, users should still enable authentication and secure access to data based on roles.
    
 ***Status***:
 
@@ -257,7 +257,7 @@ If an unauthorized user or malicious actor gathers data used to construct the pa
 
 **Mitigation**:
 
-1. Dashboard is not intended to be public-facing. If a decision is taken to make it public, it should be configured to use HTTPS and The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary. We should capture this as a neccessary step if user chooses to expose Dashboard over internet.
+1. Dashboard is not intended to be public-facing. If a decision is taken to make it public, it should be configured to use HTTPS and The [Backstage  permissions system](https://backstage.io/docs/permissions/overview) should be enabled and configured to restrict access as necessary. We should capture this as a necessary step if user chooses to expose Dashboard over internet.
    
 ***Status***:
 
