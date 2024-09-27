@@ -824,3 +824,6 @@ cryptographically
 SHA
 sha
 rfc
+configs
+sqlite
+ApplicationsCore

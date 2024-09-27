@@ -104,7 +104,7 @@ None
 
 ### Clients
 
-The primary user of Dashboard is browser. At present, we dont have any other Backstage plugin that cloud be a Radius Dashboard client but that could change in future. 
+The primary user of Dashboard is browser. At present, we don't have any other Backstage plugin that cloud be a Radius Dashboard client but that could change in future. 
 
 ## Trust Boundaries
 
