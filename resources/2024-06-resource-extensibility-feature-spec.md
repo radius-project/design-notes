@@ -78,7 +78,7 @@ Today Radius enables users to get started on contributing to Radius with good-fi
 
 ### Scenario 1: Deb integrates the Budgets app with Radius
 
-Deb, a platform engineer at a Financial Services company who is responsible for building the custom internal developer platform. He has started the journey to enable radification one of their Budgets app. The Budgets app relies on an internal messaging service called Plaid. Deb wants to use Plaid as a resource type in Radius to deploy the application seamlessly. Deb needs a to author, register and deploy Plaid as a user defined type in Radius without having to write Go code to integrate with Radius components. This will enable his team, IT operators and application developers to leverage all the features of Radius, such as Recipes, Connections, and the rad CLI, with ease and flexibility.
+Deb, a platform engineer at a Financial Services company who is responsible for building the custom internal developer platform. He has started the journey to enable radification one of their Budgets app. The Budgets app relies on an internal messaging service called Plaid. Deb wants to use Plaid as a resource type in Radius to deploy the application seamlessly and leverage all the features of Radius, such as Recipes, Connections, and the rad CLI, with ease and flexibility.
 
 ### Scenario 2: Amy contributes and open-sources PostgreSQL support to Radius
 
