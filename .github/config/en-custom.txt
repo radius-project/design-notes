@@ -803,3 +803,11 @@ customizable
 implementers
 azureWorkloadIdentity
 untrusted
+DoS
+ConfigStructuresqlite
+ApplicationsCore
+con
+configs
+sqlite
+dont
+ApplicationsCore-RP 
