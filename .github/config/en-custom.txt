@@ -847,4 +847,8 @@ integrators
 IntelliSense
 radification
 openAPI
-
+discoverable
+os
+plaidDescription
+plaidName
+plaidQueue

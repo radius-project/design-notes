@@ -186,7 +186,7 @@ We need to support both the schema formats to author a user defined type in Radi
 
     **Pre-requisites**: User has typespec compiler/CLI installed
 
-    1. Deb uses the radCLI to scaffold a template typespec definition
+    1. Deb uses the rad CLI to scaffold a template typespec definition
 
         ```bash
         rad resource-provider init Contoso.Messaaging --template-kind typespec
