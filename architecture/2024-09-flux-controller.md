@@ -191,12 +191,6 @@ the specific sub-components that will be updated, for example, controller, proce
 recipe engine, driver, to name a few.
 -->
 
-#### UCP (if applicable)
-#### Bicep (if applicable)
-#### Deployment Engine (if applicable)
-#### Core RP (if applicable)
-#### Portable Resources / Recipes RP (if applicable)
-
 ### Error Handling
 <!--
 Describe the error scenarios that may occur and the corresponding recovery/error handling and user experience.

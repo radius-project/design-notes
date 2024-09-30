@@ -16,14 +16,17 @@ Today, Radius users are unable to deploy resources defined in Bicep manifests us
 
 **CR (Custom Resource)**: An instance of a CRD that represents a custom resource in Kubernetes.
 
+**Kubernetes Tools**: Tools that exist in the Kubernetes ecosystem and operate on kubernetes resources. Examples include `helm`, GitOps tools such as `Flux` and `ArgoCD`, and `kubectl`.
+
 **Bicep**: An infrastructure-as-code language that when used with Radius, can deploy Radius resources, Azure resources, and AWS resources.
  
 ## Objectives
 
 ### Goals
 
-**Goal: Users can use Kubernetes tooling to deploy and manage resources defined in Bicep manifests**
+**Goal: Users can use Kubernetes tooling to continuously deploy and manage resources defined in Bicep manifests**
 - With this work, users will be able to deploy resources defined in Bicep using only Kubernetes. We will essentially be providing a "translation layer" between Kubernetes resources (that Kubernetes tools can understand) and Radius resources (that Radius can understand).
+- With this work, users can rely on the `BicepDeploymentController` to repair drift from the desired state, and to perform disaster recovery. These are benefits users can't get from `rad deploy` or `az deployment create`.
 
 **Goal: Users can quickly generate a Kubernetes Custom Resource from Bicep using the Radius CLI**
 - We will provide a CLI command that generates the BicepDeployment resource from a Bicep manifest to make this feature easy to adopt.
@@ -33,7 +36,7 @@ Today, Radius users are unable to deploy resources defined in Bicep manifests us
 
 ### Non-goals
 
-**Non-goal: Full support for GitOps**
+**Non-goal (out of scope): Full support for GitOps**
 
 - We will not yet be implementing automatic generation of BicepDeployment resources from Bicep manifests or querying Git repositories. This design will enable this work, and it will be covered in a future design document.
 
@@ -41,7 +44,7 @@ Today, Radius users are unable to deploy resources defined in Bicep manifests us
 
 #### Jon can deploy cloud (Azure or AWS) resources defined in Bicep manifests using Kubernetes tools
 
-Jon is an infrastructure operator for an enterprise company. His team manages a production application that is deployed on Kubernetes and uses cloud resources. Jon wants to declare all dependencies for his application in Kubernetes manifests, including cloud resources. He installs Radius on his cluster and uses the rad CLI to generate a custom resource from his Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the cloud resources defined in the Bicep manifest. If he wants to update or delete the cloud resources, he can do so by re-applying the updated custom resource or deleting the custom resource.
+Jon is an infrastructure operator for an enterprise company. His team manages a production application that is deployed on Kubernetes and uses cloud resources. Jon wants to declare all dependencies for his application in Kubernetes manifests, including cloud resources while leveraging Radius for its useful features. He installs Radius on his cluster and uses the rad CLI to generate a custom resource from his Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the cloud resources defined in the Bicep manifest. If he wants to update or delete the cloud resources, he can do so by re-applying the updated custom resource or deleting the custom resource.
 
 #### Jon can deploy Radius resources defined in Bicep manifests using Kubernetes tools
 
@@ -214,7 +217,7 @@ type BicepDeploymentStatus struct {
 	Operation *ResourceOperation `json:"operation,omitempty"`
 
 	// Phrase indicates the current status of the Bicep Deployment.
-	Phrase BicepDeploymentPhrase `json:"phrase,omitempty"`
+  Phrase BicepDeploymentPhrase `json:"phrase,omitempty"`
 
   // Message is a human-readable description of the status of the Bicep Deployment.
   Message string `json:"message,omitempty"`
