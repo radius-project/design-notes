@@ -827,3 +827,10 @@ rfc
 configs
 sqlite
 ApplicationsCore
+locational
+unregistration
+rollouts
+UDT
+UDTs
+encodings
+invariants
