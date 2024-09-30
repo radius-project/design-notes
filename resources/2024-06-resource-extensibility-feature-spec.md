@@ -222,7 +222,7 @@ We need to support both the schema formats to author a user defined type in Radi
         
         ![alt text](2024-06-resource-extensbility/errors.png)
 
-    1. Deb uses IntelliSense to autocomplete the schema and properties
+    1. Deb uses IntelliSense to auto complete the schema and properties
 
         ![alt text](2024-06-resource-extensbility/intellisense.png)
 
