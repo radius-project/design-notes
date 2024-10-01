@@ -171,7 +171,7 @@ First, we will create a custom YAML format that requires basic user inputs to de
 | Terminology | Description | Example |
 |-------------|-------------|---------|
 |Resource type | A service or technology that can be modeled as a resource | PostgreSQL or AWS S3 or Internal messaging service |
-|Resource provider | Resource provider refers to a group of resource types under a common namespace. Resource providers are also entities that implement the group of resource types | Contoso.Messaging or Applications.Core |
+|Resource provider | Resource provider refers to a group of resource types under a common namespace. Resource providers are also entities that implement the group of resource types | Mycompany.Messaging or Applications.Core |
 
 **Note: The user experience detailed below is an illustrative example of how the user interacts with the feature. The actual user experience may vary based on the implementation and will be covered in the child feature spec documents**
 
