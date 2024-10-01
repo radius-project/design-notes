@@ -151,11 +151,11 @@ As a platform engineer, I want to build a custom platform for application develo
 
 ## Proposed solution
 
-### Authoring, Registering and Deploying the user-defined types in Radius
+## Authoring, Registering and Deploying the user-defined types in Radius
 
 Define a schema for the user-defined type that my application uses in Radius. The schema defines the structure and properties of the custom resource type. The resource schema authoring tool provides guidance on auto-completion to help the user author the schema. 
 
-#### Schema authoring format
+### Schema authoring format
 
 | Schema Format | Why chose? | Why not to choose? | 
 |---------------|------------|-------------------|
@@ -164,9 +164,9 @@ Define a schema for the user-defined type that my application uses in Radius. Th
 
 First, we will create a custom YAML format that requires basic user inputs to define the schema for the user defined type in Radius for users to start using the feature. Following that, we will implement the Typespec authoring experience to provide users with more guidance and validation when authoring the schema.
 
-#### User experience
+### User experience
 
-##### Terminologies and concepts
+#### Terminologies and concepts
 
 | Terminology | Description | Example |
 |-------------|-------------|---------|
