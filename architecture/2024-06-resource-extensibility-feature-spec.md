@@ -134,7 +134,6 @@ resource extender 'Applications.Core/extenders@2023-10-01-preview' = {
   properties: {
     name : 'postgresql'
     sku : 'standard'
-    }
   }
 }
 ```
@@ -162,7 +161,7 @@ Define a schema for the user-defined type that my application uses in Radius. Th
 | OpenAPI YAML/JSON | More common and standard format across the open-source communities ; K8s CRDs follow the structure of Open API  | Managing versions and ensuring backward compatibility is challenging |
 | Typespec | Developer friendly; Maintenance and upgrades are easier; Errors and guidance violations at development time | Microsoft developed language; May not be widely adopted by the cloud-native communities ; Yet another language to adopt |
 
-First, we will create a custom YAML format that requires basic user inputs to define the schema for the user defined type in Radius for users to start using the feature. Following that, we will implement the Typespec authoring experience to provide users with more guidance and validation when authoring the schema.
+First, we will create a custom YAML format that requires basic user inputs to define the schema for the user defined type in Radius for users to start using the feature. Following that, based on the user feedback we may implement the Typespec authoring experience to provide users with more guidance and validation when authoring the schema.
 
 ### User experience
 
@@ -288,7 +287,7 @@ First, we will create a custom YAML format that requires basic user inputs to de
         ```
     The application is deployed with the custom resource type Plaid in Radius. Deb can iterate on the changes, compile and test the application with the custom resource type.
 
-    
+ **Note - This is an illustrative example of how the experience would be with typespec which may be implemented in future based on feedback**
 1. Amy is a system integrator who wants to author a custom resource PostgreSQL in Radius
 
     **Pre-requisites**: User has typespec compiler/CLI installed
