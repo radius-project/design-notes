@@ -26,7 +26,7 @@ Today, Radius users are unable to deploy resources defined in Bicep manifests us
 
 **Goal: Users can use Kubernetes tooling to continuously deploy and manage resources defined in Bicep manifests**
 - With this work, users will be able to deploy resources defined in Bicep using only Kubernetes. We will essentially be providing a "translation layer" between Kubernetes resources (that Kubernetes tools can understand) and Radius resources (that Radius can understand).
-- With this work, users can rely on the `DeploymentTemplateController` to repair drift from the desired state, and to perform disaster recovery. These are benefits users can't get from `rad deploy` or `az deployment create`.
+- With this work, users can rely on the `DeploymentTemplate` controller to repair drift from the desired state, and to perform disaster recovery. These are benefits users can't get from `rad deploy` or `az deployment create`.
 
 **Goal: Users can quickly generate a Kubernetes Custom Resource from Bicep using the Radius CLI**
 - We will provide a CLI command that generates the DeploymentTemplate resource from a Bicep manifest to make this feature easy to adopt.
@@ -184,11 +184,11 @@ This design proposes the creation of two new Kubernetes custom resources and the
 
 ### Architecture Diagram
 
-![Architecture Diagram](2024-08-DeploymentTemplate-controller/architecture.png)
+![Architecture Diagram](2024-10-deploymenttemplate-controller/architecture.png)
 
 ### Detailed Design
 
-#### DeploymentTemplate Custom Resource Definition
+#### `DeploymentTemplate` Custom Resource Definition
 
 The `DeploymentTemplate` CRD will be a new Kubernetes CRD that will be used to contain the ARM JSON manifest and parameters. The CRD will have the following fields:
 
@@ -209,6 +209,12 @@ type DeploymentTemplateSpec struct {
 type DeploymentTemplateStatus struct {
   // ObservedGeneration is the most recent generation observed for this DeploymentTemplate.
   ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+  // Template is the ARM JSON manifest that defines the resources to deploy.
+  Template string `json:"template"`
+
+  // Parameters is the ARM JSON parameters for the template.
+  Parameters string `json:"parameters"`
   
   // Scope is the resource id of the Radius scope.
   Scope string `json:"scope,omitempty"`
@@ -254,11 +260,17 @@ The `DeploymentResource` CRD is another CRD that will be responsible for trackin
 ```go
 // DeploymentResourceSpec defines the desired state of a Deployment Resource.
 type DeploymentResourceSpec struct {
+  // Scope is the resource ID of the scope.
+	Scope string `json:"scope,omitempty"`
+
   // ResourceId is the Radius resource Id.
   ResourceId string `json:"resourceId"`
 }
 
 type DeploymentTemplateResourceStatus struct {
+  // Scope is the resource ID of the scope.
+	Scope string `json:"scope,omitempty"`
+
   // ObservedGeneration is the most recent generation observed for this DeploymentTemplateResource.
   ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
@@ -310,8 +322,8 @@ The `radius-controller` will be updated to include a new reconciler that reconci
         4. Continue processing.
     3. If the operation failed, then update the `status.phrase` and `status.message` as `Failed` with the reason for the failure and continue processing.
 2. If the `DeploymentTemplate` is being deleted, then process deletion:
-    1. Check the cluster for and `DeploymentResource` resources that have this `DeploymentTemplate` as their owner. If any exist, queue another reconcile operation and continue processing.
-    2. If there are no `DeploymentResource` resources found, then remove the finalizer from the `DeploymentTemplate` and continue processing. This will allow the `DeploymentTemplate` to complete its deletion.
+    1. Remove the `radapp.io/deployment-template-finalizer` finalizer from the `DeploymentTemplate`.
+    1. Since the `DeploymentResources` are owned by the `DeploymentTemplate`, the `DeploymentResource` resources will be deleted first. Once they are deleted, the `DeploymentTemplate` resource will be deleted.
 4. If the `DeploymentTemplate` is not being deleted then process this as a create or update:
     1. Add the `radapp.io/deployment-template-finalizer` finalizer onto the `DeploymentTemplate` resource.
     2. Queue a PUT operation against the Radius API to deploy the ARM JSON in the `spec.template` field with the parameters in the `spec.parameters` field.
@@ -324,10 +336,13 @@ The `radius-controller` will be updated to include a new reconciler that reconci
 
 1. Check if there is an in-progress deletion. If so, check its status:
     1. If the deletion is still in progress, then queue another reconcile operation and continue processing.
-	  2. If the deletion completed successfully, then continue processing.
+	  2. If the deletion completed successfully, then remove the `radapp.io/deployment-resource-finalizer` finalizer from the resource and continue processing.
 	  3. If the operation failed, then update the `status.phrase` and `status.message` as `Failed`.
 2. If the `DeploymentTemplate` is being deleted, then process deletion:
     1. Send a DELETE operation to the Radius API to delete the resource specified in the `spec.resourceId` field.
+    2. Continue processing.
+3. If the `DeploymentTemplate` is not being deleted then process this as a create or update:
+    1. Set the `status.phrase` for the `DeploymentResource` to `Ready`.
     2. Continue processing.
 
 ### Alternatives Considered
