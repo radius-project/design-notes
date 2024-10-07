@@ -60,14 +60,24 @@ Now that he can see that Radius can deploy cloud resources defined in Bicep mani
 ```bicep
 extension radius
 
-param application string
-param tag string
 param port int
+param tag string
 
-resource container 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'container'
+resource demoenv 'Applications.Core/environments@2023-10-01-preview' existing = {
+  name: 'demoenv'
+}
+
+resource demoapp 'Applications.Core/applications@2023-10-01-preview' = {
+  name: 'demoapp'
   properties: {
-    application: application
+    environment: demoenv.id
+  }
+}
+
+resource democtnr 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'democtnr'
+  properties: {
+    application: demoapp.id
     container: {
       image: 'ghcr.io/radius-project/samples/demo:${tag}'
       ports: {
@@ -84,7 +94,6 @@ resource container 'Applications.Core/containers@2023-10-01-preview' = {
 ```bicep
 using 'app.bicep'
 
-param application = ''
 param tag = ''
 param port = 3000
 ```
@@ -105,7 +114,7 @@ kubectl apply -f app.yaml
 kind: DeploymentTemplate
 apiVersion: radapp.io/v1alpha3
 metadata:
-  name: env
+  name: app.bicep
   namespace: radius-system
 spec:
   template: |
@@ -125,9 +134,6 @@ spec:
         }
       },
       "parameters": {
-        "application": {
-          "type": "string"
-        },
         "tag": {
           "type": "string"
         },
@@ -164,9 +170,6 @@ spec:
     }
   parameters: |
     {
-      "application": {
-        "value": ""
-      },
       "tag": {
         "value": "latest"
       },
@@ -201,9 +204,28 @@ type DeploymentTemplateSpec struct {
   // Parameters is the ARM JSON parameters for the template.
   Parameters string `json:"parameters"`
 
-  // Scope is the resource id of the Radius scope.
-  Scope string `json:"scope"`
+  // ProviderConfig
+  ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 }
+
+// From Radius resourcedeploymentsclient (imported)
+type ProviderConfig struct {
+	Radius      *Radius      `json:"radius,omitempty"`
+	Az          *Az          `json:"az,omitempty"`
+	AWS         *AWS         `json:"aws,omitempty"`
+	Deployments *Deployments `json:"deployments,omitempty"`
+}
+
+type Radius struct {
+	Type  string `json:"type,omitempty"`
+	Value Value  `json:"value,omitempty"`
+}
+
+type Value struct {
+	Scope string `json:"scope,omitempty"`
+}
+
+// ...
 
 // DeploymentTemplateStatus defines the observed state of the Deployment Template.
 type DeploymentTemplateStatus struct {
