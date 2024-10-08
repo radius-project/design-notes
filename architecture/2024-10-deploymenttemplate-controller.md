@@ -210,19 +210,19 @@ type DeploymentTemplateSpec struct {
 
 // From Radius resourcedeploymentsclient (imported)
 type ProviderConfig struct {
-	Radius      *Radius      `json:"radius,omitempty"`
-	Az          *Az          `json:"az,omitempty"`
-	AWS         *AWS         `json:"aws,omitempty"`
-	Deployments *Deployments `json:"deployments,omitempty"`
+  Radius      *Radius      `json:"radius,omitempty"`
+  Az          *Az          `json:"az,omitempty"`
+  AWS         *AWS         `json:"aws,omitempty"`
+  Deployments *Deployments `json:"deployments,omitempty"`
 }
 
 type Radius struct {
-	Type  string `json:"type,omitempty"`
-	Value Value  `json:"value,omitempty"`
+  Type  string `json:"type,omitempty"`
+  Value Value  `json:"value,omitempty"`
 }
 
 type Value struct {
-	Scope string `json:"scope,omitempty"`
+  Scope string `json:"scope,omitempty"`
 }
 
 // ...
@@ -283,15 +283,15 @@ The `DeploymentResource` CRD is another CRD that will be responsible for trackin
 // DeploymentResourceSpec defines the desired state of a Deployment Resource.
 type DeploymentResourceSpec struct {
   // Scope is the resource ID of the scope.
-	Scope string `json:"scope,omitempty"`
+  Scope string `json:"scope,omitempty"`
 
-  // ResourceId is the Radius resource Id.
-  ResourceId string `json:"resourceId"`
+  // ID is the Radius resource ID.
+  ID string `json:"id"`
 }
 
 type DeploymentTemplateResourceStatus struct {
   // Scope is the resource ID of the scope.
-	Scope string `json:"scope,omitempty"`
+  Scope string `json:"scope,omitempty"`
 
   // ObservedGeneration is the most recent generation observed for this DeploymentTemplateResource.
   ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -310,17 +310,17 @@ type DeploymentTemplateResourceStatus struct {
 type DeploymentResourcePhrase string
 
 const (
-	// DeploymentResourcePhraseReady indicates that the Deployment Resource is ready.
-	DeploymentResourcePhraseReady DeploymentResourcePhrase = "Ready"
+  // DeploymentResourcePhraseReady indicates that the Deployment Resource is ready.
+  DeploymentResourcePhraseReady DeploymentResourcePhrase = "Ready"
 
-	// DeploymentResourcePhraseFailed indicates that the Deployment Resource has failed to delete.
-	BicepPhraseFailed DeploymentResourcePhrase = "Failed"
+  // DeploymentResourcePhraseFailed indicates that the Deployment Resource has failed to delete.
+  BicepPhraseFailed DeploymentResourcePhrase = "Failed"
 
-	// DeploymentResourcePhraseDeleting indicates that the Deployment Resource is being deleted.
-	BicepPhraseDeleting DeploymentResourcePhrase = "Deleting"
+  // DeploymentResourcePhraseDeleting indicates that the Deployment Resource is being deleted.
+  BicepPhraseDeleting DeploymentResourcePhrase = "Deleting"
 
-	// DeploymentResourcePhraseDeleted indicates that the Deployment Resource has been deleted.
-	BicepPhraseDeleted DeploymentResourcePhrase = "Deleted"
+  // DeploymentResourcePhraseDeleted indicates that the Deployment Resource has been deleted.
+  BicepPhraseDeleted DeploymentResourcePhrase = "Deleted"
 )
 ```
 
@@ -358,8 +358,8 @@ The `radius-controller` will be updated to include a new reconciler that reconci
 
 1. Check if there is an in-progress deletion. If so, check its status:
     1. If the deletion is still in progress, then queue another reconcile operation and continue processing.
-	  2. If the deletion completed successfully, then remove the `radapp.io/deployment-resource-finalizer` finalizer from the resource and continue processing.
-	  3. If the operation failed, then update the `status.phrase` and `status.message` as `Failed`.
+    2. If the deletion completed successfully, then remove the `radapp.io/deployment-resource-finalizer` finalizer from the resource and continue processing.
+    3. If the operation failed, then update the `status.phrase` and `status.message` as `Failed`.
 2. If the `DeploymentTemplate` is being deleted, then process deletion:
     1. Send a DELETE operation to the Radius API to delete the resource specified in the `spec.resourceId` field.
     2. Continue processing.
