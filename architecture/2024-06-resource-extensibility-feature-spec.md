@@ -368,19 +368,19 @@ First, we will create a custom YAML format that requires basic user inputs to de
         ```
         The typespec schema is compiled and validated for any errors and warnings
 
-   1. Amy registers the PostgreSQL schema to an existing provider in Radius
+    1. Amy registers the PostgreSQL schema to an existing provider in Radius
     
         ```bash
         rad resource-type create Applications.Datastore/postgreSQL --template-kind yaml -e myenv 
         ```
-    The schema is registered to existing namespace `Application.Datastores` in Radius. We will cover the open-sourcing experience, maturity model of the community repository creation for user defined types in a separate design document.
+        The schema is registered to existing namespace `Application.Datastores` in Radius. We will cover the open-sourcing experience, maturity model of the community repository creation for user defined types in a separate design document.
 
     1. Amy lists the resource types she has in her environment
 
         ```bash
         rad resource-provider list 
         ```
-    Radius lists the resource providers that Amy has registered in her environment
+        Radius lists the resource providers that Amy has registered in her environment
 
 ## High level feature Areas
 
