@@ -743,7 +743,6 @@ usecase
 gitops
 predefine
 KRM
-
 secretsStores
 DriverWithSecrets
 FindSecretIds
@@ -754,3 +753,5 @@ ConfigStructure
 RecipeSecretIds
 RecipeSecrets
 lakshmimsft
+Radify
+DeploymentTemplate

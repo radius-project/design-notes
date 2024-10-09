@@ -48,7 +48,7 @@ Jon is an infrastructure operator for an enterprise company. His team manages a 
 
 #### Jon can deploy Radius resources defined in Bicep manifests using Kubernetes tools
 
-Now that he can see that Radius can deploy cloud resources defined in Bicep manifests, Jon wants to take advantage of Radius tooling, such as the App Graph, and fully "Rad-ify" his application. He writes a Bicep manifest that defines a Radius container that connects to the cloud resources, and uses the rad CLI to generate a custom resource from the Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the Radius resources defined in the Bicep manifest. Now, Jon can take advantage of Radius tooling, such as the Radius Dashboard and App Graph, to manage his application.
+Now that he can see that Radius can deploy cloud resources defined in Bicep manifests, Jon wants to take advantage of Radius tooling, such as the App Graph, and fully "Radify" his application. He writes a Bicep manifest that defines a Radius container that connects to the cloud resources, and uses the rad CLI to generate a custom resource from the Bicep manifest. Jon applies the custom resource to his cluster, and Radius deploys the Radius resources defined in the Bicep manifest. Now, Jon can take advantage of Radius tooling, such as the Radius Dashboard and App Graph, to manage his application.
 
 ## User Experience
 
@@ -204,7 +204,7 @@ type DeploymentTemplateSpec struct {
   // Parameters is the ARM JSON parameters for the template.
   Parameters string `json:"parameters"`
 
-  // ProviderConfig
+  // ProviderConfig specifies the scope for resources
   ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 }
 
@@ -238,8 +238,8 @@ type DeploymentTemplateStatus struct {
   // Parameters is the ARM JSON parameters for the template.
   Parameters string `json:"parameters"`
   
-  // Scope is the resource id of the Radius scope.
-  Scope string `json:"scope,omitempty"`
+  // ProviderConfig specifies the scope for resources
+  ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 
   // Resource is the resource id of the deployment.
   Resource string `json:"resource,omitempty"`
@@ -282,25 +282,25 @@ The `DeploymentResource` CRD is another CRD that will be responsible for trackin
 ```go
 // DeploymentResourceSpec defines the desired state of a Deployment Resource.
 type DeploymentResourceSpec struct {
-  // Scope is the resource ID of the scope.
-  Scope string `json:"scope,omitempty"`
+  // ProviderConfig specifies the scope for resources
+  ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 
   // ID is the Radius resource ID.
   ID string `json:"id"`
 }
 
-type DeploymentTemplateResourceStatus struct {
-  // Scope is the resource ID of the scope.
-  Scope string `json:"scope,omitempty"`
+type DeploymentResourceStatus struct {
+  // ProviderConfig specifies the scope for resources
+  ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 
-  // ObservedGeneration is the most recent generation observed for this DeploymentTemplateResource.
+  // ObservedGeneration is the most recent generation observed for this DeploymentResource.
   ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
   // Operation tracks the status of an in-progress provisioning operation.
   Operation *ResourceOperation `json:"operation,omitempty"`
 
   // Phrase indicates the current status of the Deployment Template Resource.
-  Phrase DeploymentTemplateResourcePhrase `json:"phrase,omitempty"`
+  Phrase DeploymentResourcePhrase `json:"phrase,omitempty"`
 
   // Message is a human-readable description of the status of the Deployment Template Resource.
   Message string `json:"description,omitempty"`
@@ -403,7 +403,7 @@ The changes describes are only additive, so there should be no breaking changes 
 
 The new controllers will emit logs and metrics in the same way as other Radius controllers.
 
-We will be leveraging the Kubernetes Events API to emit events for the DeploymentTemplate and DeploymentTemplateResource resources. These events will be used to track the progress of the deployment and to provide feedback to the user.
+We will be leveraging the Kubernetes Events API to emit events for the DeploymentTemplate and DeploymentResource resources. These events will be used to track the progress of the deployment and to provide feedback to the user.
 
 ## Development plan
 
