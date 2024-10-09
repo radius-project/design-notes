@@ -776,6 +776,9 @@ ConfigStructure
 RecipeSecretIds
 RecipeSecrets
 lakshmimsft
+Radify
+DeploymentTemplate
+DeploymentResource
 superbeeny
 Beenham
 secretRef
