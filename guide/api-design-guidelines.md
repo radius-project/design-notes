@@ -56,8 +56,7 @@ Reference:
 <a href="#secrets" name="secrets"></a>
 ### Secrets
 
-<a href="#secret-store" name="secret-store">:white_check_mark:</a> **DO** use [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) resource to store sensitive data, such as passwords, OAuth tokens, and SSH keys.
-When utilizing this resource, Radius ensures that confidential data is handled in a safe and consistent manner across the system.
+<a href="#secret-store" name="secret-store">:white_check_mark:</a> **DO** use [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) resource to store sensitive data, such as passwords, OAuth tokens, and SSH keys. Through the use of this resource, Radius ensures that confidential data is handled in a safe and consistent manner.
 
 The TypeSpec definitions include [`SecretReference`](https://github.com/radius-project/radius/blob/ba9195c4bc6ab9be2a83bb1ed6b0f8f357d79812/typespec/Applications.Core/environments.tsp#L193) and [`SecretConfig`](https://github.com/radius-project/radius/blob/ba9195c4bc6ab9be2a83bb1ed6b0f8f357d79812/typespec/Applications.Core/environments.tsp#L126) model types to standardize usage. These are prescribed to ensure sensitive information is handled securely and uniformly across different components and resources in Radius. The following are their definitions along with usage examples:
 
@@ -129,8 +128,7 @@ env: {
 
 ```
 
-### :no_entry: DO NOT: Store sensitive as clear text in Resource Definitions
-
+### :no_entry: DO NOT: Store sensitive data as clear text
 Sensitive data MUST NEVER be stored directly in resource definitions or configuration files as clear text. Instead, use references to secrets stored in secret stores.
 
 #### Example of What NOT to Do
@@ -139,14 +137,14 @@ Sensitive data MUST NEVER be stored directly in resource definitions or configur
 
 env: {
   DB_USER: { value: 'DB_USER' }
-  DB_PASSWORD:  { value: 'myPlainTextPassword' }  # ❌ This is NOT allowed
+  DB_PASSWORD:  { value: 'myPlainTextPassword' }  // ❌ This is NOT allowed
 } 
 
 ```
 
 ### SecretConfig Model
 
-<a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** follow this structure when the stucture of the secret store resource is known and a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
+<a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** implement this model when the structure of the secret store resource is known and a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
 
 ```tsp
 
