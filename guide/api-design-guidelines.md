@@ -22,14 +22,13 @@ Please ensure that you add an anchor tag to any new guidelines that you add and 
 
 These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to ensure that customers have a great experience. These guidelines help make Radius APIs:
 - Developer friendly via consistent patterns
-- Efficient & cost-effective
 
 Technology and software is constantly changing and evolving, and as such, this is intended to be a living document. [Open an issue](https://github.com/radius-project/design-notes/issues) to suggest a change or propose a new idea. 
 
 ### Prescriptive Guidance
 This document offers prescriptive guidance labeled as follows:
 
-:white_check_mark: **DO** adopt this pattern. If you feel you need an exception, present your reason at a design review discussion **prior** to implementation.
+:white_check_mark: **DO** adopt this pattern.
 
 :ballot_box_with_check: **YOU SHOULD** adopt this pattern. If not following this advice, you MUST disclose your reason during a design review discussion.
 
@@ -37,7 +36,7 @@ This document offers prescriptive guidance labeled as follows:
 
 :warning: **YOU SHOULD NOT** adopt this pattern. If not following this advice, you MUST disclose your reason during a design review discussion.
 
-:no_entry: **DO NOT** adopt this pattern. If you feel you need an exception, present your reason at a design review discussion **prior** to implementation.
+:no_entry: **DO NOT** adopt this pattern.
 
 ## API Foundation:
 
@@ -57,16 +56,16 @@ Reference:
 <a href="#secrets" name="secrets"></a>
 ### Secrets
 
-Radius enables users to securely store sensitive data, such as passwords, OAuth tokens, and SSH keys, in [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
-The secrets are stored in secret store resource [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/)
+<a href="#secret-store" name="secret-store">:white_check_mark:</a> **DO** use [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) resource to store sensitive data, such as passwords, OAuth tokens, and SSH keys.
+When utilizing this resource, Radius ensures that confidential data is handled in a safe and consistent manner across the system.
 
-Our TypeSpec definitions provide the `SecretReference` and `SecretConfig` model types to standardize usage. These are prescribed to ensure sensitive information is handled securely and consistently across different components and resources in Radius. The following are their definitions along with usage examples:
+The TypeSpec definitions include [`SecretReference`](https://github.com/radius-project/radius/blob/ba9195c4bc6ab9be2a83bb1ed6b0f8f357d79812/typespec/Applications.Core/environments.tsp#L193) and [`SecretConfig`](https://github.com/radius-project/radius/blob/ba9195c4bc6ab9be2a83bb1ed6b0f8f357d79812/typespec/Applications.Core/environments.tsp#L126) model types to standardize usage. These are prescribed to ensure sensitive information is handled securely and uniformly across different components and resources in Radius. The following are their definitions along with usage examples:
 
 ### SecretReference Model
 
 <a href="#secret-model" name="secret-model">:white_check_mark:</a> **DO** follow this structure when adding support for secrets to resources or components in Radius.
 
-```
+```tsp
 
 @doc("This specifies a reference to a secret. Secrets are encrypted, often have fine-grained access control, auditing and are recommended to be used to hold sensitive data.")
 model SecretReference {
@@ -84,12 +83,12 @@ model SecretReference {
 <a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **DO** use the `SecretReference` type to reference a single (scalar) secret value in a resource property. Resource properties should reference a `Applications.Core/secretStores` instead of directly containing secret data.
 
 This pattern simplifies the overall design of Radius by reducing the number of places where we store secret data. 
-This solution is in alignment with Kubernetes design patterns. The structure also allows for environment variables to refer to other resources such as ConfigMaps, Pod Fields etc. in the future. 
+The structure also allows for environment variables to refer to other resources such as `ConfigMaps`, `Pod Fields` etc. in the future. 
 Examples include cases where environment variables containing sensitive information are injected into a container or used in a Terraform execution process.
 
 #### Example TypeSpec Definition
 
-```
+```tsp
 
 @doc("environment")
 env?: Record<EnvironmentVariable>;
@@ -130,11 +129,26 @@ env: {
 
 ```
 
-### SecretConfig Model
+### :no_entry: DO NOT: Store sensitive as clear text in Resource Definitions
 
-<a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** follow this structure when a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
+Sensitive data MUST NEVER be stored directly in resource definitions or configuration files as clear text. Instead, use references to secrets stored in secret stores.
+
+#### Example of What NOT to Do
+
+```bicep
+
+env: {
+  DB_USER: { value: 'DB_USER' }
+  DB_PASSWORD:  { value: 'myPlainTextPassword' }  # ❌ This is NOT allowed
+} 
 
 ```
+
+### SecretConfig Model
+
+<a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** follow this structure when the stucture of the secret store resource is known and a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
+
+```tsp
 
 @doc("Secret Configuration used to authenticate to external systems.")
 model SecretConfig {
@@ -152,7 +166,7 @@ This pattern simplifies the overall design of Radius by reducing the number of p
 
 #### Example TypeSpec Definition
 
-```
+```tsp
 
 @doc("Authentication information used to access private Terraform modules from Git repository sources.")
 model GitAuthConfig {
