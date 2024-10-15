@@ -4,18 +4,17 @@
 
 ## Overview
 
-Currently Radius support for Dapr is incomplete. This design document aims to add support for another Dapr Building Blocks: Bindings.
+Currently, Radius support for Dapr is incomplete. This design document aims to add support for another Dapr Building Block: Bindings.
 
 ## Terms and definitions
 
-[Dapr](https://github.com/dapr/dapr): Distributed Application Runtime. 
-Software that makes it easier to build microservice applications. It provides "building blocks" for writing microservices, which are high level functionalities. 
+[Dapr](https://github.com/dapr/dapr): Distributed Application Runtime. It provides "building blocks" for writing microservices, which are high level functionalities. 
 
-[Dapr Bindings](https://docs.dapr.io/developing-applications/building-blocks/bindings/bindings-overview/): Dapr building block that allows you to interact with external resources in a loosely coupled way. Bindings are used to interact with external resources such as databases, queues, and storage systems.
+[Dapr Bindings](https://docs.dapr.io/developing-applications/building-blocks/bindings/bindings-overview/): A Dapr building block that allows interaction with external resources in a loosely coupled way. Bindings are used to interact with external resources such as databases, queues, and storage systems.
 
-Bindings further subdivide into two types: input and output bindings. 
-- Input bindings are used to receive events from an external resource
-- Output bindings are used to send events to an external resource. 
+Bindings are further subdivided into two types: input and output bindings:
+- Input bindings are used to receive events from an external resource.
+- Output bindings are used to send events to an external resource.
 
 
 ## Objectives
@@ -24,26 +23,20 @@ Bindings further subdivide into two types: input and output bindings.
 
 ### Goals
 
-- Allow users to create, update, and delete Dapr Bindings using Radius.
+- Enable users to create, update, and delete Dapr Bindings using Radius.
 
 ### Non goals
 
-- (out-of-scope) Manage resources used by Dapr Bindings. This includes databases, queues, and storage systems. By definition, Dapr Bindings are meant to be used for external resources.
+- (out-of-scope) Managing resources used by Dapr Bindings. This includes databases, queues, and storage systems. By definition, Dapr Bindings are intended to be used for external resources.
+- (out-of-scope) Default recipes for Dapr Bindings. Each binding will have different requirements, so it doesn't make sense to have a single default recipe.
 
 ### User scenarios (optional)
 
-<!--
-Describe the user scenarios for this design. Ensure that you define the
-roles and personas in these user scenarios when it requires API design.
-If you have an existing issue that describes the user scenarios, please
-link to that issue instead.
--->
-
 #### User story 1
 
-As a Radius user, I want my application to be able to react to external systems changes without having any dependencies on them. 
+As a Radius user, I want my application to be able to react to changes in external systems without depending directly on them.
 
-For this example, the external system X will deliver messages to a Storage Queue. 
+In this example, an external system (X) will deliver messages to a storage queue.
 
 ```bicep
 // Input binding to an Azure Storage Queue 
@@ -78,20 +71,14 @@ resource demoApp 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
-Then, idependently of the backing servcie used by the external system, the application can receive and process messages in code using the created Binding.
+Independently of the backing service used by the external system, the application can receive and process messages using the created binding.
 
 ```go
-import (
-	"encoding/json"
-	"log"
-	"net/http"
-	"github.com/gorilla/mux"
-)
 
 func handler(w http.ResponseWriter, r *http.Request) {
   ctx := context.Background()
   client, _:= dapr.NewClient()
-  // Note : 
+
   var messagePayload MyMessageType 
   _ := json.NewDecoder(r.Body).Decode(&messagePayload)
   
@@ -104,7 +91,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
-  // Each time a request is received with the input binding
+  // Each time a request is received via the input binding
   endpoint := fmt.Sprintf("/%s", CONNECTION_QUEUE_COMPONENTNAME)
 	r.HandleFunc(endpoint, handler).Methods("POST", "OPTIONS")
 	http.ListenAndServe(":6002", r)
@@ -113,9 +100,9 @@ func main() {
 
 #### User story 2
 
-As a Radius user, I want to make sure that my application is able to send messages to external systems without having any dependencies on them.
+As a Radius user, I want my application to send messages to external systems without having direct dependencies on them.
 
-This example will use an external SMTP server to send emails. This external STMP server could be for example centralized in a company's infrastructure or an external service like SendGrid.
+This example uses an external SMTP server to send emails. The SMTP server could be centralized within a company's infrastructure or an external service like SendGrid.
 
 ```bicep
 // Output binding to an SMTP server. 
@@ -144,7 +131,7 @@ resource demoApp 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
-Then, the application can send messages to the external system using the created Binding.
+The application can then send messages to the external system using the created binding.
 
 ```go
 ctx := context.Background()
@@ -163,13 +150,15 @@ out, _:= client.InvokeBinding(ctx, in)
 
 ### High Level Design
 
+#### Architectural components 
+
 ```mermaid
 graph LR
     Client -->|Request| Engine
-    Engine -->|Deploy| AppComponents
+    Engine -->|Deploy| Kubernetes
     Application -->|Invokes| Dapr_Sidecar
-    Dapr_Sidecar -->|Resolves| Dapr_Binding
-    Dapr_Sidecar --> Service_X
+    Dapr_Sidecar -->|1 - Resolves| Dapr_Binding
+    Dapr_Sidecar --> |2 - call| Service_X
 
     subgraph Foreign
         Service_X
@@ -180,33 +169,38 @@ graph LR
         Dapr_Sidecar
     end
 
-    subgraph AppComponents
+    subgraph Kubernetes
         Pod
         Dapr_Binding
     end
 ```	
 
+#### Sequence Diagram
+
+( No changes in existing interactions)
+
 ### Detailed Design
-This design will require to add a new type to the Dapr RP. This will include:
-  - Adding `Application.Dapr/Bindings` to the TypeSpec frontend
-  - Adding the corresponding `DaprBinding` type to the internal representation of a Dapr component
-  - Allow a new type of dapr component (binding) to be emitted in the backend Kubernetes cluster.
+
+This design will require adding a new type to the Dapr RP. This includes:
+- Adding Application.Dapr/Bindings to the TypeSpec frontend.
+- Adding the corresponding DaprBinding type to the internal representation (DaprRP)
+- Allowing a new type of Dapr component (binding) to be emitted in the backend Kubernetes cluster.
 
 #### Advantages (of each option considered)
-The main advantage of this approach is that it is pure addition, and it will be non-breaking for existing users.
+
+The main advantage of this implementation approach is that it is purely additive and will be non-breaking for existing users.
 
 #### Disadvantages (of each option considered)
-The main disavantage of this approach is that it will produce some code duplication.
+
+The main disadvantage of this approach is that it will lead to some code duplication.
 
 #### Proposed Option
 
-This option is the most straightforward and will be the most efficient in terms of development time.
-As the implementation of the Dapr Building Block is not yet complete, it would be better to have a simple implementation that can be improved later, even if it means some code duplication.
-Plus, the future implementation of User-Defined type might lead to a refactor of the Dapr RP as a whole.
+This option is the most straightforward and efficient in terms of development time. Since the Dapr Building Block implementation is not yet complete, it would be better to have a simple implementation that can be improved later, even if it introduces some code duplication. Additionally, future implementations of User-Defined Types may lead to a refactor of the entire Dapr RP.
 
 ### API design (if applicable)
 
-Aside from the new type, the API will be identical to the other Dapr Building Blocks.
+Aside from the new type, the API will remain identical to the other Dapr Building Blocks.
 
 **typespec/Applications.Dapr/bindings.tsp**
 ```TypeSpec
@@ -244,7 +238,7 @@ This implementation will also have some side-effects outside of the Dapr RP:
 
 ### Error Handling
 
-No new error handling required. The error handling will be the same as for the other Dapr Building Blocks.
+No new error handling is required. The error handling will remain the same as for other Dapr Building Blocks.
 
 ## Test plan
 
@@ -252,9 +246,9 @@ Unit tests must cover:
 - converter functions
 - processor functions
 
-Functional tests must cover:
-- Using a binding in a sample application. The direction (input/output) of the binding is not important for this test. The external system can a simple Redis or even nothing at all with bindings that don't require an external system such a [CRON binding](https://docs.dapr.io/reference/components-reference/supported-bindings/cron/).
-- Using a binding with a secret-store indirection. This will require a secret store to be created and used in the binding.
+Functional tests proposed:
+- Using a binding in a sample application (the direction, input/output, of the binding is not important for this test). The external system can be something simple like Redis or a [CRON binding](https://docs.dapr.io/reference/components-reference/supported-bindings/cron/) that doesn't require an external system.
+- Using a binding with secret-store indirection, which will require creating and using a secret store in the binding.
 
 ## Security
 
@@ -266,19 +260,14 @@ This is purely additive and should not affect existing resources.
 
 ## Monitoring and Logging
 
-<!--
-Include the list of instrumentation such as metric, log, and trace to 
-diagnose this new feature. It also describes how to troubleshoot this feature
-with the instrumentation. 
--->
+N/A
 
 ## Development plan
 
 N/A, already completed 
 
 ## Open Questions
-
-By design, it doesn't make sense to have a default recipe for a Dapr Binding as it is meant to be used with external resources. This means that this resource will always be created with a manual resource provisioning. Is there any way to make this more intuituive for the user?
+N/A
 
 ## Alternatives considered
 
