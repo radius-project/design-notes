@@ -20,7 +20,7 @@ Please ensure that you add an anchor tag to any new guidelines that you add and 
 
 ## Introduction
 
-These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to ensure that customers have a great experience. These guidelines help make Radius APIs:
+These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to maintain a great user experience. These guidelines help make Radius APIs:
 - Developer friendly via consistent patterns
 
 Technology and software is constantly changing and evolving, and as such, this is intended to be a living document. [Open an issue](https://github.com/radius-project/design-notes/issues) to suggest a change or propose a new idea. 
@@ -28,7 +28,7 @@ Technology and software is constantly changing and evolving, and as such, this i
 ### Prescriptive Guidance
 This document offers prescriptive guidance labeled as follows:
 
-:white_check_mark: **DO** adopt this pattern.
+:white_check_mark: **YOU MUST** adopt this pattern.
 
 :ballot_box_with_check: **YOU SHOULD** adopt this pattern. If not following this advice, you MUST disclose your reason during a design review discussion.
 
@@ -36,7 +36,7 @@ This document offers prescriptive guidance labeled as follows:
 
 :warning: **YOU SHOULD NOT** adopt this pattern. If not following this advice, you MUST disclose your reason during a design review discussion.
 
-:no_entry: **DO NOT** adopt this pattern.
+:no_entry: **YOU MUST NOT** adopt this pattern.
 
 ## API Foundation:
 
@@ -54,15 +54,19 @@ Reference:
 ### Resource Property Design
 
 <a href="#secrets" name="secrets"></a>
-### Secrets
+#### Secrets
 
-<a href="#secret-store" name="secret-store">:white_check_mark:</a> **DO** use [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) resource to store sensitive data, such as passwords, OAuth tokens, and SSH keys. Through the use of this resource, Radius ensures that confidential data is handled in a safe and consistent manner.
+<a href="#secret-store" name="secret-store">:white_check_mark:</a> **YOU MUST** use [Applications.Core/secretStores](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) resource to store sensitive data, such as passwords, OAuth tokens, and SSH keys. Through the use of this resource, Radius ensures that confidential data is handled in a safe and consistent manner.
 
-The TypeSpec definitions include [`SecretReference`](https://github.com/radius-project/radius/blob/ba9195c4bc6ab9be2a83bb1ed6b0f8f357d79812/typespec/Applications.Core/environments.tsp#L193) and [`SecretConfig`](https://github.com/radius-project/radius/blob/ba9195c4bc6ab9be2a83bb1ed6b0f8f357d79812/typespec/Applications.Core/environments.tsp#L126) model types to standardize usage. These are prescribed to ensure sensitive information is handled securely and uniformly across different components and resources in Radius. The following are their definitions along with usage examples:
+The guidance for API design of secrets depends on which of these two scenarios best fits your use case:
+- For storing and retrieving a single (scalar) secret value, e.g., an environment variable, refer to [`SecretReference`](#secretreference-model) model type described below.
+- When storing and retrieving a structured (multiple-value) secret, e.g., OAuth configuration, refer to [`SecretConfig`](#secretconfig-model) model type described below.
 
-### SecretReference Model
+ These prescribed types ensure secure and uniform handling of sensitive information across different components and resources in Radius. Their definitions and usage examples are as follows:
+ 
+##### SecretReference Model
 
-<a href="#secret-model" name="secret-model">:white_check_mark:</a> **DO** follow this structure when adding support for secrets to resources or components in Radius.
+<a href="#c name="secretreference-model">:white_check_mark:</a> **YOU MUST** follow this structure when adding support for secrets to resources or components in Radius.
 
 ```tsp
 
@@ -77,15 +81,15 @@ model SecretReference {
 
 ```        
 
-#### Usage of SecretReference
+##### Usage of SecretReference
 
-<a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **DO** use the `SecretReference` type to reference a single (scalar) secret value in a resource property. Resource properties should reference a `Applications.Core/secretStores` instead of directly containing secret data.
+<a href="#secret-envvar" name="secret-envvar">:white_check_mark:</a> **YOU MUST** use the `SecretReference` type to reference a single (scalar) secret value in a resource property. Resource properties should reference a `Applications.Core/secretStores` instead of directly containing secret data.
 
 This pattern simplifies the overall design of Radius by reducing the number of places where we store secret data. 
 The structure also allows for environment variables to refer to other resources such as `ConfigMaps`, `Pod Fields` etc. in the future. 
 Examples include cases where environment variables containing sensitive information are injected into a container or used in a Terraform execution process.
 
-#### Example TypeSpec Definition
+##### Example TypeSpec Definition
 
 ```tsp
 
@@ -110,7 +114,7 @@ model EnvironmentVariableReference {
 
 ```
 
-#### Example Bicep Definition
+##### Example Bicep Definition
 
 ```bicep
 
@@ -128,23 +132,23 @@ env: {
 
 ```
 
-### :no_entry: DO NOT: Store sensitive data as clear text
+##### :no_entry: **YOU MUST NOT**: Store sensitive data as clear text
 Sensitive data MUST NEVER be stored directly in resource definitions or configuration files as clear text. Instead, use references to secrets stored in secret stores.
 
-#### Example of What NOT to Do
+##### Example of What NOT to Do
 
 ```bicep
 
-env: {
-  DB_USER: { value: 'DB_USER' }
-  DB_PASSWORD:  { value: 'myPlainTextPassword' }  // ❌ This is NOT allowed
+credentials: {
+  user: 'username'
+  password: 'myPlainTextPassword' // ❌ This should be avoided
 } 
 
 ```
 
-### SecretConfig Model
+##### SecretConfig Model
 
-<a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **DO** implement this model when the structure of the secret store resource is known and a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
+<a href="#secretconfig-model" name="secretconfig-model">:white_check_mark:</a> **YOU MUST** implement this model when the structure of the secret store resource is known and a component or resource in Radius requires authentication to external systems, such as private container registries, TLS certificates.
 
 ```tsp
 
@@ -156,13 +160,13 @@ model SecretConfig {
 
 ```        
 
-#### Usage of SecretConfig
+##### Usage of SecretConfig
 
-<a href="#secretconfig-ext" name="secretconfig-ext">:white_check_mark:</a> **DO** use the SecretConfig type to reference a structured set of secret values in a resource property. Resource properties should reference a Applications.Core/secretStores instead of directly containing secret data.
+<a href="#secretconfig-ext" name="secretconfig-ext">:white_check_mark:</a> **YOU MUST** use the `SecretConfig` type to reference a structured set of secret values in a resource property. Resource properties should reference a `Applications.Core/secretStores` instead of directly containing secret data.
 
 This pattern simplifies the overall design of Radius by reducing the number of places where we store secret data.
 
-#### Example TypeSpec Definition
+##### Example TypeSpec Definition
 
 ```tsp
 
@@ -174,7 +178,7 @@ model GitAuthConfig {
 
 ```
 
-#### Example Bicep Definition
+##### Example Bicep Definition
 
 ```bicep
 
