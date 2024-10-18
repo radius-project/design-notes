@@ -1,10 +1,10 @@
-# Title
+# Dapr Binding Implementation
 
 * **Author**: Lucas Peirone (@SoTrx)
 
 ## Overview
 
-Currently, Radius support for Dapr is incomplete. This design document aims to add support for another Dapr Building Block: Bindings.
+This design document proposes the addition of support for Dapr Bindings within Radius. By integrating Dapr Bindings, resources will be able to interact with external systems in a decoupled and scalable manner, facilitating better communication between services and external resources.
 
 ## Terms and definitions
 
@@ -152,6 +152,31 @@ out, _:= client.InvokeBinding(ctx, in)
 
 #### Architectural components 
 
+##### Input Binding
+```mermaid
+graph LR
+    Client -->|Request| Engine
+    Engine -->|Deploy| Kubernetes
+    Dapr_Sidecar -->|1 - Resolves| Dapr_Binding
+    Dapr_Sidecar <--> |2 - Long polling / Subscription | Service_X
+    Dapr_Sidecar -->|"3 - Callback (POST)"| Application
+
+    subgraph Foreign
+        Service_X
+    end
+
+    subgraph Pod
+        Application
+        Dapr_Sidecar
+    end
+
+    subgraph Kubernetes
+        Dapr_Binding
+        Pod
+    end
+```	
+
+##### Output Binding
 ```mermaid
 graph LR
     Client -->|Request| Engine
@@ -181,8 +206,8 @@ graph LR
 
 ### Detailed Design
 
-This design will require adding a new type to the Dapr RP. This includes:
-- Adding Application.Dapr/Bindings to the TypeSpec frontend.
+This design will require adding a new type to the Applications.Dapr resource provider. This includes:
+- Extending the TypeSpec schema definition to include the new Application.Dapr/Bindings resource
 - Adding the corresponding DaprBinding type to the internal representation (DaprRP)
 - Allowing a new type of Dapr component (binding) to be emitted in the backend Kubernetes cluster.
 
@@ -194,9 +219,23 @@ The main advantage of this implementation approach is that it is purely additive
 
 The main disadvantage of this approach is that it will lead to some code duplication.
 
+For each new Dapr Building Block type, we will need to create both a versioned/unversioned API type converter and a dedicated processor.
+
+The processor code for Dapr building blocks is largely similar across different types, with the only variation being the resource type involved.
+
+Example:
+- [Pub/Sub processor](https://github.com/radius-project/radius/blob/main/pkg/daprrp/processors/pubsubbrokers/processor.go)
+- [Configuration store processor](https://github.com/radius-project/radius/blob/main/pkg/daprrp/processors/configurationstores/processor.go)
+
+Similarly, the converter code is nearly identical for all Dapr building blocks, differing only in the resource type being converted.
+
+Example:
+- [Pub/Sub converter](https://github.com/radius-project/radius/blob/main/pkg/daprrp/api/v20231001preview/pubsubbroker_conversion.go)
+- [Configuration store converter](https://github.com/radius-project/radius/blob/main/pkg/daprrp/api/v20231001preview/configurationstore_conversion.go)
+
 #### Proposed Option
 
-This option is the most straightforward and efficient in terms of development time. Since the Dapr Building Block implementation is not yet complete, it would be better to have a simple implementation that can be improved later, even if it introduces some code duplication. Additionally, future implementations of User-Defined Types may lead to a refactor of the entire Dapr RP.
+This option is the most straightforward and efficient in terms of development time. Since the Dapr Building Block implementation is not yet complete, it would be better to have a simple implementation that can be improved later, even if it introduces some code duplication. Additionally, future implementations of User-Defined Types may lead to a refactor of the entire Applications.Dapr resource provider.
 
 ### API design (if applicable)
 
@@ -227,18 +266,23 @@ model DaprBindingProperties {
 
 ### Implementation Details
 
-As for every Dapr Building Block, the implementation will need to create in the Dapr RP:
+As for every Dapr Building Block, the implementation will need to create in the Applications.Dapr resource provider:
 - A versioned/unversioned api type converter
 - A dedicated processor for the Dapr Binding type
 
-This implementation will also have some side-effects outside of the Dapr RP:
+This implementation will also have some side-effects outside of the Applications.Dapr resource provider:
 - Updates to the allowed resource type in the Portable Resource Renderer
 - Updates to the `getResourceDataByID` function in the Core RP to take the new type into account 
 - Updates to the `ResourceTypesList` variable in the CLI (cli/clients/managements.go) to be able to list the new type
 
 ### Error Handling
 
-No new error handling is required. The error handling will remain the same as for other Dapr Building Blocks.
+For input bindings, the Dapr sidecar will send an OPTIONS request to the application at startup. The application must respond with either a 2xx or a 405 status code. If the application does not respond, the Dapr sidecar will retry the initialization 3 times before canceling the binding initialization. Additional checks can also be configured on a per-binding basis.
+
+For output bindings, if there is an error with the external system, the Dapr sidecar will [retry the operation with the default policy](https://docs.dapr.io/operations/resiliency/policies/#retries).
+
+This [behavior is configurable](https://docs.dapr.io/operations/resiliency/policies/#overriding-default-retries) by the user, though it is not yet possible to configure the [resiliency policy](https://docs.dapr.io/operations/resiliency/resiliency-overview/#complete-example-policy) in Radius.
+
 
 ## Test plan
 
@@ -252,7 +296,13 @@ Functional tests proposed:
 
 ## Security
 
-N/A
+For data at rest, the binding can reference a secret store instead of storing sensitive information directly within the binding configuration.
+
+For data in transit, all communication between Dapr components and external systems should use TLS/SSL. This can be configured on a per-binding basis in the metadata. 
+
+Additionally, networking configurations can be applied in accordance with the [Dapr security specification](https://docs.dapr.io/concepts/security-concept/#bindings-security).
+
+
 
 ## Compatibility (optional)
 
