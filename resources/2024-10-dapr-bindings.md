@@ -8,13 +8,21 @@ This design document proposes the addition of support for Dapr Bindings within R
 
 ## Terms and definitions
 
-[Dapr](https://github.com/dapr/dapr): Distributed Application Runtime. It provides "building blocks" for writing microservices, which are high level functionalities. 
+[Dapr](https://github.com/dapr/dapr): Distributed Application Runtime. It provides "building blocks" for writing microservices, offering high-level functionalities for common service tasks.
 
-[Dapr Bindings](https://docs.dapr.io/developing-applications/building-blocks/bindings/bindings-overview/): A Dapr building block that allows interaction with external resources in a loosely coupled way. Bindings are used to interact with external resources such as databases, queues, and storage systems.
+**External Resource**: A resource that is not part of the application's infrastructure. This could be a database, queue, storage system, etc. It may be a service created by another team within the same organization, a third-party service, or a service created by a different organization. No management rights over the external resource are assumed.
 
-Bindings are further subdivided into two types: input and output bindings:
-- Input bindings are used to receive events from an external resource.
-- Output bindings are used to send events to an external resource.
+[**Dapr Bindings**](https://docs.dapr.io/developing-applications/building-blocks/bindings/bindings-overview/): A Dapr building block that enables interaction with external resources in a loosely coupled way. Bindings are used to interact with resources like databases, queues, and storage systems.
+
+Bindings are further categorized into two types: input and output bindings:
+- **Input bindings** are used to receive events from an external resource. [Example](https://docs.dapr.io/reference/components-reference/supported-bindings/kafka/)
+- **Output bindings** are used to send events to an external resource. [Example](https://docs.dapr.io/reference/components-reference/supported-bindings/smtp/)
+- These two categories are not mutually exclusive. Some bindings can serve as both an input and output binding.
+
+For a single Dapr Binding, the following resources are defined:
+- **Exactly one** Dapr component: This is a [Kubernetes Custom Resource Definition (CRD)](https://docs.dapr.io/reference/api/bindings_api/) that defines the binding's configuration, including authentication information.
+- **Zero or one** External Resource: In some cases, the binding does not require an external resource, making it self-sufficient. An example of this is the [CRON binding](https://docs.dapr.io/reference/components-reference/supported-bindings/cron/).
+
 
 
 ## Objectives
@@ -23,24 +31,24 @@ Bindings are further subdivided into two types: input and output bindings:
 
 ### Goals
 
-- Enable users to create, update, and delete Dapr Bindings using Radius.
+- Enable users to create, update, and delete Dapr Bindings Component (CRD) using Radius.
+- Create a list of recipes covering common use cases for Dapr Bindings. 
 
 ### Non goals
 
-- (out-of-scope) Managing resources used by Dapr Bindings. This includes databases, queues, and storage systems. By definition, Dapr Bindings are intended to be used for external resources.
-- (out-of-scope) Default recipes for Dapr Bindings. Each binding will have different requirements, so it doesn't make sense to have a single default recipe.
+- (out-of-scope) Managing **external resources** used by Dapr Bindings. As we do not have management rights over the external resources, we will not be able to create, update, or delete them. The user will need to create the external resource and provide the necessary information to the Dapr Binding.
 
 ### User scenarios (optional)
 
 #### User story 1
 
-As a Radius user, I want my application to be able to react to changes in external systems without depending directly on them.
+As an operator using Radius, I want the application I manage to interface with other applications in my organization without exposing their implementation details to the developers.
 
-In this example, an external system (X) will deliver messages to a storage queue.
+In this example, my application requires the result of a process from a foreign application as input. As the operator, I know that the foreign application is currently hosted in Azure and uses Azure Storage Queue as a messaging solution.
+
 
 ```bicep
 // Input binding to an Azure Storage Queue 
-// The external system 
 // https://docs.dapr.io/reference/components-reference/supported-bindings/storagequeues/
 resource jobsQueue 'Applications.Dapr/bindings@2023-10-01-preview' = {
   name: 'jobsQueue'
@@ -71,8 +79,6 @@ resource demoApp 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
-Independently of the backing service used by the external system, the application can receive and process messages using the created binding.
-
 ```go
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -91,16 +97,23 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
-  // Each time a request is received via the input binding
+  // Message received from the queue will be forwarded to the service
+  // on the "/<component-name>" endpoint as a POST request 
   endpoint := fmt.Sprintf("/%s", CONNECTION_QUEUE_COMPONENTNAME)
 	r.HandleFunc(endpoint, handler).Methods("POST", "OPTIONS")
 	http.ListenAndServe(":6002", r)
 }
 ```
 
+In the future, the foreign application could be moved to a different cloud provider or switch to another messaging solution:
+- For the operator, this change will only require updating a single Radius resource (or recipe).
+- For the developer, the application will continue receiving messages from the same endpoint.
+
+
+
 #### User story 2
 
-As a Radius user, I want my application to send messages to external systems without having direct dependencies on them.
+As an operator using Radius, I want the application I manage to send messages to external systems. I don't have control over the external system, but I want to ensure that the application can communicate with it.
 
 This example uses an external SMTP server to send emails. The SMTP server could be centralized within a company's infrastructure or an external service like SendGrid.
 
@@ -145,6 +158,10 @@ in := &dapr.InvokeBindingRequest{
 }
 out, _:= client.InvokeBinding(ctx, in)
 ```
+In the future, the SMTP server could be moved to a different provider or switched to a new messaging service:
+
+- For the operator, this change will only require updating a single Radius resource or recipe.
+- For the developer, the application will continue sending messages through the same binding without requiring code changes.
 
 ## Design
 
@@ -157,8 +174,8 @@ out, _:= client.InvokeBinding(ctx, in)
 graph LR
     Client -->|Request| Engine
     Engine -->|Deploy| Kubernetes
-    Dapr_Sidecar -->|1 - Resolves| Dapr_Binding
-    Dapr_Sidecar <--> |2 - Long polling / Subscription | Service_X
+    Dapr_Sidecar -->|1 - Resolves| Dapr_Component_CRD
+    Dapr_Sidecar --> |2 - Watch for changes | Service_X
     Dapr_Sidecar -->|"3 - Callback (POST)"| Application
 
     subgraph Foreign
@@ -171,7 +188,7 @@ graph LR
     end
 
     subgraph Kubernetes
-        Dapr_Binding
+        Dapr_Component_CRD
         Pod
     end
 ```	
@@ -182,7 +199,7 @@ graph LR
     Client -->|Request| Engine
     Engine -->|Deploy| Kubernetes
     Application -->|Invokes| Dapr_Sidecar
-    Dapr_Sidecar -->|1 - Resolves| Dapr_Binding
+    Dapr_Sidecar -->|1 - Resolves| Dapr_Component_CRD
     Dapr_Sidecar --> |2 - call| Service_X
 
     subgraph Foreign
@@ -196,13 +213,35 @@ graph LR
 
     subgraph Kubernetes
         Pod
-        Dapr_Binding
+        Dapr_Component_CRD
     end
 ```	
 
 #### Sequence Diagram
 
 ( No changes in existing interactions)
+
+#### Common Usage Recipes
+
+Since a Binding is intended to interact with an external system outside of the operator control, a binding recipe would create only the CRD. This approach would require a two-step process to create a single CRD, which could otherwise be achieved in a single step using manual provisioning.
+
+To address this, rather than mapping [every possible binding](https://docs.dapr.io/reference/components-reference/supported-bindings/) to a recipe, the proposal is to create a few common usage recipes that cover the most frequently used cases.
+
+To maximize convenience for the user, these recipes will be designed with the following considerations:
+
+- **Local Development**: The recipe will create both the binding CRD and the "external resource".
+- **Production**: The recipe will create only the binding CRD, with the user providing the necessary information for connecting to the external resource.
+
+**Sample Recipes:**
+
+- **Object Storage Binding Recipe**
+  - Local Development: Creates both [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/#s3-bucket-creation) and a MinIO instance.
+  - Production, Azure: Creates [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/#s3-bucket-creation) only.
+  - Production, AWS: Creates [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/) only.
+
+- **Mailing Binding Recipe**
+  - Local Development: Creates both [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/smtp/) and a [MailDev](https://github.com/maildev/maildev) instance.
+  - Production: Creates [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/smtp/) only.
 
 ### Detailed Design
 
@@ -324,3 +363,6 @@ N/A
 N/A 
 
 ## Design Review Notes
+
+Round 1:
+- In the first iteration, recipes were considered out of scope, as they would result in a two-step process to create a single CRD (the Dapr Binding component). This was reconsidered, as not supporting recipes for a resource contradicts the Radius design philosophy. Therefore, common usage recipes were added to the design.
