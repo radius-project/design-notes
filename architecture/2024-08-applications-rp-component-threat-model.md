@@ -1,12 +1,12 @@
-# Radius Controller Component Threat Model
+# Radius Applications RP Component Threat Model
 
-- **Author**: ytimocin
+- **Author**: @nithyatsu
 
 ## Overview
 
 This document provides a threat model for the Radius Applications RP component. It identifies potential security threats to this critical part of Radius and suggests possible mitigations. The document includes an analysis of the system, its assets, identified threats, and recommended security measures to protect the system.
 
-The Applications RP component is responsible for managing an application and its resources. It communicates with UCP, Deployment Engine and Controller components to achieve this. 
+The Applications RP component is responsible for managing applications and their resources. It communicates with UCP, Deployment Engine and Controller components to achieve this. 
 
 ## Terms and Definitions
 
@@ -14,30 +14,50 @@ The Applications RP component is responsible for managing an application and its
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | mTLS                  | Mutual Transport Layer Security (mTLS) allows two parties to authenticate each other during the initial connection of an SSL/TLS handshake.                                                 |
 | UCP                 | Universal Control Plane for Radius                                                                                                                                                   |
-
 ## System Description
 
+Applications RP is a Radius service that acts as resource provider for application and its resources. The resources can be core resources like application or environment or container. They can also be a dapr resource, message queue or datastore. Applications RP lives in `radius-system` namespace in a kubernetes cluster. It is a client of Controller and UCP. It also receives requests from UCP for managing the above mentioned resources. 
+
+````````
 Applications RP is a Radius service that acts as resource provider for application and its resources. When Radius CLI sends a deploy request, UCP receives the request and works with DE for deployment plan. Then, from this plan, it forwards all requests dealing with application management to Applications RP. Applications RP 
-* persists the tracked resources for all application resources into the datastore. 
-* works with Controller to provision and manage kubernetes resources like containers and gateways. 
+* requests Controller to manage kubernetes resources like containers and gateways. 
 * requests UCP to provision AWS/Azure resources.
-* fetches Recipe from OCI compliant registry if a resource is being provisioned using recipe.
+* persists the tracked resources for all application resources into the datastore. For this, it communicates with APIServer. (Should we talk abt etcd in dev setup)
+In order to manage recipes, Applications RP
+* fetches Recipe from OCI compliant registry if a resource is being provisioned using recipe
+* requests UCP to deploy recipes after fetching them from registry
+* requests Controller to validate custom recipes
+
+````````````
 
 ### Architecture
 
-Applications RP has four types of resource providers to manage various types of resources in an application. 
+Applications RP has four types of resource providers for managing various types of resources in an application. 
 
-`corerp` resource provider manages application, environment, container and gateways. 
+`Applications.Core` resource provider manages application, environment, container and gateways. 
 
-`daprrp` resource provider manages all dapr resources that are deployed as part of application. 
+`Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. 
 
-`datastorerp` resource provider manages datastore such as SQL database or Mongo DB that an application might be using. 
+`Applications.Datastore` resource provider manages datastore such as SQL database or Mongo DB that an application might be using. 
 
-`messagingrp` resources provider manages queues such as Rabbit MQ. 
+`Applications.Messaging` resources provider manages queues such as Rabbit MQ. 
 
-A key sub component of Application RP is Recipe Engine. Recipe Engine is responsible for provisioning of resources using bicep and terraform recipes. 
+RecipeEngine is a key sub-component of Applications RP, which uses the above resource providers for provisioning infrastructure resources. It takes as input a recipe, written in bicep or terraform. It fetches Bicep recipe from any OCI complaint registry. It also fetches Terraform recipes available as public modules. It then requests UCP to help deploy the recipe. Also, if user creates a custom recipe, it requests Controller to first validate the recipe using recipe-webhook and then create it. 
+
+Users could provision application resources without using recipes too, in which case, Applications RP again works with Controller managing for Kubernetes resources and UCP for deploying AWS and Azure resources.
+
+The Applications RP provisions some resources synchronously, whereas for other resources whose creation can be time consuming, it has workers that enable async operation. To faciliate Aync operation, the Applications RP adds the incoming request to an in-memory queue. Workers dequeue requests from the queue and process them. 
+
+Applications RP persists the radius resources metadata in etcd through API Server. For this, it interacts with Kubernetes Controller. 
 
 ### Implementation Details
+
+Applications RP deploying a AWS/Azure Resource
+
+Applications RP deploying a Kubernetes Resource
+
+Applications RP deploying a Recipe 
+
 
 #### Use of Cryptography
 
@@ -86,7 +106,7 @@ This threat model assumes that:
 
 ### Diagram
 
-![Controller Component via Microsoft Threat Modeling Tool](./2024-08-controller-component-threat-model/controller-component.png)
+![Applications RP via Microsoft Threat Modeling Tool](2024-10-applications-rp-threat-model/apprp.png)
 
 1. **User creates/updates/deletes a Recipe or a Deployment resource**: When a user requests to create, update, or delete a Recipe or a Deployment resource, the request is handled by the Kubernetes API Server. One way, and probably the most common way, a user can do this request is by running a **kubectl** command. Kubernetes takes care of the authentication and the authorization of the user and its request(s) so we (Radius) don't need to worry about anything here.
 
