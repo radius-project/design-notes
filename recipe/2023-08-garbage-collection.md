@@ -1,6 +1,5 @@
 # Recipe Resource Garbage Collection
 
-* **Status**: Pending
 * **Author**: Karishma Chawla (@kachawla)
 
 ## Overview

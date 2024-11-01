@@ -1,6 +1,5 @@
 # Title
 
-* **Status**: Pending/Approved
 * **Author**: Your name (@YourGitHubUserName)
 
 ## Overview
@@ -49,7 +48,7 @@ Describe non-goals to identify something that we won’t be focusing on
 immediately. We won’t be expending any effort on these matters. If there
 will be follow-ups after this work, list them here. If there are things
 we plan to do in the future, but are out of scope of this design, list
-them here.
+them here. Provide a brief explanation on why this is a non-goal.
 -->
 
 ### User scenarios (optional)
