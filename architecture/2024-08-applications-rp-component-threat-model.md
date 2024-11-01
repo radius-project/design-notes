@@ -12,11 +12,11 @@ The Applications RP component is responsible for managing applications and their
 
 | Term                  | Definition                                                                                                                                                                                  |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mTLS                  | Mutual Transport Layer Security (mTLS) allows two parties to authenticate each other during the initial connection of an SSL/TLS handshake.                                                 |
+|RP                 | Resource Provider                                                 |
 | UCP                 | Universal Control Plane for Radius                                                                                                                                                   |
 ## System Description
 
-Applications RP is a Radius service that acts as resource provider for application and its resources. The resources can be core resources like application or environment or container. They can also be a dapr resource, message queue or datastore. Applications RP lives in `radius-system` namespace in a kubernetes cluster. It is a client of Controller and UCP. It also receives requests from UCP for managing the above mentioned resources. 
+Applications RP is a Radius service that acts as resource provider for application and its resources. It communicates over HTTP. The RP has a Datastore for storing Radius data, Message Queue for processing asynchronous request and a Secret Store for storing sensitive information such as certficates. All these are configurable components and support multiple implementations. Users and Clients cannot directly communicate with Applications RP. They instead communicate with UCP. UCP forwards relevant requests to Applications RP. Applications may have Kubernetes resources and cloud resources. Applications RP manages these Kubernetes resources on the user's behalf. This may launch user application's code on the same cluster as Radius, or a different cluster. it also has access to user's cloud credentials and manages user's cloud resources. Applications RP can invoke *recipes* which are bicep or terraform code. These recipes are used to deploy application infrastructure components like databases.  
 
 ### Architecture
 
