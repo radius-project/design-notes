@@ -406,7 +406,7 @@ Add the ability for operators to reference values from their `Applications.Core/
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
 - Feature request tracking this scenario: https://github.com/radius-project/radius/issues/5520
-- Pull request (work in progress) for adding secretstore references into container env variables: https://github.com/radius-project/radius/pull/7744
+- Pull request (merged) for adding secretstore references into container env variables: https://github.com/radius-project/radius/pull/7744
 
 ## Design Review Notes
 
