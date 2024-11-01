@@ -414,4 +414,4 @@ Add the ability for operators to reference values from their `Applications.Core/
 - Discussion around whether `Applications.Core/secretStores` is right, specifically whether it should be part of `Applications.Core` or whether it should be part of UCP (something like `System.Resources/secretStores`) -- *this is a larger discussion beyond the scope of this particular feature spec*
 - Scenario that allows for secrets to be passed as parameters into a Radius Bicep resource is missing -- *this scenario was added*
 - Need scenarios for referencing `Applications.Core/secretStores` in Radius Recipes -- *this scenario was added*
-- Add more information on customers bringing in their own secrets, secrets stores resource currently supporting only k8s secrets -- TODO
+- Add more information on customers bringing in their own secrets, secrets stores resource currently supporting only k8s secrets -- *addressed in the spec*
