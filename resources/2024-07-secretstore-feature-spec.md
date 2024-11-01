@@ -158,7 +158,7 @@ output "result" {
 }
 ```
 
-Step 2: Developer references the `Applications.Core/secretStores` resource in their `Applications.Core/containers` resource definition to inject secrets as environment variables into their container at deploy time.
+Step 3: Developer references the `Applications.Core/secretStores` resource in their `Applications.Core/containers` resource definition to inject secrets as environment variables into their container at deploy time.
 
 > The example below follows the implementation that has been completed in https://github.com/radius-project/radius/pull/7744
 
@@ -189,7 +189,7 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
-Step 3: Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders` or `Applications.Volumes` resource definition to securely manage secrets for use in their application.
+Step 4: Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders` or `Applications.Volumes` resource definition to securely manage secrets for use in their application.
 
 ```diff
 resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
@@ -261,7 +261,7 @@ resource volume 'Applications.Core/volumes@2023-10-01-preview' = {
 }
 ```
 
-Step 4: Developer references the `Applications.Core/secretStores` resource in their `Applications.Datastores/*` or `Applications.Messaging/*` resource definition to securely manage secrets for use in their application.
+Step 5: Developer references the `Applications.Core/secretStores` resource in their `Applications.Datastores/*` or `Applications.Messaging/*` resource definition to securely manage secrets for use in their application.
 
 ```diff
 resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
@@ -325,7 +325,7 @@ resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
 }
 ```
 
-Step 5: The developer specifies the `Applications.Core/secretStores` resource as a parameter to the Bicep resource that requires the secret.
+Step 6: The developer specifies the `Applications.Core/secretStores` resource as a parameter to the Bicep resource that requires the secret.
 
 ```bicep
 param secretStore object = authcreds
@@ -356,7 +356,7 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
-Step 6: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables or used as credentials for authentication into the extender, volume, datastore, or messaging resource at deploy time.
+Step 7: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables or used as credentials for authentication into the extender, volume, datastore, or messaging resource at deploy time. If the resource is deployed using a Recipe, the secrets are securely passed as outputs to Radius by the Recipe for use in provisioning and deploying the resource.
 
 ## Key investments
 <!-- List the features required to enable this scenario. -->
@@ -378,6 +378,10 @@ Add the ability for developers to reference values from their `Applications.Core
 ### Feature 4: Add functionality to reference `Applications.Core/secretStores` objects as a parameter to a Bicep resource
 <!-- One or two sentence summary -->
 Add the ability for developers to specify the `Applications.Core/secretStores` resource as a parameter of the `object` type to the Bicep resource that requires the secret so that secrets can be passed as parameters into a Radius Bicep resource.
+
+### Feature 5: Add functionality to reference `Applications.Core/secretStores` in Recipes
+<!-- One or two sentence summary -->
+Add the ability for operators to reference values from their `Applications.Core/secretStores` resources in their Recipe's `output` object so that secrets can be securely passed as outputs to Radius that can be used in provisioning and deploying the resource using the Recipe.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
