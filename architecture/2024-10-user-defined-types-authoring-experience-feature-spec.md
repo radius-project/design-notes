@@ -4,7 +4,7 @@
 
 ## Summary
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
-User-Defined Types enable Platform engineers to define and deploy their organization's custom services in Radius. More details around the feature, user scenarios and experience can be found [here](/architecture/2024-06-resource-extensibility-feature-spec.md). This document will focus on the authoring experience for defining the user-defined resource type schema.
+User-Defined Types enable Platform engineers to define and deploy their organization's custom services in Radius. More details around the feature, user scenarios and end-end-experience can be found [here](/architecture/2024-06-resource-extensibility-feature-spec.md). This feature specification document details on the requirements and the user experience for authoring and updating the schema for the User-Defined-Type.
 
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
@@ -21,7 +21,7 @@ These goals are out of scope for the first iteration but might be considered in 
 - Advanced scenarios defining the capabilities of the resource type in the schema definition. This includes defining capabilities like connections to other resource, output resources or infrastructure resources produced by the resource type etc.
 - Defining child resources or nested resources in the schema definition
 - Extensibility on CRUDL operations for the resource type
-- Providing solutions to handle breaking changes on API versions of the resource type
+- Providing solutions to handle breaking changes on API versions of the resource type (?)
 
 ## User profile and challenges
 <!-- Define the primary user and the key problem / pain point we intend to address for that user. If there are multiple users or primary and secondary users, call them out.   -->
@@ -155,7 +155,7 @@ Resource type `plaid` created successfully for version `2024-11-01`
 Question 
 
 1. We leave it up to the user to decide whether to use the new optional property in their application definitions and Recipes. Should we provide any guidance?
-2. If Deb tries to add an optional property within the same version or without a default value, what should be the behavior ? Should we consider any change warrants a api version upgrade like Azure/ ARM does?
+2. If Deb tries to add an optional property within the same version or without a default value, what should be the behavior ? Should we consider that any change warrants a api version upgrade like Azure/ ARM does?
 
 #### Sub-scenario 2: Deb adds a required property and updates the resource type Plaid.
 Deb wants to add a required property `messageForwarding`. This is considered to be a breaking change as it would require the Infrastructure operator teams and developers to update their Recipes and application definitions to use the new property in the resource type Plaid. Deb should be provided with an error message when a breaking change is detected in the schema definition.
