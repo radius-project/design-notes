@@ -246,7 +246,7 @@ To maximize convenience for the user, these recipes will be designed with the fo
 ### Detailed Design
 
 This design will require adding a new type to the Applications.Dapr resource provider. This includes:
-- Extending the TypeSpec schema definition to include the new Application.Dapr/Bindings resource
+- Extending the TypeSpec schema definition to include the new `Application.Dapr/bindings` resource
 - Adding the corresponding DaprBinding type to the internal representation (DaprRP)
 - Allowing a new type of Dapr component (binding) to be emitted in the backend Kubernetes cluster.
 
