@@ -115,7 +115,7 @@ Updates to schema definitions can be classified into two categories: non-breakin
 | Change type | Description | Example |
 |-------------|-------------|---------|
 | Non-breaking changes | Changes that can be made to the schema definition without impacting existing applications that use the resource type. | Eg: Adding an optional property to the schema definition |
-| Breaking changes | Changes that are not backward/forward compatible require. These changes are disruptive and often requires the users to update their applications to use the new schema definition. | Eg: Adding a required property to the schema definition |
+| Breaking changes | Changes that are not backward/forward compatible. These changes are disruptive and often requires the users to update their applications to use the new schema definition. | Eg: Adding a required property to the schema definition |
 
 There are two key sub-scenarios to consider when Deb updates the schema for the internal messaging service Plaid
 
