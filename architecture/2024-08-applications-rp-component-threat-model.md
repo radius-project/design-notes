@@ -20,23 +20,23 @@ Applications RP is a Radius service that acts as resource provider for applicati
 
 ### Architecture
 
-Applications RP has four types of resource providers for managing various types of resources in an application. 
+Application RP consists of four types of resource providers for managing various types of resources in an application. 
 
-`Applications.Core` resource provider manages application, environment, container and gateways. 
+`Applications.Core` resource provider manages core application resources such as application, environment, container and gateways. Applications RP managed containers can use Azure Key Vault for storing secrets, TLS keys, and certificates. To deploy gateways, the RP uses contour as ingress controller. These gateways support TLS termination. In order to do this, Applications RP stores sensitive TLS information as secret using Radius Secret Store.
+Radius secret stores are implemented using kubernetes as secret provider. 
 
-`Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. 
+`Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. These include dapr state store, dapr secret store, dapr pubsub and dapr configuartion store.
 
-`Applications.Datastore` resource provider manages datastore such as SQL database or Mongo DB that an application might be using. 
+`Applications.Datastore` resource provider supports provisioning SQL database, Mongo DB and Redis Cache. 
 
-`Applications.Messaging` resources provider manages queues such as Rabbit MQ. 
+`Applications.Messaging` resources provider manages queues such as Rabbit MQ.
 
-RecipeEngine is a key sub-component of Applications RP, which uses the above resource providers for provisioning infrastructure resources. It takes as input a recipe, written in bicep or terraform. It fetches Bicep recipe from any OCI complaint registry. It also fetches Terraform recipes available as public modules. It then requests UCP to help deploy the recipe. Also, if user creates a custom recipe, it requests Controller to first validate the recipe using recipe-webhook and then create it. 
+Applications RP has a key sub component `Recipe Engine` to execute `recipes`. 
+`Recipes` are Bicep or Terraform code that is used to deploy infrastructure components on Azure and AWS. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
 
-Users could provision application resources without using recipes too, in which case, Applications RP again works with Controller managing for Kubernetes resources and UCP for managing AWS and Azure resources. For deploying Terraform Recipe, it directly communicates with AWS and Azure.
+In order to execute Terraform recipes, Applications RP installs latest Terraform. It mounts a directory `/terraform` in Applications RP pod for executing terraform recipes in this, using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
 
-The Applications RP provisions some resources synchronously, whereas for other resources whose creation can be time consuming, it has workers that enable async operation. To faciliate Async operation, the Applications RP adds the incoming request to an in-memory queue. Workers dequeue requests from the queue and process them. 
-
-Applications RP persists the radius resources metadata in etcd through API Server. For this, it interacts with Kubernetes Controller. 
+Applications RP also allows users to create their own recipes and use them to provision their infrastructure.  
 
 Below is a high level overview of various sub components in Applications RP
 ![Applications RP](2024-10-applications-rp-threat-model/apprp.png) 
@@ -204,3 +204,4 @@ Pending
 - should I say kubernetes controller since we use those libraries and invoke API Server calls? or directly say Appcore RP --> API Server?
 - there seems to be no cert for Applications RP when I list secrets
 - kubernetes secrets are not encrypted. Should we cover the point and add support of some other secret store as default secret management for Radius going forward?
+- how do we store datastore sensitive info such as conn string and password
