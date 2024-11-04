@@ -22,8 +22,8 @@ Applications RP is a Radius service that acts as resource provider for applicati
 
 Application RP consists of four types of resource providers for managing various types of resources in an application. 
 
-`Applications.Core` resource provider manages core application resources such as application, environment, container and gateways. Applications RP managed containers can use Azure Key Vault for storing secrets, TLS keys, and certificates. To deploy gateways, the RP uses contour as ingress controller. These gateways support TLS termination. In order to do this, Applications RP stores sensitive TLS information as secret using Radius Secret Store.
-Radius secret stores are implemented using kubernetes as secret provider. 
+`Applications.Core` resource provider manages core application resources such as application, environment, container and gateways. Applications RP managed containers can use Azure Key Vault for storing secrets, TLS keys, and certificates. To deploy gateways, the RP uses contour as ingress controller. These gateways support TLS termination. In order to do this, Applications RP stores sensitive TLS information as secret using Secret Store.
+Applications.Core RP implements Secret stores using kubernetes as secret provider. 
 
 `Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. These include dapr state store, dapr secret store, dapr pubsub and dapr configuartion store.
 
