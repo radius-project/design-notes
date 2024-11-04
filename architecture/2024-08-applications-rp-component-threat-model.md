@@ -34,7 +34,9 @@ Radius secret stores are implemented using kubernetes as secret provider.
 Applications RP has a key sub component `Recipe Engine` to execute `recipes`. 
 `Recipes` are Bicep or Terraform code that is used to deploy infrastructure components on Azure and AWS. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
 
-In order to execute Terraform recipes, Applications RP installs latest Terraform. It mounts a directory `/terraform` in Applications RP pod for executing terraform recipes in this, using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
+In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
+
+In order to deploy bicp recipes, Applications RP sends a request to UCP, which in turn forwards it to Deployment Engine. 
 
 Applications RP also allows users to create their own recipes and use them to provision their infrastructure.  
 
