@@ -27,7 +27,7 @@ Applications.Core RP implements Secret stores using kubernetes as secret provide
 
 `Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. These include dapr state store, dapr secret store, dapr pubsub and dapr configuartion store.
 
-`Applications.Datastore` resource provider supports provisioning SQL database, Mongo DB and Redis Cache. 
+`Applications.Datastore` resource provider supports provisioning SQL database, Mongo DB and Redis Cache. The secrets associated with these resources are stored in plain text in the corresponding tracked resource kubernetes object.
 
 `Applications.Messaging` resources provider manages queues such as Rabbit MQ.
 
