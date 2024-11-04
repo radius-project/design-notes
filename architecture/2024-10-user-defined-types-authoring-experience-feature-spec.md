@@ -120,7 +120,7 @@ Updates to schema definitions can be classified into two categories: non-breakin
 There are two key sub-scenarios to consider when Deb updates the schema for the internal messaging service Plaid
 
 #### Sub-scenario 1: Deb adds a optional property and updates the resource type Plaid.
-Deb wants to add an optional property `logAnalytics` to know whether the resource type should have log analytics enabled. This is considered to be a non-breaking change as it is an optional property with default value. Users should be able to use the new property without any impact across versions on their existing applications.
+Deb wants to add an optional property `logAnalytics` to have log analytics enabled for the resource-type. This is considered to be a non-breaking change as it is an optional property with default value. Users should be able to use the new property without any impact across versions on their existing applications.
 
 ```yaml
 namespace: 'Mycompany.Messaging'
