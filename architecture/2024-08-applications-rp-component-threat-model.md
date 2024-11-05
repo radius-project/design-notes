@@ -20,7 +20,30 @@ Applications RP is a Radius service that acts as resource provider for applicati
 
 ### Architecture
 
-Application RP consists of four types of resource providers for managing various types of resources in an application. 
+Application RP recieves HTTP requests from UCP. It does not interface directly with user/ cli. These requests have untrusted json payloads. RP validates these payloads before consuming them. 
+
+The RP consists of four types of resource providers for managing various types of resources in an application. `Applications.Core` resource provider manages core application resources such as application, environment, container and gateways. `Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. `Applications.Datastore` resource provider supports provisioning SQL database, Mongo DB and Redis Cache.
+`Applications.Messaging` resources provider manages queues such as Rabbit MQ.
+
+Applications RP has a key sub component `Recipe Engine` to execute `recipes`. 
+`Recipes` are Bicep or Terraform code supplied by user that is used to deploy infrastructure components on Azure and AWS. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
+
+In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
+
+In order to deploy bicp recipes, Applications RP sends a request to UCP, which in turn forwards it to Deployment Engine. 
+
+Applications RP also allows users to create their own recipes and use them to provision their infrastructure. 
+
+The RP can create kubernetes resources and manage them on behalf of the user. It can, for example, create a container based on the image provided by the user, which can in turn execute arbitrary code, and create other resources in the cluster as well as in AWS and Azure. 
+
+Applications RP has user's AWS / Azure credentials so that it can deploy and manage the cloud resources. The credentials are available as a kubernetes secret. While the credentials are registered and stored as secrets using an API, they are not available for retrieval or update through API calls. 
+
+The RP uses a queue to process requests asyncronously. Information about resources that are deployed / being deployed is stored in a datastore. 
+
+Below is a high level overview of various sub components in Applications RP
+![Applications RP](2024-10-applications-rp-threat-model/apprp.png) 
+
+### Implementation Details
 
 `Applications.Core` resource provider manages core application resources such as application, environment, container and gateways. Applications RP managed containers can use Azure Key Vault for storing secrets, TLS keys, and certificates. To deploy gateways, the RP uses contour as ingress controller. These gateways support TLS termination. In order to do this, Applications RP stores sensitive TLS information as secret using Secret Store.
 Applications.Core RP implements Secret stores using kubernetes as secret provider. 
@@ -31,19 +54,6 @@ Applications.Core RP implements Secret stores using kubernetes as secret provide
 
 `Applications.Messaging` resources provider manages queues such as Rabbit MQ.
 
-Applications RP has a key sub component `Recipe Engine` to execute `recipes`. 
-`Recipes` are Bicep or Terraform code that is used to deploy infrastructure components on Azure and AWS. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
-
-In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
-
-In order to deploy bicp recipes, Applications RP sends a request to UCP, which in turn forwards it to Deployment Engine. 
-
-Applications RP also allows users to create their own recipes and use them to provision their infrastructure.  
-
-Below is a high level overview of various sub components in Applications RP
-![Applications RP](2024-10-applications-rp-threat-model/apprp.png) 
-
-### Implementation Details
 
 *Applications RP deploying a cloud Resource*
 
@@ -106,7 +116,7 @@ storageProvider:
 
 Applications RP stores secrets for rendering some resources. For instance TLS termination in gateways needs storing TLS cert and key. For these cases, Applications RP uses kubernetes secrets. 
 
-#### Data Serialization / Formats
+#### Data Serialization / Formats 
 
 ### Clients
 
@@ -133,7 +143,7 @@ This threat model assumes that:
 2. The Kubernetes cluster that Radius is installed on is not compromised.
 3. It is the responsibility of the Kubernetes cluster to authenticate users. Administrators and users with sufficient privileges can perform their required tasks. Radius cannot prevent actions taken by an administrator.
 
-## Data Flow
+## Data Flow      
 
 ### Diagram
 
@@ -143,7 +153,7 @@ Below are the key points associated with data flow:
 1. Applications RP receives request to dpeloy resources from UCP and sends back appropriate response.
 2. Applications RP communicates with Controller for managing kubernetes resources and validating custom recipes.
 3. Applications RP requests UCP to deploy bicep recipes.
-4.  Application RP (terraform provider) requests AWS/ Azure to deploy resources for terraform recipes.
+4.  Application RP (terraform provider) requests AWS/ Azure to deploy resources for terraform recipes.                   
 5.  Application RP uses API server through Kubernetes Controller to save Radius resources and Async Operations ( APIServer is used as datastore and Queue).
 6.  Application RP fetches recipes from OCI registries and public terraform modules.
 
