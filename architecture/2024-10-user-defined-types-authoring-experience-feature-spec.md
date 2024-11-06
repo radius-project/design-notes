@@ -9,19 +9,23 @@ User-Defined Types enable Platform engineers to define and deploy their organiza
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
 
-- Enable a simple and intuitive experience for platform engineers to define the schema for their User-Defined-Type with minimal lines of code
-- Ensure that there is low concept count for the user to understand and get started with defining the schema for their User-Defined-Type
-- Ensure that users have clear visibility into the validation process of the schema definition to guarantee its correctness.
+- Enable a simple and intuitive experience for platform engineers to define the schema for their User-Defined-Type with low concept count and minimal learning curve
+- Ensure that the schema definitions are authored in a unified, consistent and standard format across all resource types
+- Ensure that users receive transparent and detailed error messages when the schema definition is incorrect or when there are breaking changes in the schema definition.
 
 ### Non-goals (out of scope)
 <!-- What are we explicitly not trying to accomplish? -->
-These goals are out of scope for the first iteration but might be considered in future iterations based on user feedback.
+Below goals are out of scope for the first iteration but might be considered in future iterations based on user feedback.
 
-- Providing a full-fledged TypeSpec tooling experience for authoring the schema definition with autocompletion, error validation at development time.
 - Advanced scenarios defining the capabilities of the resource type in the schema definition. This includes defining capabilities like connections to other resource, output resources or infrastructure resources produced by the resource type etc.
 - Defining child resources or nested resources in the schema definition
+- Adding a new resource methods or operations to the resource type
+- Providing a full-fledged TypeSpec tooling experience for authoring the schema definition with autocompletion, error validation at development time.
+- Providing solutions to handle breaking changes on API versions of the resource type
+
+Below goals are out of scope 
+
 - Extensibility on CRUDL operations for the resource type
-- Providing solutions to handle breaking changes on API versions of the resource type (?)
 
 ## User profile and challenges
 <!-- Define the primary user and the key problem / pain point we intend to address for that user. If there are multiple users or primary and secondary users, call them out.   -->
@@ -68,34 +72,35 @@ As called out in the [feature spec](/architecture/2024-06-resource-extensibility
     Deb creates a plaid.yaml file with the following schema definition
 
     ```yaml
-    namespace: 'Mycompany.Messaging'
-    resourceTypes:
-        'Mycompany.Messaging/plaidResource':
-            name: 'Name of the resource'
-            version: '2024-10-01'
-                properties: 
-                    required: ['queueName','host', 'port', 'connectionString']
-                    queueName:
-                        type: 'string'
-                        description: 'Name of the queue'
-                    host:
-                        type: 'string'
-                        description: 'Hostname of the messaging service'        
-                    port:
-                        type: 'string'
-                        description: 'Port'
-                    connectionString:
-                        type: 'string'
-                        description: 'Connection string to the messaging service'
+    resource namespace: 'Mycompany.Messaging'
+        'plaidResource':
+            apiVersions: 
+                2024-10-01:
+                    schema:
+                        properties: 
+                            queueName:
+                                type: 'string'
+                                description: 'Name of the queue'
+                                required: true
+                            host:
+                                type: 'string'
+                                description: 'Hostname of the messaging service'
+                                required: true        
+                            port:
+                                type: 'string'
+                                description: 'Port'
+                                required: true
+                            connectionString:
+                                type: 'string'
+                                description: 'Connection string to the messaging service' 
+                                required: true             
     ....
     ```
- Questions
-1. Is resource namespace needed or can we parse this from the resource type ?
 
- Now Deb can register this resource type via the CLI
+ Now Deb register this resource type via the CLI
 
     ```bash
-    rad resource-type create -f plaid.yaml
+    rad resource-provider create -f Mycompany.Messaging.yaml
     ```
 The boilerplate code for CRUDL operations for the resource type is generated automatically and the resource type is registered in Radius.
 
@@ -123,26 +128,32 @@ There are two key sub-scenarios to consider when Deb updates the schema for the 
 Deb wants to add an optional property `logAnalytics` to have log analytics enabled for the resource-type. This is considered to be a non-breaking change as it is an optional property with default value. Users should be able to use the new property without any impact across versions on their existing applications.
 
 ```yaml
-namespace: 'Mycompany.Messaging'
-resourceTypes:
-    'Mycompany.Messaging/plaidResource':
-        name: 'Name of the resource'
-        version: '2024-11-01'
-            properties: 
-                required: ['queueName','host', 'port', 'connectionString']
-                queueName:
-                    type: 'string'
-                    description: 'Name of the queue'       
-                port:
-                    type: 'string'
-                    description: 'Port'
-                connectionString:
-                    type: 'string'
-                    description: 'Connection string to the messaging service'
-                logAnalytics:
-                    type: 'string'
-                    description: 'Usage type of the messaging service'  
-                    default: 'off'        
+resource namespace: 'Mycompany.Messaging'
+    'plaidResource':
+        apiVersions: 
+            2024-10-01:
+                schema:
+                    properties: 
+                        queueName:
+                            type: 'string'
+                            description: 'Name of the queue'
+                            required: true
+                        host:
+                            type: 'string'
+                            description: 'Hostname of the messaging service'
+                            required: true        
+                        port:
+                            type: 'string'
+                            description: 'Port'
+                            required: true
+                        connectionString:
+                            type: 'string'
+                            description: 'Connection string to the messaging service' 
+                            required: true             
+                        logAnalytics:
+                            type: 'string'
+                            description: 'Usage type of the messaging service'  
+                            default: 'off'        
 ```
 
 Deb creates the updated resource type schema via the CLI
@@ -161,28 +172,31 @@ Question
 Deb wants to add a required property `messageForwarding`. This is considered to be a breaking change as it would require the Infrastructure operator teams and developers to update their Recipes and application definitions to use the new property in the resource type Plaid. Deb should be provided with an error message when a breaking change is detected in the schema definition.
 
 ```yaml
-namespace: 'Mycompany.Messaging'
-resourceTypes:
-    'Mycompany.Messaging/plaidResource':
-        name: 'Name of the resource'
-        version: '2024-11-01'
-            properties: 
-                required: ['host', 'port', 'connectionString']
-                queueName:
-                    type: 'string'
-                    description: 'Name of the queue'   
-                host:
-                    type: 'string'
-                    description: 'Hostname of the messaging service'        
-                port:
-                    type: 'string'
-                    description: 'Port'
-                connectionString:
-                    type: 'string'
-                    description: 'Connection string to the messaging service'
-                messageForwarding:
-                    type: 'string'
-                    description: 'Usage type of the messaging service'          
+resource namespace: 'Mycompany.Messaging'
+    'plaidResource':
+        apiVersions: 
+            2024-10-01:
+                schema:
+                    properties: 
+                        queueName:
+                            type: 'string'
+                            description: 'Name of the queue'
+                            required: true
+                        host:
+                            type: 'string'
+                            description: 'Hostname of the messaging service'
+                            required: true        
+                        port:
+                            type: 'string'
+                            description: 'Port'
+                            required: true
+                        connectionString:
+                            type: 'string'
+                            description: 'Connection string to the messaging service' 
+                            required: true             
+                        messageForwarding:
+                            type: 'string'
+                            description: 'Usage type of the messaging service'          
 ```
 
 Deb creates the updated resource type schema via the CLI
