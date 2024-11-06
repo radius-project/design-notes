@@ -15,7 +15,7 @@ User-Defined Types enable Platform engineers to define and deploy their organiza
 
 ### Non-goals (out of scope)
 <!-- What are we explicitly not trying to accomplish? -->
-Below goals are out of scope for the first iteration but might be considered in future iterations based on user feedback.
+Below goals are out of scope for the first iteration but might be considered in future iterations based on user feedback:
 
 - Advanced scenarios defining the capabilities of the resource type in the schema definition. This includes defining capabilities like connections to other resource, output resources or infrastructure resources produced by the resource type etc.
 - Defining child resources or nested resources in the schema definition
@@ -23,7 +23,7 @@ Below goals are out of scope for the first iteration but might be considered in 
 - Providing a full-fledged TypeSpec tooling experience for authoring the schema definition with autocompletion, error validation at development time.
 - Providing solutions to handle breaking changes on API versions of the resource type
 
-Below goals are out of scope 
+Below goals are out of scope forever:
 
 - Extensibility on CRUDL operations for the resource type
 
