@@ -171,7 +171,7 @@ Resource type `plaid` created successfully for version `2024-11-01`
 **FAQs**:
 
 1. If Deb tries to add an optional property within the same version or without a default value, what should be the behavior ? 
-Any change to the resource-type schema warrants the APIversion to be upgraded. This is a pattern that is followed by ARM/Azure which seems to be a good practice and hence we will restrict the user from doing changes to the schema within the same version.
+Any change to the resource-type schema warrants the API version to be upgraded. This is a pattern that is followed by ARM/Azure which seems to be a good practice and hence we will restrict the user from doing changes to the schema within the same version.
 
 1. We leave it up to the user to decide whether to use the new optional property in their application definitions and Recipes. Should we provide any guidance/feature from GitOps perspective?
 <>
