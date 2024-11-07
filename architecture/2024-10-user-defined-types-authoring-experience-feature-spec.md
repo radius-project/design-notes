@@ -19,7 +19,7 @@ Below goals are out of scope for the first iteration but might be considered in 
 
 - Advanced scenarios defining the capabilities of the resource type in the schema definition. This includes defining capabilities like connections to other resource, output resources or infrastructure resources produced by the resource type etc.
 - Defining child resources or nested resources in the schema definition
-- Adding a new resource methods or operations to the resource type
+- Adding new resource methods or operations to the resource type
 - Providing a full-fledged TypeSpec tooling experience for authoring the schema definition with autocompletion, error validation at development time.
 - Providing solutions to handle breaking changes on API versions of the resource type
 
@@ -68,6 +68,7 @@ As called out in the [feature spec](/architecture/2024-06-resource-extensibility
     | Resource type description | The description of the resource type | No |
     | Properties | The data model of the resource type | Yes |
     | API Version | The version of the resource type | Yes |
+    | Capabilities | The capabilities of the resource type | No |
 
     Deb creates a plaid.yaml file with the following schema definition
 
@@ -93,7 +94,8 @@ As called out in the [feature spec](/architecture/2024-06-resource-extensibility
                             connectionString:
                                 type: 'string'
                                 description: 'Connection string to the messaging service' 
-                                required: true             
+                                required: true 
+                    capabilities: ["Recipe"]           
     ....
     ```
 
@@ -158,7 +160,8 @@ resource namespace: 'Mycompany.Messaging'
                         logAnalytics:
                             type: 'string'
                             description: 'Usage type of the messaging service'  
-                            default: 'off'        
+                            default: 'off' 
+                capabilities: ["Recipe"]        
 ```
 
 Deb creates the updated resource type schema via the CLI
@@ -204,7 +207,8 @@ resource namespace: 'Mycompany.Messaging'
                             required: true             
                         messageForwarding:
                             type: 'string'
-                            description: 'Usage type of the messaging service'          
+                            description: 'Usage type of the messaging service'
+                capabilities: ["Recipe"]           
 ```
 
 Deb creates the updated resource type schema via the CLI
@@ -214,7 +218,7 @@ rad resource-type create -f plaid.yaml
 Error: Unable to create the resource-type `plaid` for version `2024-10-01`. The schema definitions has a breaking change with the required property `instance_type`. Please delete older versions of the resource type and try again.
 ```
 
-FAQs:
+**FAQs:**
 
 1. How does Radius handle breaking changes in the schema definition ?
     For MVP, we flag breaking changes to the users and provide guidance or documentation to handle the breaking changes. In future iterations, we can provide tooling support to handle breaking changes in the schema definition.
