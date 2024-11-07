@@ -113,6 +113,11 @@ E.g.:
     Error: The schema definition is incorrect. The required property 'port' is missing a type in the schema definition
     ```
 
+**Error Validations**:
+1. Syntax errors in the schema definition
+1. Required inputs are missing in the schema definition
+1. Incomplete data types for the properties in the schema definition
+
 ### Scenario 2: Deb updates the schema for the internal messaging service Plaid
 <!-- One or two sentence summary -->
 Updates to schema definitions can be classified into two categories: non-breaking changes and breaking changes. 
@@ -163,10 +168,14 @@ rad resource-type create -f plaid.yaml
 Resource type `plaid` created successfully for version `2024-11-01`
 ```
 
-Question 
+**FAQs**:
 
-1. We leave it up to the user to decide whether to use the new optional property in their application definitions and Recipes. Should we provide any guidance?
-2. If Deb tries to add an optional property within the same version or without a default value, what should be the behavior ? Should we consider that any change warrants a api version upgrade like Azure/ ARM does?
+1. If Deb tries to add an optional property within the same version or without a default value, what should be the behavior ? 
+Any change to the resource-type schema warrants the APIversion to be upgraded. This is a pattern that is followed by ARM/Azure which seems to be a good practice and hence we will restrict the user from doing changes to the schema within the same version.
+
+1. We leave it up to the user to decide whether to use the new optional property in their application definitions and Recipes. Should we provide any guidance/feature from GitOps perspective?
+<>
+
 
 #### Sub-scenario 2: Deb adds a required property and updates the resource type Plaid.
 Deb wants to add a required property `messageForwarding`. This is considered to be a breaking change as it would require the Infrastructure operator teams and developers to update their Recipes and application definitions to use the new property in the resource type Plaid. Deb should be provided with an error message when a breaking change is detected in the schema definition.
@@ -206,29 +215,36 @@ rad resource-type create -f plaid.yaml
 Error: Unable to create the resource-type `plaid` for version `2024-10-01`. The schema definitions has a breaking change with the required property `instance_type`. Please delete older versions of the resource type and try again.
 ```
 
-Questions
-1. For MVP, can we just flag breaking changes and provide documentation on how to handle breaking changes ? 
+FAQs:
+
+1. How does Radius handle breaking changes in the schema definition ?
+    For MVP, we flag breaking changes to the users and provide guidance or documentation to handle the breaking changes. In future iterations, we can provide tooling support to handle breaking changes in the schema definition.
+
 2. What are the breaking changes that we need to consider ? 
-    - Adding a required property
-    - Removing a required property
-    - Changing the type of a property
-    - Changing the name of a property
-    ?
+    - API schema changes that are not forward/backward compatible. Some examples include:
+       - Changing the resource namespace or resource name of a property
+       - Adding/removing a required property
+       - Changing the data type of a property
+    - 
 
 ### Scenario 3: Deb deletes the schema for the internal messaging service Plaid
 <!-- One or two sentence summary -->
 
 Deb wants to delete the schema for the internal messaging service Plaid. Deb should be able to delete the schema definition via the CLI.
 
+Option 1:
+
+    ```bash
+    rad resource-type delete -n Mycompany.Messaging/plaidResource -v 2024-10-01
+    Warning : There are resources provisioned with the resource type `plaidResource`. Deleting the resource type will delete the resources provisioned with the resource type. Do you want to continue ? (y/n)
+    ```
+
+Option 2:
+    
 ```bash
-rad resource-type delete -n Mycompany.Messaging/plaidResource
-Warning : There are resources provisioned with the resource type `plaidResource`. Deleting the resource type will disrupt the resources provisioned with the resource type. Do you want to continue ? (y/n)
+rad resource-type delete -n Mycompany.Messaging/plaidResource -v 2024-10-01 
+Error: There are resources provisioned with the resource type `plaidResource`. Please delete the resources and try again.
 ```
-
-Questions
-1. Should we delete the resource type if there are resources provisioned with the resource type ? or 
-2. Should we delete the resources provisioned with the resource type when the resource type is deleted ?
-
 
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
