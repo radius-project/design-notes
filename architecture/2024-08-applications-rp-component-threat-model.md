@@ -12,11 +12,12 @@ The Applications RP component is responsible for managing applications and their
 
 | Term                  | Definition                                                                                                                                                                                  |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|RP                 | Resource Provider                                                 |
-| UCP                 | Universal Control Plane for Radius                                                                                                                                                   |
+| RP                 | Resource Provider    |
+| UCP                 | Universal Control Plane for Radius   |
+
 ## System Description
 
-Applications RP is a Radius component that acts as resource provider for application and its resources. It communicates over HTTP. The RP has a Datastore for storing Radius data, Message Queue for processing asynchronous request and a Secret Store for storing sensitive information such as certficates. All these are configurable components and support multiple implementations. Users and Clients cannot directly communicate with Applications RP. They instead communicate with UCP. UCP forwards relevant requests to Applications RP. Applications may have Kubernetes resources and cloud resources. Applications RP manages these Kubernetes resources on the user's behalf. This may launch user application's code on the same cluster as Radius, or a different cluster. it also has access to user's cloud credentials and manages user's cloud resources. Applications RP can invoke *recipes* which are bicep or terraform code. These recipes are used to deploy application infrastructure components like databases.  
+Applications RP is a Radius component that acts as resource provider for application and its resources. It communicates over HTTP. The RP has a Datastore for storing Radius data, Message Queue for processing asynchronous request and a Secret Store for storing sensitive information such as certficates. All these are configurable components and support multiple implementations. Users and Clients cannot directly communicate with Applications RP. They instead communicate with UCP. UCP forwards relevant requests to Applications RP. Applications may have Kubernetes resources. Applications RP manages these resources on the user's behalf. This may launch user application's code on the same cluster as Radius, or a different cluster. It also has access to user's cloud credentials and manages user's cloud resources. Applications RP can invoke *recipes* which are bicep or terraform code. These recipes are used to deploy application infrastructure components like databases.  
 
 ### Architecture
 
@@ -30,18 +31,13 @@ Applications RP has a key sub component `Recipe Engine` to execute `recipes`.
 
 In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
 
-In order to deploy bicp recipes, Applications RP sends a request to UCP, which in turn forwards it to Deployment Engine. 
-
-Applications RP also allows users to create their own recipes and use them to provision their infrastructure. 
-
-The RP can create kubernetes resources and manage them on behalf of the user. It can, for example, create a container based on the image provided by the user, which can in turn execute arbitrary code, and create other resources in the cluster as well as in AWS and Azure. The RP also can create managed identities for azure which will decide who can deploy and run user code.  
-
-Applications RP has user's AWS / Azure credentials so that it can deploy and manage the cloud resources. The credentials are available as a kubernetes secret. While the credentials are registered and stored as secrets using an API, they are not available for retrieval or update through API calls. 
+In order to deploy bicep recipes, Applications RP sends a request to UCP, which in turn forwards it to Deployment Engine. 
 
 The RP uses a queue to process requests asyncronously. Information about resources that are deployed / being deployed is stored in a datastore. 
 
 Below is a high level overview of various key subcomponents in Applications RP
 ![Applications RP](2024-10-applications-rp-threat-model/apprp.png) 
+
 
 ### Implementation Details
 
@@ -58,12 +54,11 @@ Below is a high level overview of various key subcomponents in Applications RP
 
 #### Storage of secrets
 
-Applications RP has access to sensitive information related to the application resource it manages as well as the cloud credentials it requires for managing cloud resources on Azure and AWS. Applications RP provides a Secret Store which can be used to store sentive information such as TLS certificate and private keys. It uses kubernetes secrets to implement this secret store. 
-
+Applications RP has access to sensitive information related to the application resource it manages as well as the cloud credentials it requires for managing cloud resources on Azure and AWS. Applications RP provides a Secret Store which can be used to store sensitive information such as TLS certificate and private keys. It uses kubernetes secrets to implement this secret store. 
 
 ##### Managing secrets for datastores
 
-Applications RP service has a Datastore RP. This RP is the resource provider for datstores such as SQL database, Mongo DB and Redis Cache. As of today, sensitive information such as DB connection string, user/ password that is required to provision these resources is stored in plain text (is this true for datastore recipe too). The feature which enables datastores to use a secret store is in progress. 
+Applications RP service has a Datastore RP. This RP is the resource provider for datstores such as SQL database, Mongo DB and Redis Cache. As of today, sensitive information such as DB connection string, user/ password that is required to provision these resources is stored in plain text. The feature which enables datastores to use a secret store is in progress. 
 
 ##### Access to cloud credentials and cloud
 
@@ -74,7 +69,7 @@ Using these credentials, Applications RP can create other resources in AWS and A
 
 #### Access to cluster
 
-The RP can create kubernetes resources and manage them on behalf of the user. It can, for example, create a container based on the image provided by the user, which can in turn execute arbitrary code, and create other resources in the cluster. 
+The RP can create kubernetes resources and manage them on behalf of the user. It can, for example, create a container based on the image provided by the user, which can in turn execute arbitrary code, and create other resources in the cluster where Radius is running, or on a different cluster. 
 
 #### Exposing User Application to Internet
 
@@ -88,10 +83,9 @@ The Radius RP can create ingress Kubernetes objects, which can expose a kubernet
 
 Terraform recipes are download from internet too, since they are available as public modules. These recipes are downloaded onto an empty directory `/terraform` which is mounted into the applications RP pod. Then the installed terraform executable executes these recipes in the current directory. Terraform communicates with AWS and Azure as needed to deploy resources.
 
-
 #### Data Serialization / Formats
 
-We use custom parsers to parse Radius-related resource IDs and do not use any other custom parsers and instead rely on Kubernetes built-in parsers. Therefore, we trust Kubernetes security measures to handle data serialization and formats securely. The custom parser that parses Radius resource IDs has its own security mechanisms that don't accept anything other than a Radius resource ID. 
+We use custom parsers to parse Radius-related resource IDs and do not use any other custom parsers. The custom parser that parses Radius resource IDs has its own security mechanisms that don't accept anything other than a Radius resource ID. 
 
 We also use json for data interchange between Applications RP and other services. We use golang standard libraries to parse json. 
 
