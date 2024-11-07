@@ -70,7 +70,7 @@ As called out in the [feature spec](/architecture/2024-06-resource-extensibility
     | API Version | The version of the resource type | Yes |
     | Capabilities | The capabilities of the resource type | No |
 
-    Deb creates a plaid.yaml file with the following schema definition
+    Deb creates a `Mycompany.Messaging.yaml` file with the following schema definition
 
     ```yaml
     resource namespace: 'Mycompany.Messaging'
@@ -111,7 +111,7 @@ Now on creation, the schema should be validated for correctness and completeness
 E.g.:
 
     ```bash
-    rad resource-type create -f plaid.yaml
+    rad resource-type create -f Mycompany.Messaging.yaml
     Error: The schema definition is incorrect. The required property 'port' is missing a type in the schema definition
     ```
 
@@ -138,7 +138,7 @@ Deb wants to add an optional property `logAnalytics` to have log analytics enabl
 resource namespace: 'Mycompany.Messaging'
     'plaidResource':
         apiVersions: 
-            2024-10-01:
+            2024-11-01:
                 schema:
                     properties: 
                         queueName:
@@ -167,7 +167,7 @@ resource namespace: 'Mycompany.Messaging'
 Deb creates the updated resource type schema via the CLI
 
 ```bash
-rad resource-type create -f plaid.yaml
+rad resource-type create -f Mycompany.Messaging.yaml
 Resource type `plaid` created successfully for version `2024-11-01`
 ```
 
@@ -186,7 +186,7 @@ Deb wants to add a required property `messageForwarding`. This is considered to 
 resource namespace: 'Mycompany.Messaging'
     'plaidResource':
         apiVersions: 
-            2024-10-01:
+            2024-11-01:
                 schema:
                     properties: 
                         queueName:
@@ -214,7 +214,7 @@ resource namespace: 'Mycompany.Messaging'
 Deb creates the updated resource type schema via the CLI
 
 ```bash
-rad resource-type create -f plaid.yaml
+rad resource-type create -f Mycompany.Messaging.yaml
 Error: Unable to create the resource-type `plaid` for version `2024-10-01`. The schema definitions has a breaking change with the required property `instance_type`. Please delete older versions of the resource type and try again.
 ```
 
