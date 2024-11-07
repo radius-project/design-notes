@@ -121,11 +121,13 @@ This threat model assumes that:
 ![Applications RP via Microsoft Threat Modeling Tool](2024-10-applications-rp-threat-model/apprp-dataflow.png)
 
 Below are the key points associated with data flow:
-1. Applications RP receives request to dpeloy resources from UCP and sends back appropriate response.
-2. Applications RP requests UCP to deploy bicep recipes.
-3. Application RP (terraform provider) requests AWS/ Azure to deploy resources for terraform recipes.                   
-4. Application RP uses API server to save Radius resources and Async Operations ( API Server is used as datastore and Queue).
-5. Application RP fetches recipes from OCI registries and public terraform modules.
+1. Applications RP receives request to deploy resources from UCP and sends back appropriate response.
+2. Depending on the resource to be deployed Applications RP takes the next step 
+    1. If the request is to deploy a recipe, Applications RP first downloads the recipe from a OCI registry (for bicep) or public module (for terraform)
+    2. Applications RP requests UCP to deploy bicep recipes. Or if its a Terraform recipe, the downloaded recipe is exceuted using the installed terraform, in the empty terraform directory mounted into the Applications RP pod. As part of this executiion, Terraform integrated in RP makes AWS and Azure API calls. 
+    3. If it is a kubernetes resource such as container, the RP interacts with API srever to render the resource.
+3. Application RP uses API server to save Radius resources and Async Operations By default, API Server is used as Radius Datastore and Queue.
+
 
 ## Threats
 
