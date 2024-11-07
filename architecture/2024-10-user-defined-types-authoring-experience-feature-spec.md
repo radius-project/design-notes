@@ -224,7 +224,6 @@ FAQs:
        - Changing the resource namespace or resource name of a property
        - Adding/removing a required property
        - Changing the data type of a property
-    - 
 
 ### Scenario 3: Deb deletes the schema for the internal messaging service Plaid
 <!-- One or two sentence summary -->
@@ -248,12 +247,9 @@ Error: There are resources provisioned with the resource type `plaidResource`. P
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
 
-### Feature 1
-<!-- One or two sentence summary -->
+### Feature 1 - Resource schema definition for User-Defined-Types
+This feature will cover the ability to define the schema for the User-Defined-Type in a custom `yaml` format. The schema definition should include the basic inputs as described in the scenario 1. The schema definition should be validated for correctness and completeness on creation.
 
-### Feature 2
+### Feature 2 - Versioning user-defined-types
 <!-- One or two sentence summary -->
-
-### Feature 3
-<!-- One or two sentence summary -->
-
+This feature will cover the ability to version the schema definition for the User-Defined-Type. Users should be able to create, update and delete the schema definition for the User-Defined-Type with versioning support. Users should be provided with error messages when a breaking change is detected in the schema definition.
