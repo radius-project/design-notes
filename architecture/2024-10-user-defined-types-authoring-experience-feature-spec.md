@@ -176,7 +176,6 @@ Any change to the resource-type schema warrants the API version to be upgraded. 
 1. We leave it up to the user to decide whether to use the new optional property in their application definitions and Recipes. Should we provide any guidance/feature from GitOps perspective?
 <>
 
-
 #### Sub-scenario 2: Deb adds a required property and updates the resource type Plaid.
 Deb wants to add a required property `messageForwarding`. This is considered to be a breaking change as it would require the Infrastructure operator teams and developers to update their Recipes and application definitions to use the new property in the resource type Plaid. Deb should be provided with an error message when a breaking change is detected in the schema definition.
 
