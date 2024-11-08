@@ -6,8 +6,6 @@
 
 This document provides a threat model for the Radius Applications RP component. It identifies potential security threats to this critical part of Radius and suggests possible mitigations. The document includes an analysis of the system, its assets, identified threats, and recommended security measures to protect the system.
 
-The Applications RP component is responsible for managing applications and their resources. It communicates with UCP, Deployment Engine and Controller components to achieve this. 
-
 ## Terms and Definitions
 
 | Term                  | Definition                                                                                                                                                                                  |
@@ -17,11 +15,18 @@ The Applications RP component is responsible for managing applications and their
 
 ## System Description
 
-Applications RP is a Radius component that acts as resource provider for application and its resources. It communicates over HTTP. The RP has a Datastore for storing Radius data, Message Queue for processing asynchronous request and a Secret Store for storing sensitive information such as certficates. All these are configurable components and support multiple implementations. Users and Clients cannot directly communicate with Applications RP. They instead communicate with UCP. UCP forwards relevant requests to Applications RP. Applications may have Kubernetes resources. Applications RP manages these resources on the user's behalf. This may launch user application's code on the same cluster as Radius, or a different cluster. It also has access to user's cloud credentials and manages user's cloud resources. Applications RP can invoke *recipes* which are bicep or terraform code. These recipes are used to deploy application infrastructure components like databases.  
+Applications RP is a Radius control-plane microservice that acts as resource provider for application and its resources. When users deploy an application using Radius, Applications RP manages the lifecycle of the created resources on the user's behalf. 
+
+- Deploying an application may launch the user application's code on the same cluster as Radius, or a different cluster. 
+
+- Deploying application may created resources in the cloud using Recipes. These *recipes* are bicep or terraform code, and are responsible for creating These  application infrastructure components like databases.
+
+- As a result, Applications RP has access to the user's cloud credentials and can managed the user's cloud resources.
+
+Resource providers (including Applications RP) communicate over HTTP and manage the lifecycle of resources. See the [architecture documentation](https://docs.radapp.io/concepts/technical/architecture/) for more context.  Users and clients cannot directly communicate with Applications RP. They instead communicate with UCP. UCP forwards relevant requests to Applications RP. 
+The RP has a datastore for storing Radius data, message queue for processing asynchronous requests, and a secret Store for storing sensitive information such as certificates. All these are configurable components and support multiple implementations.  
 
 ### Architecture
-
-Application RP recieves HTTP requests from UCP. It does not interface directly with user/ cli. These requests have untrusted json payloads. RP validates these payloads before consuming them. 
 
 The RP consists of four types of resource providers for managing various types of resources in an application. `Applications.Core` resource provider manages core application resources such as application, environment, container and gateways. `Applications.Dapr` resource provider manages all dapr resources that are deployed as part of application. `Applications.Datastore` resource provider supports provisioning SQL database, Mongo DB and Redis Cache.
 `Applications.Messaging` resources provider manages queues such as Rabbit MQ.
@@ -54,22 +59,26 @@ Below is a high level overview of various key subcomponents in Applications RP
 
 #### Storage of secrets
 
-Applications RP has access to sensitive information related to the application resource it manages as well as the cloud credentials it requires for managing cloud resources on Azure and AWS. Applications RP provides a Secret Store which can be used to store sensitive information such as TLS certificate and private keys. It uses kubernetes secrets to implement this secret store. 
+Applications RP has access to sensitive information related to the application resource it manages as well as the cloud credentials it requires for managing cloud resources on Azure and AWS. 
 
-##### Managing secrets for datastores
-
-Applications RP service has a Datastore RP. This RP is the resource provider for datstores such as SQL database, Mongo DB and Redis Cache. As of today, sensitive information such as DB connection string, user/ password that is required to provision these resources is stored in plain text. The feature which enables datastores to use a secret store is in progress. 
-
-##### Access to cloud credentials and cloud
+##### Managing cloud credentails
 
 Applications RP requires AWS and Azure credentials for accessing and managing resources in cloud. It fetches credentials using UCP Secret Provider library. 
-Credentials are not available for retrieval through API. Also, RP supports federated identities which enables robust security practices. 
+Credentials are not available for retrieval through API. The RP also supports [federated identity](https://docs.radapp.io/guides/operations/providers/overview) for both Azure and AWS. Unless there is a limitation that prevents using federated identity, users should prefer using this since it removes the need to store secrets. 
 
-Using these credentials, Applications RP can create other resources in AWS and Azure. The RP also can create managed identities for azure which will decide who can deploy and run user code.  
+Using these credentials, Applications RP can create other resources in AWS and Azure. The RP also can create managed identities for azure which will decide who can deploy and run user code. 
+
+#### Managing secrets for applications
+
+Applications RP provides a secret store which can be used to store sensitive information such as TLS certificate and private keys. It uses kubernetes secrets to implement this secret store. In most cases, sensitive application data can be stored in this secret store and consumed by the application's other components such as a container. 
+
+###### Managing secrets for datastores
+
+Applications RP service has a Datastore RP. This RP is the resource provider for datstores such as SQL database, Mongo DB and Redis Cache. As of today, sensitive information such as DB connection string, user/ password that is required to provision these resources is stored in plain text. The feature which enables datastores to use a secret store is in progress. Until the feature is available, we recommend the users use recipes to deploy datastores. With recipe, the secrets are not stored in plain text.
 
 #### Access to cluster
 
-The RP can create kubernetes resources and manage them on behalf of the user. It can, for example, create a container based on the image provided by the user, which can in turn execute arbitrary code, and create other resources in the cluster where Radius is running, or on a different cluster. 
+The RP can create and manage Kubernetes resources on behalf of the user. For example, it can deploy a container based on the image provided by the user. This container can execute arbitrary code and may create additional resources within the cluster where Radius is running or even in another cluster. The Application RP's service account allows the RP to securely authenticate with Kubernetes to perform these actions. The service account is configured with appropriate permissions to enable this. 
 
 #### Exposing User Application to Internet
 
@@ -77,11 +86,13 @@ The Radius RP can create ingress Kubernetes objects, which can expose a kubernet
 
 #### Bicep Recipe execution
 
-`Recipes` are arbitrary Bicep or Terraform code which can provision infrastructure resources. In order to exceute a Bicep recipe, Applications RP's Recipe Engine first downloads the recipe from a OCI compliant registry over HTTP. Then it requests UCP to deploy the bicep. 
+Bicep recipes can provision arbitrary infrastructure resources in the cloud, and are provided by users. In order to execute a Bicep recipe, Applications RP's Recipe Engine first authenticates with a OCI compliant registry and then  downloads the recipe from it. RP uses the stored Azure credentials to authenticate with the registry. RP also supports federated credentials. When enabled, RP uses this to authenticate with the registry. Whenever possible, federated identies should be preferred and used for robust security. After retrieving the Bicep recipe, the RP requests UCP to deploy it.
 
 #### Terraform Recipe execution
 
-Terraform recipes are download from internet too, since they are available as public modules. These recipes are downloaded onto an empty directory `/terraform` which is mounted into the applications RP pod. Then the installed terraform executable executes these recipes in the current directory. Terraform communicates with AWS and Azure as needed to deploy resources.
+Terraform recipes are download from internet too. We support public and private modules as well as different kinds of authentication.
+
+Terraform downloads providers from the internet onto an empty directory `/terraform` which is mounted into the applications RP pod and executes them. This means that these providers have access to the network, filesystem, and environment variables, as well as the running memory of Applications RP. Terraform communicates with AWS as needed to deploy resources.
 
 #### Data Serialization / Formats
 
@@ -100,11 +111,13 @@ We have a few different trust boundaries for the Controller component:
 - **Kubernetes Cluster**: The overall environment where the Applications RP  operates and receives requests from the UCP.
 - **Namespaces within the Cluster**: Logical partitions within the cluster to separate and isolate resources and workloads.
 
-The Applications RP component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCPD also resides within the same namespace.
+The Applications RP component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. UCP also resides within the same namespace.
 
 The Kubernetes API Server, with which Applications RP interacts, runs in the `kube-system` namespace within the cluster.
 
-Applications RP deploys each Application and its resources in its own namespace. 
+Today, the RP assumes that incoming requests are from a trusted user who is authorized to make the request. It should enforce this by checking that the requests are made by UCP. UCP in turn should accept requests from authorized and authenticated users and clients such as `rad cli`. Once we have Radius RBAC support, we should configure UCP so that it accepts requests only from authorized and authenticated users.
+
+Applications RP deploys each Application and its resources in its own namespace. This is necessary for administrators of the Kubernetes cluster to correctly configure RBAC and limit the scope of permissions. 
 
 ## Assumptions 
 
@@ -113,7 +126,7 @@ This threat model assumes that:
 1. The Radius installation is not tampered with.
 2. The Kubernetes cluster that Radius is installed on is not compromised.
 3. It is the responsibility of the Kubernetes cluster to authenticate users. Administrators and users with sufficient privileges can perform their required tasks. Radius cannot prevent actions taken by an administrator.
-4. Radius stores and queues used by Applicatioßns RP are not compromised. 
+4. Radius stores and queues used by Applications RP are not compromised. 
 
 
 ## Data Flow
@@ -215,10 +228,11 @@ Active (dependant on user's processes)
    
 **Status:** 
 
-Pending. This mitigation requires rbac support in radius.
+Pending. This mitigation requires RBAC support in radius.
 
 
+## Open Questions
 
-
+## Action Items
 
 
