@@ -40,6 +40,28 @@ In order to deploy bicep recipes, Applications RP sends a request to UCP, which 
 
 The RP uses a queue to process requests asyncronously. Information about resources that are deployed / being deployed is stored in a datastore. 
 
+Sample high level flow:
+
+Let us consider a bicep definition of application which has a container and a SQL Server DB. The container has the ability to query the SQL Server DB. 
+
+1. Request to deploy comes from cli to UCP
+2. UCP sends the deploy request to Deployment Engine
+3. UCP gets a PUT request (creation request) for container from Deployment Engine
+4. UCP forwards the request to create container to Applications RP
+5. As part of creation, Applications RP creates the below entities and stores information about them in its datastore:
+   1. Kubernetes deployment object responsible  managing for the pods of this container
+   2. Kubernetes service account which provides identity for the pod
+   3. Kubernetes role which defines the accesses this pod can have
+   4. Kubernetes role binding which binds the role to the service account
+   5. Kubernetes service if the container has ports. 
+   since the pod has to communicates with an azure resource (sqlserver), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this, since it has access to user's Azure credentials.
+6. UCP gets a PUT request (creation request) for SQL Server DB from Deployment Engine 
+7. UCP forwards the request to create SQL server DB to Applications RP
+8. Applications RP communicates with OCI registry, downloads the recipe for creation of SQLServer DB. 
+9.  RP then sends a request to UCP for deploying the bicep recipe and also stores information about it in its datastore.
+10. UCP requests DE to deploy the SQL Server DB.
+
+
 Below is a high level overview of various key subcomponents in Applications RP
 ![Applications RP](2024-10-applications-rp-threat-model/apprp.png) 
 
@@ -82,7 +104,8 @@ The RP can create and manage Kubernetes resources on behalf of the user. For exa
 
 #### Exposing User Application to Internet
 
-The Radius RP can create ingress Kubernetes objects, which can expose a kubernetes service to internet. 
+The Applications RP can create ingress Kubernetes objects, which can expose a kubernetes service to internet. While deploying a Radius 'Gateway' resource, 
+the RP creates HTTPProxy objects, which expose Kubernetes service to ourside of cluster. 
 
 #### Bicep Recipe execution
 
