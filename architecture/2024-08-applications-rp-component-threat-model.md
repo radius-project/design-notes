@@ -46,7 +46,7 @@ Let us consider a bicep definition of application which has a container and a SQ
 
 1. Request to deploy comes from cli to UCP
 2. UCP sends the deploy request to Deployment Engine
-3. UCP gets a PUT request (creation request) for container from Deployment Engine
+3. UCP gets container creation request from Deployment Engine
 4. UCP forwards the request to create container to Applications RP
 5. As part of creation, Applications RP creates the below entities and stores information about them in its datastore:
    1. Kubernetes deployment object responsible  managing for the pods of this container
@@ -54,10 +54,10 @@ Let us consider a bicep definition of application which has a container and a SQ
    3. Kubernetes role which defines the accesses this pod can have
    4. Kubernetes role binding which binds the role to the service account
    5. Kubernetes service if the container has ports. 
-   since the pod has to communicates with an azure resource (sqlserver), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this, since it has access to user's Azure credentials.
-6. UCP gets a PUT request (creation request) for SQL Server DB from Deployment Engine 
+   since the pod has to communicates with an azure resource (sqlserver), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this since it has access to user's Azure credentials.
+6. UCP gets SQL Server DB creation request from Deployment Engine 
 7. UCP forwards the request to create SQL server DB to Applications RP
-8. Applications RP communicates with OCI registry, downloads the recipe for creation of SQLServer DB. 
+8. Applications RP communicates with OCI registry, downloads the bicep recipe for creating SQLServer DB. 
 9.  RP then sends a request to UCP for deploying the bicep recipe and also stores information about it in its datastore.
 10. UCP requests DE to deploy the SQL Server DB.
 
