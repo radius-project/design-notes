@@ -12,6 +12,7 @@ This document provides a threat model for the Radius Applications RP component. 
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | RP                 | Resource Provider    |
 | UCP                 | Universal Control Plane for Radius   |
+| DE | Deployment Engine |
 
 ## System Description
 
@@ -19,9 +20,9 @@ Applications RP is a Radius control-plane microservice that acts as resource pro
 
 - Deploying an application may launch the user application's code on the same cluster as Radius, or a different cluster. 
 
-- Deploying application may created resources in the cloud using Recipes. These *recipes* are bicep or terraform code, and are responsible for creating These  application infrastructure components like databases.
+- Deploying application may create resources in the cloud using Recipes. These *recipes* are bicep or terraform code, and are responsible for creating   application infrastructure components like databases.
 
-- As a result, Applications RP has access to the user's cloud credentials and can managed the user's cloud resources.
+- As a result, Applications RP has access to the user's cloud credentials and can manage the user's cloud resources.
 
 Resource providers (including Applications RP) communicate over HTTP and manage the lifecycle of resources. See the [architecture documentation](https://docs.radapp.io/concepts/technical/architecture/) for more context.  Users and clients cannot directly communicate with Applications RP. They instead communicate with UCP. UCP forwards relevant requests to Applications RP. 
 The RP has a datastore for storing Radius data, message queue for processing asynchronous requests, and a secret Store for storing sensitive information such as certificates. All these are configurable components and support multiple implementations.  
@@ -34,7 +35,7 @@ The RP consists of four types of resource providers for managing various types o
 Applications RP has a key sub component `Recipe Engine` to execute `recipes`. 
 `Recipes` are Bicep or Terraform code supplied by user that is used to deploy infrastructure components on Azure and AWS. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
 
-In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed executable. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
+In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed Terraform. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
 
 In order to deploy bicep recipes, Applications RP sends a request to UCP, which in turn forwards it to Deployment Engine. 
 
@@ -42,24 +43,23 @@ The RP uses a queue to process requests asyncronously. Information about resourc
 
 Sample high level flow:
 
-Let us consider a bicep definition of application which has a container and a SQL Server DB. The container has the ability to query the SQL Server DB. 
+Let us consider a bicep definition of application which has a container and a SQL Server DB. The container code queries the SQL Server DB. 
 
 1. Request to deploy comes from cli to UCP
 2. UCP sends the deploy request to Deployment Engine
-3. UCP gets container creation request from Deployment Engine
-4. UCP forwards the request to create container to Applications RP
-5. As part of creation, Applications RP creates the below entities and stores information about them in its datastore:
+3. UCP gets container creation request from Deployment Engine and forwards it to Applications RP
+4. As part of container creation, Applications RP creates the below entities and stores information about them in its datastore:
    1. Kubernetes deployment object responsible  managing for the pods of this container
    2. Kubernetes service account which provides identity for the pod
    3. Kubernetes role which defines the accesses this pod can have
    4. Kubernetes role binding which binds the role to the service account
    5. Kubernetes service if the container has ports. 
-   since the pod has to communicates with an azure resource (sqlserver), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this since it has access to user's Azure credentials.
-6. UCP gets SQL Server DB creation request from Deployment Engine 
-7. UCP forwards the request to create SQL server DB to Applications RP
-8. Applications RP communicates with OCI registry, downloads the bicep recipe for creating SQLServer DB. 
-9.  RP then sends a request to UCP for deploying the bicep recipe and also stores information about it in its datastore.
-10. UCP requests DE to deploy the SQL Server DB.
+   Since the pod has to communicates with an azure resource (SQLServer DB), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this since it has access to user's Azure credentials. 
+5. UCP gets SQL Server DB creation request from Deployment Engine 
+6. UCP forwards the request to create SQL server DB to Applications RP
+7. Applications RP communicates with OCI registry, downloads the bicep recipe for creating SQLServer DB. 
+8.  RP then sends a request to UCP for deploying the bicep recipe and also stores information about it in its datastore.
+9.  UCP requests DE to deploy the SQL Server DB.
 
 
 Below is a high level overview of various key subcomponents in Applications RP
@@ -88,7 +88,7 @@ Applications RP has access to sensitive information related to the application r
 Applications RP requires AWS and Azure credentials for accessing and managing resources in cloud. It fetches credentials using UCP Secret Provider library. 
 Credentials are not available for retrieval through API. The RP also supports [federated identity](https://docs.radapp.io/guides/operations/providers/overview) for both Azure and AWS. Unless there is a limitation that prevents using federated identity, users should prefer using this since it removes the need to store secrets. 
 
-Using these credentials, Applications RP can create other resources in AWS and Azure. The RP also can create managed identities for azure which will decide who can deploy and run user code. 
+Using these credentials, Applications RP can create and manage other resources in AWS and Azure. 
 
 #### Managing secrets for applications
 
@@ -104,8 +104,8 @@ The RP can create and manage Kubernetes resources on behalf of the user. For exa
 
 #### Exposing User Application to Internet
 
-The Applications RP can create ingress Kubernetes objects, which can expose a kubernetes service to internet. While deploying a Radius 'Gateway' resource, 
-the RP creates HTTPProxy objects, which expose Kubernetes service to ourside of cluster. 
+The Applications RP can create ingress Kubernetes objects. While deploying a Radius 'Gateway' resource, 
+the RP creates HTTPProxy objects, which expose Kubernetes service to outside of cluster. 
 
 #### Bicep Recipe execution
 
