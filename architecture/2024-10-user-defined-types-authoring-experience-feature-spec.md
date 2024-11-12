@@ -73,28 +73,27 @@ As called out in the [feature spec](/architecture/2024-06-resource-extensibility
     Deb creates a `Mycompany.Messaging.yaml` file with the following schema definition
 
     ```yaml
-    resource namespace: 'Mycompany.Messaging'
+    name: 'Mycompany.Messaging'
+    types:
         'plaidResource':
             apiVersions: 
                 2024-10-01:
                     schema:
+                        type: 'object'
                         properties: 
                             queueName:
                                 type: 'string'
                                 description: 'Name of the queue'
-                                required: true
                             host:
                                 type: 'string'
-                                description: 'Hostname of the messaging service'
-                                required: true        
+                                description: 'Hostname of the messaging service'        
                             port:
                                 type: 'string'
                                 description: 'Port'
-                                required: true
                             connectionString:
                                 type: 'string'
                                 description: 'Connection string to the messaging service' 
-                                required: true 
+                        required: ['queueName', 'host', 'port', 'connectionString']
                     capabilities: ["Recipe"]           
     ....
     ```
@@ -135,32 +134,31 @@ There are two key sub-scenarios to consider when Deb updates the schema for the 
 Deb wants to add an optional property `logAnalytics` to have log analytics enabled for the resource-type. This is considered to be a non-breaking change as it is an optional property with default value. Users should be able to use the new property without any impact across versions on their existing applications.
 
 ```yaml
-resource namespace: 'Mycompany.Messaging'
+name: 'Mycompany.Messaging'
+types:
     'plaidResource':
         apiVersions: 
             2024-11-01:
                 schema:
+                    type: 'object'
                     properties: 
                         queueName:
                             type: 'string'
                             description: 'Name of the queue'
-                            required: true
                         host:
                             type: 'string'
-                            description: 'Hostname of the messaging service'
-                            required: true        
+                            description: 'Hostname of the messaging service'       
                         port:
                             type: 'string'
                             description: 'Port'
-                            required: true
                         connectionString:
                             type: 'string'
-                            description: 'Connection string to the messaging service' 
-                            required: true             
+                            description: 'Connection string to the messaging service'             
                         logAnalytics:
                             type: 'string'
                             description: 'Usage type of the messaging service'  
                             default: 'off' 
+                    required: ['queueName', 'host', 'port', 'connectionString']
                 capabilities: ["Recipe"]        
 ```
 
@@ -183,31 +181,30 @@ Any change to the resource-type schema warrants the API version to be upgraded. 
 Deb wants to add a required property `messageForwarding`. This is considered to be a breaking change as it would require the Infrastructure operator teams and developers to update their Recipes and application definitions to use the new property in the resource type Plaid. Deb should be provided with an error message when a breaking change is detected in the schema definition.
 
 ```yaml
-resource namespace: 'Mycompany.Messaging'
+name: 'Mycompany.Messaging'
+types:
     'plaidResource':
         apiVersions: 
             2024-11-01:
                 schema:
+                    type: 'object' 
                     properties: 
                         queueName:
                             type: 'string'
                             description: 'Name of the queue'
-                            required: true
                         host:
                             type: 'string'
-                            description: 'Hostname of the messaging service'
-                            required: true        
+                            description: 'Hostname of the messaging service'       
                         port:
                             type: 'string'
                             description: 'Port'
-                            required: true
                         connectionString:
                             type: 'string'
-                            description: 'Connection string to the messaging service' 
-                            required: true             
+                            description: 'Connection string to the messaging service'             
                         messageForwarding:
                             type: 'string'
                             description: 'Usage type of the messaging service'
+                    required: ['queueName', 'host', 'port', 'connectionString', 'messageForwarding']
                 capabilities: ["Recipe"]           
 ```
 
