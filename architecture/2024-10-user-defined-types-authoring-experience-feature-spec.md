@@ -63,9 +63,8 @@ As called out in the [feature spec](/architecture/2024-06-resource-extensibility
     
     |Input | Description | Required|
     |------|-------------|---------|
-    | Resource namespace | The namespace for the resource provider | Yes |
-    | Resource type name | The name of the resource type | Yes |
-    | Resource type description | The description of the resource type | No |
+    | Name | The name of the resource provider | Yes |
+    | Types | The name of the resource types  | Yes |
     | Properties | The data model of the resource type | Yes |
     | API Version | The version of the resource type | Yes |
     | Capabilities | The capabilities of the resource type | No |
