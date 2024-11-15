@@ -8,13 +8,15 @@ This document provides a threat model for the Radius UCP (Universal Control Plan
 
 One of the most important goals of Radius is to be cloud agnostic and to enable portability of applications across platforms and environments. Therefore, the Radius UCP (Universal Control Plane) component helps the user apply ARM capabilities to non-Azure hosting models like AWS, GCP, and Kubernetes.
 
-In brief, UCP is a lightweight proxy that stands in front of the resource providers like Applications RP, AWS, and Azure. Based on the requests UCP gets, it forwards those requests to the appropriate service.
+In brief, the UCP is a lightweight proxy that sits in front of resource providers such as Applications RP, AWS, and Azure. It routes traffic from various clients of Radius to the appropriate resource provider. It holds the necessary credentials (Azure and/or AWS) to manage resources on behalf of Radius users. **As of November 15, 2024, there is no Role-Based Access Control (RBAC) implemented, and the traffic between the UCP and the resource providers is unauthenticated.**
+
+In the near future, we plan to provide Radius users with the capability to add their custom resource providers, increasing the number of resource providers that the UCP will route user requests to.
 
 ## Terms and Definitions
 
-| Term                    | Definition                                                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Radius Tracked Resource | Ex: `/planes/radius/local/resourceGroups/test-group/providers/System.Resources/resources/test-app-303153687ee5adbcf353bc6c2caa4373f31e04c6` |
+| Term | Definition |
+| ---- | ---------- |
+|      |            |
 
 ## System Description
 
@@ -35,17 +37,19 @@ An example flow:
 
 The UCP (Universal Control Plane) consists of several important pieces:
 
-- **Storage Provider**: Radius needs a data store to store all the information related to the resources of the installation. UCP keeps the information of resources by converting them to tracked resources. On the other hand, available implementations of the Radius Storage Provider:
+- **Storage Provider**: Radius needs a data store to store all the information related to the resources of the installation. UCP keeps the information of resources by converting them to tracked resources. Available implementations of the Radius Storage Provider:
 
   1. Cosmos Database
   2. etcd (in-memory or persistent)
   3. In-Memory storage
   4. PostgreSQL
+  5. apiserver
 
 - **Secret Provider**: The UCP occasionally needs to create and store secrets. Available implementations of the UCP Secret Provider are:
 
   1. etcd
   2. Kubernetes Secrets
+  3. In-memory
 
 - **Queue Provider**: This component handles asynchronous operations. Whenever an operation that is handled asynchronously is requested, it is added as a message to the queue, which is then processed by the UCP worker.
 
@@ -94,21 +98,17 @@ In all instances where SHA-1 is utilized within the codebase, it serves for gene
 
 Below you will find where and how Radius stores secrets. We create Kubernetes Secret objects and rely on Kubernetes security measures to protect these secrets.
 
-1. **Creating or Updating a Cloud Provider Credential Resource**: [Azure](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/azure/createorupdateazurecredential.go#L89), [AWS](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/aws/createorupdateawscredential.go#L81). When a **Cloud Provider Credential** resource is deployed, Radius creates a new Kubernetes Secret or updates an existing one. The Kubernetes Secret is deleted when the **Cloud Provider Credential** is deleted.
+1. **Creating or Updating a Cloud Provider Credential Resource**: [Azure Implementation](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/azure/createorupdateazurecredential.go#L89), [AWS Implementation](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/aws/createorupdateawscredential.go#L81). When a **Cloud Provider Credential** resource is deployed, Radius creates a new Kubernetes Secret or updates an existing one. The Kubernetes Secret is deleted when the **Cloud Provider Credential** is deleted. We should also note that these credentials cannot be retrieved or updated through API calls.
 
 #### Data Serialization / Formats
 
-We use custom parsers to parse Radius-related resource IDs and do not use any other custom parsers and instead rely on Kubernetes built-in parsers. Therefore, we trust Kubernetes security measures to handle data serialization and formats securely. The custom parser that parses Radius resource IDs has its own security mechanisms that don't accept anything other than a Radius resource ID.
+We use custom parsers exclusively for parsing Radius-related resource IDs. For all other parsing needs, we rely on the Go Standard Library's built-in parsers, trusting its security measures to handle data serialization and formats securely. Our custom parser for Radius resource IDs includes security mechanisms that ensure only valid Radius resource IDs are accepted.
 
 ### Clients
 
 In this section, we will discuss the different clients of the Radius UCP (Universal Control Plane) component. Clients are systems that interact with the UCP component to trigger actions. Here are the clients of the UCP component:
 
-1. **Radius CLI**: Radius CLI interacts with UCP under the hood through the generated clients. For example, a `rad deploy` command needs to go to UCP and then through UCP to the Deployment Engine. UCP will do the forwarding of the requests to the Deployment Engine and the other components like Applications RP.
-
-2. **Direct API Querying**: Clients can interact with the UCP component directly by making API queries. For example, a client can query the status of a deployment or retrieve information about a specific resource by making a direct API call to the UCP server.
-
-3. **Deployment Engine**: Deployment Engine makes requests to the UCP to deploy and also ask about the deployment status of certain objects within the ongoing deployment. Example:
+1. **All Components of Radius**: Every component other than UCP is a client of UCP. This list includes the Radius CLI, Deployment Engine, Controller, Deployment Engine, Dashboard, and Applications RP. An example of how Deployment Engine communicates with UCP can be found below:
 
    ```text
    {
@@ -141,24 +141,25 @@ In this section, we will discuss the different clients of the Radius UCP (Univer
    }
    ```
 
-4. **Health Check Probes**: Kubernetes itself can act as a client by performing health and readiness checks on the Universal Control Plane.
+2. **Health Check Probes**: Kubernetes itself can act as a client by performing health and readiness checks on the Universal Control Plane.
 
-5. **Metrics Scrapers**: If metrics are enabled, Prometheus or other monitoring tools can scrape metrics from the Universal Control Plane.
+3. **Metrics Scrapers**: If metrics are enabled, Prometheus or other monitoring tools can scrape metrics from the Universal Control Plane.
 
 ## Trust Boundaries
 
-We have a few different trust boundaries for the UCP component:
+### Trust Model of UCP Clients
 
-- **Kubernetes Cluster**: The overall environment where the UCP component operates and receives requests from the clients.
-- **Namespaces within the Cluster**: Logical partitions within the cluster to separate and isolate resources and workloads.
+The clients of the UCP include other Radius components like Applications RP, CLI, Controller, Dashboard, and Deployment Engine. Most of these clients reside within the same Kubernetes cluster and namespace as the UCP, except for the Radius CLI, which operates outside of the Kubernetes cluster and, therefore, outside of the namespace.
 
-The UCP component lives inside the `radius-system` namespace in the Kubernetes cluster where it is installed. Other components of Radius like Controller, Deployment Engine, Dashboard, and Applications RP also live in the same namespace.
+For clients that are in the same cluster and namespace as the UCP component, we rely on Kubernetes to implement the necessary security measures and establish the required trust boundary. For external clients--meaning clients that are outside of this trust boundary--we rely on the host machine's trust boundary and assume that it is not compromised. In such cases, proper authentication and authorization are essential to maintain security.
 
-### Key Points of Namespaces
+### Trust Model of Internal Resource providers
 
-1. **Isolation of Resources and Workloads**: Different namespaces separate and isolate resources and workloads within the Kubernetes cluster.
-2. **Access Controls and Permissions**: Access controls and other permissions are implemented to manage interactions between namespaces.
-3. **Separation of Concerns**: Namespaces support the separation of concerns by allowing different teams or applications to manage their resources independently, reducing the risk of configuration errors and unauthorized changes.
+Currently, our only resource provider is the Applications RP. As mentioned above, the Applications RP lives in the same Kubernetes cluster and namespace as the UCP. Therefore, the trust boundaries are defined by the Kubernetes cluster and the namespace within that cluster.
+
+### Trust Model of External Resource Manages (Azure and AWS)
+
+The UCP routes user requests to Azure and AWS whenever a resource from those providers is requested. In these cases, we rely on Azure and AWS to establish the trust boundary and operate under the assumption that they are secure and trustworthy.
 
 ## Assumptions
 
@@ -170,6 +171,7 @@ This threat model assumes that:
 4. The Data Store (can be one of these: etcd, Cosmos DB, PostgreSQL, in-memory, and API Server) that the UCP uses to keep important data is not compromised.
 5. The Secret Store (can be one of these: etcd, Kubernetes Secrets) that the UCP uses to keep important data is not compromised.
 6. The Queue that the UCP uses to write messages for the async operations is not compromised.
+7. External Resource Managers (Azure and AWS) are not compromised and are working as expected.
 
 ## Data Flow
 
@@ -185,7 +187,7 @@ This threat model assumes that:
 
 ### Threats
 
-#### Spoofing Deployment Engine Could Cause Information Disclosure and Denial of Service
+#### Threat: Spoofing Deployment Engine Could Cause Information Disclosure and Denial of Service
 
 **Description:** If a malicious actor can spoof the Deployment Engine by tampering with the configuration in the UCP, the UCP will start sending requests to the malicious server. The malicious server can capture the traffic, leading to information disclosure. This would effectively disable the UCP, causing a Denial of Service.
 
@@ -198,7 +200,7 @@ This threat model assumes that:
 
 **Status:** All mitigations listed are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace.
 
-#### Information Disclosure by Unauthorized Access to Secrets
+#### Threat: Information Disclosure by Unauthorized Access to Secrets
 
 **Description:** A malicious actor could circumvent Kubernetes RBAC controls and gain unauthorized access to Kubernetes secrets managed by Radius. These secrets may contain sensitive information, such as credentials intended for use by applications.
 
@@ -212,7 +214,7 @@ This threat model assumes that:
 
 **Status:** All mitigations listed are currently active. Operators are expected to secure their cluster and limit access for users.
 
-#### Escalation of Privilege by Using Radius to Circumvent Kubernetes RBAC Controls
+#### Threat: Escalation of Privilege by Using Radius to Circumvent Kubernetes RBAC Controls
 
 **Description:** A malicious actor could circumvent Kubernetes RBAC controls and create arbitrary resources in Kubernetes by using Universal Control Plane. UCP operates with a wide scope of permissions in Kubernetes and the cloud.
 
@@ -227,11 +229,37 @@ At the time of writing, Radius does not provide granular authorization controls.
 
 **Status:** These mitigations are partial and require configuration by the operator. We will revisit and improve this area in the future.
 
+#### Threat: Lack of Role-Based Access Control (RBAC) and Unauthorized Traffic
+
+**Description:** As mentioned above, as of November 15, 2024, the UCP does not implement RBAC, and communication between the UCP and resource providers is unauthenticated.
+
+**Impact:** Increased risk of unauthorized access and actions, making it easier for attackers to interact with resource providers or manipulate user resources without proper authorization.
+
+**Mitigations:**
+
+1. **Implement RBAC within the UCP:** An authentication and authorization mechanism that verifies the identity of clients and enforces access policies must be developed.
+2. **Secure Communication Between UCP and Other Components:** mTLS should be enabled.
+3. **Network Policies and Firewall Rules:** Application of Kubernetes Network Policies to control traffic flow to and from the UCP.
+
+**Status:** Other than the second mitigation (secure communication) listed above, none of the mitigations is currently active.
+
+#### Threat: Use of Weak Cryptographic Hashing Algorithm (SHA-1)
+
+**Description:** As mentioned above, the UCP uses SHA-1 for hashing resource IDs and generating ETags.
+
+**Impact:** Although used for non-security purposes, SHA-1 has known vulnerabilities. If misused in security contexts, it could lead to hash collisions and potential security weaknesses. Also, if we want to have a stronger cryptographic hashing algorithm for hashing resource IDs and generating ETags, we should use another one.
+
+**Mitigations:**
+
+1. **Replace SHA-1 with a Stronger Algorithm.**
+
+**Status:** The mitigation is not active as of now. An action item is created to update the crypto algorithm used in hashing resource IDs and generating ETags as well as in other components of Radius.
+
 ## Open Questions
 
 ## Action Items
 
-1. Use a hashing algorithm other than SHA-1 while computing the hash of the configuration of a Deployment object. This is a breaking change because deployments that are already hashed with SHA1 should be redeployed so that reconciler can work as expected.
+1. Use a hashing algorithm other than SHA-1 while computing the hash of resource IDs and generating ETags.
 2. Check if RBAC with Least Privilege is configured for every component to ensure that each component has only the permissions it needs to function. Make changes to the necessary components if required.
 3. Define and implement necessary Network Policies to ensure that communication is accepted only from expected and authorized components. Regularly review and update these policies to maintain security.
 4. Containers should run as a non-root user wherever possible to minimize the risks. Check if we can run any of the Radius containers as non-root. Do the necessary updates.
@@ -239,6 +267,7 @@ At the time of writing, Radius does not provide granular authorization controls.
 ## Review Notes
 
 1. Initial review on the 5th of November, 2024.
+2. Comments addressed on the 15th of November, 2024.
 
 ## References
 
