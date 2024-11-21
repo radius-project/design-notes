@@ -20,9 +20,7 @@ Please ensure that you add an anchor tag to any new guidelines that you add and 
 
 ## Introduction
 
-These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to maintain a great user experience. These guidelines help make Radius APIs:
-- Developer friendly via consistent patterns
-
+These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to maintain a great user experience. These guidelines help make Radius APIs developer friendly via consistent patterns.  
 Technology and software is constantly changing and evolving, and as such, this is intended to be a living document. [Open an issue](https://github.com/radius-project/design-notes/issues) to suggest a change or propose a new idea. 
 
 ### Prescriptive Guidance
@@ -66,7 +64,7 @@ The guidance for API design of secrets depends on which of these two scenarios b
  
 ##### SecretReference Model
 
-<a href="#c name="secretreference-model">:white_check_mark:</a> **YOU MUST** follow this structure when adding support for secrets to resources or components in Radius.
+<a href="secretreference-model" name="secretreference-model">:white_check_mark:</a> **YOU MUST** follow this structure when adding support for secrets to resources or components in Radius.
 
 ```tsp
 
