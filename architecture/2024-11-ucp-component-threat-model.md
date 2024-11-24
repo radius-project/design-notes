@@ -57,6 +57,10 @@ The UCP (Universal Control Plane) consists of several important pieces:
 
 ### Implementation Details
 
+#### UCP Container runs as Non-Root
+
+As of November 24, 2024, the UCP container runs as a non-root user. This security measure helps to limit the potential impact of a container compromise by restricting the privileges available to the container. Running containers as non-root users is a best practice that enhances the overall security posture of the system. For more details, refer to the [Dockerfile](https://github.com/radius-project/radius/blob/96504063bbab8c0ee53b0955a9647cf00c7f5fae/deploy/images/ucpd/Dockerfile#L14).
+
 #### Use of Cryptography
 
 1. **Generating Unique Keys for Queue Messages**: [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/queue/apiserver/client.go#L152)
@@ -102,44 +106,13 @@ Below you will find where and how Radius stores secrets. We create Kubernetes Se
 
 #### Data Serialization / Formats
 
-We use custom parsers exclusively for parsing Radius-related resource IDs. For all other parsing needs, we rely on the Go Standard Library's built-in parsers, trusting its security measures to handle data serialization and formats securely. Our custom parser for Radius resource IDs includes security mechanisms that ensure only valid Radius resource IDs are accepted.
+We use custom parsers to parse Radius-related resource IDs and do not use any other custom parsers. Radius resource IDs are a custom string format that can be parsed from untrusted data. The parser is a shared component.
 
 ### Clients
 
 In this section, we will discuss the different clients of the Radius UCP (Universal Control Plane) component. Clients are systems that interact with the UCP component to trigger actions. Here are the clients of the UCP component:
 
-1. **All Components of Radius**: Every component other than UCP is a client of UCP. This list includes the Radius CLI, Deployment Engine, Controller, Deployment Engine, Dashboard, and Applications RP. An example of how Deployment Engine communicates with UCP can be found below:
-
-   ```text
-   {
-   "timestamp": "2024-11-03T14:06:54.684Z",
-   "severity": "INFO",
-   "message": "Start processing HTTP request GET https://ucp.radius-system/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Applications.Core/containers/demo?api-version=2023-10-01-preview",
-   "name": "RequestPipelineStart",
-   "scope": "System.Net.Http.HttpClient.local.LogicalHandler",
-   "serviceName": "deployment.engine",
-   "version": "0.38\u002B1b2449770894506793f865dc7ecc9ed8e6df0d93",
-   "hostName": "bicep-de-6b86cc859f-tt2r8",
-   "traceId": "a0d750fc4e5d35bd1c615d87c1261f72",
-   "spanId": "5b624ecddd0b19c2",
-   "HttpMethod": "GET",
-   "Uri": "https://ucp.radius-system/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Applications.Core/containers/demo?api-version=2023-10-01-preview"
-   },
-   {
-   "timestamp": "2024-11-03T14:06:54.684Z",
-   "severity": "INFO",
-   "message": "Sending HTTP request GET https://ucp.radius-system/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Applications.Core/containers/demo?api-version=2023-10-01-preview",
-   "name": "RequestStart",
-   "scope": "System.Net.Http.HttpClient.local.ClientHandler",
-   "serviceName": "deployment.engine",
-   "version": "0.38\u002B1b2449770894506793f865dc7ecc9ed8e6df0d93",
-   "hostName": "bicep-de-6b86cc859f-tt2r8",
-   "traceId": "a0d750fc4e5d35bd1c615d87c1261f72",
-   "spanId": "5b624ecddd0b19c2",
-   "HttpMethod": "GET",
-   "Uri": "https://ucp.radius-system/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Applications.Core/containers/demo?api-version=2023-10-01-preview"
-   }
-   ```
+1. **All Components of Radius**: Every component other than UCP is a client of UCP. This list includes the Radius CLI, Deployment Engine, Controller, Deployment Engine, Dashboard, and Applications RP.
 
 2. **Health Check Probes**: Kubernetes itself can act as a client by performing health and readiness checks on the Universal Control Plane.
 
@@ -147,25 +120,21 @@ In this section, we will discuss the different clients of the Radius UCP (Univer
 
 ## Trust Boundaries
 
-### UCP Container runs as Non-Root
-
-As of November 24, 2024, the UCP container runs as a non-root user. This security measure helps to limit the potential impact of a container compromise by restricting the privileges available to the container. Running containers as non-root users is a best practice that enhances the overall security posture of the system. For more details, refer to the [Dockerfile](https://github.com/radius-project/radius/blob/96504063bbab8c0ee53b0955a9647cf00c7f5fae/deploy/images/ucpd/Dockerfile#L14).
-
 ### Trust Model of UCP Clients
 
-UCP is a [Kubernetes API Service](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) that aims to extend Kubernetes with its APIs and capabilities. So anything that is sent to an API path that starts with `/apis/api.ucp.dev/v1alpha3` gets sent to the UCP through the Kubernetes API Server. This means that for external clients like Radius CLI, we rely on Kubernetes authentication and don't provide any additional authentication mechanism.
+UCP is a [Kubernetes API Service](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) that aims to extend Kubernetes with its APIs and capabilities. So anything that is sent to an API path that starts with `/apis/api.ucp.dev/v1alpha3` gets sent to the UCP through the Kubernetes API Server. This means that requests coming into UCP originate from an authorized user that is authorized by Kubernetes.
 
 ![CLI - Kubernetes API Server - UPC](./2024-11-ucp-component-threat-model/cli-kubernetes-api-server-ucp.png)
 
-In terms of authentication between UCP and resource providers, we also don't have any authentication mechanisms right now. We use [AnonymousCredential](https://github.com/radius-project/radius/blob/main/pkg/azure/tokencredentials/anonymous.go#L50) while making calls to the resource providers from UCP. It basically means that there are no tokens in the request making the communication unauthenticated.
-
 ### Trust Model of Internal Resource providers
 
-Currently, our only resource provider is the Applications RP. As mentioned above, the Applications RP lives in the same Kubernetes cluster and namespace as the UCP. Therefore, the trust boundaries are defined by the Kubernetes cluster and the namespace within that cluster.
+In terms of authentication between UCP and resource providers, we also don't have any authentication mechanisms right now. We use [AnonymousCredential](https://github.com/radius-project/radius/blob/main/pkg/azure/tokencredentials/anonymous.go#L50) while making calls to the resource providers from UCP. It basically means that there are no tokens in the request making the communication unauthenticated.
 
 ### Trust Model of External Resource Managers (Azure and AWS)
 
 The UCP routes user requests to Azure and AWS whenever a resource from those providers is requested. In these cases, we rely on Azure and AWS to establish the trust boundary and operate under the assumption that they are secure and trustworthy. We provide necessary credentials that the user has provided to us and authenticate to these cloud providers. We, then, trigger the next action.
+
+We communicate with external resource managers through their public HTTPS APIs. We use standard authentication mechanisms, with credentials provided by the user. Therefore we can assume that external resource managers are authentic, and our requests and subject to the authorization model provided by those resource managers.
 
 ## Assumptions
 
@@ -195,14 +164,14 @@ This threat model assumes that:
 
 #### Threat: Spoofing a Resource Provider Could Cause Information Disclosure and Denial of Service
 
-**Description:** If a malicious actor can spoof the Deployment Engine by tampering with the configuration in the UCP, the UCP will start sending requests to the malicious server. The malicious server can capture the traffic, leading to information disclosure. This would effectively disable the UCP, causing a Denial of Service.
+**Description:** If a malicious actor can spoof any one of Radius resource providers by tampering with the configuration in the UCP, the UCP will start sending requests to the malicious server. The malicious server can capture the traffic, leading to information disclosure. This would effectively disable the functionality of the resource provider and the UCP, causing a Denial of Service.
 
-**Impact:** All data sent to the Deployment Engine by the UCP will be available to the malicious actor, including payloads of resources in the applications. The functionality of the UCP for managing resources will be disabled. Users will not be able to deploy updates to their applications.
+**Impact:** All data sent to the resource provider by the UCP will be available to the malicious actor, including payloads of resources in the applications. The functionality of the UCP for managing resources will be disabled. Users will not be able to deploy updates to their applications.
 
 **Mitigations:**
 
 1. Tampering with the UCP code, configuration, or certificates would require access to modify the `radius-system` namespace. Our threat model assumes that the operator has limited access to the `radius-system` namespace using Kubernetes' existing RBAC mechanism.
-2. The resource payloads sent to the Deployment Engine by the UCP **MAY** contain sensitive operational information (e.g., passwords).
+2. The resource payloads sent to the resource provider by the UCP **MAY** contain sensitive operational information (e.g., passwords).
 
 **Status:** All mitigations listed are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace.
 
@@ -249,10 +218,10 @@ This threat model assumes that:
 **Mitigations:**
 
 1. **Implement RBAC within the UCP:** An authentication and authorization mechanism that verifies the identity of clients and enforces access policies must be developed.
-2. **Secure Communication Between UCP and Other Components:** mTLS should be enabled.
+2. **Secure Communication Between UCP and Other Components:** A form of authentication (e.g., mTLS) should be enabled.
 3. **Network Policies and Firewall Rules:** Application of Kubernetes Network Policies to control traffic flow to and from the UCP.
 
-**Status:** Other than the second mitigation (secure communication) listed above, none of the mitigations is currently active.
+**Status:** None of the mitigations is currently active and we created action items to work on them.
 
 #### Threat: A Malicious Actor Could Exploit SHA-1 Weaknesses to Generate Hash Collisions
 
