@@ -876,3 +876,6 @@ apiserver
 ETags
 cryptographic
 Cryptographic
+Dockerfile
+AnonymousCredential
+ConfigMaps

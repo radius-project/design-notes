@@ -147,19 +147,25 @@ In this section, we will discuss the different clients of the Radius UCP (Univer
 
 ## Trust Boundaries
 
+### UCP Container runs as Non-Root
+
+As of November 24, 2024, the UCP container runs as a non-root user. This security measure helps to limit the potential impact of a container compromise by restricting the privileges available to the container. Running containers as non-root users is a best practice that enhances the overall security posture of the system. For more details, refer to the [Dockerfile](https://github.com/radius-project/radius/blob/96504063bbab8c0ee53b0955a9647cf00c7f5fae/deploy/images/ucpd/Dockerfile#L14).
+
 ### Trust Model of UCP Clients
 
-The clients of the UCP include other Radius components like Applications RP, CLI, Controller, Dashboard, and Deployment Engine. Most of these clients reside within the same Kubernetes cluster and namespace as the UCP, except for the Radius CLI, which operates outside of the Kubernetes cluster and, therefore, outside of the namespace.
+UCP is a [Kubernetes API Service](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) that aims to extend Kubernetes with its APIs and capabilities. So anything that is sent to an API path that starts with `/apis/api.ucp.dev/v1alpha3` gets sent to the UCP through the Kubernetes API Server. This means that for external clients like Radius CLI, we rely on Kubernetes authentication and don't provide any additional authentication mechanism.
 
-For clients that are in the same cluster and namespace as the UCP component, we rely on Kubernetes to implement the necessary security measures and establish the required trust boundary. For external clients--meaning clients that are outside of this trust boundary--we rely on the host machine's trust boundary and assume that it is not compromised. In such cases, proper authentication and authorization are essential to maintain security.
+![CLI - Kubernetes API Server - UPC](./2024-11-ucp-component-threat-model/cli-kubernetes-api-server-ucp.png)
+
+In terms of authentication between UCP and resource providers, we also don't have any authentication mechanisms right now. We use [AnonymousCredential](https://github.com/radius-project/radius/blob/main/pkg/azure/tokencredentials/anonymous.go#L50) while making calls to the resource providers from UCP. It basically means that there are no tokens in the request making the communication unauthenticated.
 
 ### Trust Model of Internal Resource providers
 
 Currently, our only resource provider is the Applications RP. As mentioned above, the Applications RP lives in the same Kubernetes cluster and namespace as the UCP. Therefore, the trust boundaries are defined by the Kubernetes cluster and the namespace within that cluster.
 
-### Trust Model of External Resource Manages (Azure and AWS)
+### Trust Model of External Resource Managers (Azure and AWS)
 
-The UCP routes user requests to Azure and AWS whenever a resource from those providers is requested. In these cases, we rely on Azure and AWS to establish the trust boundary and operate under the assumption that they are secure and trustworthy.
+The UCP routes user requests to Azure and AWS whenever a resource from those providers is requested. In these cases, we rely on Azure and AWS to establish the trust boundary and operate under the assumption that they are secure and trustworthy. We provide necessary credentials that the user has provided to us and authenticate to these cloud providers. We, then, trigger the next action.
 
 ## Assumptions
 
@@ -187,7 +193,7 @@ This threat model assumes that:
 
 ### Threats
 
-#### Threat: Spoofing Deployment Engine Could Cause Information Disclosure and Denial of Service
+#### Threat: Spoofing a Resource Provider Could Cause Information Disclosure and Denial of Service
 
 **Description:** If a malicious actor can spoof the Deployment Engine by tampering with the configuration in the UCP, the UCP will start sending requests to the malicious server. The malicious server can capture the traffic, leading to information disclosure. This would effectively disable the UCP, causing a Denial of Service.
 
@@ -216,16 +222,21 @@ This threat model assumes that:
 
 #### Threat: Escalation of Privilege by Using Radius to Circumvent Kubernetes RBAC Controls
 
-**Description:** A malicious actor could circumvent Kubernetes RBAC controls and create arbitrary resources in Kubernetes by using Universal Control Plane. UCP operates with a wide scope of permissions in Kubernetes and the cloud.
+**Description:** A malicious actor could circumvent Kubernetes RBAC controls and create arbitrary resources in Kubernetes by exploiting the Universal Control Plane (UCP). The UCP has the following permissions as of November 24, 2024:
 
-At the time of writing, Radius does not provide granular authorization controls. Any authenticated client can create any Radius resource and execute any action Radius is capable of taking. This is the case in UCP as well as other components of Radius like the Kubernetes controllers.
+- Create, Delete, Get, List, Patch, Update, and Watch on ConfigMaps, Secrets, Services, Deployments, StatefulSets, and `ucp.dev` resources.
+- All permissions on `api.ucp.dev` resources.
 
-**Impact:** An authorized user of the Kubernetes cluster with permission to create a resource can execute any application definition in any environment registered with Radius.
+**Impact:** This level of access could allow an attacker to perform unauthorized actions, potentially compromising the entire Kubernetes cluster and its resources. Unauthorized resource creation, modification, or deletion could lead to data breaches, service disruptions, and loss of control over the cluster.
 
 **Mitigations:**
 
-1. Operators should limit direct access to the Radius API using Kubernetes RBAC.
-2. We should revisit the threat model and provide a more robust set of authorization controls when granular authorization policies are added to Radius.
+1. **Limit Direct Access to the Radius API Using Kubernetes RBAC:**
+   1. Action: Implement strict RBAC policies to limit which users and service accounts can access the Radius API. Ensure that only trusted and necessary entities have the required permissions.
+   2. Implementation: Review and update the RBAC policies regularly to ensure they adhere to the principle of least privilege.
+2. **Enhance Authorization Controls:**
+   1. Action: Develop and implement more granular authorization controls within the UCP to enforce fine-grained access policies.
+   2. Implementation: Introduce role-based access controls within the UCP itself, allowing for more specific permissions and roles tailored to different user needs.
 
 **Status:** These mitigations are partial and require configuration by the operator. We will revisit and improve this area in the future.
 
@@ -243,26 +254,30 @@ At the time of writing, Radius does not provide granular authorization controls.
 
 **Status:** Other than the second mitigation (secure communication) listed above, none of the mitigations is currently active.
 
-#### Threat: Use of Weak Cryptographic Hashing Algorithm (SHA-1)
+#### Threat: A Malicious Actor Could Exploit SHA-1 Weaknesses to Generate Hash Collisions
 
-**Description:** As mentioned above, the UCP uses SHA-1 for hashing resource IDs and generating ETags.
+**Description:** A malicious actor could exploit the known vulnerabilities of the SHA-1 hashing algorithm to generate hash collisions. The UCP currently uses SHA-1 for hashing resource IDs and generating ETags. This could potentially allow an attacker to create two different inputs that produce the same hash value, leading to unauthorized access or data manipulation.
 
-**Impact:** Although used for non-security purposes, SHA-1 has known vulnerabilities. If misused in security contexts, it could lead to hash collisions and potential security weaknesses. Also, if we want to have a stronger cryptographic hashing algorithm for hashing resource IDs and generating ETags, we should use another one.
+**Impact:** Although SHA-1 is used for non-security purposes, its vulnerabilities could be exploited to create hash collisions. This could result in unauthorized access to resources, data corruption, or other security weaknesses if the hashes are used in security-sensitive contexts. Using a stronger cryptographic hashing algorithm is essential to ensure the integrity and security of the system.
 
 **Mitigations:**
 
-1. **Replace SHA-1 with a Stronger Algorithm.**
+1. **Replace SHA-1 with a Stronger Algorithm**:
+   1. **Action**: Identify all instances where SHA-1 is used in the codebase.
+   2. **Implementation**: Replace SHA-1 with SHA-256 or another secure hashing algorithm for hashing resource IDs and generating ETags. Ensure that the new algorithm is consistently used across all components. Test to verify that the change does not impact system functionality.
 
-**Status:** The mitigation is not active as of now. An action item is created to update the crypto algorithm used in hashing resource IDs and generating ETags as well as in other components of Radius.
+**Status:** The mitigation is not active as of now. An action item has been created to update the cryptographic algorithm used in hashing resource IDs and generating ETags, as well as in other components of Radius.
 
 ## Open Questions
 
 ## Action Items
 
-1. Use a hashing algorithm other than SHA-1 while computing the hash of resource IDs and generating ETags.
-2. Check if RBAC with Least Privilege is configured for every component to ensure that each component has only the permissions it needs to function. Make changes to the necessary components if required.
-3. Define and implement necessary Network Policies to ensure that communication is accepted only from expected and authorized components. Regularly review and update these policies to maintain security.
-4. Containers should run as a non-root user wherever possible to minimize the risks. Check if we can run any of the Radius containers as non-root. Do the necessary updates.
+1. **Use a Stronger Hashing Algorithm**:
+   1. **Action**: Replace SHA-1 with a more secure hashing algorithm (e.g., SHA-256) for computing the hash of resource IDs and generating ETags. The issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8084>.
+2. **Ensure RBAC with Least Privilege is Configured for UCP**:
+   1. **Action**: Implement strict RBAC policies to limit which users and service accounts can access the UCP. Ensure that only trusted and necessary entities have the required permissions. Refer to the following pull request for more details: <https://github.com/radius-project/radius/pull/8080>.
+3. **Secure Communication Between UCP and Resource Providers**:
+   1. **Action**: Implement a form of authentication (e.g., mTLS) and apply Network Policies where applicable to secure communication between the UCP and resource providers. Documentation should also be added. Here is the issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8083>.
 
 ## Review Notes
 
