@@ -13,7 +13,7 @@ The building blocks of this multi-tenancy is implemented today with resource gro
 This feature specification describes:
 
 * Granting and revoking permission to users to perform Radius administrative actions at the control-plane level and tenant level
-* Granting and revoking permission to users to perform create, read, update, delete actions on resources and resource groups
+* Granting and revoking permission to users to perform create, read, update, delete actions on resources and resource groups including applications, user-defined resource types, environments, and recipe registrations
 * Granting and revoking permission to users to associate resources between resource groups
 
 ### Non-goals (out of scope)
@@ -49,12 +49,12 @@ As a Radius administrator, I just installed Radius on a Kubernetes cluster and n
 ```bash
 # Radius administrative access is granted via membership in the radius-admin role in the Radius namespace
 # Add user-1 to the radius-admin role
-kubectl create rolebinding user-1-admin --role=radius-admin --user=user-1 -n radius-system
+kubectl create rolebinding user-1-admin --role radius-admin --user user-1 -n radius-system
 ```
 
 **Result**
 
-A new RoleBinding is created in the `radius-system` namespace for `user-1` to be granted the `radius-admin` role
+A new RoleBinding is created in the `radius-system` namespace for `user-1` to be granted the `radius-admin` role.
 
 ### Scenario 2 – Create resource group for applications
 
@@ -307,7 +307,9 @@ actions:
   - Applications.Core/environments/*/recipes/*
 ```
 
-This action may not be correct. The intent is to permit the ability to register and unregistered recipes on all environments within a certain resource group. The scenario is that the environment administrator has created the environment and connected it to the cloud provider. But there are certain resource types that require a specific team expertise such as DBAs. The Radius admin wants to permit the ability to register/unregister recipes only while not being able to modify the environment or the resource types.
+> [!CAUTION]
+>
+> This action may not be correct. The intent is to permit the ability to register and unregistered recipes on all environments within a certain resource group. The scenario is that the environment administrator has created the environment and connected it to the cloud provider. But there are certain resource types that require a specific team expertise such as DBAs. The Radius admin wants to permit the ability to register/unregister recipes only while not being able to modify the environment or the resource types.
 
 **Result**
 
@@ -321,6 +323,39 @@ The operation fails and informs the user interactively if:
 
 * The role definition or assignment already exists
 * The `grp-dba` group does not exist in the identity provider
+
+### Scenario 7 – Deleting a role definition and assignment
+
+As a Radius administrator, I need to delete a role definition and assignment I previously created.
+
+**User Experience**
+
+```bash
+# Create resource type administrator role
+rad role definition delete recipe-admin
+# Error is shown because existing role assignments for this definition exist
+ERROR: The following role assignments exist for the recipe-admin role definition
+ROLE          ASSIGNEE       SCOPE
+recipe-admin  group/grp-dba  /planes/radius/MyCompany/resourceGroup/*
+# Delete the role assignment
+rad role assignment delete \
+  --assignee group/grp-cloud-engineering \
+  --role recipe-admin \
+  --scope /planes/radius/MyCompany/resourceGroup/*
+# Delete the role definition
+rad role definition delete recipe-admin
+```
+
+**Result**
+
+1. The role assignments for the `recipe-admin` role are deleted
+2. The `recipe-admin` role definition is deleted
+
+**Exceptions**
+
+The operation fails and informs the user interactively if:
+
+* Role assignments for the role definition exist as shown in the example
 
 ## Feature Summary
 

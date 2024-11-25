@@ -865,3 +865,15 @@ invariants
 Mycompany
 plaidResource
 resourceTypes
+Casper
+Zach
+zachcasper
+Okta
+DBAs
+RoleBinding
+MyCompany
+MyCompany's
+Deployer
+deployers
+DBA
+DBAs
