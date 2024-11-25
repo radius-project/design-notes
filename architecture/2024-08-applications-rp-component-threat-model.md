@@ -242,7 +242,7 @@ This can facilitate the attackers to create resources based on any arbitrary ima
 
 3. Any container launched by Radius is subject to Kubernetes as the platform. Users should configure their Kubernetes cluster to ensure that pods are created only from images hosted on trusted URLs or registries.
 
-4. Users should configure RBAC of Radius such that blast radius of any security incidents involving Radius.
+4. Users should configure RBAC of Radius with principle of least privilege so that blast radius of any security incidents involving Radius is minimized.
 
 
 **Status**
@@ -251,6 +251,8 @@ This can facilitate the attackers to create resources based on any arbitrary ima
 2. Active. Operators are expected limit access so that an application in its own namespace cannot by affected by application in another namespace.
    
 3. Active. Operators are expected to configure their Kubernetes cluster with trusted URLs or registries.
+   
+4. Active. Operators are expected to configure RBAC of Radius appropriately to minimize its blast radius.
 
 #### Using application definition to deploy malicious containers
 
