@@ -47,7 +47,7 @@ As a Radius administrator, I just installed Radius on a Kubernetes cluster and n
 **User Experience**
 
 ```bash
-# Radius administrative access is granted via membership in the radius-admin role in the Radius namespace
+# Radius administrative access is granted via membership in the radius-admin role in the radius-system namespace
 # Add user-1 to the radius-admin role
 kubectl create rolebinding user-1-admin --role radius-admin --user user-1 -n radius-system
 ```
@@ -65,12 +65,14 @@ As a Radius administrator, I need to create a resource group for applications an
 ```bash
 # Create application resource group 
 rad group create rg-app-1
+
 # Create developer role
 rad role definition create -f developer-role-definition.yaml
+
 # Assign the developer role to members of the developers group in the identity provider
 # Permissions only apply in the rg-app-1 resource group
 rad role assignment create \
-	# group/ or user/ or rolebinding/
+  # group/ or user/ or rolebinding/
   --assignee group/grp-developers \
   --role developer \
   --scope /planes/radius/MyCompany/resourceGroup/rg-app-1
@@ -114,7 +116,7 @@ The operation fails and informs the user interactively if:
 
 ```bash
 rad role assignment create \
-	# group/ or user/ or rolebinding/
+  # group/ or user/ or rolebinding/
   --assignee rolebinding/developers \
   --role developer \
   --scope /planes/radius/MyCompany/resourceGroup/rg-app-1
@@ -128,6 +130,7 @@ rad role assignment create \
   --assignee users/user-1 \
   --role developer \
   --scope /planes/radius/MyCompany/resourceGroup/rg-app-1
+
 # Add user-2 as a developer
 rad role assignment create \
   --assignee users/user-2 \
@@ -144,8 +147,10 @@ As a Radius administrator, I need to create a resource group for environments in
 ```bash
 # Create resource group for non-production environments
 rad group create rg-non-prod-env
+
 # Create environment administrator role
 rad role definition create -f env-admin-role-definition.yaml
+
 # Assign environment administrator role to the cloud engineering user group
 # Permissions only apply in the non-production resource group
 rad role assignment create \
@@ -197,6 +202,7 @@ As a Radius administrator, I need to set permissions which define who can deploy
 ```bash
 # Create deployer role
 rad role definition create -f deployer-role-definition.yaml
+
 # Assign deployer role to the developers group in the identity provider
 # Permissions only apply in the rg-non-prod-env resource group
 rad role assignment create \
@@ -242,6 +248,7 @@ As a Radius administrator, I need to delegate the ability to manage resource typ
 ```bash
 # Create resource type administrator role
 rad role definition create -f resource-type-admin-definition.yaml
+
 # Assign the resource type administrator role to users in the platform engineering user group
 rad role assignment create \
   --assignee group/grp-platform-engineering \
@@ -284,11 +291,13 @@ As a Radius administrator, I need to delegate the ability to manage recipes in R
 ```bash
 # Create resource type administrator role
 rad role definition create -f recipe-admin-definition.yaml
+
 # Assign the resource type administrator role to users in the cloud engineering user group
 rad role assignment create \
   --assignee group/grp-cloud-engineering \
   --role recipe-admin \
   --scope /planes/radius/MyCompany/resourceGroup/*
+
 # Assign the resource type administrator role to users in the DBA user group
 rad role assignment create \
   --assignee group/grp-dba \
@@ -333,15 +342,18 @@ As a Radius administrator, I need to delete a role definition and assignment I p
 ```bash
 # Create resource type administrator role
 rad role definition delete recipe-admin
+
 # Error is shown because existing role assignments for this definition exist
 ERROR: The following role assignments exist for the recipe-admin role definition
 ROLE          ASSIGNEE       SCOPE
 recipe-admin  group/grp-dba  /planes/radius/MyCompany/resourceGroup/*
+
 # Delete the role assignment
 rad role assignment delete \
   --assignee group/grp-cloud-engineering \
   --role recipe-admin \
   --scope /planes/radius/MyCompany/resourceGroup/*
+
 # Delete the role definition
 rad role definition delete recipe-admin
 ```
