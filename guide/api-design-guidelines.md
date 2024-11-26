@@ -20,7 +20,8 @@ Please ensure that you add an anchor tag to any new guidelines that you add and 
 
 ## Introduction
 
-These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to maintain a great user experience. These guidelines help make Radius APIs developer friendly via consistent patterns.  
+These are prescriptive guidelines that Radius contributors MUST follow while designing APIs to maintain a great user experience. These guidelines help make Radius APIs developer friendly via consistent patterns.
+
 Technology and software is constantly changing and evolving, and as such, this is intended to be a living document, with a current focus on secrets handling. [Open an issue](https://github.com/radius-project/design-notes/issues) to suggest a change or propose a new idea.
 
 ### Prescriptive Guidance
