@@ -58,9 +58,8 @@ Let us consider a bicep definition of application which has a container and a SQ
 5. UCP gets SQL Server DB creation request from Deployment Engine 
 6. UCP forwards the request to create SQL server DB to Applications RP
 7. Applications RP communicates with OCI registry, downloads the bicep recipe for creating SQLServer DB. 
-8.  RP then sends a request to UCP for deploying the bicep recipe and also stores information about it in its datastore.
-9.  UCP requests DE to deploy the SQL Server DB.
-
+8. Applications RP then sends a request to UCP for deploying the bicep recipe and also stores information about it in its datastore.
+9. UCP requests DE to deploy the SQL Server DB.
 
 Below is a high level overview of various key subcomponents in Applications RP
 ![Applications RP](2024-10-applications-rp-threat-model/apprp.png) 
