@@ -263,12 +263,15 @@ Application definitions could create pods from any arbitrary image. This contain
 These containers can then potentially expose secrets, overconsume resources or create several resources, delete important infrasture etc. 
 
 **Mitigations**
-Application definition and images and recipes used should be reviewed and only authorized users should be able to create and deploy application definitions.
-Radius RBAC could enable only trusted users to manage application definition  recipe configurations and deployment.
+1. Application definition and images and recipes used should be reviewed and only authorized users should be able to create and deploy application definitions. Radius RBAC could enable only trusted users to manage application definition  recipe configurations and deployment.
+   
+2. Any container launched by Radius is subject to Kubernetes as the platform. Users should configure their Kubernetes cluster to ensure that pods are created only from images hosted on trusted URLs or registries.
 
 **Status**
 
-Pending. This mitigation requires RBAC support in radius. 
+1. Pending. This mitigation requires RBAC support in radius. 
+   
+2. Active. Operators are expected to configure their Kubernetes cluster with trusted URLs or registries.
 
 #### Applications RP has the a ability to create managed identities which if misused can lead to Escalation of Privilege
 
@@ -284,8 +287,9 @@ Pending. This mitigation requires RBAC support in radius.
 
 Pending. This mitigation requires RBAC support in radius.
 
-
 ## Open Questions
+
+Nonewip
 
 ## Action Items
 
