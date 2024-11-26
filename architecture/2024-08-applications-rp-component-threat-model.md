@@ -33,7 +33,7 @@ The RP consists of four types of resource providers for managing various types o
 `Applications.Messaging` resources provider manages queues such as Rabbit MQ.
 
 Applications RP has a key sub component `Recipe Engine` to execute `recipes`. 
-`Recipes` are Bicep or Terraform code supplied by user that is used to deploy infrastructure components on Azure and AWS. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
+`Recipes` are Bicep or Terraform code supplied by user that is used to deploy infrastructure components on Azure, AWS and Kubernetes. The Bicep recipes are fetched from OCI compliant registries. Terraform recipes are public modules and fetched from internet too. 
 
 In order to execute Terraform recipes, Applications RP installs latest Terraform. It also mounts an empty directory `/terraform` into Applications RP pod. It uses this directory for executing terraform recipes using the installed Terraform. The output resources generated from terraform module are converted to Radius output resources and stored in our datastore. 
 
@@ -43,7 +43,7 @@ The RP uses a queue to process requests asyncronously. Information about resourc
 
 Sample high level flow:
 
-Let us consider a bicep definition of application which has a container and a SQL Server DB. The container code queries the SQL Server DB. 
+Let us consider a bicep definition of application which has a container and a SQL Server DB. The container code queries the SQL Server DB. We are using a SQL Server DB recipe.
 
 1. Request to deploy comes from cli to UCP
 2. UCP sends the deploy request to Deployment Engine
@@ -54,7 +54,7 @@ Let us consider a bicep definition of application which has a container and a SQ
    3. Kubernetes role which defines the accesses this pod can have
    4. Kubernetes role binding which binds the role to the service account
    5. Kubernetes service if the container has ports. 
-   Since the pod has to communicates with an azure resource (SQLServer DB), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this since it has access to user's Azure credentials. 
+   6. Since the pod has to communicates with an azure resource (SQLServer DB), Applications RP also creates a managed identity, assigns appropriate roles so that it can query the DB. It is able to do this since it has access to user's Azure credentials. 
 5. UCP gets SQL Server DB creation request from Deployment Engine 
 6. UCP forwards the request to create SQL server DB to Applications RP
 7. Applications RP communicates with OCI registry, downloads the bicep recipe for creating SQLServer DB. 
@@ -191,7 +191,7 @@ The impersonator would also be able to retreive credentials through UCP. The cre
 
 1. Active. All mitigations which make use of kubernetes RBAC are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace. 
    
-2. Pending. 
+2. Pending. We should add support in Radius to use mTLS as communication protocol between UCP and Applications RP.
 
 #### Malicious user can make arbitrary requests to Applications RP API. 
 
@@ -225,7 +225,7 @@ A malicious actor could use the information about the resources and operations i
 
 1. Active. All mitigations listed are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace.
 
-2. Pending
+2. Pending. We should add support in Radius to use mTLS as communication protocol between UCP and Applications RP.
 
 #### Using recipes can cause escalation of priviledge
 
@@ -246,7 +246,7 @@ This can facilitate the attackers to create resources based on any arbitrary ima
 
 
 **Status**
-1. Pending. 
+1. Pending. We should implement Radius RBAC and then use the feature to restrict recipe registeration to only trusted employees.
    
 2. Active. Operators are expected limit access so that an application in its own namespace cannot by affected by application in another namespace.
    
@@ -267,7 +267,8 @@ Application definition and images and recipes used should be reviewed and only a
 Radius RBAC could enable only trusted users to manage application definition  recipe configurations and deployment.
 
 **Status**
-Radius RBAC support is pending. 
+
+Pending. This mitigation requires RBAC support in radius. 
 
 #### Applications RP has the a ability to create managed identities which if misused can lead to Escalation of Privilege
 
