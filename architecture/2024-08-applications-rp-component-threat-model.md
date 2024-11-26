@@ -217,7 +217,7 @@ A malicious actor could use the information about the resources and operations i
 
 **Mitigations**
 
-1. Tampering with Application RP code/ configs would require access to modify the `radius-system` namespace. Our threat model assumes that the operator has limited access to the `radius-system` namespace using Kubernetes' existing RBAC mechanism. It would be impossible for an arbitrary user to gain access to the cluster and capture traffic.
+1. Tampering with Application RP code/ configs would require access to modify the `radius-system` namespace. Our threat model assumes that the operator has limited access to the `radius-system` namespace using Kubernetes' existing RBAC mechanism. It would be challenging for an arbitrary user to gain access to the cluster and capture traffic.
 
 2. We should add support in Radius to use mTLS as communication protocol between UCP and Applications RP.
 
