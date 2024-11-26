@@ -40,6 +40,26 @@ The following scenarios will describe a final setup similar to the image below.
 
 ![](2024-11-authz-feature-spec/authz.png)
 
+Summarizing the diagram, below are the envisioned roles and permissions described in these scenarios. 
+
+| Role                | Scope          | Resources                                                    | Allowed Action |
+| ------------------- | -------------- | ------------------------------------------------------------ | -------------- |
+| Radius Admin        | Control plane  | *                                                          | *            |
+| Resource Type Admin | Tenant         | System.Resources/resourceproviders for all resource namespaces | *            |
+|                     | Tenant         | System.Resources/resourceproviders/MyCompany.App for a specific resource namespace | *            |
+| Environment Admin   | Resource group | Applications.Core/environments                               | *            |
+|                     | Resource group | Applications.Core/secretStores                               | *            |
+|                     | Resource group | System.AWS/credentials                                       | *            |
+|                     | Resource group | System.Azure/credentials                                     | *            |
+| Recipe Admin        | Resource group | Only the recipe property of environments; tentatively denoted as Applications.Core/environments/*/recipes/ in this document | *            |
+| Developer           | Resource group | Applications.Core/applications                            | *            |
+|                     | Resource group | UDT namespace, e.g., MyCompany.App                         | *            |
+| Deployer            | Resource group | Applications.Core/environments                             | deployTo     |
+
+> [!NOTE]
+>
+> These roles names and role definitions are illustrative only. Radius admins can create whatever roles work best for their organization using any combination of actions. 
+
 ### Scenario 1 – Adding Radius administrators
 
 As a Radius administrator, I just installed Radius on a Kubernetes cluster and now I need to add an additional user as a Radius administrator.
@@ -123,6 +143,10 @@ rad role assignment create \
 ```
 
 2. The Radius admin could have also assigned the role to a single user in the identity provider. Multiple role assignments could be created for each user.
+
+> [!WARNING]
+>
+> This use case is classified as p3 or low priority. It's not necessary for this use case to be fully thought out at this time.
 
 ```bash
 # Add user-1 as a developer
@@ -286,6 +310,10 @@ The operation fails and informs the user interactively if:
 
 As a Radius administrator, I need to delegate the ability to manage recipes in Radius to my cloud engineering and DBA teams.
 
+> [!WARNING]
+>
+> This use case is classified as p3 or low priority. It's not necessary for this use case to be fully thought out at this time.
+
 **User Experience**
 
 ```bash
@@ -379,7 +407,7 @@ The operation fails and informs the user interactively if:
 | p1       | S    | Assign a role to users in an existing group in the configured identity provider system for a resource group (`rad role assignment create --assignee group/myGroup`) |
 | p1       | S    | The `radius-admin` Role is created when Radius is installed in a Kubernetes cluster and a RoleBinding is created for the current user |
 | p2       | S    | Create role definition for environment administrators which grants permission to perform actions on environments and cloud provider credentials (`Applications.Core/environments/*`, `Applications.Core/secretStores`/*, `System.AWS/credentials/*`, and  `System.Azure/credentials/*`) |
-| p3       | S    | Create role definition for resource type administrators which grants permission create, modify, and delete resource types in the tenant (`System.Resources/resourceproviders/`) |
+| p2       | S    | Create role definition for resource type administrators which grants permission create, modify, and delete resource types in the tenant (`System.Resources/resourceproviders/`) |
 | p3       | S    | Assign a role to an individual user the configured identity provider system for a resource group (`rad role assignment create --assignee user/user-1`) |
 | p3       | M    | Create role definition for recipe administrators which grants permission to only register and unregister recipes with an environment  (`Applications.Core/environments/*/recipes/*` or something similar) |
 
