@@ -89,7 +89,7 @@ Credentials are not available for retrieval through API. The RP also supports [f
 
 Using these credentials, Applications RP can create and manage other resources in AWS and Azure. 
 
-#### Managing secrets for applications
+##### Managing secrets for applications
 
 Applications RP provides a secret store which can be used to store sensitive information such as TLS certificate and private keys. It uses kubernetes secrets to implement this secret store. In most cases, sensitive application data can be stored in this secret store and consumed by the application's other components such as a container. 
 
