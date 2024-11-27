@@ -878,3 +878,9 @@ deployers
 DBA
 DBAs
 SecretConfig
+deployTo
+deployer
+resourcegroups
+resourceproviders
+roleassignments
+rolesdefinitions
