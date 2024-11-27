@@ -877,3 +877,4 @@ Deployer
 deployers
 DBA
 DBAs
+SecretConfig
