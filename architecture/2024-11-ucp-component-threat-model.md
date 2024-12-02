@@ -189,26 +189,6 @@ This threat model assumes that:
 
 **Status:** All mitigations listed are currently active. Operators are expected to secure their cluster and limit access for users.
 
-#### Threat: A Malicious Actor Could Exploit Lack of RBAC to Gain Unauthorized Access and Escalate Privileges
-
-**Description:** A malicious actor could circumvent Kubernetes RBAC controls and create arbitrary resources in Kubernetes by exploiting the Universal Control Plane (UCP). The UCP has the following permissions as of November 24, 2024:
-
-- Create, Delete, Get, List, Patch, Update, and Watch on ConfigMaps, Secrets, Services, Deployments, StatefulSets, and `ucp.dev` resources.
-- All permissions on `api.ucp.dev` resources.
-
-**Impact:** This level of access could allow an attacker to perform unauthorized actions, potentially compromising the entire Kubernetes cluster and its resources. Unauthorized resource creation, modification, or deletion could lead to data breaches, service disruptions, and loss of control over the cluster.
-
-**Mitigations:**
-
-1. **Limit Direct Access to the Radius API Using Kubernetes RBAC:**
-   1. Action: Implement strict RBAC policies to limit which users and service accounts can access the Radius API. Ensure that only trusted and necessary entities have the required permissions.
-   2. Implementation: Review and update the RBAC policies regularly to ensure they adhere to the principle of least privilege.
-2. **Enhance Authorization Controls:**
-   1. Action: Develop and implement more granular authorization controls within the UCP to enforce fine-grained access policies.
-   2. Implementation: Introduce role-based access controls within the UCP itself, allowing for more specific permissions and roles tailored to different user needs.
-
-**Status:** These mitigations are partial and require configuration by the operator. We will revisit and improve this area in the future.
-
 #### Threat: A Malicious Actor Could Intercept Unauthenticated Communication to Manipulate Data
 
 **Description:** Communication between the UCP and resource providers is currently unauthenticated. This means that there are no mechanisms in place to verify the authenticity of the communication between these components.
@@ -222,29 +202,13 @@ This threat model assumes that:
 
 **Status:** None of the mitigations is currently active and we created action items to work on them.
 
-#### Threat: A Malicious Actor Could Exploit SHA-1 Weaknesses to Generate Hash Collisions
-
-**Description:** A malicious actor could exploit the known vulnerabilities of the SHA-1 hashing algorithm to generate hash collisions. The UCP currently uses SHA-1 for hashing resource IDs and generating ETags. Although SHA-1 is not used in security-sensitive contexts, its vulnerabilities could still be exploited to create hash collisions, potentially leading to data integrity issues.
-
-**Impact:** Even though SHA-1 is used for non-security purposes, its vulnerabilities could be exploited to create hash collisions. This could result in data integrity issues, such as incorrect resource identification (can happen in ETag generation) or versioning (when we are hashing resource IDs to do some comparison). Using a stronger cryptographic hashing algorithm is essential to ensure the integrity and reliability of the system.
-
-**Mitigations:**
-
-1. **Replace SHA-1 with a Stronger Algorithm:**
-   1. **Action:** Identify all instances where SHA-1 is used in the codebase.
-   2. **Implementation:** Replace SHA-1 with SHA-256 or another secure hashing algorithm for hashing resource IDs and generating ETags. Ensure that the new algorithm is consistently used across all components. Test to verify that the change does not impact system functionality.
-
-**Status:** The mitigation is not active as of now. An action item has been created to update the cryptographic algorithm used in hashing resource IDs and generating ETags, as well as in other components of Radius.
-
 ## Open Questions
 
 ## Action Items
 
-1. **Use a Stronger Hashing Algorithm:**
-   1. **Action:** Replace SHA-1 with a more secure hashing algorithm (e.g., SHA-256) for computing the hash of resource IDs and generating ETags. The issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8084>.
-2. **Ensure RBAC with Least Privilege is Configured for UCP:**
+1. **Ensure RBAC with Least Privilege is Configured for UCP:**
    1. **Action:** Implement strict RBAC policies to limit which users and service accounts can access the UCP. Ensure that only trusted and necessary entities have the required permissions. Refer to the following pull request for more details: <https://github.com/radius-project/radius/pull/8080>.
-3. **Secure Communication Between UCP and Resource Providers:**
+2. **Secure Communication Between UCP and Resource Providers:**
    1. **Action:** Implement a form of authentication (e.g., mTLS) and apply Network Policies where applicable to secure communication between the UCP and resource providers. Documentation should also be added. Here is the issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8083>.
 
 ## Review Notes
