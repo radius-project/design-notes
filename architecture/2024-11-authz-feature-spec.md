@@ -22,6 +22,28 @@ This feature specification describes:
 
 This feature specification only addresses authorization. A separate feature specification is under development for authenticating users.
 
+## Definition of Terms
+
+Throughout this document, several terms will be used which have specific meaning within the context of Radius authorization.
+
+**Authentication** – Validation that the user is who they claim to be; typically via a certificate, username/password, or passkey; sometimes abbreviated as AuthN
+
+**Authorization** – Validation that the user has permission to perform the requested function within the system; typically is implemented as a set of permitted actions on a specified set of resources (e.g., user X has permission to perform the restart action on the set of virtual machine within this group); typically abbreviated as AuthZ
+
+**Identity Provider** – A system which authenticates users to client applications; user identities can be stored within the identity provider system or federated out to other identity providers; identity providers alleviate the need for client applications to store user credentials or implement authentication mechanisms; typically abbreviated as IdP; examples include Entra ID, Ping Identity, or Okta
+
+**Identity and Access Management** – An overloaded term which can refer to the overall topic of authentication and authorization, modules within a system which implement both authentication and authorization, or product names such as AWS IAM
+
+**Role** – A collection of permitted actions; typically named for the user persona
+
+**Action** – An act performed upon a resource such as create, read (or show), update, delete, list, or a resource-specific action such as restart; typically is mapped one to one with an API call or a CLI command
+
+**Scope** – The set of resources which actions are allowed to be performed; within Radius, the scope is typically a resource group
+
+**Role Definition** – A commonly used pattern in cloud systems which includes the role name and a collection of allowed actions; specific implementations include Kubernetes Roles, AWS IAM roles, Azure role definitions, or Google Cloud custom roles
+
+**Role Assignment** – A commonly used pattern in cloud systems which maps a role definition to a user or set of users; specific implementations include Kubernetes RoleBinding, Azure role assignments, or Google Cloud role binding
+
 ## User profiles and challenges
 
 **Platform engineers** – Platform engineers configure and maintain Radius. These users are primarily concerned with configuring Radius to support the various development and infrastructure teams within their organization. They need a flexible authorization scheme built into Radius which is easy to setup in the beginning, but flexible enough to grow as Radius is used by more teams in more ways. This flexibility will enable platform engineers to grant and restrict actions at a high level on a wide range of resources, or on a fine-grained level.
@@ -46,7 +68,7 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 
 **Radius Administrator** – The Radius Administrator has superuser access to the Radius system. 
 
-**Resource Group Administrator** – The IAM Administrator role grants permission to manage resource groups, role definitions, and role assignments.
+**Resource Group Administrator** – The Resource Group Administrator role grants permission to manage resource groups, role definitions, and role assignments.
 
 **Developer** – The Developer role grants permission to create applications and application resources. It also allows them to deploy these resources to environments. Out of the box, developers create, update, delete, list, get, and deploy resources from `Application.Core` (except Environment and Extenders), `Applications.Datastores`, `Applications.Messaging`, and `Applications.Dapr`. Environments is reserved for the platform engineering team. Extenders are not included by default to encourage the use of pre-defined resource types. If the platform engineer creates additional resource types, they can add the resource type namespace (aka resource provider name) to this role.
 
