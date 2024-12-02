@@ -865,6 +865,7 @@ invariants
 Mycompany
 plaidResource
 resourceTypes
+SecretConfig
 apiserver
 ETags
 cryptographic
