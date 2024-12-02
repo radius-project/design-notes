@@ -191,7 +191,7 @@ This threat model assumes that:
 
 #### Threat: A Malicious Actor Could Exploit Lack of RBAC to Gain Unauthorized Access and Escalate Privileges
 
-**Description:** A malicious actor could circumvent Kubernetes RBAC controls and create arbitrary resources in Kubernetes by exploiting the Universal Control Plane (UCP). The UCP has the following permissions as of November 24, 2024:
+**Description:** A malicious actor could exploit the lack of Role-Based Access Control (RBAC) within the Universal Control Plane (UCP) to gain unauthorized access and escalate privileges. By circumventing Kubernetes RBAC controls, the attacker could use the UCP's extensive permissions to create, delete, or modify resources within the Kubernetes cluster. The UCP has the following permissions as of November 24, 2024:
 
 - Create, Delete, Get, List, Patch, Update, and Watch on ConfigMaps, Secrets, Services, Deployments, StatefulSets, and `ucp.dev` resources.
 - All permissions on `api.ucp.dev` resources.
