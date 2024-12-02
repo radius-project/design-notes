@@ -115,7 +115,7 @@ In the future, the foreign application could be moved to a different cloud provi
 
 As an operator using Radius, I want the application I manage to send messages to external systems. I don't have control over the external system, but I want to ensure that the application can communicate with it.
 
-This example uses an external SMTP server to send emails. The SMTP server could be centralized within a company's infrastructure or an external service like SendGrid.
+This example uses an external SMTP server to send emails. The SMTP server could be centralized within a company's infrastructure or an external service like `SendGrid`.
 
 ```bicep
 // Output binding to an SMTP server. 
@@ -235,19 +235,19 @@ To maximize convenience for the user, these recipes will be designed with the fo
 **Sample Recipes:**
 
 - **Object Storage Binding Recipe**
-  - Local Development: Creates both [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/#s3-bucket-creation) and a MinIO instance.
+  - Local Development: Creates both [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/#s3-bucket-creation) and a `MinIO` instance.
   - Production, Azure: Creates [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/#s3-bucket-creation) only.
   - Production, AWS: Creates [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/s3/) only.
 
 - **Mailing Binding Recipe**
-  - Local Development: Creates both [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/smtp/) and a [MailDev](https://github.com/maildev/maildev) instance.
+  - Local Development: Creates both [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/smtp/) and a [`MailDev`](https://github.com/maildev/maildev) instance.
   - Production: Creates [CRD](https://docs.dapr.io/reference/components-reference/supported-bindings/smtp/) only.
 
 ### Detailed Design
 
 This design will require adding a new type to the Applications.Dapr resource provider. This includes:
 - Extending the TypeSpec schema definition to include the new `Application.Dapr/bindings` resource
-- Adding the corresponding DaprBinding type to the internal representation (DaprRP)
+- Adding the corresponding DaprBinding type to the internal representation (Dapr Resource Provider)
 - Allowing a new type of Dapr component (binding) to be emitted in the backend Kubernetes cluster.
 
 #### Advantages (of each option considered)
@@ -258,7 +258,7 @@ The main advantage of this implementation approach is that it is purely additive
 
 The main disadvantage of this approach is that it will lead to some code duplication.
 
-For each new Dapr Building Block type, we will need to create both a versioned/unversioned API type converter and a dedicated processor.
+For each new Dapr Building Block type, we will need to create both a versioned/not versioned API type converter and a dedicated processor.
 
 The processor code for Dapr building blocks is largely similar across different types, with the only variation being the resource type involved.
 
@@ -306,7 +306,7 @@ model DaprBindingProperties {
 ### Implementation Details
 
 As for every Dapr Building Block, the implementation will need to create in the Applications.Dapr resource provider:
-- A versioned/unversioned api type converter
+- A versioned/not versioned api type converter
 - A dedicated processor for the Dapr Binding type
 
 This implementation will also have some side-effects outside of the Applications.Dapr resource provider:

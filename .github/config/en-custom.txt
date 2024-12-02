@@ -20,6 +20,7 @@ CLIs
 CMD
 CQRS
 CRDs
+CRON
 CRUDL
 CSI
 CTRL
@@ -95,6 +96,7 @@ ResourceDeploymentClient
 Rollout
 SaaS
 SDKs
+SMTP
 SNI
 SQL
 SQS
