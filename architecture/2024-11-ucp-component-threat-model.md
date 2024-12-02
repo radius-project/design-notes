@@ -1,6 +1,6 @@
 # Radius UCP Component Threat Model
 
-- **Author**: ytimocin
+- **Author:** ytimocin
 
 ## Overview
 
@@ -37,7 +37,7 @@ An example flow:
 
 The UCP (Universal Control Plane) consists of several important pieces:
 
-- **Storage Provider**: Radius needs a data store to store all the information related to the resources of the installation. UCP keeps the information of resources by converting them to tracked resources. Available implementations of the Radius Storage Provider:
+- **Storage Provider:** Radius needs a data store to store all the information related to the resources of the installation. UCP keeps the information of resources by converting them to tracked resources. Available implementations of the Radius Storage Provider:
 
   1. Cosmos Database
   2. etcd (in-memory or persistent)
@@ -45,15 +45,15 @@ The UCP (Universal Control Plane) consists of several important pieces:
   4. PostgreSQL
   5. apiserver
 
-- **Secret Provider**: The UCP occasionally needs to create and store secrets. Available implementations of the UCP Secret Provider are:
+- **Secret Provider:** The UCP occasionally needs to create and store secrets. Available implementations of the UCP Secret Provider are:
 
   1. etcd
   2. Kubernetes Secrets
   3. In-memory
 
-- **Queue Provider**: This component handles asynchronous operations. Whenever an operation that is handled asynchronously is requested, it is added as a message to the queue, which is then processed by the UCP worker.
+- **Queue Provider:** This component handles asynchronous operations. Whenever an operation that is handled asynchronously is requested, it is added as a message to the queue, which is then processed by the UCP worker.
 
-- **Worker**: As mentioned above, the worker is for handling the asynchronous operations. It gets the operation messages from the queue and starts handling them.
+- **Worker:** As mentioned above, the worker is for handling the asynchronous operations. It gets the operation messages from the queue and starts handling them.
 
 ### Implementation Details
 
@@ -63,27 +63,27 @@ As of November 24, 2024, the UCP container runs as a non-root user. This securit
 
 #### Use of Cryptography
 
-1. **Generating Unique Keys for Queue Messages**: [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/queue/apiserver/client.go#L152)
+1. **Generating Unique Keys for Queue Messages:** [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/queue/apiserver/client.go#L152)
 
    1. **Purpose:** To generate unique keys for messages to be added to the queue in the Kubernetes CRD-based implementation of the Radius Queue.
    2. **Library:** Uses the Go standard `crypto/rand` package: [crypto/rand](https://pkg.go.dev/crypto/rand)
    3. **Type:** Random data generated using `crypto/rand`
 
-2. **Hashing Resource IDs for Data Store Resource Names**: [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/store/apiserverstore/apiserverclient.go#L406)
+2. **Hashing Resource IDs for Data Store Resource Names:** [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/store/apiserverstore/apiserverclient.go#L406)
 
    1. **Purpose:** To hash the resource ID to generate a unique key for the resource name in the data store.
    2. **Library:** Uses the Go standard `crypto/sha1` package: [crypto/sha1](https://pkg.go.dev/crypto/sha1)
    3. **Type:** SHA-1  
       _Note:_ SHA-1 is used here for generating unique identifiers, not for security.
 
-3. **Hashing Resource IDs for Tracking Resource Names**: [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/trackedresource/name.go#L52)
+3. **Hashing Resource IDs for Tracking Resource Names:** [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/trackedresource/name.go#L52)
 
    1. **Purpose:** To hash a given resource ID to compute the tracked resource name.
    2. **Library:** Uses the Go standard `crypto/sha1` package: [crypto/sha1](https://pkg.go.dev/crypto/sha1)
    3. **Type:** SHA-1  
       _Note:_ As previously noted, SHA-1 is used for optimization purposes only.
 
-4. **Hashing Input Data to Generate New ETags**: [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/util/etag/etag.go#L30)
+4. **Hashing Input Data to Generate New ETags:** [Link to code](https://github.com/radius-project/radius/blob/main/pkg/ucp/util/etag/etag.go#L30)
 
    1. **Purpose:** To hash input data to generate new ETags for resource versioning.
    2. **Library:** Uses the Go standard `crypto/sha1` package: [crypto/sha1](https://pkg.go.dev/crypto/sha1)
@@ -102,7 +102,7 @@ In all instances where SHA-1 is utilized within the codebase, it serves for gene
 
 Below you will find where and how Radius stores secrets. We create Kubernetes Secret objects and rely on Kubernetes security measures to protect these secrets.
 
-1. **Creating or Updating a Cloud Provider Credential Resource**: [Azure Implementation](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/azure/createorupdateazurecredential.go#L89), [AWS Implementation](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/aws/createorupdateawscredential.go#L81). When a **Cloud Provider Credential** resource is deployed, Radius creates a new Kubernetes Secret or updates an existing one. The Kubernetes Secret is deleted when the **Cloud Provider Credential** is deleted. We should also note that these credentials cannot be retrieved or updated through API calls.
+1. **Creating or Updating a Cloud Provider Credential Resource:** [Azure Implementation](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/azure/createorupdateazurecredential.go#L89), [AWS Implementation](https://github.com/radius-project/radius/blob/95409fe179d7adca884a3fc1d82f326bc81c8da0/pkg/ucp/frontend/controller/credentials/aws/createorupdateawscredential.go#L81). When a **Cloud Provider Credential** resource is deployed, Radius creates a new Kubernetes Secret or updates an existing one. The Kubernetes Secret is deleted when the **Cloud Provider Credential** is deleted. We should also note that these credentials cannot be retrieved or updated through API calls.
 
 #### Data Serialization / Formats
 
@@ -112,11 +112,11 @@ We use custom parsers to parse Radius-related resource IDs and do not use any ot
 
 In this section, we will discuss the different clients of the Radius UCP (Universal Control Plane) component. Clients are systems that interact with the UCP component to trigger actions. Here are the clients of the UCP component:
 
-1. **All Components of Radius**: Every component other than UCP is a client of UCP. This list includes the Radius CLI, Deployment Engine, Controller, Deployment Engine, Dashboard, and Applications RP.
+1. **All Components of Radius:** Every component other than UCP is a client of UCP. This list includes the Radius CLI, Deployment Engine, Controller, Deployment Engine, Dashboard, and Applications RP.
 
-2. **Health Check Probes**: Kubernetes itself can act as a client by performing health and readiness checks on the Universal Control Plane.
+2. **Health Check Probes:** Kubernetes itself can act as a client by performing health and readiness checks on the Universal Control Plane.
 
-3. **Metrics Scrapers**: If metrics are enabled, Prometheus or other monitoring tools can scrape metrics from the Universal Control Plane.
+3. **Metrics Scrapers:** If metrics are enabled, Prometheus or other monitoring tools can scrape metrics from the Universal Control Plane.
 
 ## Trust Boundaries
 
@@ -132,9 +132,9 @@ In terms of authentication between UCP and resource providers, we also don't hav
 
 ### Trust Model of External Resource Managers (Azure and AWS)
 
-The UCP routes user requests to Azure and AWS whenever a resource from those providers is requested. In these cases, we rely on Azure and AWS to establish the trust boundary and operate under the assumption that they are secure and trustworthy. We provide necessary credentials that the user has provided to us and authenticate to these cloud providers. We, then, trigger the next action.
+The UCP routes user requests to Azure and AWS when resources from these providers are needed. We rely on Azure and AWS to establish the trust boundary and assume they are secure and trustworthy. We use the credentials provided by the user to authenticate with these cloud providers and then trigger the necessary actions.
 
-We communicate with external resource managers through their public HTTPS APIs. We use standard authentication mechanisms, with credentials provided by the user. Therefore we can assume that external resource managers are authentic, and our requests and subject to the authorization model provided by those resource managers.
+Communication with external resource managers is done through their public HTTPS APIs using standard authentication mechanisms. Therefore, we assume that these external resource managers are authentic and that our requests are subject to their authorization models.
 
 ## Assumptions
 
@@ -154,7 +154,7 @@ This threat model assumes that:
 
 ![UCP Component via Microsoft Threat Modeling Tool](./2024-11-ucp-component-threat-model/ucp-component-flow.png)
 
-1. **User runs `rad deploy app.bicep` using Radius CLI**: When a user runs `rad deploy app.bicep` using the Radius CLI, the Bicep file gets converted to a JSON Template file and is sent to the UCP.
+1. **User runs `rad deploy app.bicep` using Radius CLI:** When a user runs `rad deploy app.bicep` using the Radius CLI, the Bicep file gets converted to a JSON Template file and is sent to the UCP.
 2. **UCP forwards the template to the Deployment Engine**
 3. **Deployment Engine sends the list of resources back to the UCP as requests**
 4. **UCP sends each request to the corresponding Resource Provider**
@@ -189,7 +189,7 @@ This threat model assumes that:
 
 **Status:** All mitigations listed are currently active. Operators are expected to secure their cluster and limit access for users.
 
-#### Threat: Escalation of Privilege by Using Radius to Circumvent Kubernetes RBAC Controls
+#### Threat: A Malicious Actor Could Exploit Lack of RBAC to Gain Unauthorized Access and Escalate Privileges
 
 **Description:** A malicious actor could circumvent Kubernetes RBAC controls and create arbitrary resources in Kubernetes by exploiting the Universal Control Plane (UCP). The UCP has the following permissions as of November 24, 2024:
 
@@ -209,31 +209,30 @@ This threat model assumes that:
 
 **Status:** These mitigations are partial and require configuration by the operator. We will revisit and improve this area in the future.
 
-#### Threat: Lack of Role-Based Access Control (RBAC) and Unauthorized Traffic
+#### Threat: A Malicious Actor Could Intercept Unauthenticated Communication to Manipulate Data
 
-**Description:** As mentioned above, as of November 15, 2024, the UCP does not implement RBAC, and communication between the UCP and resource providers is unauthenticated.
+**Description:** Communication between the UCP and resource providers is currently unauthenticated. This means that there are no mechanisms in place to verify the authenticity of the communication between these components.
 
-**Impact:** Increased risk of unauthorized access and actions, making it easier for attackers to interact with resource providers or manipulate user resources without proper authorization.
+**Impact:** Unauthenticated communication increases the risk of unauthorized access and actions. Attackers could potentially intercept or manipulate the communication between the UCP and resource providers, leading to data breaches or unauthorized operations.
 
 **Mitigations:**
 
-1. **Implement RBAC within the UCP:** An authentication and authorization mechanism that verifies the identity of clients and enforces access policies must be developed.
-2. **Secure Communication Between UCP and Other Components:** A form of authentication (e.g., mTLS) should be enabled.
-3. **Network Policies and Firewall Rules:** Application of Kubernetes Network Policies to control traffic flow to and from the UCP.
+1. **Secure Communication Between UCP and Resource Providers:** Implement a form of authentication (e.g., mTLS) to verify the authenticity of the communication between the UCP and resource providers.
+2. **Network Policies and Firewall Rules:** Apply Kubernetes Network Policies to control traffic flow to and from the UCP. Configure firewalls to allow only necessary traffic between trusted components.
 
 **Status:** None of the mitigations is currently active and we created action items to work on them.
 
 #### Threat: A Malicious Actor Could Exploit SHA-1 Weaknesses to Generate Hash Collisions
 
-**Description:** A malicious actor could exploit the known vulnerabilities of the SHA-1 hashing algorithm to generate hash collisions. The UCP currently uses SHA-1 for hashing resource IDs and generating ETags. This could potentially allow an attacker to create two different inputs that produce the same hash value, leading to unauthorized access or data manipulation.
+**Description:** A malicious actor could exploit the known vulnerabilities of the SHA-1 hashing algorithm to generate hash collisions. The UCP currently uses SHA-1 for hashing resource IDs and generating ETags. Although SHA-1 is not used in security-sensitive contexts, its vulnerabilities could still be exploited to create hash collisions, potentially leading to data integrity issues.
 
-**Impact:** Although SHA-1 is used for non-security purposes, its vulnerabilities could be exploited to create hash collisions. This could result in unauthorized access to resources, data corruption, or other security weaknesses if the hashes are used in security-sensitive contexts. Using a stronger cryptographic hashing algorithm is essential to ensure the integrity and security of the system.
+**Impact:** Even though SHA-1 is used for non-security purposes, its vulnerabilities could be exploited to create hash collisions. This could result in data integrity issues, such as incorrect resource identification (can happen in ETag generation) or versioning (when we are hashing resource IDs to do some comparison). Using a stronger cryptographic hashing algorithm is essential to ensure the integrity and reliability of the system.
 
 **Mitigations:**
 
-1. **Replace SHA-1 with a Stronger Algorithm**:
-   1. **Action**: Identify all instances where SHA-1 is used in the codebase.
-   2. **Implementation**: Replace SHA-1 with SHA-256 or another secure hashing algorithm for hashing resource IDs and generating ETags. Ensure that the new algorithm is consistently used across all components. Test to verify that the change does not impact system functionality.
+1. **Replace SHA-1 with a Stronger Algorithm:**
+   1. **Action:** Identify all instances where SHA-1 is used in the codebase.
+   2. **Implementation:** Replace SHA-1 with SHA-256 or another secure hashing algorithm for hashing resource IDs and generating ETags. Ensure that the new algorithm is consistently used across all components. Test to verify that the change does not impact system functionality.
 
 **Status:** The mitigation is not active as of now. An action item has been created to update the cryptographic algorithm used in hashing resource IDs and generating ETags, as well as in other components of Radius.
 
@@ -241,12 +240,12 @@ This threat model assumes that:
 
 ## Action Items
 
-1. **Use a Stronger Hashing Algorithm**:
-   1. **Action**: Replace SHA-1 with a more secure hashing algorithm (e.g., SHA-256) for computing the hash of resource IDs and generating ETags. The issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8084>.
-2. **Ensure RBAC with Least Privilege is Configured for UCP**:
-   1. **Action**: Implement strict RBAC policies to limit which users and service accounts can access the UCP. Ensure that only trusted and necessary entities have the required permissions. Refer to the following pull request for more details: <https://github.com/radius-project/radius/pull/8080>.
-3. **Secure Communication Between UCP and Resource Providers**:
-   1. **Action**: Implement a form of authentication (e.g., mTLS) and apply Network Policies where applicable to secure communication between the UCP and resource providers. Documentation should also be added. Here is the issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8083>.
+1. **Use a Stronger Hashing Algorithm:**
+   1. **Action:** Replace SHA-1 with a more secure hashing algorithm (e.g., SHA-256) for computing the hash of resource IDs and generating ETags. The issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8084>.
+2. **Ensure RBAC with Least Privilege is Configured for UCP:**
+   1. **Action:** Implement strict RBAC policies to limit which users and service accounts can access the UCP. Ensure that only trusted and necessary entities have the required permissions. Refer to the following pull request for more details: <https://github.com/radius-project/radius/pull/8080>.
+3. **Secure Communication Between UCP and Resource Providers:**
+   1. **Action:** Implement a form of authentication (e.g., mTLS) and apply Network Policies where applicable to secure communication between the UCP and resource providers. Documentation should also be added. Here is the issue that keeps track of this action item: <https://github.com/radius-project/radius/issues/8083>.
 
 ## Review Notes
 
