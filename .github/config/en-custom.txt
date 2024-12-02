@@ -884,3 +884,5 @@ resourcegroups
 resourceproviders
 roleassignments
 rolesdefinitions
+AuthN
+AuthZ
