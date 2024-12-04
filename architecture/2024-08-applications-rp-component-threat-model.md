@@ -85,7 +85,9 @@ Applications RP has access to sensitive information related to the application r
 ##### Managing cloud credentials
 
 Applications RP requires AWS and Azure credentials for accessing and managing resources in cloud. It fetches credentials using UCP Secret Provider library. 
-Credentials are not available for retrieval through API. The RP also supports [federated identity](https://docs.radapp.io/guides/operations/providers/overview) for both Azure and AWS. Unless there is a limitation that prevents using federated identity, users should prefer using this since it removes the need to store secrets. 
+Credentials are not available for retrieval through Radius' public API. The secret provider library relies on internals of Radius to read the data from Kubernetes. Any user of the Kubernetes cluster that has read-access to secrets in the `radius-system` namespace can read these values.
+
+The RP also supports [federated identity](https://docs.radapp.io/guides/operations/providers/overview) for both Azure and AWS. Unless there is a limitation that prevents using federated identity, users should prefer using this since it removes the need to store secrets. 
 
 Using these credentials, Applications RP can create and manage other resources in AWS and Azure. 
 
@@ -141,7 +143,11 @@ The Applications RP component lives inside the `radius-system` namespace in the 
 
 The Kubernetes API Server, with which Applications RP interacts, runs in the `kube-system` namespace within the cluster.
 
-Today, the RP assumes that incoming requests are from a trusted user who is authorized to make the request. It should enforce this by checking that the requests are made by UCP. UCP in turn should accept requests from authorized and authenticated users and clients such as `rad cli`. Once we have Radius RBAC support, we should configure UCP so that it accepts requests only from authorized and authenticated users.
+Today, the RP assumes that incoming requests are from an authorized user. At the time of writing there is no authentication or encryption for requests inbound to Applications RP.
+
+We have planned work to implement TLS encryption for requests in transit, and an authentication to enforce that only UCP may send requests to Applications RP. This threat model document will be updated once this work is complete.
+
+Applications RP relies on UCP to implement and enforce granular authorization policies. Applications RP will not implement its own authorization system. At the time of writing there is no support in UCP for granular authorization policies. This threat model document will be updated once this work is complete.
 
 Applications RP deploys each Application and its resources in its own namespace. This is necessary for administrators of the Kubernetes cluster to correctly configure RBAC and limit the scope of permissions. 
 
@@ -171,26 +177,48 @@ Below are the key points associated with data flow:
 
 ## Threats
 
-#### Impersonating Applications RP could cause information disclosure, DDoS and misuse of cloud resources.
+#### Impersonating Applications RP could cause information disclosure
 
 **Description:** 
-If a malicious actor can impersonate Applications RP, requests from UCP will be received by the malicious actor. The malicious actor can also send requests to UCP and access cloud credentials.
+If a malicious actor can impersonate Applications RP, requests from UCP will be received by the malicious actor. 
 
 **Impact:** 
 All data sent from UCP to Applications RP will be available to the malicious actor, such as payloads of resources. These payloads can disclose information about Application resources. 
-The impersonator would also be able to retrieve credentials through UCP. The credentials can be used to create and consume Azure and AWS resources. The impersonator could also update Environment recipe links to use an outdated/ vulnerable version of the resource.
 
 **Mitigations:**
 
 1. Impersonating Applications RP, tampering with the applications rp code and configuration would require access to modify the `radius-system` namespace. Our threat model assumes that the operator has limited access to the `radius-system` namespace using Kubernetes' existing RBAC mechanism.
 
-2. We should add support in Radius to use mTLS as communication protocol between UCP and Applications RP.
+2. We should add support in Radius authenticate communication between UCP and Applications RP.
 
 **Status:** 
 
 1. Active. All mitigations which make use of kubernetes RBAC are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace. 
    
-2. Pending. We should add support in Radius to use mTLS as communication protocol between UCP and Applications RP.
+2. Pending. We should add support in Radius authenticate communication between UCP and Applications RP.
+
+
+#### Impersonating Applications RP could cause misuse of cloud resources.
+
+**Description:** 
+
+If a malicious actor can impersonate Applications RP, the malicious actor can  send requests to UCP and access cloud credentials.
+
+**Impact:** 
+
+The credentials can be used by impersonator to create and consume Azure and AWS resources. 
+
+**Mitigations:**
+
+1. Impersonating Applications RP, tampering with the applications rp code and configuration would require access to modify the `radius-system` namespace. Our threat model assumes that the operator has limited access to the `radius-system` namespace using Kubernetes' existing RBAC mechanism.
+
+2. We should add support in Radius authenticate communication between UCP and Applications RP.
+
+**Status:** 
+
+1. Active. All mitigations which make use of kubernetes RBAC are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace. 
+   
+2. Pending. We should add support in Radius authenticate communication between UCP and Applications RP.
 
 #### Malicious user can make arbitrary requests to Applications RP API. 
 
@@ -200,7 +228,7 @@ This can result in unintended application resource changes.
 
 **Mitigation**
 
-Radius should add validation to make sure the incoming request is from UCP. 
+Radius should add authentication to make sure the incoming request is from UCP. 
 
 **Status**
 
@@ -209,9 +237,11 @@ Pending
 #### Sniffing the communication between Applications RP  and Kubernetes API Server / UCP could cause information disclosure 
 
 **Description:** 
-If a malicious actor could sniff communication between the applications RP and the UCP, the actor could modify/replay the packets.
+
+If a malicious actor could sniff communication between the applications RP and the UCP, the actor could save the sniffed traffic as packet capture and replay the packets using tools such as tcpreplay. 
 
 **Impact:** 
+
 A malicious actor could use the information about the resources and operations in progress. They can also replay the same requests to cause a DDoS or send a modified payload to cause inadvertent changes to application.
 
 **Mitigations**
@@ -229,12 +259,15 @@ A malicious actor could use the information about the resources and operations i
 #### Using recipes can cause escalation of privilege
 
 **Description** 
+
 A malicious user could become the admin, and configure recipes to create / update resources without having permissions to access these resources directly.
 
 **Impact** 
+
 This can facilitate the attackers to create resources based on any arbitrary image. 
 
 **Mitigations**
+
 1. Ability to register recipes should be given to only trusted employees. This in will be possible once Radius to support RBAC. 
 
 2. Since each application resource is deployed in the application's namespace, we can use Kubernetes RBAC to confine potential security implications to the application's namespace.
@@ -245,23 +278,27 @@ This can facilitate the attackers to create resources based on any arbitrary ima
 
 
 **Status**
+
 1. Pending. We should implement Radius RBAC and then use the feature to restrict recipe registration to only trusted employees.
    
 2. Active. Operators are expected limit access so that an application in its own namespace cannot by affected by application in another namespace.
    
 3. Active. Operators are expected to configure their Kubernetes cluster with trusted URLs or registries.
    
-4. Active. Operators are expected to configure RBAC of Radius appropriately to minimize its blast radius.
+4. Pending. This mitigation requires RBAC support in radius.  
 
 #### Using application definition to deploy malicious containers
 
 **Description** 
+
 Application definitions could create pods from any arbitrary image. This container executes code, and it can potentially lead to misuse of cluster resources. 
 
 **Impact** 
+
 These containers can then potentially expose secrets, overconsume resources or create several resources, delete important infrastructure etc. 
 
 **Mitigations**
+
 1. Application definition and images and recipes used should be reviewed and only authorized users should be able to create and deploy application definitions. Radius RBAC could enable only trusted users to manage application definition  recipe configurations and deployment.
    
 2. Any container launched by Radius is subject to Kubernetes as the platform. Users should configure their Kubernetes cluster to ensure that pods are created only from images hosted on trusted URLs or registries.
@@ -274,9 +311,13 @@ These containers can then potentially expose secrets, overconsume resources or c
 
 #### Applications RP has the a ability to create managed identities which if misused can lead to Escalation of Privilege
 
-**Description:** If a malicious actor uses Radius, they could deploy Azure managed identity which could provide escalated privileges to users.
+**Description:** 
 
-**Impact:** A malicious actor use this ability to gain inappropriate access to azure resources. 
+If a malicious actor uses Radius, they could deploy Azure managed identity which could provide escalated privileges to users.
+
+**Impact:** 
+
+A malicious actor use this ability to gain inappropriate access to azure resources. 
 
 **Mitigations:**
 
