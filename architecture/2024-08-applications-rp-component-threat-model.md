@@ -254,7 +254,7 @@ A malicious actor could misuse the information about the resources and operation
 
 1. Active. All mitigations listed are currently active. Operators are expected to secure their cluster and limit access to the `radius-system` namespace.
 
-2. Pending. We should aauthenticate communication between UCP and Applications RP.
+2. Pending. We should authenticate communication between UCP and Applications RP.
 
 #### Using recipes can cause escalation of privilege
 
