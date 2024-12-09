@@ -28,7 +28,7 @@ Throughout this document, several terms will be used which have specific meaning
 
 **Authentication** – Validation that the user is who they claim to be; typically via a certificate, username/password, or passkey; sometimes abbreviated as AuthN
 
-**Authorization** – Validation that the user has permission to perform the requested function within the system; typically is implemented as a set of permitted actions on a specified set of resources (e.g., user X has permission to perform the restart action on the set of virtual machine within this group); typically abbreviated as AuthZ
+**Authorization** – Validation that the user has permission to perform the action function within the system; typically is implemented as a set of permitted actions on a specified set of resources (e.g., user X has permission to perform the restart action on the set of virtual machine within this group); typically abbreviated as AuthZ
 
 **Identity Provider** – A system which authenticates users to client applications; user identities can be stored within the identity provider system or federated out to other identity providers; identity providers alleviate the need for client applications to store user credentials or implement authentication mechanisms; typically abbreviated as IdP; examples include Entra ID, Ping Identity, or Okta
 
@@ -40,9 +40,9 @@ Throughout this document, several terms will be used which have specific meaning
 
 **Scope** – The set of resources which actions are allowed to be performed; within Radius, the scope is typically a resource group
 
-**Role Definition** – A commonly used pattern in cloud systems which includes the role name and a collection of allowed actions; specific implementations include Kubernetes Roles, AWS IAM roles, Azure role definitions, or Google Cloud custom roles
+**Role Definition** – A commonly used pattern in systems which includes the role name and a collection of allowed actions; specific implementations include Kubernetes Roles, AWS IAM roles, Azure role definitions, or Google Cloud custom roles
 
-**Role Assignment** – A commonly used pattern in cloud systems which maps a role definition to a user or set of users; specific implementations include Kubernetes RoleBinding, Azure role assignments, or Google Cloud role binding
+**Role Assignment** – A commonly used pattern in systems which maps a role definition to a user or set of users; specific implementations include Kubernetes RoleBinding, Azure role assignments, or Google Cloud role binding
 
 ## User profiles and challenges
 
@@ -70,7 +70,7 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 
 **Resource Group Administrator** – The Resource Group Administrator role grants permission to manage resource groups, role definitions, and role assignments.
 
-**Developer** – The Developer role grants permission to create applications and application resources. It also allows them to deploy these resources to environments. Out of the box, developers create, update, delete, list, get, and deploy resources from `Application.Core` (except Environment and Extenders), `Applications.Datastores`, `Applications.Messaging`, and `Applications.Dapr`. Environments is reserved for the platform engineering team. Extenders are not included by default to encourage the use of pre-defined resource types. If the platform engineer creates additional resource types, they can add the resource type namespace (aka resource provider name) to this role.
+**Developer** – The Developer role grants permission to create applications and application resources. It does not allow them to deploy resources to an environment without the associated Deployer role. Out of the box, developers create, update, delete, list, get, and deploy resources from `Application.Core` (except Environment and Extenders), `Applications.Datastores`, `Applications.Messaging`, and `Applications.Dapr`. Environments is reserved for the platform engineering team. Extenders are not included by default to encourage the use of pre-defined resource types. If the platform engineer creates additional resource types, they can add the resource type namespace (aka resource provider name) to this role.
 
 **Deployer** – The Deployer role is for the same persona as the Developer role. The role exists to control which environments the developer can deploy applications to. The Developer role and Deployer role are typically assigned to the same user at the same time, just with different scopes.
 
@@ -83,11 +83,10 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 | Role                         | Short Name   | Resources                                            | Allowed Action |
 | ---------------------------- | ------------ | ---------------------------------------------------- | -------------- |
 | Radius Administrator         | radius-admin | *                                                    | *              |
-| Resource Group Administrator | group-admin  | /planes/radius/{planeName}/resourcegroups/           | *              |
-|                              |              | /planes/radius/MyCompany/rolesdefinitions/           | *              |
-|                              |              | /planes/radius/MyCompany/roleassignments/            | *              |
+| Resource Group Administrator | group-admin  | /planes/radius/{planeName}/resourcegroups            | *              |
+|                              |              | /planes/radius/MyCompany/rolesdefinitions            | *              |
+|                              |              | /planes/radius/MyCompany/roleassignments             | *              |
 | Developer                    | developer    | Applications.Core/applications/applications          | *              |
-|                              |              | Applications.Core/applications/applications          | *              |
 |                              |              | Applications.Core/applications/containers            | *              |
 |                              |              | Applications.Core/applications/gateways              | *              |
 |                              |              | Applications.Core/applications/secretStores          | *              |
@@ -95,12 +94,12 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 |                              |              | Applications.Datastores/*                            | *              |
 |                              |              | Applications.Messaging/*                             | *              |
 |                              |              | Applications.Dapr/*                                  | *              |
-| Deployer                     | deployer     | Applications.Core/environments/                      | deployTo       |
+| Deployer                     | deployer     | Applications.Core/environments                       | deployTo       |
 | Environment Administrator    | env-admin    | Applications.Core/environments                       | *              |
 |                              |              | Applications.Core/secretStores                       | *              |
 |                              |              | System.AWS/credentials                               | *              |
 |                              |              | System.Azure/credentials                             | *              |
-|                              |              | System.Kubernetes/credentials (future functionality) |                |
+|                              |              | System.Kubernetes/credentials (future functionality) | *              |
 | Resource Type Administrator  | type-admin   | System.Resources/resourceproviders                   | *              |
 | Recipe Administrator         | recipe-admin | Only the recipe property of environments             | *              |
 
@@ -108,7 +107,7 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 
 > [!NOTE]
 >
-> In a new Radius installation, there is no identity provider (IdP) configured. Radius does not have a built-in identity system, therefore the Radius administrator must configure an IdP before Radius will recognize and authorize the user. Roles can be assigned prior to IdP configuration, but without an IdP, the user still cannot be authorized. 
+> In a new Radius installation, there is no identity provider (IdP) configured. Radius does not have a built-in identity system, therefore the Radius administrator must configure an IdP before Radius will recognize and authorize the user. Roles can be assigned prior to IdP configuration, but without an IdP there is no effect. 
 
 As a platform engineer, I just installed Radius using my Kubernetes cluster credentials. I want to access Radius via my typical user credentials from my IdP.
 
@@ -141,37 +140,37 @@ As a platform engineer, I need to assign the Developer role to a developer for t
 
 When Radius is installed, two resource groups are created:
 
-1. `rg-default-application` – When a user deploys an application without specifying a resource group, it is deployed to this resource group.
-2. `rg-default-environment` – When a user creates an environment without specifying a resource group, it is deployed to this resource group.
+1. `default-application` – When a user deploys an application without specifying a resource group, it is deployed to this resource group.
+2. `default-environment` – When a user creates an environment without specifying a resource group, it is deployed to this resource group.
 
 > [!NOTE]
 >
 > The default resource group is split to encourage best practices for actual Radius use. Splitting resource groups introduces the concept of resource groups and Radius' authorization model.
 
-Given this behavior, the developer will be granted the Developer role scoped to the `default-application` resource group and the Deployer role scoped to the `rg-default-environment`
+Given this behavior, the developer will be granted the Developer role scoped to the `default-application` resource group and the Deployer role scoped to the `default-environment`
 
 ```bash
-# Assign the Developer role to a user from the IdP scoped to the rg-default-application resource group
+# Assign the Developer role to a user from the IdP scoped to the default-application resource group
 rad role assignment create \
   --assignee developer@my-company.net \
   --role developer \
-  --scope /planes/radius/MyCompany/resourceGroup/rg-default-application
+  --scope /planes/radius/MyCompany/resourceGroup/default-application
 rad role assignment create \
   --assignee developer@my-company.net \
   --role deployer \
-  --scope /planes/radius/MyCompany/resourceGroup/rg-default-environment
+  --scope /planes/radius/MyCompany/resourceGroup/default-environment
 ```
 
 **Result**
 
-1. `developer@my-company.net` is added to the out-of-the-box role `developer` for the `rg-default-application` resource group 
-2. `developer@my-company.net` is added to the out-of-the-box role `deplorer` for the `rg-default-environment` resource group
+1. `developer@my-company.net` is added to the out-of-the-box role `developer` for the `default-application` resource group 
+2. `developer@my-company.net` is added to the out-of-the-box role `deplorer` for the `default-environment` resource group
 
 **Exceptions**
 
 The operation fails and informs the user interactively if:
 
-* The current user is not a member of the `radius-admin` or `group-admin` roles
+* The current user is not a member of the `radius-admin` or `group-admin` roles or the `cluster-admin` RoleBinding in the Kubernetes cluster
 
 ### Scenario 3 – Multi-tenant enterprise
 
@@ -183,36 +182,36 @@ Large enterprises need a flexible authorization model which enables them to tigh
 
 #### User story 3 – Create resource group for environments
 
-As a platform engineer at a large enterprise, I need to create a resource group for a cloud environment and grant access to manage environments to my cloud infrastructure team. I have deleted the `rg-default-environment` resource group.
+As a platform engineer at a large enterprise, I need to create a resource group for a cloud environment and grant access to manage environments to my cloud infrastructure team. I have deleted the `default-environment` resource group.
 
 **User Experience**
 
 ```bash
 # Create resource group for non-production environments
-rad group create rg-non-prod-env
+rad group create non-prod-env
 # Assign Environment Administrator role to the cloud engineering user group
 rad role assignment create \
   --assignee cloud-engineering@my-company.net \
   --role env-admin \
-  --scope /planes/radius/MyCompany/resourceGroup/rg-non-prod-env
+  --scope /planes/radius/MyCompany/resourceGroup/non-prod-env
 ```
 
 **Result**
 
-1. An empty resource group is created called `rg-non-prod-env`
-2. The `env-admin` role is granted to the cloud engineering group to manage environments within the `rg-non-prod-env` resource group
+1. An empty resource group is created called `non-prod-env`
+2. The `env-admin` role is granted to the cloud engineering group to manage environments within the `non-prod-env` resource group
 
 **Exceptions**
 
 The operation fails and informs the user interactively if:
 
-* The current user is not a member of the `radius-admin` or `group-admin` roles
+* The current user is not a member of the `radius-admin` or `group-admin` roles or the `cluster-admin` RoleBinding in the Kubernetes cluster
 * The resource group already exists
 * The role assignment already exists
 
 #### User story 4 – Create resource group for an application
 
-As a platform engineer at a large enterprise, I need to create a resource group for a new application and grant access to a development team. I only want the development team to use my company's resource types. I have deleted the `rg-default-application` resource group.
+As a platform engineer at a large enterprise, I need to create a resource group for a new application and grant access to a development team. I only want the development team to use my company's resource types. I have deleted the `default-application` resource group.
 
 **User Experience**
 
@@ -240,18 +239,18 @@ actions:
 
 ```bash
 # Create application resource group 
-rad group create rg-app-1
+rad group create app-1
 # Assign the Developer role to the IdP group the new group
 rad role assignment create \
   --assignee app-1-dev-team@my-company.net \
   --role developer \
-  --scope /planes/radius/MyCompany/resourceGroup/rg-app-1
+  --scope /planes/radius/MyCompany/resourceGroup/app-1
 ```
 
 **Result**
 
 1. `Applications.Core`, `Applications.Datastores`, `Applications.Messaging`, and `Applications.Dapr` were resource type namespaces were removed from the Developer role and `MyCompany.App` was added
-2. An empty resource group is created called `rg-app-1`
+2. An empty resource group is created called `app-1`
 3. The `developer` role is assigned to the app-1-dev-team@my-company.net group
 
 **Exceptions**
@@ -280,7 +279,7 @@ rad role assignment create \
   --scope /planes/radius/MyCompany/ResourceTypes
 ```
 
-The contents of `resource-type-admin-definition.yaml` is similar to:
+The contents of `mycompany-app-resource-type-admin-definition.yaml` is similar to:
 
 ```yaml
 ---
@@ -300,7 +299,7 @@ actions:
 
 The operation fails and informs the user interactively if:
 
-* The current user is not a member of the `radius-admin` or `group-admin` roles
+* The current user is not a member of the `radius-admin` or `group-admin` roles or the `cluster-admin` RoleBinding in the Kubernetes cluster
 * The role definition or assignment already exists
 
 #### User story 6 – Assigning the Recipe Admin role
@@ -326,11 +325,15 @@ rad role assignment create \
 
 1. The `recipe-admin` role is granted to the cloud engineering and DBA groups to register and unregistered recipes on environments in resource groups in scope
 
+> [!CAUTION]
+>
+> Ideally, the Radius administrator could specify a scope for the resource types they each role is able to administer within each resource group. Given the recipes are a property of environments today, it's unclear if this is feasible within the current design. 
+
 **Exceptions**
 
 The operation fails and informs the user interactively if:
 
-* The current user is not a member of the `radius-admin` or `group-admin` roles
+* The current user is not a member of the `radius-admin` or `group-admin` roles or the `cluster-admin` RoleBinding in the Kubernetes cluster
 * The role assignment already exists
 
 #### User story 7 – Deleting a role definition and assignment
@@ -364,7 +367,7 @@ rad role definition delete my-role-definition
 
 The operation fails and informs the user interactively if:
 
-* The current user is not a member of the `radius-admin` or `group-admin` roles
+* The current user is not a member of the `radius-admin` or `group-admin` roles or the `cluster-admin` RoleBinding in the Kubernetes cluster
 * Role assignments for the role definition exist as shown in the example
 
 ## Feature Summary
@@ -376,7 +379,7 @@ The operation fails and informs the user interactively if:
 | p0       | S    | Create or delete a role assignment for an individual user from the configured IdP system for a resource group (`rad role assignment create --assignee user@mycompany.net`) |
 | p1       | S    | Create or delete a role assignment for a group from the configured IdP system for a resource group (`rad role assignment create --assignee my-group@mycompany.net`) |
 | p1       | M    | Ability to create, update, and delete a role definition      |
-| p2       | M    | Replace the `default` resource group with `rg-default-application` and `rg-default-environment` and modify `rad environment`, `rad deploy`, and `rad run` to use these new groups |
+| p2       | M    | Replace the `default` resource group with `default-application` and `default-environment` and modify `rad environment`, `rad deploy`, and `rad run` to use these new groups |
 
 ## Future Features
 
