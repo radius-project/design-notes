@@ -872,3 +872,11 @@ Mycompany
 plaidResource
 resourceTypes
 SecretConfig
+apiserver
+ETags
+ETag
+cryptographic
+Cryptographic
+Dockerfile
+AnonymousCredential
+ConfigMaps
