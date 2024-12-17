@@ -775,7 +775,6 @@ kustomize
 usecase
 gitops
 predefine
-KRM
 secretsStores
 DriverWithSecrets
 FindSecretIds
@@ -884,3 +883,4 @@ Cryptographic
 Dockerfile
 AnonymousCredential
 ConfigMaps
+KRM
