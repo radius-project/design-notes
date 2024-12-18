@@ -900,3 +900,8 @@ Cryptographic
 Dockerfile
 AnonymousCredential
 ConfigMaps
+SecOps
+kube
+workspace's
+Authorizer
+
