@@ -20,12 +20,13 @@ clusterissuer
 tcpreplay
 DDoS
 ClusterIssuer
-golang
 CLI
+golang
 CLIs
 CMD
 CQRS
 CRDs
+CRON
 CRUDL
 CSI
 CTRL
@@ -101,6 +102,7 @@ ResourceDeploymentClient
 Rollout
 SaaS
 SDKs
+SMTP
 SNI
 SQL
 SQS
@@ -282,6 +284,7 @@ param
 params
 parametrization
 passthrough
+Peirone
 pem
 performant
 periodSeconds
@@ -332,6 +335,7 @@ sharded
 shortcode
 shortcodes
 shortname
+SoTrx
 spanId
 specificed
 spf
@@ -904,4 +908,3 @@ SecOps
 kube
 workspace's
 Authorizer
-
