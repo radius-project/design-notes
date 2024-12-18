@@ -56,7 +56,148 @@ Throughout this document, several terms will be used which have specific meaning
 
 ### Scenario 1 – Getting started and local development
 
-When a first-time user or a developer installs Radius, the authorization configuration should be wide open to the user. The user should never have to configure anything or be presented with any options. This is the behavior of Radius today. There are no enhancements needed to support this scenario.
+When a first-time user or a developer installs Radius, the authorization configuration should be wide open to the user. The user should never have to configure anything or be presented with any options. 
+
+#### User story 1 – Running the first application
+
+As a developer, I just installed Radius on my local workstation and I want to run my first application using Radius.
+
+##### Summary
+
+Radius today creates a `default` workspace, with a `default` resource group, and a `default` environment. In order to introduce the resource group concept the  `rad run` and `rad deploy` user experience is changed so that the user is required to specify a resource group. The default environment remains but is placed in a new `env-default` resource group. The full list of changes includes:
+
+* The `scope` property is replaced with `resource-group` in the config.yaml since scope is ambiguous for the user
+* `rad init` is modified:
+  * The default workspace no longer includes a scope property
+  * The out-of-the-box environment is renamed from `default` to the context string from the KUBECONFIG file (the `connection.context` is already set to this value)
+  * The default resource group is renamed `env-default`
+* `rad run` and `rad deploy` error out if a group is not specified in the command line or config.yaml
+* `rad run` and `rad deploy` now create the specified group if it does not exist
+* `rad run` and `rad deploy` respect the role definitions and assignments described in this document
+* The `Creating application...` output from `rad run` is modified to be more precise
+* New `rad workspace update` command
+
+> [!NOTE]
+>
+> The naming convention for resource groups is `app-group-name` for groups container applications and application resources and `env-group-name` for environments and their recipes. "Resource group" is the long name and should be used in the UI and documentation. "Group" is the short name used in CLI commands or other technical contexts.
+
+> [!NOTE]
+>
+> The UI should refer to resources with the fully qualified name unless the resource group context is obvious. In the examples below, The application is referred to as "getting-started" since the "app-getting-started" resource group was referenced. But the environment is referred to as "env-default/my-kube-context" since it was not previous referenced.
+
+##### User Experience 1
+
+The getting started experience will look like:
+
+```bash
+rad run ./getting-started/app.bicep
+# Error is shown because there is no resource group specified
+# The current config.yaml no longer includes a 'scope' property (see last example)
+ERROR: There is no resource group specified. Include a group name via --group or add a group to the workspace
+rad run ./getting-started/app.bicep --group app-getting-started
+Building app.bicep...
+Resource group 'app-getting-started' does not exist.
+Creating resource group 'app-getting-started'...
+Creating application 'getting-started' in 'app-getting-started' and deploying to the 'env-default/my-kube-context' environment...
+Deployment in progress...
+Deployment complete.
+```
+
+**Result**
+
+1. `rad run` creates the specified resource group because it does not exist
+2. The user is notified that the application is being _**created**_ in the group specified and _**deployed**_ to the workspace's environment
+
+**Other changes**
+
+The config.yaml no longer includes a `scope` property.
+
+**Exceptions**
+
+The operation fails and informs the user interactively if:
+
+* There is no group specified via the command line or in the workspace config
+* The user's role assignment does not have permission to create a resource group; the user should contact the Radius administrator (not applicable in this user story since Radius was just installed, but true otherwise)
+* The user's role assignment does not have permission to deploy applications to the environment; the user should specify an alternative environment via `--environment` or by updating the workspace, or contacting the Radius administrator  (not applicable in this user story since Radius was just installed, but true otherwise)
+
+##### User Experience 2
+
+The user can also add the group to the workspace via a new `rad workspace update` command:
+
+```bash
+rad run ./getting-started/app.bicep
+ERROR: There is no resource group specified. Include a group name via --group or add a group to the workspace
+# Add the resource group to the workspace
+rad workspace update default --group app-getting-started
+rad run ./getting-started/app.bicep
+Building app.bicep...
+Resource group 'app-getting-started' does not exist.
+Creating resource group 'app-getting-started'...
+Creating application 'getting-started' in 'app-getting-started' and deploying to the 'env-default/my-kube-context' environment...
+Deployment in progress...
+Deployment complete.
+```
+
+**Result**
+
+1. The group "/planes/radius/local/resourceGroups/app-getting-started" is added to the workspace
+2. Otherwise same as User Experience 1
+
+**Exceptions**
+
+The operation fails and informs the user interactively if:
+
+* Same as User Experience 1
+
+##### User Experience 3
+
+Advanced users can directly modify the config.yaml file adding the group property:
+
+```bash
+rad deploy ./getting-started/app.bicep
+ERROR: There is no resource group specified. Include a group name via --group or add a group to the workspace
+# An experienced Radius user can add the group to the config.yaml manually
+# The current config.yaml no longer includes a 'scope' property 
+cat ~/.rad/config.yaml
+workspaces:
+  default: default
+  items:
+    default:
+      connection:
+        context: my-kube-context
+        kind: kubernetes
+      environment: /planes/radius/local/resourceGroups/default/providers/Applications.Core/environments/my-kube-context
+# Add group to the default workspace
+yq -i '.workspaces.items.default.resource-group="/planes/radius/local/resourceGroups/app-getting-started"' ~/.rad/config.yaml
+cat ~/.rad/config.yaml
+workspaces:
+  default: default
+  items:
+    default:
+      connection:
+        context: my-kube-context
+        kind: kubernetes
+      environment: /planes/radius/local/resourceGroups/default/providers/Applications.Core/environments/my-kube-context
+      resource-group: /planes/radius/local/resourceGroups/app-getting-started
+rad run ./first-app/app.bicep
+Building app.bicep...
+Resource group 'app-getting-started' does not exist.
+Creating resource group 'app-getting-started'...
+Creating application 'getting-started' in 'app-getting-started' and deploying to the 'env-default/my-kube-context' environment...
+Deployment in progress...
+Deployment complete.
+```
+
+**Result**
+
+1. `rad deploy` creates the resource group from the config.yaml file because it does not exist
+2. Otherwise same as User Experience 1 and 2
+
+**Exceptions**
+
+The operation fails and informs the user interactively if:
+
+* Same as User Experience 1
 
 ### Scenario 2 – Simple internal developer platform
 
@@ -74,7 +215,7 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 
 **Resource Group Administrator** – The Resource Group Administrator role grants permission to manage resource groups, role definitions, and role assignments.
 
-**Developer** – The Developer role grants permission to create applications and application resources. It does not allow them to deploy resources to an environment without the associated Deployer role. Out of the box, developers create, update, delete, list, get, and deploy resources from `Application.Core` (except Environment and Extenders), `Applications.Datastores`, `Applications.Messaging`, and `Applications.Dapr`. Environments is reserved for the platform engineering team. Extenders are not included by default to encourage the use of pre-defined resource types. If the platform engineer creates additional resource types, they can add the resource type namespace (aka resource provider name) to this role.
+**Developer** – The Developer role grants permission to create applications and application resources. It does not allow them to deploy resources to an environment in another resource group without the associated Deployer role. Out of the box, developers create, update, delete, list, get, and deploy resources from `Application.Core` (except Environment and Extenders), `Applications.Datastores`, `Applications.Messaging`, and `Applications.Dapr`. Environments are reserved for the platform engineering team. Extenders are not included by default to encourage the use of pre-defined resource types. If the platform engineer creates additional resource types, they can add the resource type namespace (aka resource provider name) to this role.
 
 **Deployer** – The Deployer role is for the same persona as the Developer role. The role exists to control which environments the developer can deploy applications to. The Developer role and Deployer role are typically assigned to the same user at the same time, just with different scopes.
 
@@ -108,7 +249,7 @@ Radius will ship with several roles pre-defined. These roles grant permission to
 | Resource Type Administrator      | type-admin    | Configured IdP  | System.Resources/resourceproviders                   | *              |
 | Recipe Administrator             | recipe-admin  | Configured IdP  | Only the recipe property of environments             | *              |
 
-#### User story 1 – Assigning the Radius Administrator role
+#### User story 2 – Assigning the Radius Administrator role
 
 As a platform engineer, I just installed Radius using my Kubernetes cluster credentials. I want to access Radius via my typical user credentials from my IdP.
 
@@ -133,39 +274,32 @@ The operation fails and informs the user interactively if:
 
 * The current user is not a member of the `cluster-admin` RoleBinding in the Kubernetes cluster
 
-#### User story 2 – Assigning the Developer role to the default application resource group
+#### User story 3 – Assigning the Developer role to the default application resource group
 
 As a platform engineer, I need to assign the Developer role to a developer for the first time. There are no applications created in Radius yet and I am not familiar with resource groups yet.
 
  **User Experience**
 
-When Radius is installed, two resource groups are created:
-
-1. `default-application` – When a user deploys an application without specifying a resource group, it is deployed to this resource group.
-2. `default-environment` – When a user creates an environment without specifying a resource group, it is deployed to this resource group.
-
-> [!NOTE]
->
-> The default resource group is split to encourage best practices for actual Radius use. Splitting resource groups introduces the concept of resource groups and Radius' authorization model.
-
-Given this behavior, the developer will be granted the Developer role scoped to the `default-application` resource group and the Deployer role scoped to the `default-environment`
-
 ```bash
-# Assign the Developer role to a user from the IdP scoped to the default-application resource group
+# Assign the Developer role to a user from the IdP scoped to the app-developer-1 resource group
+# If the app-developer-1 resource group does not exist, create it
 rad role-assignment create \
-  --assignee developer@my-company.net \
+  --assignee developer-1@my-company.net \
   --role developer \
-  --scope /planes/radius/MyCompany/resourceGroup/default-application
+  --scope /planes/radius/MyCompany/resourceGroups/app-developer-1
 rad role-assignment create \
-  --assignee developer@my-company.net \
+  --assignee developer-1@my-company.net \
   --role deployer \
-  --scope /planes/radius/MyCompany/resourceGroup/default-environment
+  --scope /planes/radius/MyCompany/resourceGroups/env-default
 ```
 
 **Result**
 
-1. `developer@my-company.net` is added to the out-of-the-box role `developer` for the `default-application` resource group 
-2. `developer@my-company.net` is added to the out-of-the-box role `deployer` for the `default-environment` resource group
+1. The `app-developer-1` resource group is created since it does not already exist
+2. `developer-1@my-company.net` is added to the out-of-the-box role `developer` for the `app-developer-1` resource group 
+3. `developer-1@my-company.net` is added to the out-of-the-box role `deployer` for the `env-default` resource group
+
+The developer can create resource groups in the MyCompany tenant and deploy resources to environments in the `env-default` resource group.
 
 **Exceptions**
 
@@ -181,7 +315,7 @@ Large enterprises need a flexible authorization model which enables them to tigh
 
 ![](2024-11-authz-feature-spec/authz.png)
 
-#### User story 3 – Create resource group for environments
+#### User story 4 – Create resource group for environments
 
 As a platform engineer at a large enterprise, I need to create a resource group for a cloud environment and grant access to manage environments to my cloud infrastructure team. I have deleted the `default-environment` resource group.
 
@@ -194,7 +328,7 @@ rad group create non-prod-env
 rad role-assignment create \
   --assignee cloud-engineering@my-company.net \
   --role env-admin \
-  --scope /planes/radius/MyCompany/resourceGroup/non-prod-env
+  --scope /planes/radius/MyCompany/resourceGroups/non-prod-env
 ```
 
 **Result**
@@ -210,7 +344,7 @@ The operation fails and informs the user interactively if:
 * The role assignment already exists
 * The resource group does not exist when creating the role assignment
 
-#### User story 4 – Create resource group for an application
+#### User story 5 – Create resource group for an application
 
 As a platform engineer at a large enterprise, I need to create a resource group for a new application and grant access to a development team. I only want the development team to use my company's resource types. I have deleted the `default-application` resource group.
 
@@ -246,7 +380,7 @@ rad group create app-1
 rad role-assignment create \
   --assignee app-1-dev-team@my-company.net \
   --role developer \
-  --scope /planes/radius/MyCompany/resourceGroup/app-1
+  --scope /planes/radius/MyCompany/resourceGroups/app-1
 ```
 
 **Result**
@@ -262,7 +396,7 @@ The operation fails and informs the user interactively if:
 * The current user is not a member of the `cluster-admin`, `radius-admin` or `group-admin` roles
 * The resource group does not exist when creating the role assignment
 
-#### User story 5 – Assigning the Resource Type Admin role
+#### User story 6 – Assigning the Resource Type Admin role
 
 As a platform engineer at a large enterprise, I need to delegate the ability to manage application resource types in Radius to my enterprise architecture team.
 
@@ -302,7 +436,7 @@ The operation fails and informs the user interactively if:
 
 * The current user is not a member of the `cluster-admin`, `radius-admin` or `group-admin` roles
 
-#### User story 6 – Assigning the Recipe Admin role
+#### User story 7 – Assigning the Recipe Admin role
 
 As a platform engineer at a large enterprise, I need to delegate the ability to manage recipes in Radius to my cloud engineering and DBA teams.
 
@@ -313,12 +447,12 @@ As a platform engineer at a large enterprise, I need to delegate the ability to 
 rad role-assignment create \
   --assignee cloud-engineering@my-company.net \
   --role recipe-admin \
-  --scope /planes/radius/MyCompany/resourceGroup/*
+  --scope /planes/radius/MyCompany/resourceGroups/*
 # Assign the resource type administrator role to users in the DBA user group
 rad role-assignment create \
   --assignee dba@my-company.net \
   --role recipe-admin \
-  --scope /planes/radius/MyCompany/resourceGroup/*
+  --scope /planes/radius/MyCompany/resourceGroups/*
 ```
 
 **Result**
@@ -335,7 +469,7 @@ The operation fails and informs the user interactively if:
 
 * The current user is not a member of the `cluster-admin`, `radius-admin` or `group-admin` roles
 
-#### User story 7 – Deleting a role definition and assignment
+#### User story 8 – Deleting a role definition and assignment
 
 As a platform engineer at a large enterprise, I need to delete a role definition and assignment I previously created.
 
@@ -347,12 +481,12 @@ rad role-definition delete my-role-definition
 # Error is shown because existing role assignments for this definition exist
 ERROR: The following role assignments exist for the my-role-definition role definition
 ROLE                ASSIGNEE            SCOPE
-my-role-definition  dba@my-company.net  /planes/radius/MyCompany/resourceGroup/*
+my-role-definition  dba@my-company.net  /planes/radius/MyCompany/resourceGroups/*
 # Delete the role assignment
 rad role-assignment delete \
   --assignee dba@my-company.net \
   --role recipe-admin \
-  --scope /planes/radius/MyCompany/resourceGroup/*
+  --scope /planes/radius/MyCompany/resourceGroups/*
 # Delete the role definition
 rad role-definition delete my-role-definition
 ```
