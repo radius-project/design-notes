@@ -295,8 +295,7 @@ rad role-assignment create \
 
 **Result**
 
-1. The `app-developer-1` resource group is created since it does not already exist
-2. `developer-1@my-company.net` is added to the out-of-the-box role `developer` for the `app-developer-1` resource group 
+1. developer-1@my-company.net` is added to the out-of-the-box role `developer` for the `app-developer-1` resource group 
 3. `developer-1@my-company.net` is added to the out-of-the-box role `deployer` for the `env-default` resource group
 
 The developer can create resource groups in the MyCompany tenant and deploy resources to environments in the `env-default` resource group.
@@ -305,6 +304,7 @@ The developer can create resource groups in the MyCompany tenant and deploy reso
 
 The operation fails and informs the user interactively if:
 
+* The resource group does not exist
 * The current user is not a member of the `cluster-admin`, `radius-admin` or `group-admin` roles
 
 ### Scenario 3 – Complex enterprise
