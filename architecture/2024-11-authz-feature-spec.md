@@ -79,7 +79,7 @@ Radius today creates a `default` workspace, with a `default` resource group, and
 
 > [!NOTE]
 >
-> The naming convention for resource groups is `app-group-name` for groups container applications and application resources and `env-group-name` for environments and their recipes. "Resource group" is the long name and should be used in the UI and documentation. "Group" is the short name used in CLI commands or other technical contexts.
+> The naming convention for resource groups is `app-app-name-env-name` for groups container applications and application resources and `env-env-name` for environments and their recipes. For example, the `shoestore` application deployed to `prod-east` and `prod-west` is stored in the `app-shoestore-prod-east` and `app-shoestore-prod-west` resource groups. "Resource group" is the long name and should be used in the UI and documentation. "Group" is the short name used in CLI commands or other technical contexts.
 
 > [!NOTE]
 >
@@ -122,13 +122,13 @@ The operation fails and informs the user interactively if:
 
 ##### User Experience 2
 
-The user can also add the group to the workspace via a new `rad workspace update` command:
+The user can also add the group to the workspace via `rad group switch` command:
 
 ```bash
 rad run ./getting-started/app.bicep
 ERROR: There is no resource group specified. Include a group name via --group or add a group to the workspace
 # Add the resource group to the workspace
-rad workspace update default --group app-getting-started
+rad group switch app-getting-started
 rad run ./getting-started/app.bicep
 Building app.bicep...
 Resource group 'app-getting-started' does not exist.
