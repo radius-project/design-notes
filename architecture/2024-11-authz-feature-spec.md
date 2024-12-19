@@ -510,9 +510,9 @@ The operation fails and informs the user interactively if:
 | p0       | S    | Out-of-the-box role definitions (excluding Recipe Administrator) |
 | p0       | L    | UCP validates membership in a role definition on each API call |
 | p0       | S    | Create or delete a role assignment for an individual user from the configured IdP system for a resource group (`rad role-assignment create --assignee user@mycompany.net`) |
+| p1       | M    | Out-of-the-box resource group behavior is modified so user must specify a resource group for the application |
 | p1       | S    | Create or delete a role assignment for a group from the configured IdP system for a resource group (`rad role-assignment create --assignee my-group@mycompany.net`) |
 | p1       | M    | Ability to create, update, and delete a role definition      |
-| p2       | M    | Replace the `default` resource group with `default-application` and `default-environment` and modify `rad environment`, `rad deploy`, and `rad run` to use these new groups |
 | p3       | M    | Add ability to have Recipe Administrator separate from Environment Administrator |
 
 ## Future Features
