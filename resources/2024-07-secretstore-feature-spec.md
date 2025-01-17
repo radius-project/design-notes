@@ -307,27 +307,15 @@ Step 3: Developer deploys the resources to Radius and the secrets required are e
 ## Key investments
 <!-- List the features required to enable this scenario. -->
 
-### Feature 1: Add functionality to reference `Applications.Core/secretStores` in `Applications.Core/containers` resources
+### Feature 1: Add functionality to reference `Applications.Core/secretStores` to write into mounted `Applications.Core/volumes` resources
 <!-- One or two sentence summary -->
-Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their `Applications.Core/containers` resource definitions under the `properties.container.env` field so that secrets can be injected as environment variables into their container at deploy time.
+Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their `Applications.Core/volumes` resources so that secrets can be securely managed for use in their application to be written to the volume and mounted at deploy time by Radius.
 
-### Feature 2: Add functionality to reference `Applications.Core/secretStores` in `Applications.Core/*` resources
+### Feature 2: Add functionality to reference `Applications.Core/secretStores` to enable Radius to use internally for authentication into resources
 <!-- One or two sentence summary -->
-Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their core resources (namely `Applications.Core/extenders` and `Applications.Core/volumes`) so that secrets can be securely managed for use in their application to authenticate into those resources.
-
-### Feature 3: Add functionality to reference `Applications.Core/secretStores` in portable resources
-<!-- One or two sentence summary -->
-Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their portable resources (namely `Applications.Datastores/*` and `Applications.Messaging/*`) so that secrets can be securely managed for use in their application to authenticate into those resources.
+Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their Radius resources (namely `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*`) so that secrets can be securely managed for use by Radius to authenticate into those resources.
 
 > We should revisit the overall plan for provisioning types we plan to support on portable resources before implementing this change. There are some changes with UDT that haven't been solidified yet.
-
-### Feature 4: Add functionality to reference `Applications.Core/secretStores` objects as a parameter to a Bicep resource
-<!-- One or two sentence summary -->
-Add the ability for developers to specify the `Applications.Core/secretStores` resource as a parameter of the `object` type to the Bicep resource that requires the secret so that secrets can be passed as parameters into a Radius Bicep resource.
-
-### Feature 5: Add functionality to reference `Applications.Core/secretStores` in Recipes
-<!-- One or two sentence summary -->
-Add the ability for operators to reference values from their `Applications.Core/secretStores` resources in their Recipe's `output` object so that secrets can be securely passed as outputs to Radius that can be used in provisioning and deploying the resource using the Recipe.
 
 ## Design Review Notes
 
@@ -336,6 +324,6 @@ Add the ability for operators to reference values from their `Applications.Core/
 - [x] Scenario that allows for secrets to be passed as parameters into a Radius Bicep resource is missing -- *this scenario was added*
 - [x] Need scenarios for referencing `Applications.Core/secretStores` in Radius Recipes -- *this scenario was added*
 - [x] Add more information on customers bringing in their own secrets, secrets stores resource currently supporting only k8s secrets -- *addressed in the spec*
-- [] More clarity needed on the actual features that need to be implemented as the spec is somewhere in between vision doc and user scenarios descriptions. The document needs to clearly identify feature gaps and the priority order for addressing them in order for it to be actionable.
-- [] The recipes section should be separated into its own design document to provide more specific and actionable guidance.
-- [] The ability to specify secret managers per environment is a feature that is out of scope for this feature spec and should be addressed as a separate feature. Other environment-wide concerns may include other things like federated identity, VPC, firewall rules, diagnostics, etc.
+- [x] More clarity needed on the actual features that need to be implemented as the spec is somewhere in between vision doc and user scenarios descriptions. The document needs to clearly identify feature gaps and the priority order for addressing them in order for it to be actionable.
+- [x] The recipes section should be separated into its own design document to provide more specific and actionable guidance.
+- [x] The ability to specify secret managers per environment is a feature that is out of scope for this feature spec and should be addressed as a separate feature. Other environment-wide concerns may include other things like federated identity, VPC, firewall rules, diagnostics, etc.
