@@ -1,4 +1,4 @@
-# Topic: CLI commands for User-Defined-Type definitions
+# Topic: Author and Deploy User-Defined-Types in Radius
 
 * **Author**: Reshma Abdul Rahim (reshrahim)
 
