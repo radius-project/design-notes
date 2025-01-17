@@ -125,7 +125,7 @@ Pre-requisites: Radius is installed in a Kubernetes cluster and the user has the
     ```bash
     rad bicep publish-extension mycompany -f postgreSQL.yaml
     ```
-    The bicep extension `mycomoany` for the postgreSQLDatabase resource type is generated and published.
+    The bicep extension `mycomoany` for the postgreSQLDatabase resource type is generated and published thus enabling the user to author the postgreSQLDatabase resource type in Bicep.
 
 1. User authors the todoapp application with the postgreSQLDatabase resource type
 
@@ -139,16 +139,16 @@ Pre-requisites: Radius is installed in a Kubernetes cluster and the user has the
         name: 'demo'
         properties: {
             container: {
-            image: 'ghcr.io/radius-project/samples/demo:latest'
-            ports: {
-                web: {
-                containerPort: 3000
+                image: 'ghcr.io/radius-project/samples/demo:latest'
+                ports: {
+                    web: {
+                    containerPort: 3000
+                    }
                 }
-            }
-            env: {
-                DB_HOST: 'db.properties.host'
-                DB_USERNAME: 'db.properties.username'
-            }
+                env: {
+                    DB_HOST: 'db.properties.host'
+                    DB_USERNAME: 'db.properties.username'
+                }
             }
         }
     }
