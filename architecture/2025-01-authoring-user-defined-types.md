@@ -28,7 +28,7 @@ The key scenarios for UDTs are outlined [here](/architecture/2024-06-resource-ex
 
 ### User Experience
 
-Below is an illustrative example of how a user would define and deploy the demo todoapp with a user defined postgreSQL. 
+Below is an illustrative example of how a user would define and deploy the demo todoapp with a user defined PostgreSQL resource type. 
 
 ![alt text](2025-01-authoring-user-defined-types/todoapp.png)
 
