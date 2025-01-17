@@ -775,6 +775,7 @@ kustomize
 usecase
 gitops
 predefine
+KRM
 secretsStores
 DriverWithSecrets
 FindSecretIds
@@ -907,6 +908,5 @@ SecOps
 kube
 workspace's
 Authorizer
-KRM
 Aditi
 Twilio
