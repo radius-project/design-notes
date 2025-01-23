@@ -5,7 +5,7 @@
 ## Topic Summary
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
 
-This feature spec outlines the desired user experience for extending the use-cases of `Applications.Core/secretStores` to allow for referencing secret stores in `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Core/volumes`, `Applications.Datastores/*`, and `Applications.Messaging/*` resources. The goal is to enable developers to securely manage secrets for use in their applications by referencing `Applications.Core/secretStores` in their resources.
+This feature spec outlines the desired user experience for extending the use-cases of `Applications.Core/secretStores` to allow for referencing secret stores in `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resources. The goal is to enable developers to securely manage secrets for use in their applications by referencing `Applications.Core/secretStores` in their resources.
 
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
@@ -35,7 +35,7 @@ Operators may have to do extra work to inject secrets as environment variables i
 ### Positive user outcome
 <!-- What is the positive outcome for the user if we deliver this, i.e. what is the value proposition for the user? Remember, this is user-centric. -->
 
-As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Core/volumes`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource definitions so that Radius may securely manage secrets for use in my application to authenticate into those resources.
+As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource definitions so that Radius may securely manage secrets for use in my application to authenticate into those resources.
 
 As an operator, I want to ensure that the developers I support can securely leverage secrets I manage on their behalf for use in their application resources. Today, these secrets have to be stored in plain text within resources.
 
@@ -46,9 +46,9 @@ As an operator, I want to ensure that the developers I support can securely leve
 <!-- One or two sentence summary -->
 Barry is a developer who is building a microservice application that requires a database connection string to authenticate into a Cosmos DB instance. Barry wants to securely manage the database connection string for his application and thus creates a `Applications.Core/secretStores` resource containing the database connection string. Barry then references the `Applications.Core/secretStores` resource in his `Applications.Core/containers` resource definition so that Radius will inject the database connection string as an environment variable into his container at deploy time.
 
-### Scenario 2: Secrets are stored and then mounted as files-on-disk in a container.
+### Scenario 2: Secrets are stored and then mounted as files-on-volume in a container.
 <!-- One or two sentence summary -->
-Maya is a developer who is building a microservice application that requires a TLS certificate to authenticate into a RabbitMQ instance. Maya wants to securely manage the TLS certificate for her application and thus creates a `Applications.Core/secretStores` resource containing the TLS certificate. Maya then references the `Applications.Core/secretStores` resource in her `Applications.Core/volumes` resource definition so that Radius will write the TLS certificate into a file on disk and mount that volume into her container at deploy time.
+Maya is a developer who is building a microservice application that requires a TLS certificate to authenticate into a RabbitMQ instance. Maya wants to securely manage the TLS certificate for her application and thus creates a `Applications.Core/secretStores` resource containing the TLS certificate. Maya then references the `Applications.Core/secretStores` resource in her `Applications.Core/containers` resource definition under the `volumes` object so that Radius will write the TLS certificate into a file on disk/memory and mount that volume into her container at deploy time.
 
 ### Scenario 3: Secrets are stored and used internally by the Radius infrastructure or some other piece of automation (not application code).
 <!-- One or two sentence summary -->
@@ -83,9 +83,9 @@ Currently, Radius provides an `Applications.Core/secretStores` resource type tha
 - `Applications.Core/containers` to inject secrets as [environment variables into a container](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#container) at deploy time
 - `Applications.Core/environments` for authentication into [private Recipe registries](https://docs.radapp.io/guides/recipes/terraform/howto-private-registry/), [custom Terraform Providers](https://docs.radapp.io/guides/recipes/terraform/howto-custom-provider/), and in [Recipe configurations](https://github.com/radius-project/radius/blob/594faf60683351e4be2dee7309ebc369dfac26ad/test/functional-portable/corerp/noncloud/resources/testdata/corerp-resources-terraform-postgres.bicep#L32).
 
-As an operator, I can create a `secretStores` resource to securely manage secrets for use in the Radius Environments I provide for my developers, which is handy to allow for authentication into private Recipe registries and custom Terraform Providers. However, the `secretStores` resource type is not yet supported by the `Applications.Core/extenders`, `Applications.Core/volumes`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types. Thus, I have to do extra work to inject secrets as environment variables in order to propagate secrets to my application developers.
+As an operator, I can create a `secretStores` resource to securely manage secrets for use in the Radius Environments I provide for my developers, which is handy to allow for authentication into private Recipe registries and custom Terraform Providers. However, the `secretStores` resource type is not yet supported by the `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types. Thus, I have to do extra work to inject secrets as environment variables in order to propagate secrets to my application developers.
 
-As an application developer, I cannot reference a `secretStores` resource in the `Applications.Core/extenders`, `Applications.Core/volumes`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types to securely manage secrets for use in my application. Instead, I'm having to store my secrets in plain text within the `properties.secrets` field for each resource. This is a critical gap in the secret management capabilities of Radius that is hindering my ability to securely manage secrets for use in my containers.
+As an application developer, I cannot reference a `secretStores` resource in the `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types to securely manage secrets for use in my application. Instead, I'm having to store my secrets in plain text within the `properties.secrets` field for each resource. This is a critical gap in the secret management capabilities of Radius that is hindering my ability to securely manage secrets for use in my containers.
 
 ## Desired user experience outcome
 
@@ -95,7 +95,7 @@ As an application developer, I cannot reference a `secretStores` resource in the
 
 [existing feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers` resource definition so that Radius will inject secrets as environment variables into my container at deploy time so that credentials can be provided to the container for authentication, etc. This is a supported scenario in an existing feature, see [here](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#container).
 
-[proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Volumes` resource definition so that Radius will write the secret into a file on disk and mount that volume into the container at deploy time. I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
+[proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.containers` resource definition under the `volumes` object so that Radius will write the secret into a file on disk/memory and mount that volume into the container at deploy time. I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
 
 [proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Datastores/*`, `Applications.Messaging/*`, or `Applications.Extenders` resource definition so that Radius will use the password internally to authenticate into the resource at deploy time. I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
 
@@ -166,54 +166,59 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
-(b) Developer references the `Applications.Core/secretStores` resource in their `Applications.Core/volumes` resource definition within the `app.bicep` application definition to write the secret into a file on disk and mount that volume into their container at deploy time.
+(b) Developer references the `Applications.Core/secretStores` resource in their `Applications.Core/containers` resource definition under the `volumes` object within the `app.bicep` application definition to write the secret into a file on disk/memory with a specified file path and name, then mount that volume into their container at deploy time.
 
 ```diff
-resource volume 'Applications.Core/volumes@2023-10-01-preview' = {
-  name: 'myvolume'
+resource demo 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'demo'
   properties: {
-    application: app.id
-    kind: 'azure.com.keyvault'
-    resource: keyvault.id
-    secrets: {
-      mysecret: {
-+        name: {
-+          valueFrom: {
-+            secretRef: {
-+              source: azurekeyvaultsecrets.id
-+              key: 'name'
-+            }
-+          }
-+        }
-+        version: {
-+          valueFrom: {
-+            secretRef: {
-+              source: azurekeyvaultsecrets.id
-+              key: 'version'
-+            }
-+          }
-+        }
-+        alias: {
-+          valueFrom: {
-+            secretRef: {
-+              source: azurekeyvaultsecrets.id
-+              key: 'alias'
-+            }
-+          }
-+        }
-+        encoding: {
-+          valueFrom: {
-+            secretRef: {
-+              source: azurekeyvaultsecrets.id
-+              key: 'encoding'
-+            }
-+          }
-+        }
+    application: application
+    container: {
+      image: 'ghcr.io/radius-project/samples/demo:latest'
+      ports: {
+        web: {
+          containerPort: 3000
+        }
       }
+      volumes: {
+        ephemeralVolume: {
+          kind: 'ephemeral'
+          mountPath: '/tmpfs'
+          managedStore: 'memory'
++         secrets: {
++           filePath: '/path/to/secret' // default is /var/run/secrets/
++           fileName: 'secretfile.txt' // default is secretfile.txt
++           username: {
++             valueFrom: {
++               secretRef: {
++                 source: authcreds.id
++                 key: 'username'
++               }
++             }
++           }
++         }
+        }
+        persistentVolume: {
+          kind: 'persistent'
+          source: volume.id
++         secrets: {
++           filePath: '/path/to/secret' // default is /var/run/secrets/
++           fileName: 'secretfile.txt' // default is secretfile.txt
++           username: {
++             valueFrom: {
++               secretRef: {
++                 source: authcreds.id
++                 key: 'username'
++               }
++             }
++           }
++         }
+        }
     }
   }
 }
 ```
+> Note: the`secrets`, `filePath`, and `fileName` properties are just a proprosal and may change during tech design. They should also be optional for the `volumes` property in `Applications.Core/containers` to write the secret into a file on disk/memory with a specified file path and name, with the default being `/var/run/secrets/` and `secretfile.txt` respectively.
 
 (c) Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders` `Applications.Datastores/*`, or `Applications.Messaging/*` resource definition to securely manage secrets for use in their application. Radius then uses the secret to authenticate into the resource at deploy time. The secrets might be referenced in the resources within the `app.bicep` application definition as follows:
 
@@ -307,9 +312,9 @@ Step 3: Developer deploys the resources to Radius and the secrets required are e
 ## Key investments
 <!-- List the features required to enable this scenario. -->
 
-### Feature 1: Add functionality to reference `Applications.Core/secretStores` to write into mounted `Applications.Core/volumes` resources
+### Feature 1: Add functionality to reference `Applications.Core/secretStores` to write into volumes mounted onto `Applications.Core/containers` resources
 <!-- One or two sentence summary -->
-Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their `Applications.Core/volumes` resources so that secrets can be securely managed for use in their application to be written to the volume and mounted at deploy time by Radius.
+Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their `Applications.Core/containers` resources within the `volumes` property so that secrets can be securely managed for use in their application to be written to the volume and mounted at deploy time by Radius.
 
 ### Feature 2: Add functionality to reference `Applications.Core/secretStores` to enable Radius to use internally for authentication into resources
 <!-- One or two sentence summary -->
@@ -327,3 +332,6 @@ Add the ability for developers to reference values from their `Applications.Core
 - [x] More clarity needed on the actual features that need to be implemented as the spec is somewhere in between vision doc and user scenarios descriptions. The document needs to clearly identify feature gaps and the priority order for addressing them in order for it to be actionable.
 - [x] The recipes section should be separated into its own design document to provide more specific and actionable guidance.
 - [x] The ability to specify secret managers per environment is a feature that is out of scope for this feature spec and should be addressed as a separate feature. Other environment-wide concerns may include other things like federated identity, VPC, firewall rules, diagnostics, etc.
+- [x] Revisit the mounting to volumes case to ensure it aligns with existing implementations of volumes in containers.
+- [ ] Add ability to reference secrets in Dapr resources
+- [ ] Add ability to reference secrets in custom UDT resources
