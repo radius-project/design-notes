@@ -54,6 +54,10 @@ Maya is a developer who is building a microservice application that requires a T
 <!-- One or two sentence summary -->
 Aditi is a developer who is building a microservice application that requires a password to authenticate into a Twilio extender. She wants to securely manage the password for her application and thus creates a `Applications.Core/secretStores` resource containing the password. Aditi then references the `Applications.Core/secretStores` resource in her `Applications.Core/extenders` resource definition so that Radius will use the password internally to authenticate into the Twilio extender at deploy time.
 
+### Scenario 4: Secrets are stored then used by User-Defined Types (UDTs)
+<!-- One or two sentence summary -->
+Kenneth is a developer who is building a microservice application that requires a password to authenticate into a custom user-defined resource. He wants to securely manage the password for his application and thus creates a `Applications.Core/secretStores` resource containing the password. Kenneth then references the `Applications.Core/secretStores` resource in his custom user-defined resource definition so that Radius may use the secret to set up authentication for the custom user-defined resource at deploy time.
+
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
 <!-- What other risks are you aware of that need to be mitigated. If you have a mitigation in mind, summarize here. -->
@@ -89,6 +93,8 @@ As an operator, I can create a `secretStores` resource to securely manage secret
 As an application developer, I cannot reference a `secretStores` resource in the `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types to securely manage secrets for use in my application. Instead, I'm having to store my secrets in plain text within the `properties.secrets` field for each resource. This is a critical gap in the secret management capabilities of Radius that is hindering my ability to securely manage secrets for use in my containers.
 
 As an application developer using Dapr components, I cannot reference a Radius `secretStores` resource in the `Applications.Dapr/*` resource types to securely manage secrets for use in my application. Instead, I'm having to create a Dapr secret store and manage the secrets in the Dapr secret store to be able to reference it in my `Applications.Dapr/*` resource. This limitation forces me to manage all my Dapr-related secrets in a Dapr secret store when I already have a Radius `secretStores` resource that I could use to manage all my secrets in one place.
+
+As an application developer using custom user-defined resources, I cannot specify a `secretStores` resource in my custom user-defined resource to securely manage secrets for use in my custom UDT resource and application.
 
 ## Desired user experience outcome
 
@@ -227,7 +233,7 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 
 (c) Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, or `Applications.Dapr/*` resource definition to securely manage secrets for use in their application. Radius then uses the secret to authenticate into the resource at deploy time. The secrets might be referenced in the resources within the `app.bicep` application definition as follows:
 
-In an extender resource:
+**In an extender resource:**
 ```diff
 resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
   name: 'twilio'
@@ -251,7 +257,7 @@ resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
 }
 ```
 
-In a datastore resource:
+**In a datastore resource:**
 ```diff
 resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
   name: 'db'
@@ -288,7 +294,7 @@ resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
 }
 ```
 
-In a messaging resource:
+**In a messaging resource:**
 ```diff
 resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
   name: 'rabbitmq'
@@ -315,7 +321,7 @@ resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
 }
 ```
 
-In a Dapr resource:
+**In a Dapr resource:**
 ```diff
 resource config 'Applications.Dapr/configurationStores@2023-10-01-preview' = {
   name: 'configstore'
@@ -343,9 +349,41 @@ resource config 'Applications.Dapr/configurationStores@2023-10-01-preview' = {
   }
 }
 ```
-> Note: The proposal here is to follow the same `valueFrom` syntax as the `Applications.Core/containers` resource type for referencing Radius Secrets in the `Applications.Dapr/*` resource type, which deviates from the Dapr Secrets reference pattern that exists today. We'll leave it up to the technical design to decide whether to follow the existing Dapr Secrets reference pattern or to follow the `Applications.Core/containers` reference pattern.
+> Note: The proposal here is to follow the same `valueFrom` syntax as the `Applications.Core/containers` resource type for referencing Radius Secrets in the `Applications.Dapr/*` resource type, which deviates from the [Dapr Secrets reference pattern](https://docs.radapp.io/guides/author-apps/dapr/how-to-dapr-secrets/) that exists today to reference Dapr Secret Stores. We'll leave it up to the technical design to decide whether to follow the existing Dapr Secrets reference pattern or to follow the `Applications.Core/containers` reference pattern for Radius Secret Store resources.
 
-Step 3: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables, written to a file on a volume and mounted to the container, or used as credentials for authentication into the extender, datastore, or messaging resource at deploy time.
+**In a custom UDT resource:**
+```diff
+resource customtype 'Applications.Core/udt@2023-10-01-preview' = {
+  name: 'customtype'
+  properties: {
+    application: application
+    environment: environment
+    env:{
++        URI: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'uri'
++            }
++          }
++        }
+      }
+    secrets: {
++        password: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'password'
++            }
++          }
++        }
+    }
+  }
+}
+```
+> Note: This scenario is a future feature since UDT is not fully implemented yet, nor is its schema finalized. The proposal here is to follow the same `valueFrom` syntax as the `Applications.Core/containers` resource type for referencing Radius Secrets in the `Applications.Core/udt` resource type, but this may change during tech design and implementation.
+
+Step 3: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables, written to a file on a volume and mounted to the container, used as credentials for authentication into the extender, datastore, messaging, or Dapr resource at deploy time, or used in the custom UDT resource at deploy time.
 
 ## Key investments
 <!-- List the features required to enable this scenario. -->
@@ -364,7 +402,13 @@ Add the ability for developers to reference values from their `Applications.Core
 <!-- One or two sentence summary -->
 Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their `Applications.Dapr/*` resources so that secrets can be securely managed for use in their Dapr components.
 
-> We need to reconcile the existing Dapr Secrets reference pattern with the `Applications.Core/containers` reference pattern before implementing this change.
+> We need to reconcile the existing [Dapr Secrets reference pattern](https://docs.radapp.io/guides/author-apps/dapr/how-to-dapr-secrets/) with the `Applications.Core/containers` reference pattern before implementing this change.
+
+### Feature 4: Add functionality to reference `Applications.Core/secretStores` to enable Radius to manage secrets for use in custom UDT resources
+<!-- One or two sentence summary -->
+Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their custom UDT resources so that secrets can be securely managed for use in their custom UDT resources.
+
+> This feature is a future feature since UDT is not fully implemented yet, nor is its schema finalized. The proposal here is to follow the same `valueFrom` syntax as the `Applications.Core/containers` resource type for referencing Radius Secrets in the `Applications.Core/udt` resource type, but this may change during tech design and implementation.
 
 ## Design Review Notes
 
@@ -378,4 +422,4 @@ Add the ability for developers to reference values from their `Applications.Core
 - [x] The ability to specify secret managers per environment is a feature that is out of scope for this feature spec and should be addressed as a separate feature. Other environment-wide concerns may include other things like federated identity, VPC, firewall rules, diagnostics, etc.
 - [x] Revisit the mounting to volumes case to ensure it aligns with existing implementations of volumes in containers.
 - [x] Add ability to reference secrets in Dapr resources
-- [ ] Add ability to reference secrets in custom UDT resources
+- [x] Add ability to reference secrets in custom UDT resources
