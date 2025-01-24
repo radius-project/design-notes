@@ -5,7 +5,7 @@
 ## Topic Summary
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
 
-This feature spec outlines the desired user experience for extending the use-cases of `Applications.Core/secretStores` to allow for referencing secret stores in `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, and `Applications.Dapr/*` resources. The goal is to enable developers to securely manage secrets for use in their applications by referencing `Applications.Core/secretStores` in their resources.
+This feature spec outlines the desired user experience for extending the use-cases of `Applications.Core/secretStores` to allow for referencing secret stores in `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, `Applications.Dapr/*`, and custom user-defined type (UDT) resources. The goal is to enable developers to securely manage secrets for use in their applications by referencing `Applications.Core/secretStores` in their resources.
 
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
@@ -15,6 +15,7 @@ This feature spec outlines the desired user experience for extending the use-cas
 <!-- What are we explicitly not trying to accomplish? -->
 - The ability to [reference secret stores in a Recipe](https://github.com/radius-project/roadmap/issues/59) is out of scope for this feature spec, i.e. *As an operator, I can reference an `Applications.Core/secretStores` in my Recipes so that I no longer have to store secrets as plain text in the `secrets` field of my Recipe's `output` object for authentication, etc.*
 - Today the `type` property in the `Applications.Core/secretStores` is an enum -- this feature spec does not propose to change the existing [implementation](https://github.com/radius-project/radius/pull/7816) of the `type` property in the `Applications.Core/secretStores` resource type.
+- User defined types (UDTs) are not yet fully implemented, nor is their schema finalized -- this feature spec does not assert any opinions on how UDTs should be implemented, but rather proposes that once UDTs are implemented, the ability to reference `Applications.Core/secretStores` in UDTs should be supported.
 
 ## User profile and challenges
 <!-- Define the primary user and the key problem / pain point we intend to address for that user. If there are multiple users or primary and secondary users, call them out.   -->
