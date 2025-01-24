@@ -5,7 +5,7 @@
 ## Topic Summary
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
 
-This feature spec outlines the desired user experience for extending the use-cases of `Applications.Core/secretStores` to allow for referencing secret stores in `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resources. The goal is to enable developers to securely manage secrets for use in their applications by referencing `Applications.Core/secretStores` in their resources.
+This feature spec outlines the desired user experience for extending the use-cases of `Applications.Core/secretStores` to allow for referencing secret stores in `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, and `Applications.Dapr/*` resources. The goal is to enable developers to securely manage secrets for use in their applications by referencing `Applications.Core/secretStores` in their resources.
 
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
@@ -35,7 +35,7 @@ Operators may have to do extra work to inject secrets as environment variables i
 ### Positive user outcome
 <!-- What is the positive outcome for the user if we deliver this, i.e. what is the value proposition for the user? Remember, this is user-centric. -->
 
-As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource definitions so that Radius may securely manage secrets for use in my application to authenticate into those resources.
+As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Core/containers`, `Applications.Core/extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, and `Applications.Dapr/*` resource definitions so that Radius may securely manage secrets for use in my application to authenticate into those resources.
 
 As an operator, I want to ensure that the developers I support can securely leverage secrets I manage on their behalf for use in their application resources. Today, these secrets have to be stored in plain text within resources.
 
@@ -82,10 +82,13 @@ Currently, Radius provides an `Applications.Core/secretStores` resource type tha
 - `Applications.Core/gateways` to manage [TLS certificates for HTTPS connections](https://docs.radapp.io/guides/author-apps/networking/tls/)
 - `Applications.Core/containers` to inject secrets as [environment variables into a container](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#container) at deploy time
 - `Applications.Core/environments` for authentication into [private Recipe registries](https://docs.radapp.io/guides/recipes/terraform/howto-private-registry/), [custom Terraform Providers](https://docs.radapp.io/guides/recipes/terraform/howto-custom-provider/), and in [Recipe configurations](https://github.com/radius-project/radius/blob/594faf60683351e4be2dee7309ebc369dfac26ad/test/functional-portable/corerp/noncloud/resources/testdata/corerp-resources-terraform-postgres.bicep#L32).
+- `Applications.Dapr/*` to reference [Dapr Secrets for use in Dapr components](https://docs.radapp.io/guides/author-apps/dapr/how-to-dapr-secrets/)
 
-As an operator, I can create a `secretStores` resource to securely manage secrets for use in the Radius Environments I provide for my developers, which is handy to allow for authentication into private Recipe registries and custom Terraform Providers. However, the `secretStores` resource type is not yet supported by the `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types. Thus, I have to do extra work to inject secrets as environment variables in order to propagate secrets to my application developers.
+As an operator, I can create a `secretStores` resource to securely manage secrets for use in the Radius Environments I provide for my developers, which is handy to allow for authentication into private Recipe registries and custom Terraform Providers. However, the `secretStores` resource type is not yet supported by the `Applications.Core/extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, and `Applications.Dapr/*` resource types. Thus, I have to do extra work to inject secrets as environment variables in order to propagate secrets to my application developers.
 
 As an application developer, I cannot reference a `secretStores` resource in the `Applications.Core/extenders`, `Applications.Datastores/*`, and `Applications.Messaging/*` resource types to securely manage secrets for use in my application. Instead, I'm having to store my secrets in plain text within the `properties.secrets` field for each resource. This is a critical gap in the secret management capabilities of Radius that is hindering my ability to securely manage secrets for use in my containers.
+
+As an application developer using Dapr components, I cannot reference a Radius `secretStores` resource in the `Applications.Dapr/*` resource types to securely manage secrets for use in my application. Instead, I'm having to create a Dapr secret store and manage the secrets in the Dapr secret store to be able to reference it in my `Applications.Dapr/*` resource. This limitation forces me to manage all my Dapr-related secrets in a Dapr secret store when I already have a Radius `secretStores` resource that I could use to manage all my secrets in one place.
 
 ## Desired user experience outcome
 
@@ -98,6 +101,8 @@ As an application developer, I cannot reference a `secretStores` resource in the
 [proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.containers` resource definition under the `volumes` object so that Radius will write the secret into a file on disk/memory and mount that volume into the container at deploy time. I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
 
 [proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Datastores/*`, `Applications.Messaging/*`, or `Applications.Extenders` resource definition so that Radius will use the password internally to authenticate into the resource at deploy time. I no longer have to store secrets as plain text in the `properties.secrets` field of my resource for authentication, etc.
+
+[proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Dapr/*` resource definition so that Radius will use the Radius secret store to manage secrets for use in my Dapr components. I no longer have to create a Dapr secret store and manage the secrets in the Dapr secret store to be able to reference it in my `Applications.Dapr/*` resource.
 
 [future feature] As a developer, I can specify a `Applications.Core/secretStores` in my custom user-defined resource once the [user-defined types](https://github.com/radius-project/design-notes/blob/main/architecture/2024-07-user-defined-types.md) feature is implemented.
 
@@ -218,10 +223,11 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
   }
 }
 ```
-> Note: the`secrets`, `filePath`, and `fileName` properties are just a proprosal and may change during tech design. They should also be optional for the `volumes` property in `Applications.Core/containers` to write the secret into a file on disk/memory with a specified file path and name, with the default being `/var/run/secrets/` and `secretfile.txt` respectively.
+> Note: the`secrets`, `filePath`, `fileName` properties and default values are just proposals and may be changed during tech design. They should also be optional for the `volumes` property in `Applications.Core/containers` to write the secret into a file on disk/memory with a specified file path and name, with the proposed defaults being `/var/run/secrets/` and `secretfile.txt` respectively.
 
-(c) Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders` `Applications.Datastores/*`, or `Applications.Messaging/*` resource definition to securely manage secrets for use in their application. Radius then uses the secret to authenticate into the resource at deploy time. The secrets might be referenced in the resources within the `app.bicep` application definition as follows:
+(c) Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, or `Applications.Dapr/*` resource definition to securely manage secrets for use in their application. Radius then uses the secret to authenticate into the resource at deploy time. The secrets might be referenced in the resources within the `app.bicep` application definition as follows:
 
+In an extender resource:
 ```diff
 resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
   name: 'twilio'
@@ -245,6 +251,7 @@ resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
 }
 ```
 
+In a datastore resource:
 ```diff
 resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
   name: 'db'
@@ -281,6 +288,7 @@ resource db 'Applications.Datastores/mongoDatabases@2023-10-01-preview' = {
 }
 ```
 
+In a messaging resource:
 ```diff
 resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
   name: 'rabbitmq'
@@ -307,6 +315,36 @@ resource rabbitmq 'Applications.Messaging/rabbitmqQueues@2023-10-01-preview' = {
 }
 ```
 
+In a Dapr resource:
+```diff
+resource config 'Applications.Dapr/configurationStores@2023-10-01-preview' = {
+  name: 'configstore'
+  properties: {
+    environment: environment
+    application: app.id
+    resourceProvisioning: 'manual'
+    type: 'configuration.redis'
+    metadata: {
+      redisHost: {
+        value: '<REDIS-URL>'
+      }
+      redisPassword: {
++        value: {
++          valueFrom: {
++            secretRef: {
++              source: authcreds.id
++              key: 'password'
++            }
++          }
++        }
+      }
+    }
+    version: 'v1'
+  }
+}
+```
+> Note: The proposal here is to follow the same `valueFrom` syntax as the `Applications.Core/containers` resource type for referencing Radius Secrets in the `Applications.Dapr/*` resource type, which deviates from the Dapr Secrets reference pattern that exists today. We'll leave it up to the technical design to decide whether to follow the existing Dapr Secrets reference pattern or to follow the `Applications.Core/containers` reference pattern.
+
 Step 3: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables, written to a file on a volume and mounted to the container, or used as credentials for authentication into the extender, datastore, or messaging resource at deploy time.
 
 ## Key investments
@@ -322,6 +360,12 @@ Add the ability for developers to reference values from their `Applications.Core
 
 > We should revisit the overall plan for provisioning types we plan to support on portable resources before implementing this change. There are some changes with UDT that haven't been solidified yet.
 
+### Feature 3: Add functionality to reference `Applications.Core/secretStores` to enable Radius to manage secrets for use in Dapr components
+<!-- One or two sentence summary -->
+Add the ability for developers to reference values from their `Applications.Core/secretStores` resources in their `Applications.Dapr/*` resources so that secrets can be securely managed for use in their Dapr components.
+
+> We need to reconcile the existing Dapr Secrets reference pattern with the `Applications.Core/containers` reference pattern before implementing this change.
+
 ## Design Review Notes
 
 - [x] Considerations for `Applications.Core/secretstores` resource `type` values -- *this has been addressed by [PR #7816](https://github.com/radius-project/radius/pull/7816) and referenced in this feature spec doc*
@@ -333,5 +377,5 @@ Add the ability for developers to reference values from their `Applications.Core
 - [x] The recipes section should be separated into its own design document to provide more specific and actionable guidance.
 - [x] The ability to specify secret managers per environment is a feature that is out of scope for this feature spec and should be addressed as a separate feature. Other environment-wide concerns may include other things like federated identity, VPC, firewall rules, diagnostics, etc.
 - [x] Revisit the mounting to volumes case to ensure it aligns with existing implementations of volumes in containers.
-- [ ] Add ability to reference secrets in Dapr resources
+- [x] Add ability to reference secrets in Dapr resources
 - [ ] Add ability to reference secrets in custom UDT resources
