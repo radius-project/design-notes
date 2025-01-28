@@ -8,6 +8,10 @@ Given the importance of serverless infrastructure in the modern application land
 
 This document describes the high-level overview for expanding the Radius platform to enable management of serverless container runtimes. The goal is to provide a seamless experience for developers to deploy and manage serverless containers in a way that is consistent with the existing Radius model, including Environments, Applications, and Resources.
 
+## Terms and definitions
+
+- nGroups: ACI feature that provides you with advanced capabilities for managing multiple related container groups, e.g. maintaining multiple instances, rolling upgrades, high availability, managed identity support, confidential container support, load balancing, zone rebalancing.
+
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
 1. Genericize the Radius platform to support deployment of applications on serverless (and other) compute platforms beyond Kubernetes.
@@ -56,19 +60,17 @@ Enable the ability to define and run serverless compute with necessary extension
 Users can specify Radius [application](https://docs.radapp.io/reference/resource-schema/core-schema/application-schema/) definitions for applications running on serverless compute platforms. 
 > Must be sure to include serverless platform specific customizations via a `runtimes` property, similar to how Kubernetes patching was implemented for [containers](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#runtimes).
 
-Allow for Radius abstraction of a [container](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/) resource that can be deployed to serverless compute platforms, leveraging the [`runtimes` property](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#runtimes). Must be sure to include serverless platform specific configurations via [connections](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#connections), [extensions](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#extensions), and routing to other resources via [gateways](https://docs.radapp.io/reference/resource-schema/core-schema/gateway/).
-> One idea to explore is whether we can we build extensibility via Recipes - i.e. allow Recipes for Containers, which themselves can be serverless containers.
+Allow for Radius abstraction of a [container](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/) resource that can be deployed to serverless compute platforms. Must be sure to include serverless platform specific configurations via [connections](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#connections), [extensions](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#extensions), and routing to other resources via [gateways](https://docs.radapp.io/reference/resource-schema/core-schema/gateway/).
+> One future idea to explore is whether we can we build extensibility via Recipes - i.e. allow Recipes for Containers, which themselves can be serverless containers.
 
 ### Scenario 2: "Punch-through" to platform-specific features and incremental adoption of Radius into existing serverless applications
 <!-- One or two sentence summary -->
-Allow for platform-specific features to be used in Radius applications via abstraction "punch-through" mechanisms, similar to how Kubernetes-specific features are supported in Radius via [base YAML or PodSpec patching](https://docs.radapp.io/guides/author-apps/containers/overview/#kubernetes) functionalities. For example, ACI has a confidential containers offering that may not be common across serverless platforms, but Radius should allow for this feature to be used in ACI applications.
+Allow for platform-specific features to be used in Radius applications via abstraction "punch-through" mechanisms, similar to how Kubernetes-specific features are supported in Radius via [base YAML or PodSpec patching](https://docs.radapp.io/guides/author-apps/containers/overview/#kubernetes) functionalities that is achieved through the [`runtimes`](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#runtimes) property in the container definition. For example, ACI has a confidential containers offering that may not be common across serverless platforms, but Radius should allow for this feature to be used in ACI containers.
 > Stretch goal: Ability to add Radius to existing serverless applications without requiring a full rewrite of the application, similar to how Radius can be added to existing Kubernetes applications via [Kubernetes manifest](https://docs.radapp.io/tutorials/add-radius/) or [Helm chart](https://docs.radapp.io/tutorials/helm/) annotations. Note: The Kubernetes/Helm support works because Kubernetes itself is extensible. Other systems like ACA are not extensible in the same way but we should explore if there are options to make this work.
 
 ### Scenario 3: User interfaces for serverless--Radius API, CLI, Dashboard
 <!-- One or two sentence summary -->
-Enable deployment and management of serverless compute resources via the existing Radius API and CLI commands.
-
-Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
+Enable deployment and management of serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -102,25 +104,31 @@ There has been a proof-of-concept for ACI support in Radius built on top of the 
 Step 2
 … -->
 
-### Step 1: Define a Radius Environment for serverless
+### Step 1: Define and deploy a Radius Environment for serverless
 
-1. The user defines a new Radius Environment for serverless compute by creating a new Environment definition file (e.g. `env.bicep`) and specifying the necessary settings for the serverless platform.
+The user defines a new Radius Environment for serverless compute by creating a new Environment definition file (e.g. `env.bicep`) and specifying the necessary settings for the serverless platform before deploying the environment using `rad deploy env.bicep`.
 
-```bicep
+```diff
 resource environment 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'myenv'
   properties: {
     compute: {
-      kind: 'aci'   // Required. The kind of container runtime to use, e.g. 'aci' for Azure Container Instances and 'ecs' for AWS Elastic Container Service
-      namespace: 'default' // Required. Need to figure out what would be the equivalent of a namespace in the specific serverless platform
++      kind: 'aci'   // Required. The kind of container runtime to use, e.g. 'aci' for Azure Container Instances and 'ecs' for AWS Elastic Container Service
++      namespace: 'default' // This is currently required, but may be made optional if it doesn't apply to all compute platforms
++      resourceGroup: '/subscriptions/.../resourceGroups/myrg' // This was introduced as a part of the ACI prototype, but may be changed depending on the implementation, need to figure out if namespace and resourceGroup should be combined into a single more generic property
     }
++    providers: { // This was introduced as a part of the ACI prototype, but may be changed depending on the implementation
++      azure: {
++        scope: '/subscriptions/.../resourceGroups/myrg'
++      }
++    }
     extensions: [
       {
         kind: 'kubernetesMetadata'
         labels: {
           'team.contact.name': 'frontend'
         }
-        // Add other serverless platform-specific extensions here
++        // Add other serverless platform-specific extensions here
       }
     ]
   }
@@ -129,35 +137,35 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
 
 ### Step 2: Define a Radius Application for serverless
 
-1. The user defines a new Radius Application for serverless compute by creating a new Application definition file (e.g. `app.bicep`) and specifying the necessary settings for the container runtime platform. Note that the application definitions are container runtime platform-agnostic, thus this same application definition can be deployed to both Kubernetes and serverless compute platforms.
+The user defines a new Radius Application for serverless compute by creating a new Application definition file (e.g. `app.bicep`) and specifying the necessary settings for the container runtime platform. Note that the application definitions are container runtime platform-agnostic, thus this same application definition can be deployed to both Kubernetes and serverless compute platforms.
 
-```bicep
+```diff
 resource app 'Applications.Core/applications@2023-10-01-preview' = {
   name: 'myapp'
   properties: {
     environment: environment
-    extensions: [ // these are all currently Kubernetes-centric, will need to update for serverless
++    extensions: [ // these are all currently Kubernetes-centric, will need to update for serverless
       {
-        kind: 'kubernetesNamespace' // need to genericize this to be platform-agnostic, rename it to allow for encompassing both Kubernetes and serverless namespaces (e.g. NGroups for ACI)
+        kind: 'kubernetesNamespace'
         namespace: 'myapp'
       }
       {
-        kind: 'kubernetesMetadata' // need to genericize this to be platform-agnostic, rename it to allow for encompassing both Kubernetes and serverless metadata
+        kind: 'kubernetesMetadata'
         labels: {
           'team.contact.name': 'frontend'
         }
       }
++      // add other serverless extensions as applicable
     ]
   }
 }
 ```
 
 ### Step 3: Define a Radius Container for serverless
-<!-- Include the punch-through mechanism to allow for platform-specific features to be used in Radius applications via abstraction "punch-through" mechanisms, similar to how Kubernetes-specific features are supported in Radius via base YAML or PodSpec patching functionalities. -->
 
-1. The user defines a Radius Container within the application definition (e.g. `app.bicep`). Note that the container definitions are container runtime platform-agnostic, thus this same container definition can be deployed to both Kubernetes and serverless compute platforms.
+The user defines a Radius Container within the application definition (e.g. `app.bicep`) and specifies relevant container properties, such as `extensions` or `runtimes` to set platform specific configurations. Note that the container definitions are container runtime platform-agnostic, thus this same container definition can be deployed to both Kubernetes and serverless compute platforms if common functionalities across compute platforms are used.
 
-```bicep
+```diff
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
   name: 'demo'
   properties: {
@@ -169,14 +177,30 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
           containerPort: 3000
         }
       }
++      // all the other container properties should also be implemented (e.g. `env`, `readinessProbe`, `livenessProbe`, etc.)
     }
+    extensions: [
++      {
++        kind:  'manualScaling'
++        replicas: 2
++      }
+    ]
+    runtimes: {
++      aci: {
++        // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
++        sku: 'Confidential' // 'Standard', 'Dedicated', etc.
++        }
++      ecs: {
++        // Add AWS ECS-specific properties here to punch-through the Radius abstraction
++        }
++      }
   }
 }
 ```
 
 ### Step 4: Define and connect other resources to the serverless container
 
-1. The user defines other resources (e.g. databases, message queues, etc.) that the container can connect to. These resources can be defined in the same application definition file (e.g. `app.bicep`) and connected to the container using the `connections` property for serverless containers just as they can be today for Kubernetes containers.
+The user defines other resources (e.g. databases, message queues, etc.) that the container can connect to. These resources can be defined in the same application definition file (e.g. `app.bicep`) and connected to the container using the `connections` property for serverless containers just as they can be today for Kubernetes containers.
 
 ```bicep
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
@@ -210,19 +234,29 @@ resource db 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
 
 ### Step 5: Deploy the application to the serverless platform
 
+The user deploys the application to the serverless platform by running the `rad run` or `rad deploy` command with the application definition file targeting the serverless environment (e.g. `app.bicep`).
+
 ### Step 6: View the serverless containers in the CLI and Radius Dashboard
 
-### Step 7: Make use of platform-specific features in the application
-<!-- e.g. confidential containers and spot instances in ACI -->
+After successful deployment, the user can view the serverless containers in the CLI using the `rad app graph` command or via the Application Graph in the Radius Dashboard.
 
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
 
-### Feature 1
+### Feature 1: Model Radius Environment resources for serverless
 <!-- One or two sentence summary -->
+Add support for defining and deploying serverless compute resources in a Radius Environment definition file (e.g. `env.bicep`).
 
-### Feature 2
+### Feature 2: Model Radius Application resources for serverless
 <!-- One or two sentence summary -->
+Add support for defining serverless compute resources in a Radius Application definition file (e.g. `app.bicep`).
 
-### Feature 3
+### Feature 3: Model Radius Container resources for serverless
 <!-- One or two sentence summary -->
+Add support for defining serverless container resources for container functionalities that are common across all platforms (e.g. `image`, `env`, `volumes`, etc.) within a Radius application definition file. 
+
+### Feature 4: Punch-through to platform-specific features
+<!-- One or two sentence summary -->
+Add support for platform-specific features for containers via abstraction "punch-through" mechanisms. This will allow users to use platform-specific features, such as confidential containers or spot instances, in Radius applications.
+
+> This is similar to how Kubernetes-specific features are supported in Radius via base YAML or PodSpec patching functionalities.
