@@ -273,3 +273,7 @@ Add support for defining serverless container resources for container functional
 Add support for platform-specific features for containers via abstraction "punch-through" mechanisms. This will allow users to use platform-specific features, such as confidential containers or spot instances, in Radius applications.
 
 > This is similar to how Kubernetes-specific features are supported in Radius via base YAML or [PodSpec patching](https://docs.radapp.io/guides/author-apps/kubernetes/patch-podspec/) functionalities.
+
+### Feature 5: User interfaces for serverless--Radius API, CLI, Dashboard
+<!-- One or two sentence summary -->
+Add support for deploying and managing serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
