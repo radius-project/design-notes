@@ -10,7 +10,13 @@ This document describes the high-level overview for expanding the Radius platfor
 
 ## Terms and definitions
 
-- nGroups: ACI feature that provides you with advanced capabilities for managing multiple related container groups, e.g. maintaining multiple instances, rolling upgrades, high availability, managed identity support, confidential container support, load balancing, zone rebalancing.
+- [AWS Elastic Container Service (ECS)](https://aws.amazon.com/ecs/): A fully managed container orchestration service that allows you to run containers on a cluster of virtual machines.
+- [Azure Container Instances (ACI)](https://learn.microsoft.com/en-us/azure/container-instances/): A serverless container runtime service that enables you to run containers on-demand without having to manage the underlying infrastructure.
+- [AWS Fargate](https://aws.amazon.com/fargate/): A serverless compute engine for containers that allows you to run containers without having to manage the underlying infrastructure.- [Azure Container Apps (ACA)](https://learn.microsoft.com/en-us/azure/container-apps/): A fully managed serverless container platform that abstracts away the need to manage containers altogether.
+- ACI [Container Groups](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-container-groups): A container group is a collection of containers that get scheduled on the same host machine. The containers in a container group share a lifecycle, resources, local network, and storage volumes. It's similar in concept to a pod in Kubernetes.
+- ACI [nGroups](https://learn.microsoft.com/en-us/azure/container-instances/container-instance-ngroups/container-instances-about-ngroups): ACI feature that provides you with advanced capabilities for managing multiple related container groups, e.g. maintaining multiple instances, rolling upgrades, high availability, managed identity support, confidential container support, load balancing, zone rebalancing.
+- ACI [Confidential Containers](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-confidential-overview): ACI feature that provides a secure enclave for your containerized applications to run in a confidential computing environment.
+- ACI [Spot Instances](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-spot-containers-overview): ACI feature that allows you to run interruptible workloads at a reduced cost compared to the standard price by taking advantage of unused capacity in Azure datacenters.
 
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
@@ -198,6 +204,12 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 }
 ```
 
+> AWS ECS schema reference: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html 
+
+> AWS ECS API reference: https://docs.aws.amazon.com/pdfs/AmazonECS/latest/APIReference/ecs-api.pdf#Welcome
+
+> ACI schema reference: https://learn.microsoft.com/en-us/azure/container-instances/container-instances-reference-yaml
+
 ### Step 4: Define and connect other resources to the serverless container
 
 The user defines other resources (e.g. databases, message queues, etc.) that the container can connect to. These resources can be defined in the same application definition file (e.g. `app.bicep`) and connected to the container using the `connections` property for serverless containers just as they can be today for Kubernetes containers.
@@ -259,4 +271,4 @@ Add support for defining serverless container resources for container functional
 <!-- One or two sentence summary -->
 Add support for platform-specific features for containers via abstraction "punch-through" mechanisms. This will allow users to use platform-specific features, such as confidential containers or spot instances, in Radius applications.
 
-> This is similar to how Kubernetes-specific features are supported in Radius via base YAML or PodSpec patching functionalities.
+> This is similar to how Kubernetes-specific features are supported in Radius via base YAML or [PodSpec patching](https://docs.radapp.io/guides/author-apps/kubernetes/patch-podspec/) functionalities.
