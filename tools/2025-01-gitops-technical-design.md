@@ -12,7 +12,7 @@ team. Do not provide the design details in this, section - there is a
 dedicated section for that later in the document.
 -->
 
-The Radius Flux Controller is a key component of the Radius GitOps feature. It is responsible for reading the Git repository, compiling Bicep files, and creating the DeploymentTemplate resources on the cluster. This controller ensures that the infrastructure defined in the Git repository is accurately reflected in the Kubernetes cluster, enabling a seamless GitOps workflow.
+The Radius Flux Controller is a new Radius control plane service that, along with the Radius DeploymentTemplate Controller, enables GitOps practices for Radius users. It is responsible for reading the Git repository, compiling Bicep files, and creating the DeploymentTemplate resources on the cluster. This controller ensures that the infrastructure defined in the Git repository is accurately reflected in the Kubernetes cluster, enabling a seamless GitOps workflow.
 
 ## Terms and definitions
 
@@ -25,7 +25,7 @@ be specific to this design context.
 
 - **GitOps**: A set of practices to manage infrastructure and application configurations using Git.
 - **Bicep**: A domain-specific language (DSL) for deploying Azure resources declaratively.
-- **DeploymentTemplate**: A custom resource in Kubernetes that represents the desired state of a deployment.
+- **DeploymentTemplate**: A custom resource in Kubernetes that represents the desired state of a Bicep deployment.
 
 ## Objectives
 
@@ -47,9 +47,9 @@ Describe goals to define why we are doing this work, how we will make
 priority decisions, and how we will determine success.
 -->
 
-- Enable seamless integration of GitOps workflows with Radius.
-- Automate the process of reading, compiling, and deploying infrastructure as code (IaC) from a Git repository.
-- Ensure that the infrastructure defined in the Git repository is accurately reflected in the Kubernetes cluster.
+- Enable seamless integration of GitOps workflows with Radius + Bicep. Users should be able to specify their Bicep files and parameters in a Git repository and have the resources within them automatically deployed to their Kubernetes cluster.
+- Ensure that the infrastructure defined in the Git repository is accurately reflected in the Kubernetes cluster. This includes creating, updating, and deleting resources as necessary, based on the changes in the Git repository.
+- Provide an experience that is consistent with existing Flux workflows. Users should be able to use Flux as they do today, with the addition of the Radius Flux Controller for managing Bicep files.
 
 ### Non goals
 
@@ -61,9 +61,9 @@ we plan to do in the future, but are out of scope of this design, list
 them here. Provide a brief explanation on why this is a non-goal.
 -->
 
-- Implementing advanced error handling and recovery mechanisms.
+- Supporting non-Flux GitOps tools (e.g., ArgoCD).
 - Supporting non-Bicep IaC formats.
-- Providing a user interface for managing GitOps workflows.
+- Radius Dashboard support
 
 ### User scenarios (optional)
 
@@ -74,35 +74,9 @@ If you have an existing issue that describes the user scenarios, please
 link to that issue instead.
 -->
 
-#### User story 1
+#### Helly can use Radius and Bicep to simplify application and infrastructure management
 
-As a DevOps engineer, I want to automate the deployment of my infrastructure using GitOps so that I can ensure consistency and reliability in my deployments.
-
-#### User story 2
-
-As a developer, I want to define my infrastructure as code in a Git repository and have it automatically deployed to my Kubernetes cluster.
-
-## User Experience (if applicable)
-<!--
-If the change impacts the user experience, provide expected interaction
-flow we aim to achieve through this proposal.
-
-When users interact with Radius through the CLI, include sample
-input commands and their corresponding output. Include a bicep/helm code
-sample, if this proposal involves updates to that experience.
--->
-
-**Sample Input:**
-
-git push origin main
-
-**Sample Output:**
-
-DeploymentTemplate resources created successfully.
-
-**Sample Recipe Contract:**
-
-N/A
+Helly is an infrastructure operator for an enterprise company. Her team manages a production application that is deployed on Kubernetes and uses AWS resources. To simplify the management of the application and infrastructure, Helly decides to use Radius and Bicep. She writes Bicep manifests that define the AWS resources required by the application, such as S3 buckets and RDS databases, as well as Radius resources that define container applications. Helly then uploads these Bicep files to a Git repository. She then writes a Flux configuration which includes Flux installation, Radius installation, and Flux setup for tracking her Git repository. Finally, Helly applies the Flux configuration to her Kubernetes cluster, and Radius deploys the resources defined in the Bicep manifests to the cluster. Now, any changes to the Bicep files in the Git repository are automatically reflected in the Kubernetes cluster, enabling a seamless GitOps workflow.
 
 ## Design
 
@@ -129,9 +103,11 @@ components interact with each other in the context of this proposal.
 Include separate high level architecture diagram and component specific diagrams, wherever appropriate.
 -->
 
-!Architecture Diagram
+![Architecture Diagram Part 1](2025-01-gitops-technical-design/rfc-1.png)
 
-### Detailed Design
+![Architecture Diagram Part 2](2025-01-gitops-technical-design/rfc-2.png)
+
+### Detailed Design: Radius Flux Controller
 
 <!--
 This section should be detailed and thorough enough that another developer
@@ -153,56 +129,195 @@ Discuss the rationale behind architectural choices and alternative options
 considered during the design process.
 -->
 
-#### Advantages (of each option considered)
-<!--
-Describe what's good about this plan relative to other options.
-Provides better user experience? Does it feel easy to implement?
-Provides flexibility for future work?
--->
+The Radius Flux Controller will be implemented as a new controller in the `controller` service. Here is the high-level control loop of the new controller:
 
-- Seamless integration with existing GitOps workflows.
-- Automated deployment of infrastructure as code.
-- Consistency and reliability in deployments.
+1. The controller lists all `GitRepository` resources in the cluster.
+1. For each `GitRepository`, the controller parses the contents of the Git repository.
+1. The controller checks for a `radius-config.yaml` file in the repository. If the file is not present, then the controller skips the repository.
+1. The controller reads the `radius-config.yaml` file and extracts the Bicep compilation instructions, such as the Bicep file path and parameters.
+1. The controller compiles the Bicep file using the Bicep CLI, which is installed on the controller.
+1. The controller creates (or updates) a `DeploymentTemplate` resource on the cluster with the compiled Bicep file as the template.
+1. The controller lists all `DeploymentTemplate` resources in the cluster that have been created from this Git repository and deletes any resources that are not present in the Git repository.
+1. The controller repeats this process at a regular interval to ensure that the resources in the Git repository are accurately reflected in the Kubernetes cluster.
 
-#### Disadvantages (of each option considered)
-<!--
-Describe what's not ideal about this plan. Does it lock us into a
-particular design for future changes or is it flexible if we were to
-pivot in the future. This is a good place to cover risks.
--->
+The following is a detailed description of the major steps in the control loop.
 
-- Limited to Bicep IaC format.
-- Requires integration with the DeploymentTemplate controller.
+#### Reading the Git Repository
 
-#### Proposed Option
-<!--
-Describe the recommended option and provide reasoning behind it.
--->
+The code for reading the Git repository will use the Flux GitOps toolkit libraries and will be based off the example [here](https://fluxcd.io/flux/gitops-toolkit/source-watcher/).
 
-The proposed option is to implement the Radius Flux Controller as described, leveraging the existing DeploymentTemplate controller for managing the desired state of the infrastructure.
+The controller is set up to watch `GitRepository` resources in the cluster:
+```go
+func (r *FluxController) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &radappiov1alpha3.DeploymentTemplate{}, deploymentTemplateRepositoryField, deploymentTemplateRepositoryIndexer); err != nil {
+		return err
+	}
 
-### API design (if applicable)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&sourcev1.GitRepository{}, builder.WithPredicates(GitRepositoryRevisionChangePredicate{})).
+		Complete(r)
+}
+```
 
-<!--
-Include if applicable – any design that changes our public REST API, CLI
-arguments/commands, or Go APIs for shared components should provide this
-section. Write N/A here if not applicable.
-- Describe the REST APIs in detail for new resource types or updates to
-  existing resource types. E.g. API Path and Sample request and response.
-- Describe new commands in the CLI or changes to existing CLI commands.
-- Describe the new or modified Go APIs for any shared components.
--->
+When a `GitRepository` resource is created or updated, the controller will get the object and read the contents of the Git repository:
+```go 
+	// Get the GitRepository object from the cluster
+	var repository sourcev1.GitRepository
+	if err := r.Get(ctx, req.NamespacedName, &repository); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
-N/A
+  ...
 
-### CLI Design (if applicable)
-<!--
-Include if applicable – any design that changes Radius CLI
-arguments/commands. Write N/A here if not applicable.
-- Describe new commands in the CLI or changes to existing CLI commands.
--->
+  // Fetch the artifact from the Source Controller
+	logger.Info("Fetching artifact", "url", artifact.URL)
+	if err := r.ArchiveFetcher.Fetch(artifact.URL, artifact.Digest, tmpDir); err != nil {
+		logger.Error(err, "unable to fetch artifact")
+		return ctrl.Result{}, err
+	}
+```
 
-N/A
+#### Parsing the `radius-config.yaml` File
+
+The controller will look for a `radius-config.yaml` file in the Git repository. If the file is not present, then the controller will skip the repository. If the file is present, then the controller will read the file and extract the Bicep compilation instructions:
+```go
+  // Read the radius-config.yaml file
+  configFile := filepath.Join(tmpDir, "radius-config.yaml")
+  config, err := ioutil.ReadFile(configFile)
+  if err != nil {
+    logger.Error(err, "unable to read radius-config.yaml file")
+    return ctrl.Result{}, err
+  }
+
+  // Parse the radius-config.yaml file
+  var radiusConfig RadiusConfig
+  if err := yaml.Unmarshal(config, &radiusConfig); err != nil {
+    logger.Error(err, "unable to parse radius-config.yaml file")
+    return ctrl.Result{}, err
+  }
+```
+
+The `radius-config.yaml` file will have the following structure:
+> Note: The structure of the `radius-config.yaml` file is subject to change. We should discuss this in the design meeting. I considered adapting the existing `.rad/config.yaml` file format, but there were too many differences between the two formats, so I decided to create a new format specifically for the Radius Flux Controller.
+```yaml
+config:
+  bicep:
+    - file: main.bicep
+      parameters: main.bicepparam
+      namespace: default
+    - file: secondary.bicep
+  providers:
+    - radius:
+        scope: /planes/radius/local/resourcegroups/default
+    - aws:
+        scope: /planes/aws/aws/accounts/000000000/regions/us-west-2
+    - azure:
+        scope: 	/planes/azure/azurecloud/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group
+```
+
+#### Compiling the Bicep File
+
+The controller will compile the Bicep file using the Bicep CLI, which is installed on the controller. It will use existing functionality to leverage the Bicep compiler: https://github.com/radius-project/radius/blob/87f7ea1b8d814a266fb89333ea4e5b38463ed7f9/pkg/cli/bicep/types.go#L46
+
+#### Creating the `DeploymentTemplate` Resource
+
+The controller will create (or update) a `DeploymentTemplate` resource on the cluster with the compiled Bicep file as the template:
+```go
+  // Create the DeploymentTemplate resource
+  deploymentTemplate := &radappiov1alpha3.DeploymentTemplate{
+    ObjectMeta: metav1.ObjectMeta{
+      Name:      radiusConfig.Name,
+      Namespace: radiusConfig.Namespace,
+    },
+    Spec: radappiov1alpha3.DeploymentTemplateSpec{
+      Template: string(compiledBicep),
+    },
+  }
+
+  // Create or update the DeploymentTemplate resource
+  if err := r.CreateOrUpdate(ctx, deploymentTemplate); err != nil {
+    logger.Error(err, "unable to create or update DeploymentTemplate resource")
+    return ctrl.Result{}, err
+  }
+```
+
+#### Deleting Stale `DeploymentTemplate` Resources
+
+The controller will list all `DeploymentTemplate` resources in the cluster that have been created from this Git repository and delete any resources that are not present in the Git repository:
+```go
+	// List all DeploymentTemplates on the cluster that are from the same git repository
+	deploymentTemplates := &radappiov1alpha3.DeploymentTemplateList{}
+	err = r.Client.List(ctx, deploymentTemplates, client.MatchingFields{deploymentTemplateRepositoryField: repository.Name})
+	if err != nil {
+		logger.Error(err, "unable to list deployment templates")
+		return ctrl.Result{}, err
+	}
+
+	// For all of the DeploymentTemplates on the cluster, check if the bicep file
+	// that it was created from is still present in the git repository. If not, delete the
+	// DeploymentTemplate from the cluster.
+	for _, deploymentTemplate := range deploymentTemplates.Items {
+		if _, err := r.FileSystem.Stat(path.Join(tmpDir, deploymentTemplate.Name)); os.IsNotExist(err) {
+			// File does not exist in the git repository,
+			// delete the DeploymentTemplate from the cluster
+			logger.Info("Deleting DeploymentTemplate", "name", deploymentTemplate.Name)
+			if err := r.Client.Delete(ctx, &deploymentTemplate); err != nil {
+				logger.Error(err, "unable to delete deployment template")
+				return ctrl.Result{}, err
+			}
+
+			logger.Info("Deleted DeploymentTemplate", "name", deploymentTemplate.Name)
+		} else if err != nil {
+			logger.Error(err, "failed to check if file exists")
+			return ctrl.Result{}, err
+		}
+	}
+```
+
+### Detailed Design: Bicep Compilation
+
+The Bicep compilation will be done using the Bicep CLI. The Bicep CLI itself will be present in a container image that is mounted as a volume in the controller pod. The controller will use the Bicep CLI to compile the Bicep file and return the compiled template as a string.
+
+`deploy/images/bicep/Dockerfile`:
+```Dockerfile
+FROM alpine:latest
+
+ARG TARGETARCH
+
+RUN apk --no-cache add curl
+
+WORKDIR /
+
+RUN curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 \
+    && chmod +x ./bicep
+
+ENTRYPOINT ["/bin/sh"]
+```
+
+`deploy/Chart/templates/controller/deployment.yaml`:
+```yaml
+    spec:
+      ...
+      initContainers:
+      - name: bicep
+        image: "{{ .Values.bicep.image }}:{{ .Values.bicep.tag | default $appversion }}"
+        command: ['sh', '-c', 'mv ./bicep /usr/local/bin/bicep']
+        volumeMounts:
+        - name: bicep
+          mountPath: /usr/local/bin
+      ...
+      containers:
+      ...
+        volumeMounts:
+        - name: bicep
+          mountPath: /usr/local/bin
+      ...
+      volumes:
+      ...
+        - name: bicep
+          emptyDir: {}
+      ...
+```
 
 ### Implementation Details
 <!--
@@ -211,34 +326,15 @@ the specific sub-components that will be updated, for example, controller, proce
 recipe engine, driver, to name a few.
 -->
 
-- **Controller**: Implement the Radius Flux Controller to read the Git repository, compile Bicep files, and create DeploymentTemplate resources.
-- **Processor**: Ensure that the compiled Bicep files are processed correctly.
-- **Renderer**: Render the DeploymentTemplate resources based on the compiled Bicep files.
-- **Recipe Engine**: Integrate with the existing recipe engine to manage the deployment process.
-
-#### UCP (if applicable)
-N/A
-
-#### Bicep (if applicable)
-N/A
-
-#### Deployment Engine (if applicable)
-N/A
-
-#### Core RP (if applicable)
-N/A
-
-#### Portable Resources / Recipes RP (if applicable)
-N/A
+- **Controller**: The Radius Flux Controller will be implemented as a new controller in the `controller` service. The controller will read the Git repository, compile Bicep files, and create DeploymentTemplate resources on the cluster.
+- **Bicep Compilation**: The Bicep compilation will be done using the Bicep CLI. The Bicep CLI itself will be present in a container image that is mounted as a volume in the controller pod. The controller will use the Bicep CLI to compile the Bicep file and return the compiled template as a string.
 
 ### Error Handling
 <!--
 Describe the error scenarios that may occur and the corresponding recovery/error handling and user experience.
 -->
 
-- **Git Repository Not Found**: Log an error and retry after a specified interval.
-- **Bicep Compilation Error**: Log the error and notify the user.
-- **DeploymentTemplate Creation Error**: Log the error and retry after a specified interval.
+All errors will be logged to the Kubernetes event log. We will also provide detailed error messages in the controller logs to help users troubleshoot any issues.
 
 ## Test plan
 
@@ -252,9 +348,9 @@ Describe any functionality that will create new testing challenges:
 - Features that do I/O or change OS state and are thus hard to unit test
 -->
 
-- **Unit Tests**: Test the individual components of the Radius Flux Controller.
-- **Integration Tests**: Test the integration with the Git repository and the DeploymentTemplate controller.
-- **End-to-End Tests**: Test the entire GitOps workflow from pushing changes to the Git repository to deploying the infrastructure on the Kubernetes cluster.
+- **Unit Tests**: Test the individual components of the Radius Flux Controller. There are many external dependencies that will need to be mocked, such as GitRepository objects and Bicep compilation.
+- **Functional Tests**: Test the end-to-end functionality of the Radius Flux Controller together with the DeploymentTemplate controller. This will involve creating GitRepository objects on a real Kubernetes cluster and verifying that the resources in the Bicep templates are created and updated correctly.
+- **Sample**: Provide a sample Git repository with Bicep files and a `radius-config.yaml` file to test the Radius Flux Controller. This should be added as a sample in our documentation.
 
 ## Security
 
@@ -272,7 +368,7 @@ If this feature has no new challenges or changes to the security model
 then describe how the feature will use existing security features of Radius.
 -->
 
-The Radius Flux Controller will use existing authentication mechanisms to access the Git repository and Kubernetes cluster. Secrets and credentials will be stored securely using Kubernetes Secrets. No new cryptographic methods are introduced.
+No new security challenges are introduced by the Radius Flux Controller. It uses the existing security features of Radius and Flux.
 
 ## Compatibility (optional)
 
@@ -292,9 +388,7 @@ diagnose this new feature. It also describes how to troubleshoot this feature
 with the instrumentation.
 -->
 
-- **Metrics**: Track the number of successful and failed deployments.
-- **Logs**: Log all actions performed by the Radius Flux Controller, including errors and retries.
-- **Tracing**: Implement tracing to track the flow of operations from reading the Git repository to deploying the infrastructure.
+The Radius Flux Controller will be setup as another controller in the Radius controller process. It will use standard Radius and Kubernetes logging and monitoring facilities, such as Kubernetes events and logs, to provide visibility into its actions. Users will be able to troubleshoot the Radius Flux Controller by examining the logs and events generated by the controller, as is the case with other Kubernetes controllers.
 
 ## Development plan
 
@@ -306,11 +400,13 @@ item. Don’t forget to include the Unit Test and functional test in your
 estimates.
 -->
 
-- **Phase 1**: Implement the basic functionality of the Radius Flux Controller.
-- **Phase 2**: Integrate with the DeploymentTemplate controller.
-- **Phase 3**: Implement error handling and retry mechanisms.
-- **Phase 4**: Write unit, integration, and end-to-end tests.
-- **Phase 5**: Monitor and log the Radius Flux Controller's actions.
+The development of the Radius Flux Controller will be broken down into the following tasks:
+
+1. Implement the Bicep compilation functionality in the controller.
+1. Implement the control loop for the controller.
+1. Write unit and functional tests for the controller.
+1. Write documentation and samples for the controller.
+
 
 ## Open Questions
 
@@ -320,8 +416,7 @@ Use the discussion to answer these with experts after people digest the
 overall design.
 -->
 
-- How should we handle large Git repositories with many Bicep files?
-- What is the best way to notify users of errors during the deployment process?
+* Does this design fit well into the Kubernetes controller pattern? Are there any improvements that can be made to the design to better align with Kubernetes controller best practices?
 
 ## Alternatives considered
 
@@ -331,13 +426,10 @@ Give a justification for why alternative approaches should be rejected if
 possible.
 -->
 
-- **Alternative 1**: Use a different IaC format instead of Bicep. Rejected because Bicep is the preferred format for Azure resources.
-- **Alternative 2**: Implement a custom deployment controller instead of using the DeploymentTemplate controller. Rejected because the DeploymentTemplate controller provides the necessary functionality.
+* We should consider different formats for the `radius-config.yaml` format.
 
 ## Design Review Notes
 
 <!--
 Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
 -->
-
-To be updated after the design review meeting.
