@@ -4,7 +4,7 @@
 
 ## Topic Summary
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
-Given the importance of serverless infrastructure in the modern application landscape, it is a priority for Radius to expand beyond Kubernetes and support serverless compute platforms. The initial expansion will focus on support for an unopinionated serverless container runtime (e.g. Azure Container Instances, AWS Elastic Container Service) before exploring integrations with other more opinionated serverless platforms (e.g. AWS Fargate, Azure Container Apps).
+Given the importance of serverless infrastructure in the modern application landscape, it is a priority for Radius to expand beyond Kubernetes and support additional container platforms with lower operational overhead. The initial expansion will focus on support for Azure Container Instances, then AWS Elastic Container Service including AWS Fargate. This will be followed by more feature rich platforms including Azure Container Apps and eventually Google CloudRun.
 
 This document describes the high-level overview for expanding the Radius platform to enable management of serverless container runtimes. The goal is to provide a seamless experience for developers to deploy and manage serverless containers in a way that is consistent with the existing Radius model, including Environments, Applications, and Resources.
 
