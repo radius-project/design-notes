@@ -1,4 +1,4 @@
-# Topic: Serverless Container Runtimes
+# Topic: Serverless Container Platforms
 
 * **Author**: Will Tsai (@willtsai)
 
@@ -6,13 +6,12 @@
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
 Given the importance of serverless infrastructure in the modern application landscape, it is a priority for Radius to expand beyond Kubernetes and support additional container platforms with lower operational overhead. The initial expansion will focus on support for Azure Container Instances, then AWS Elastic Container Service including AWS Fargate. This will be followed by more feature rich platforms including Azure Container Apps and eventually Google CloudRun.
 
-This document describes the high-level overview for expanding the Radius platform to enable management of serverless container runtimes. The goal is to provide a seamless experience for developers to deploy and manage serverless containers in a way that is consistent with the existing Radius model, including Environments, Applications, and Resources.
+This document describes the high-level overview for deploying Radius-managed applications to serverless container platforms. The goal is to provide a consistent development experience for developers regardless of which container platform the platform engineer has chosen. In other words, with serverless support in Radius, applications will now be portable between cloud providers and now container platforms.
 
 ## Terms and definitions
 
-- [AWS Elastic Container Service (ECS)](https://aws.amazon.com/ecs/): A fully managed container orchestration service that allows you to run containers on a cluster of virtual machines.
+- [AWS Elastic Container Service (ECS)](https://aws.amazon.com/ecs/): A fully managed container orchestration service that allows you to run containerized applications. Containers are grouped into tasks (analogous to Kubernetes pods) which are then grouped into a service which managed ingress and autoscaling (analogous to a Kubernetes service of type loadBalancer). ECS can run containerized applications on EC2 virtual machines or on AWS Fargate serverless infrastructure.
 - [Azure Container Instances (ACI)](https://learn.microsoft.com/en-us/azure/container-instances/): A serverless container runtime service that enables you to run containers on-demand without having to manage the underlying infrastructure.
-- [AWS Fargate](https://aws.amazon.com/fargate/): A serverless compute engine for containers that allows you to run containers without having to manage the underlying infrastructure.
 - [Azure Container Apps (ACA)](https://learn.microsoft.com/en-us/azure/container-apps/): A fully managed serverless container platform that abstracts away the need to manage containers altogether.
 - ACI [Container Groups](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-container-groups): A container group is a collection of containers that get scheduled on the same host machine. The containers in a container group share a lifecycle, resources, local network, and storage volumes. It's similar in concept to a pod in Kubernetes.
 - ACI [nGroups](https://learn.microsoft.com/en-us/azure/container-instances/container-instance-ngroups/container-instances-about-ngroups): ACI feature that provides you with advanced capabilities for managing multiple related container groups, e.g. maintaining multiple instances, rolling upgrades, high availability, managed identity support, confidential container support, load balancing, zone rebalancing.
@@ -47,7 +46,7 @@ Primarily, our users are application developers, operators, and platform enginee
 
 ### Challenge(s) faced by the user
 <!-- What challenges do the user face? Why are they experiencing pain and why do current offerings not meet their need? -->
-With the additional complexity and specialized knowledge required to manage and operate Kubernetes clusters, many users are looking to serverless compute platforms as a way to simplify their infrastructure and reduce operational overhead. Services like ACI and ECS provide a way to run containerized workloads without the need to manage the underlying infrastructure, while still providing the benefits of containers like portability and scalability. Azure Container Apps and AWS Fargate take this a step further by providing a fully managed serverless container platform that abstracts away the need to manage containers altogether.
+With the additional complexity and specialized knowledge required to manage and operate Kubernetes clusters, many users are looking to serverless compute platforms as a way to simplify their infrastructure and reduce operational overhead. Services like Azure Container Apps and ECS Fargate provide a way to run containerized workloads without the need to manage the underlying infrastructure, while still providing the benefits of containers like portability and scalability. 
 
 Users who build applications exclusively on serverless compute platforms are not able to adopt Radius. These users face the same challenges as those who have chosen to adopt Radius for Kubernetes: making sense of complex architectures, suboptimal troubleshooting experiences, pain in dealing with a plethora of cross-platform tools, difficulties in enforcing best practices, and hindered team collaboration due to unclear separation of concerns.
 
