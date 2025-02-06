@@ -1,6 +1,6 @@
 # User Defined Resource Types Feature Spec
 
-@zachcasper, @reshrahim
+[@zachcasper](https://github.com/zachcasper), [@reshrahim](https://github.com/reshrahim)
 
 ## Summary
 
@@ -477,7 +477,7 @@ The recipe for MyCompany.Data/postgreSQL is registered in the my-env environment
 
 **`postgreSQL.tf`**
 
-```json
+```
 terraform {
   // Providers and other Terraform configurations
   ...
@@ -490,7 +490,7 @@ variable "context" {
 
 // The required property from the resource type definition
 variable "size" {
-  description = "The size of database to provision”
+  description = "The size of database to provision"
   type = string
 }
 
@@ -531,7 +531,7 @@ output "connection-string" {
 }
 
 output "credentials.username" {
-  value = "${username}""
+  value = "${username}"
 }
 
 output "credentials.password" {
