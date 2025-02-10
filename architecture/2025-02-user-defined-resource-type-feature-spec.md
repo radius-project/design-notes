@@ -1,62 +1,99 @@
-# User Defined Resource Types Feature Spec
+# User-Defined Resource Types Feature Spec
 
 [@zachcasper](https://github.com/zachcasper), [@reshrahim](https://github.com/reshrahim)
 
 ## Summary
 
-TODO: Review and update @zachcasper
+Radius is a core component of internal developer platforms for organizations building cloud-native applications. It enables developers to model their application using portable resource types pre-defined within Radius and enables platform engineers to control the deployment of these resources within the environment they specify. Today, platform engineers can customize these system-defined types by exposing parameters for developers to specify or by building custom resource types using the Applications.Core/extenders resource type. However, these customization methods are insufficient for a mature developer platform within a sophisticated organization. 
 
-Radius is a core component of the internal developer platform for enterprises building cloud native applications. Many enterprises use a wide range of technologies together for achieving their cloud-native strategy. For any technology that’s a newcomer and helps solve a problem in the cloud native landscape, users look for an easy and seamless way to integrate their existing tools and technologies and incrementally adopt the new technology to their strategy. For Radius, we have heard requests from our users/community to support technologies that their applications are tightly coupled with e.g. an internal messaging service or a technology they absolutely love e.g. PostgreSQL/Kafka. Today, Radius provides [`Applications.Core/extenders`](https://docs.radapp.io/guides/author-apps/custom/overview/) to model any kind of service in an untyped way, but they pose limitations for sophisticated enterprises in terms of guardrails and validation that platform engineers want to impose on their developer platform. 
+This document details the requirements and user experience for fully customizable user-defined resource types for Radius. User-defined resource types empower platform engineers to extend Radius to meet their organization's unique requirements and enable their developers to model their applications using organization-specific resource types while supporting all the capabilities of Radius. 
 
-One of the high value extensibility points in Radius is Recipes. Today you can author and contribute Recipes only for a limited set of portable resource types. We need to provide an extensibility model that supports “Bring your own technology”, deploy using Recipes and unblock your scenario with Radius. This feature specification document details on the requirements and the user experience for defining and deploying a custom resource type in Radius.
+### **Vision** 
+
+Our vision for user-defined resource types is to significantly expand the set of resource types available to developers and platform engineers. This will be accomplished by democratizing the creation of new resource types. User-defined resource types will: 
+
+- Make the creation of new resource types easy to accomplish by a non-developer 
+- Make it easy to share new resource types with internal developers and external platform engineers 
+- Enable the discovery of new resource types across organizations within the user community 
+- Enable platform engineers to manage their user-defined resource types including loading, unloading, and updating 
+
+With these capabilities, not only will there be a wide selection of resource types available directly from the Radius project, but additional types from other teams within an organization, platform engineers from other organizations using Radius, other open-source projects, independent software vendors (ISVs), independent developers, and, aspirationally, from cloud service providers. 
+
+These new resource types can be: 
+
+- Commonly used application components but not yet built into Radius such as PostegreSQL and Kafka 
+- Application components which have higher levels of abstraction such as a microservice, function, or job
+- Application components which are composed of multiple resources such as a resource that includes an HTTPS endpoint and a memcache server 
+- Commercial software deployments 
+- Cloud-provider specific services which use recipes to provision 
 
 ## Goals
 
-TODO: Review and update @zachcasper
-
-* Provide platform engineers with a simple and intuitive experience to define and register custom resource types in Radius
-* Provide a mechanism for platform engineers to deploy, manage and maintain these resource types across the environments
-* Enable developers to use and integrate these custom resource types into their applications seamlessly
-* Ensure platform engineers can implement guardrails on the resource types the developers can use in their applications
+- Enable platform engineers to define user-defined resource types to meet their organization's unique requirements 
+- Enable Radius community developers to extend Radius resource types independently of the core project 
+- Enable platform engineers and Radius community developers to share their user-defined resource types and associated recipes 
+- Enable developers to use and integrate these custom resource types into their applications seamlessly
+- Enable specifying user-defined resource types with minimal configuration overhead 
+- Support all core Radius functionality with user-defined resources 
 
 ## Non-Goals (out of scope)
 
-TODO: Review and update @zachcasper
+* Configuring and keeping up to date Radius and Bicep tooling on developer workstations
+* Modifying, versioning, and deprecation of resource types
+* Deployment of updates to resources
+* Radius-maintained and test sample repository 
 
-* TypeSpec and other tooling experiences for authoring custom resource types
-* Scenarios that involve multi-region deployments and custom provisioning logic
-* Providing the community a way to open-source the custom resource types is out of scope for this document and will be covered separately
+## About this Document
 
+This document is the first of three feature specifications for user-defined resource types. This document covers the general resource type user scenarios. Future documents will describe user scenarios for managing the developer workstations and all Day 2 scenarios. It is structured around a series of user stories ordered sequentially to describe an end-to-end user journey, or scenario. 
+
+Each user story is described with detailed examples. The examples are used to convey the user experience and technical detail. While attention has been paid to technical accuracy such as syntax and structure, expressiveness is prioritized over accuracy. The syntax and structure are expected to change during implementation.
+
+At the conclusion of the user stories, the Feature Summary section lists specific features which are required to fulfill the described user story. These features are an initial decomposition of work. The features are stack ranked in order of priority resulting in a roadmap of features for user-defined resource types.
 
 ## Definition of Terms
 
-**Resource** – An abstract object representing an application, application component, or cloud resource
+**Resource** – An abstraction representing an application, application component, or cloud resource
 
-**Resource type** – The type for a resource which includes the name, an API schema and version and developer documentation
+**Resource type** – The type for a resource which includes the name, an API schema, and version and developer documentation
 
-**Resource type definition** – A file which describes a resource type including it's namespace, name, and OpenAPI-based schema
+**Resource type definition** – A structured description of a resource type including its namespace, name, and OpenAPI-based schema
 
 **Core resource types** – Primitive resource types which other resource types can build on; includes application, environment, container, gateway, secrets, and volumes
 
-**User-defined resource type** – All resource types which are note core resource types
+**User-defined resource type** – All resource types which are not core resource types
 
 **Sample resource types** – Previously referred to as portable resource types; resource types which ship with Radius as examples of user-defined resource types; includes SQL Server, MongoDB, Redis, RabbitMQ, and Dapr and their respective recipes
 
-**Resource type catalog** – The entire collection of resource types in a Radius tenant; may include multiple namespaces and resource types
+**Resource type catalog** – The entire collection of user-defined resource types in a Radius tenant; may include multiple namespaces and resource types
 
-**Recipe** – A Terraform or Bicep module which deploys a resource type within an environment
+**Resource type namespace** – A logical grouping of resource types; resource type names are unique within a namespace
 
-**Recipe manifest** –  A collection of resource type to recipe mappings; the mapping includes the location (but not the contents) of the Terraform or Bicep module
+**Resource provider** – A technical term used only in the implementation of Radius; adopted from Azure resource manager which orchestrates resource lifecycle events with services which actually provide resources (e.g. Azure VMs) whereas Radius user-defined resource types do not have a resource provider; existing references of resource providers in the UI are most likely referring to the resource type namespace
 
-## User personas and challenges
+> [!WARNING]
+>
+> The term resource provider in the context of Radius is semantically confusing to users. A user-defined resource type inherently will never have a resource provider since the user-defined resource type is built on top of other resource providers (such as Azure VMs). Resource providers will remain in the implementation of Radius but not in the UI.
 
-TODO: Review and update @zachcasper
+**Recipe** – A Terraform configuration or Bicep template which deploys a resource type within an environment
 
-**Platform engineers** – Platform engineers are responsible for building internal developer platforms (IDP) for streamlining the developer-experience for their organization. They provide self-service capabilities for application teams/developers to use. Platform engineers define and manage the resource types a developer can use in their applications.
+**Recipe manifest** –  A collection of resource type to recipe mappings; the mapping includes the location (but not the contents) of the Terraform configuration or Bicep module
 
-**Developers** – Developers are responsible for building the cloud native applications. They are responsible for writing the code, designing and maintaining the applications. They use the resource types available to them to model their application and deploy it to the environments.
+**Create** – A Radius API action where a resource gets created in the Radius tenant; i.e. the contents of the request payload is copied into the control plane; e.g., resource types are created
 
-**Operators** – Operators are responsible for managing the infrastructure and ensuring that the applications are running smoothly. They are responsible for maintaining the infrastructure and providing support for the infrastructure. They update and maintain the provisioning of resource types via recipes.
+**Register** – A Radius API action where a the location of a resource is created in the Radius tenant; i.e. a pointer to a resource is created; e.g. recipes are registered
+
+## User Personas
+
+**Platform Engineers** – Platform engineers are responsible for building and maintaining the internal developer platform used by application developers within their organization. This developer platform provides the tooling and services which enables developers to build applications in a self-service manner using standardized practices within the organization. These practices include the consistent use of cloud services, continuous integration and testing, enforcement of security and operational best practices, accurate cost attribution, and other capabilities. In addition to enforcing these best practices, the developer platform performs also perform automated deployments to local and shared non-production environments (continuous delivery). 
+
+**Application Developers** – Application developers, or simply developers, are responsible for building applications within their organization. They are responsible for technical design, implementation, and test cases. Developers typically build, run, and test their applications on a local development workstation then deploy the application to a cloud-based environment. Some organizations provide a cloud environment for individual developers, while others require developers to commit their code to a source code repository; after which the developer platform's continuous delivery capability will deploy to the cloud environment. 
+
+**System Reliability Engineers (SREs) and Operators** – SRE and operators are responsible for managing the infrastructure and ensuring that the applications are running smoothly. They are responsible for maintaining the infrastructure and providing support for the infrastructure.  
+
+**Security Engineer** – Security engineers are responsible for identifying and remediating security vulnerabilities within an organization's applications and infrastructure. When a vulnerability is identified, they need tools and processes to identify which software components need to be updated and the ability to quickly apply those updates across their non-production and production environments. 
+
+**Open-Source Contributors** – A wide variety of organizations and personas may collaborate with other Radius contributors by building, testing, and providing feedback on user-defined resource types and their associated recipes. This includes platform engineers and developers discussed above, but also other open-source projects, system integrators, IT operations service providers, ISVs, and other cloud service providers. 
 
 ## Scenario 1 – Using Resource Types
 
@@ -71,6 +108,10 @@ The platform engineer will create a resource type in their Radius tenant using t
 The initial technical design for resource types used YAML. OpenAPI schemas are typically modeled using YAML or JSON and users in the cloud-native space are comfortable with YAML. However, after evaluating more advanced use cases and discussing with users, YAML was determined to be too limiting and only works for this basic use case. Bicep was chosen because it is already used throughout Radius, had features such as string manipulation functions, and built-in support for advanced use cases such as child resources. 
 
 There was early concern about requiring platform engineers to use Bicep given their familiarity is centered on traditional infrastructure as code solutions, namely Terraform. However, feedback from users was that they would prefer to use Bicep because of the additional capabilities it provides, the limitations of using YAML for complex resource types, and the overall ease of use of Bicep.
+
+> [!NOTE]
+>
+> Since YAML has already been implemented, the initial release of user-defined resource types may continue use YAML if that eases the implementation. However, the format should change to Bicep very quickly and support for YAML removed. Radius will only support one file format. This is reflected in the feature summary at the bottom of this document. 
 
 **User Experience** 
 
@@ -105,13 +146,9 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 }
 ```
 
-> [!IMPORTANT]
->
-> All examples in this feature specification are used to convey detail. While attention was paid to technical accuracy, such as syntax and structure, expressiveness is prioritized over accuracy. The syntax and structure of these examples are expected to change during implementation.
-
 **Result** 
 
-1. The postgreSQL resource type is created with one property which is required and must be a value from the enum 
+1. The postgreSQL resource type is created
 
 **Exceptions**
 
@@ -124,11 +161,11 @@ The operation fails and informs the user interactively if:
 
 > [!NOTE]
 >
-> The behavior of failing if the resource type already exists may change dependent upon how updated a resource type is handled. Modifying resource types has not been designed yet.
+> The behavior of failing if the resource type already exists may change dependent upon how the modifying a resource type user story is handled. Modifying resource types has not been designed yet.
 
 ### User Story 2 – Setting Properties
 
-As a platform engineer, as I am authoring a resource type, I need to include required and optional input  parameters. I also want to include output parameters which will be set by my recipe. 
+As a platform engineer, as I am authoring a resource type, I need to include required and optional input parameters. I also want to include output parameters which will be set by my recipe. 
 
 **Summary**
 
@@ -157,7 +194,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 +        // Output property set by the recipe, note the readOnly property
 +        connection-string: {
 +          type: 'string'
-+         readOnly: true
++          readOnly: true
 +        }
 +        // Output property set by the recipe, note the readOnly property
 +        credentials: {
@@ -189,7 +226,7 @@ The develop can manually inject environment variables into the container using B
 
 > [!NOTE]
 >
-> This functionality exists today. There are no changes. It is included here for context with the examples.
+> This functionality exists today. There are no changes. It is included here for context with the other examples.
 
 **`my-backend-application.bicep`**:
 
@@ -232,7 +269,7 @@ The environment variables set specified by the developer are set in the containe
 
 **User Experience 2 – Automatically Injected by platform engineer** 
 
-The platform engineer can specify default environment variables which will automatically be injected into a container when a connection is established. This is similar to existing functionality for built-in resource types in Radius today (see the [Redis type](https://docs.radapp.io/reference/resource-schema/cache/redis/#environment-variables-for-connections) for example). Note that user experience 1 and 2 can be used side-by-side.
+The platform engineer can specify default environment variables which will automatically be injected into a container when a connection is established. This is similar to existing functionality for portable resource types in Radius today (see the [Redis type](https://docs.radapp.io/reference/resource-schema/cache/redis/#environment-variables-for-connections) for example). Note that user experience 1 and 2 can be used side-by-side.
 
 **`postgreSQL-resource-type.bicep`**:
 
@@ -285,7 +322,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 
 **Result**
 
-When a developer creates a postgreSQL resource and a connection to that resource from a container, the environment variables are automatically set in the container for the connection string, username, and password.
+When a developer creates a postgreSQL resource and a connection to that resource from a container, the environment variables are automatically set in the container.
 
 ### User Story 4 – Providing developer documentation 
 
@@ -376,7 +413,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 }
 ```
 
-The description property on the resource type should be at least 2 KB, or approximately one page. Properties can be much smaller.
+The description property on the resource type should be at least 2 KB, or approximately one page. Properties can be smaller.
 
 **User Experience 1 – Command Line**
 
@@ -434,14 +471,14 @@ OPTIONAL PROPERTIES
       - 'VERBOSE': Use only if you plan to actually look up the Postgres source code 
 
 READ-ONLY PROPERTIES
-  * connection-string (string) Fully qualified string to connect to the resource
-  * credentials.username (string) The username for the database
-  * credentials.password (string) The password for the database user
+  - connection-string (string) Fully qualified string to connect to the resource
+  - credentials.username (string) The username for the database
+  - credentials.password (string) The password for the database user
 
 ENVIRONMENT VARIABLES
-  * POSTGRESQL_CONNECTION_STRING (connection-string)
-  * POSTGRESQL_USERNAME (credentials.username)
-  * POSTGRESQL_PASSWORD (credentials.password)
+  - POSTGRESQL_CONNECTION_STRING (connection-string)
+  - POSTGRESQL_USERNAME (credentials.username)
+  - POSTGRESQL_PASSWORD (credentials.password)
 ```
 
 **User Experience 2 – Radius Dashboard**
@@ -456,11 +493,11 @@ As a platform engineer, I need to register a recipe which implements my new reso
 
 **Summary**
 
-The platform engineer authors a Terraform configuration file which deploys the resources. The Terraform file must have variables defined which match the required and optional properties of the resource type and must have outputs defined for each read-only property. Radius passes required and optional properties to Terraform and sets read-only properties on the resource based on the Terraform outputs.
+The platform engineer authors a Terraform configuration which deploys the resources. The Terraform configuration must have variables defined which match the required and optional properties of the resource type and must have outputs defined for each read-only property. Radius passes required and optional properties to Terraform and sets read-only properties on the resource based on the Terraform outputs.
 
 > [!NOTE]
 >
-> This example ignores storing the Terraform module in a Radius-accessible location.
+> This example ignores storing the Terraform configuration file in a Radius-accessible location.
 
 **User Experience**
 
@@ -474,6 +511,10 @@ rad recipe register postgreSQL \
 Registering recipe for MyCompany.Data/postgreSQL
 The recipe for MyCompany.Data/postgreSQL is registered in the my-env environment
 ```
+
+> [!IMPORTANT]
+>
+> See [Other Changes](#Other Changes) for changes related to the `rad recipe register` command. 
 
 **`postgreSQL.tf`**
 
@@ -497,17 +538,17 @@ variable "size" {
 // Map t-shirt sizes to CPU and memory requirements
 locals = {
   cpu = {
-    size == "S" ? 0.5 :
-    size == 'M' ? 1.0 :
-    size == 'L' ? 2.0 :
-    size == 'XL' ? 4.0:
+    var.resource.size == "S" ? 0.5 :
+    var.resource.size == 'M' ? 1.0 :
+    var.resource.size == 'L' ? 2.0 :
+    var.resource.size == 'XL' ? 4.0:
     0.5 // Default
   }
   memory = {
-    size == "S" ? 2 :
-    size == 'M' ? 4 :
-    size == 'L' ? 8 :
-    size == 'XL' ? 16:
+    var.resource.size == "S" ? 2 :
+    var.resource.size == 'M' ? 4 :
+    var.resource.size == 'L' ? 8 :
+    var.resource.size == 'XL' ? 16:
     2 // Default
   }  
 }
@@ -541,7 +582,7 @@ output "credentials.password" {
 
  **Result**
 
-1. Radius confirms the Terraform file is accessible
+1. Radius confirms the Terraform configuration file is accessible
 1. Recipe is registered in the environment
 
 **Exceptions**
@@ -549,7 +590,7 @@ output "credentials.password" {
 The operation fails and informs the user interactively if:
 
 1. The user does not have permissions to register recipes in the environment's resource group
-1. Radius does not have access to the Terraform template in the location specified
+1. Radius does not have access to the Terraform configuration in the location specified
 
 ## Scenario 2 – Advanced Resource Types 
 
@@ -561,9 +602,9 @@ As a platform engineer, I need to enable my developers to connect to already dep
 
 Almost all applications connect to other systems which are managed independently. These systems could be other applications within the organization or software as a service applications managed by other vendors. These dependencies present challenges in a complex, interconnected organization. The Radius application graph is designed to help managed these dependencies by documenting connections between application components and visualizing them via the Radius dashboard and API. However, today, the application graph only supports connections between Radius-managed components. With user-defined resource types, organizations can represent application dependencies which are external to the application, environment, or organization.
 
-Radius already restricts the ability to create resources which do not have an associated recipe in the target environment (see scenario 3). Not having a recipe for a resource type in an environment is how the platform engineer controls which resources can be deployed in which environment. 
+Radius already restricts the ability to create resources which do not have an associated recipe in the target environment. If a resource is created in an environment without a recipe for that resource type, it will fail with an error stating that no recipe was found for the corresponding resource type. Not having a recipe for a resource type in an environment is how the platform engineer controls which resources can be deployed in which environment. 
 
-However, to represent an external resource, Radius will support creating resource types which do not, and cannot, have a recipe registered to it. These recipe-less resource types are only resources within the Radius application graph. There is no other functionality associated with them aside from reading the properties such as reading the name, description, or connection string.
+However, to represent an external resource, Radius will support creating resource types which do not, and cannot, have a recipe registered to it. These recipe-less resource types are only resources within the Radius application graph—there is no deployed resource or other functionality associated with them aside from reading the properties such as reading the name, description, or connection string.
 
 **User Experience** 
 
@@ -620,7 +661,7 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
 >
 > This example stores the username and password as cleartext in the Radius database. In a real example, the credentials would be stored in a secret. That was omitted from this example for simplicity. The next user story discusses child resources which could use used to embed a secret in this resource type.
 
-The platform engineer, or environment manager can then create a resource representing the external resource. For example, the platform engineer may create a resource representing a Twilio account.
+The platform engineer, or environment manager can then create a resource representing the external resource in the environment. For example, the platform engineer may create a resource representing a Twilio account.
 
 **`production-environment.bicep`**
 
@@ -647,7 +688,7 @@ resource twilio 'MyCompany.App/externalService@v1alpha1' = {
 }
 ```
 
-Then the developer can connect to the Twilio resource in their application by using the `existing
+Then the developer can connect to the Twilio resource in their application by using the `existing` keyword.
 
 ```yaml
 // Existing resource in the resource group
@@ -682,13 +723,13 @@ As a platform engineer, I need to define a resource type which contains one or m
 
 The goal of user-defined resource types is to enable users and the broader Radius community to build a library of resource types which model cloud-native application components rather than cloud infrastructure resources. A cloud-native application component will inherently be composed of multiple resources. They could be composed of other building block application components such as an authenticator component which is common for all applications across an organization. Or, they could be composed of multiple cloud infrastructure resources. For example, a microservice could be composed of an ingress gateway, a proxy enforcing mTLS, a container implementing the service, and a security scanning sidecar. 
 
-Radius will continue to ship with core system-defined resources including containers, auto-scalers, gateways, volumes, and secrets. It will have built-in logic for deploying these resources to various container platforms including Kubernetes, ECS, ACA, ACI, and CloudRun. In order to allow the creation of more abstract, application-oriented resource types, user-defined resource types will support the concept of child resources.
+Radius will continue to ship with core resource types including containers, auto-scalers, gateways, volumes, and secrets. It will have built-in logic for deploying these resources to various container platforms including Kubernetes, ECS, ACA, ACI, and CloudRun. In order to allow the creation of more abstract, application-oriented resource types, user-defined resource types will support the concept of child resources.
 
-Child resources are resources which get deployed when its parent resource is deployed. The lifecycle of the child resource is tied to that of the parent. These child resources can be a mix of system-defined resource types such as containers and gateways, or other user-defined resource types. 
+Child resources are resources which get deployed when its parent resource is deployed. The lifecycle of the child resource is tied to that of the parent. These child resources can be a mix of core resource types and user-defined resource types. 
 
 > [!NOTE]
 >
-> Bicep has built-in support for child resources which was the top reason Bicep was chosen over YAML.
+> Bicep has built-in support for child resources which was a primary reason Bicep was chosen over YAML.
 
 **User Experience**
 
@@ -736,7 +777,7 @@ resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-previe
 }
 ```
 
-When a developer creates a `MyCompany.App/service` resource, they will not need to have any awareness that an Envoy proxy is also created. This abstraction enables the platform engineer to easily inject sidecar containers, such as Envoy here, or other more complex combinations.
+When a developer creates a `MyCompany.App/service` resource, they will not need to have any awareness that an Envoy proxy is also created. This abstraction enables the platform engineer to easily inject sidecar containers. Envoy is shown in the example here, but other common sidecars are container security scanning tools such as Aqua Security and observability tools such as OpenTelemetry or Datadog. 
 
 The developer will, however, see that Envoy is deployed when they inspect the application graph since the child resources are standard Radius resources and will appear in the application graph.
 
@@ -805,11 +846,11 @@ resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-previe
 
 ## Other Changes
 
-User-defined resource types introduces a wide range of new capabilities for Radius. So much so, that it replaces the functionality of several of today's features. Given that Radius is early in the adoption curve, it makes sense to remove or deprecate redundant functionality so as to encourage the use of user-defined resource types.
+User-defined resource types introduces a wide range of new capabilities for Radius. So much so, that it replaces the functionality of several of today's features. Given that Radius is early in the adoption curve, it makes sense to remove or deprecate redundant functionality so as to encourage the use of user-defined resource types and minimize the amount of legacy code.
 
 ### Portable Resource Types
 
-Radius ships today with core resource types (application, environment, container, gateway, secrets, and volumes) as well as a small library of portable resource types (SQL Server, MongoDB, Redis, RabbitMQ, and Dapr). The portable resource types will be removed from Radius builds and no longer shipped with Radius. Instead, these resource types will be migrated to a resource type samples repository. The getting started experience will be updated to demonstrate creating a resource type using these samples or `rad init` enhanced to offer the option of loading the samples. All associated functionality with portable resource types will be removed from Radius including manual resource provisioning. 
+Radius ships today with core resource types (application, environment, container, gateway, secrets, and volumes) as well as a small library of portable resource types (SQL Server, MongoDB, Redis, RabbitMQ, and Dapr). The portable resource types will be removed from Radius builds and no longer shipped with Radius. Instead, these resource types will be implemented as user-defined resource types and published in a Radius-maintained samples repository. The getting started experience will be updated to demonstrate creating a resource type using these samples or `rad init` enhanced to offer the option of loading the samples. All associated functionality with portable resource types will be removed from Radius including manual resource provisioning. 
 
 ### Extenders
 
@@ -826,19 +867,67 @@ Both of these were excluded because user-defined resource types are the path for
 
 ### `rad recipe register` Arguments
 
-The arguments for `rad recipe` use the term template to refer to the recipe. These include `--template-kind`, `--template-path`, `--template-version`. Template is the incorrect terminology and infers Azure-specific terminology such as ARM templates or colloquial words such as Terraform templates (Hashicorp refers to `.tf` files configuration files). These arguments should be renamed to be semantically correct: `--recipe-kind`, `--recipe-location`, `--recipe-version`.
+The arguments for `rad recipe` use the term template to refer to the recipe. These include `--template-kind`, `--template-path`, `--template-version`. Template is a Bicep-specific and Azure-specific term (HashiCorp refers to `.tf` files as configuration files). Since the majority of Radius users will be using Terraform or a combination of Terraform and other IaC solutions for their recipes, these arguments should be renamed to be semantically correct: `--recipe-kind`, `--recipe-location`, `--recipe-version`. 
 
 ## **Feature Summary** 
 
-TODO: Complete @zachcasper
-
-**To be completed at the end** 
+This does not include Day 2 or developer workstation.
 
 | **Priority** | **Complexity** | **Feature** |
 | ------------ | -------------- | ----------- |
-|              |                |             |
+| p0 | XL | Create a resource type with a simple API defined in YAML |
+| p0 | M | Ability to register recipes for user-defined resource types |
+| p0 | M | Recipe context is enriched with the resource type's properties and can be referenced in Terraform |
+| p1 | S | `allowRecipes: false` option for resource types to represent external resources |
+| p1 | M | Read-only properties are automatically set based on Terraform outputs |
+| p1 | S | Add properties to a resource type marked as required, optional, or read-only |
+| p1 | Test only | Creating resources in an environment not tied to an application |
+| p1 | Test only | Referencing a shared resource in an environment using the `existing` keyword |
+|    ||————— First application launch cut line —————|
+| p1 |XL|Create a resource type defined in Bicep|
+| p1 | L | Child resources |
+| p1 | L | Child resources appear in application graph and are denoted as a child resource |
+| p2 | M | `rad resource-type list` to list all resource types and `rad resource-type list --namespace` to filter by namespace |
+| p2 | S | Ability to add free form text as metadata on a resource type and properties |
+| p2 | S | `rad resource-type show` outputs rich detail including metadata, properties, and environment variables |
+| p2 | M | Environment variables on properties in the resource type definition are automatically created in connected containers |
+| p2 | Test only | Conditional resources |
+|  |  | ————— Minimum viable product ————— |
+| p2 | M | Migrate portable resource types to sample repository |
+| p2 | M | Remove `extenders` |
+| p2 | S | Rename `rad recipe register` arguments to be semantically correct |
+| p3 | L | Developers can browse resource catalog in the Radius dashboard |
+| p3 | S | Radius confirms Terraform file is accessible by Radius when registering a recipe |
+| p4 | S | Data validation of parameter values |
+| p4 | S | Add properties to a resource type with a default value |
+| p4 | ? | LLM-based application definition generation |
 
+Test only indicates the feature is expected to just work.
 
+## Future Work
+
+Two additional feature summaries are in development. The features related to these user stories are included in the Feature Summary below as tentatively-prioritized placeholders.
+
+**Managing developer workstations**:
+
+* **Export resource catalog** – As a platform engineer, I need to export my resource type catalog and publish the catalog to be used developers on their workstations. 
+* **Import resource catalog** – As a developer with Radius already running, I need to load my organization’s resource type catalog on my local instance of Radius. My local Bicep configuration should be updated with the new resource types.
+* **Bulk register recipes** – As a developer with Radius already running, I need to register recipes on my local instance of Radius for deploying my organization’s resource types locally. 
+* **Installing Radius locally** – As a new developer, I need to install Radius on my workstation pre-configured with my organization's resource catalog and local development recipes. 
+
+**Day 2 operations:**
+
+* **Modifying metadata** – As a platform engineer, I need to update the developer documentation for a resource type. 
+
+* **Modifying parameters** – As a platform engineer, I need to modify an existing parameter on a resource type. I may want to change whether a parameter is required, add a value to an enum, or change the parameter type. 
+* **Adding or deleting parameters** – As a platform engineer, I need to add or delete a parameter on a resource type. 
+
+- **Rolling out minor software updates to new resources** – As a platform engineer, I need newly created resources to use an updated software version. This is a a minor update and the developer should not have to concern themselves with this change. 
+- **Rolling out minor software updates to existing resources** – As a platform engineer, I need a mechanism to update existing resources with a minor software update. Dependent upon the criticality of the application, for some applications I need to deploy updates without the developer’s involvement. For more critical applications, I will have the developer control when the update is applied. 
+- **Rolling out a major update** – As a platform engineer, I need to roll out a major software update. Since it is a major update, I want developers to explicitly opt into the update so they can test their application. I want to use two different recipes for the current and the new version. 
+- **Using an updated resource type** – As a developer, I need to read the release notes for an updated resource type and modify my application to use the new resource type version. 
+- **Deprecating a resource type version** – As a platform engineer, I need to restrict the ability to create new resources using the previous resource type version. 
+- **Creating SBOMs** – As a security engineer, I need to generate a software bill of materials for all Radius-managed resources. I need the version of all deployed components.
 
 
 
@@ -868,6 +957,18 @@ Simple eShop also connects to Stripe for payment processing and Twilio for sendi
 ### Service Resource Type
 
 ![image-20250130193139170](2025-02-user-defined-resource-type-feature-spec//image-20250130193139170.png) 
+
+
+
+
+
+
+
+
+
+
+
+
 
 **`service-resource-type.bicep`**
 
