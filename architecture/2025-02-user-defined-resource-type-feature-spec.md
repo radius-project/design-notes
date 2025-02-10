@@ -906,7 +906,7 @@ Test only indicates the feature is expected to just work.
 
 ## Future Work
 
-Two additional feature summaries are in development. The features related to these user stories are included in the Feature Summary below as tentatively-prioritized placeholders.
+Two additional feature summaries are in development. All future work is not above the first application cut line above.
 
 **Managing developer workstations**:
 
@@ -957,18 +957,6 @@ Simple eShop also connects to Stripe for payment processing and Twilio for sendi
 ### Service Resource Type
 
 ![image-20250130193139170](2025-02-user-defined-resource-type-feature-spec//image-20250130193139170.png) 
-
-
-
-
-
-
-
-
-
-
-
-
 
 **`service-resource-type.bicep`**
 
