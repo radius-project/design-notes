@@ -21,9 +21,9 @@ With these capabilities, not only will there be a wide selection of resource typ
 
 These new resource types can be: 
 
-- Commonly used application components but not yet built into Radius such as PostegreSQL and Kafka 
+- Commonly used application components but not yet built into Radius such as PostgreSQL and Kafka 
 - Application components which have higher levels of abstraction such as a microservice, function, or job
-- Application components which are composed of multiple resources such as a resource that includes an HTTPS endpoint and a memcache server 
+- Application components which are composed of multiple resources such as a resource that includes an HTTPS endpoint and a memcached server 
 - Commercial software deployments 
 - Cloud-provider specific services which use recipes to provision 
 
@@ -931,6 +931,8 @@ Two additional feature summaries are in development. All future work is not abov
 
 
 
+
+
 ---
 
 
@@ -945,7 +947,7 @@ The reference application for this feature specification is called Simple eShop.
 * A backend service 
 * An orders PostgreSQL database 
 
-The Simple eShop application connects to other databased which are shared with other applications including:
+The Simple eShop application connects to other databases which are shared with other applications including:
 
 * A customers PostgreSQL database 
 * A products PostgreSQL database 
