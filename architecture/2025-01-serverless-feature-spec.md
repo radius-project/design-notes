@@ -80,7 +80,7 @@ Enable deployment and management of serverless compute resources via the existin
 
 ### Scenario 4: Support for Dapr resources
 <!-- One or two sentence summary -->
-Enable the ability to define and run Dapr resources in a Radius application definition file (e.g. `app.bicep`) if there is native support for Dapr built into the serverless compute platform.
+Enable the ability to define and run Dapr resources in a Radius application definition file (e.g. `app.bicep`) if there is native support for Dapr built into the serverless compute platform. A user would declare a Dapr sidecar in the serverless container definition and connect it to a Dapr resource, much like how it can be done today in [Kubernetes containers](https://docs.radapp.io/guides/author-apps/dapr/how-to-dapr-building-block/).
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -382,6 +382,10 @@ Add support for platform-specific features for containers via abstraction "punch
 
 > For example, in ACI, we would support punch-through via the [Container Group Profiles](https://learn.microsoft.com/en-us/azure/container-instances/container-instance-ngroups/container-instances-about-ngroups#container-group-profile-cg-profile)
 
-### Feature 5: User interfaces for serverless--Radius API, CLI, Dashboard
+### Feature 5: Support for Dapr resources and sidecars
+<!-- One or two sentence summary -->
+Add support for adding a Dapr sidecar to a Radius container definition and connecting it to a Dapr resource. This will only be applicable if the serverless compute platform has native support for Dapr.
+
+### Feature 6: User interfaces for serverless--Radius API, CLI, Dashboard
 <!-- One or two sentence summary -->
 Add support for deploying and managing serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
