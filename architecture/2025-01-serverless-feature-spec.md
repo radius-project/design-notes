@@ -29,7 +29,7 @@ This document describes the high-level overview for deploying Radius-managed app
 ### Non-goals (out of scope)
 <!-- What are we explicitly not trying to accomplish? -->
 1. Hosting the Radius control plane on serverless (and other) compute platforms outside of Kubernetes. This is a separate project tracked in the roadmap: https://github.com/radius-project/roadmap/issues/39.
-1. The ability to run the Radius control plane separately from the compute cluster to which it is deploying applications. This is a separate project tracked in the roadmap: https://github.com/radius-project/roadmap/issues/42.
+1. The ability to run the Radius control plane separately from the compute cluster to which it is deploying applications. This is a separate project tracked in the roadmap: https://github.com/radius-project/roadmap/issues/42. However, given that the initial requirement is for a Kubernetes-hosted Radius control plane to deploy applications to a serverless compute platform, we might need to partially implement or at least take into consideration the separation of the Radius control plane cluster from the target deployment cluster as a part of serverless implementation.
 1. Radius support for more opinionated or event-driven serverless platforms (e.g. Azure Functions, AWS Lambda, Knative, etc.).
 
 ## User profile and challenges
