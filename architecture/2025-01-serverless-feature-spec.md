@@ -78,12 +78,20 @@ Allow for platform-specific features to be used in Radius applications via abstr
 <!-- One or two sentence summary -->
 Enable deployment and management of serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
 
+### Scenario 4: Support for Dapr resources
+<!-- One or two sentence summary -->
+Enable the ability to define and run Dapr resources in a Radius application definition file (e.g. `app.bicep`) if there is native support for Dapr built into the serverless compute platform.
+
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
 <!-- What other risks are you aware of that need to be mitigated. If you have a mitigation in mind, summarize here. -->
 <!-- **Dependency Name** – summary of dependency.  Issues/concerns/risks with this dependency -->
 <!-- **Risk Name** – summary of risk.  Mitigation plan if known. If it is not yet known, no problem. -->
 **Dependency: orchestrator and API for the underlying serverless platform** - For each additional serverless platform that Radius supports, we have a dependency on the underlying orchestrator for that platform. For example, for Azure Container Instances, we depend on the Azure API. For AWS Elastic Container Service, we depend on the AWS API. There is a risk that the underlying orchestrator may not provide the necessary APIs to support the Radius model, the APIs may not be stable or reliable, or the APIs may not be publicly available. This will need to be investigated as a part of the implementation.
+
+**Dependency: ingress/gateway for Radius** - Today, Radius installs and has a direct dependency on [Contour](https://projectcontour.io/) to manage and route incoming traffic to the appropriate services within a Kubernetes cluster. The equivalent default ingress/gateway for serverless platforms will need to be evaluated and implemented. Furthermore, it should be implemented in a way that allows for flexibility in the future to support other ingress/gateway options as there is a Radius backlog item for [removing dependency on Contour](https://github.com/radius-project/radius/issues/6521).
+
+**Risk: the serverless compute platform might not provide native Dapr support** - Given that Dapr resources are implemented as top-level resources in Radius, these can only be implemented in compute platforms that support Dapr natively.
 
 **Risk: platform specific features that cannot be implemented in Radius** - There might be platform-specific features that cannot (or should not) be implemented in Radius. For example, Kubernetes has features for taints and tolerations that are not common across compute platforms and thus should not be implemented in Radius. This risk can be mitigated by providing mechanisms to punch-through the Radius abstraction and use platform-specific features directly, like the [Kubernetes customization options](https://docs.radapp.io/guides/author-apps/containers/overview/#kubernetes) currently available in Radius.
 
@@ -99,6 +107,8 @@ Enable deployment and management of serverless compute resources via the existin
 **Assumption**: The Radius model can be extended to support serverless compute platforms without significant changes to the existing model. Serverless platforms have orchestrators that expose APIs that can be used to model the resources in Radius. We have validated these assumptions by building a prototype for Azure Container Instances.
 
 **Assumption**: As a result of the implementation, the refactoring done to the core Radius codebase to support Serverless container runtimes should also allow for easier extensibility of Radius to support other new platforms going forward. In other words, the work done for Serverless should be genericized within the Radius code and not resemble custom implementations for Kubernetes and select Serverless platforms.
+
+**Assumption**: If there was an app that the platform team wanted to run on serverless (e.g. ECS, ACI) and another on Kubernetes (e.g. EKS, AKS) they would configure two different environments. Semantically, an environment is a single place, so we should not have multiple places (i.e. different container platforms) within a single environment. We think that this assumption is reasonable given multiple compute targets would require a cross container compute service discovery which users are unlikely to have the desire in setting up. We'll validate this assumption with feedback from potential users.
 
 **Question**: How do we handle the case where the underlying serverless platform (especially opinionated ones like Azure Container Apps or AWS Fargate) does not provide the necessary APIs to support the Radius model? We will answer this question by building prototypes for additional serverless platforms and evaluating the feasibility of supporting them in Radius.
 
@@ -158,7 +168,9 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
 }
 ```
 
-> Note: the `providers` property in the environment is necessary to specify the scope of the environment and is different from the provider credentials that were registered using `rad init`. The provider credentials are used to authenticate with the underlying compute provider, while the `providers` environment property is used to specify the scope of the environment. Thus, we might consider renaming the Environment `providers` property to avoid confusion.
+> Note: The `providers` property in the environment is necessary to specify the scope of the environment and is different from the provider credentials that were registered using `rad init`. The provider credentials are used to authenticate with the underlying compute provider, while the `providers` environment property is used to specify the scope of the environment. Thus, we might consider renaming the Environment `providers` property to avoid confusion.
+
+> Note: We need to evaluate if we should add an additional `kubernetes` provider to the environment definition, though this might only be applicable for the [Inter-cluster app deployment and management](https://github.com/radius-project/roadmap/issues/42) feature.
 
 > Note: Currently it's one entry per `extension` for Kubernetes, but as a part of implementation we should determine if this needs to be further nested into one `extension` per platform and within each platform's `extension` can have multiple entries.
 
@@ -264,7 +276,6 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 +       // Add AWS ECS-specific properties here to punch-through the Radius abstraction
 +     }
 +      }
-  }
 +   // connections to other resources remains the same for serverless containers as they are for Kubernetes containers
 +   connections: {
 +     redis: {
@@ -284,11 +295,65 @@ resource db 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
 }
 ```
 
-### Step 5: Deploy the application to the serverless platform
+### Step 5: Define a Dapr sidecar for the serverless container and connect it to a Dapr resource
+
+> Note: This step is only applicable if the serverless compute platform has native support for Dapr.
+
+The user defines a Dapr sidecar in the container definition and connects it to a Dapr resource.
+
+```diff
+resource demo 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'demo'
+  properties: {
+    application: application
+    container: {
+      image: 'ghcr.io/radius-project/samples/demo:latest'
+      ports: {
+        web: {
+          containerPort: 3000
+        }
+      }
+    }
+    runtimes: {
++     aci: {
++       // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
++       sku: 'Confidential' // 'Standard', 'Dedicated', etc.
++     }
++     ecs: {
++       // Add AWS ECS-specific properties here to punch-through the Radius abstraction
++     }
++   }
++   extensions: [
++     {
++       kind: 'daprSidecar'
++       appId: 'demo'
++       appPort: 3000
++     }
++   ]
++   // connections to other resources remains the same for serverless containers as they are for Kubernetes containers
++   connections: {
++     redis: {
++       source: daprStateStore.id
++     }
++   }
+  }
+}
+
++ // Definitions for Dapr resources that the container can connect to remain unchanged
+resource daprStateStore 'Applications.Dapr/stateStores@2023-10-01-preview' = {
+  name: 'statestore'
+  properties: {
+    environment: environment
+    application: application
+  }
+}
+```
+
+### Step 6: Deploy the application to the serverless platform
 
 The user deploys the application to the serverless platform by running the `rad run` or `rad deploy` command with the application definition file targeting the serverless environment (e.g. `app.bicep`).
 
-### Step 6: View the serverless containers in the CLI and Radius Dashboard
+### Step 7: View the serverless containers in the CLI and Radius Dashboard
 
 After successful deployment, the user can view the serverless containers in the CLI using the `rad app graph` command or via the Application Graph in the Radius Dashboard.
 
