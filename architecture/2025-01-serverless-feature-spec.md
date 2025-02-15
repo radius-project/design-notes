@@ -24,7 +24,7 @@ This document describes the high-level overview for deploying Radius-managed app
 1. Genericize the Radius platform to support deployment of applications on serverless (and other) compute platforms beyond Kubernetes.
 1. Enable developers to deploy and manage serverless containers in a way that is consistent with the existing Radius environment and application model.
 1. Make all Radius features (Recipes, Connections, App Graph, UDT, etc.) available to engineers building applications on Radius-enabled supported serverless platforms.
-1. Radius support for unopinionated (e.g. AWS Elastic Container Service, Azure Container Instances) or process-driven (Azure Container Apps, AWS Fargate, Google Cloudrun) serverless container platforms.
+1. Radius support for unopinionated (e.g. AWS Elastic Container Service, Azure Container Instances) or process-driven (Azure Container Apps, AWS Fargate, Google CloudRun) serverless container platforms.
 
 ### Non-goals (out of scope)
 <!-- What are we explicitly not trying to accomplish? -->
@@ -50,7 +50,7 @@ Primarily, our users are application developers, operators, and platform enginee
 <!-- What challenges do the user face? Why are they experiencing pain and why do current offerings not meet their need? -->
 With the additional complexity and specialized knowledge required to manage and operate Kubernetes clusters, many users are looking to serverless compute platforms as a way to simplify their infrastructure and reduce operational overhead. Services like Azure Container Apps and ECS Fargate provide a way to run containerized workloads without the need to manage the underlying infrastructure, while still providing the benefits of containers like portability and scalability. 
 
-For application developers, partcularly those deploying to Kubernetes, using Radius helps them address pain points in: making sense of complex architectures, suboptimal troubleshooting experiences, pain in dealing with a plethora of cross-platform tools, difficulties in enforcing best practices, and hindered team collaboration due to unclear separation of concerns. However, without support for additional compute platforms like serverless, developers will continue to be forced to choose a container platform prior to actually building the application. It is very difficult to move between platforms once an application has been built — even if it is containerized.
+For application developers, particularly those deploying to Kubernetes, using Radius helps them address pain points in: making sense of complex architectures, suboptimal troubleshooting experiences, pain in dealing with a plethora of cross-platform tools, difficulties in enforcing best practices, and hindered team collaboration due to unclear separation of concerns. However, without support for additional compute platforms like serverless, developers will continue to be forced to choose a container platform prior to actually building the application. It is very difficult to move between platforms once an application has been built — even if it is containerized.
 
 ### Positive user outcome
 <!-- What is the positive outcome for the user if we deliver this, i.e. what is the value proposition for the user? Remember, this is user-centric. -->
