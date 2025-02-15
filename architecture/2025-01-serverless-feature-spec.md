@@ -242,6 +242,8 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 
 > Note: We assume that the `sku: 'Confidential'` property for ACI (and other comparable properties across platforms like ECS) is scoped to the individual container and not the entire application or environment. We will need to validate this assumption as a part of the implementation.
 
+> Note: There are a certain set of core properties that would be common across all container runtimes (e.g. `image`, `ports`, `env`) and these should be included as top-level properties within the container definition and should not be ignored if provided, assuming that these core properties are limited to ones that are universal across container platforms. The properties that may not be universal across platforms (e.g. `sku: 'Confidential'`, `osType`) should not be top-level properties but should rather be encapsulated in the `runtimes` property.
+
 > Note: To make the app definition portable, we must allow several `runtimes` to be declared per container and these should all be optional for cases where the user wants to punch through the Radius abstraction. If they declare a `runtimes` property that doesn't match the targeted deployment environment's compute, we should simply ignore that property for that deployment. If they haven't declared any `runtimes` property that match the compute of the targeted deployment environment, then we should deploy their container assuming that no `runtimes` property was provided and thus no "punch-through" behavior will be applied.
 
 > Schema references:
