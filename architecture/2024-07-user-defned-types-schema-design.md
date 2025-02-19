@@ -15,7 +15,6 @@ types:
       apiVersions:
         "2023-10-01-preview":
           schema:
-            type: object
             openAPIV3Schema:
               type: object
               properties:
@@ -66,6 +65,7 @@ Validation of a UDT resource against its UDT resource type schema
   
 ### User scenarios 
 
+As a cloud operations engineer, I am responsible for ensuring the deployment of databases. The permissible sizes of the databases vary depending on whether they are intended for development or production environments. It is crucial to prevent development engineers from provisioning databases with excessive resources.
 
 ## User Experience (if applicable)
 
