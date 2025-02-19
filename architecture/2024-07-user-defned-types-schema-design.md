@@ -62,12 +62,9 @@ Summarize the initial subset of OpenAPI features that Radius would support for u
 
 ### Non goals
 
-Validation of a resource against its user defined resource type schema
+Validation of a UDT resource against its UDT resource type schema
   
 ### User scenarios 
-
-Example #1
-
 
 
 ## User Experience (if applicable)
