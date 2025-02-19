@@ -4,35 +4,34 @@
 
 ## Overview
 
-The [user-defined-types](https://github.com/nithyatsu/design-notes/blob/main/architecture/2024-07-user-defined-types.md) feature enables end-users to define their own resource types as part of their tenant of Radius. User-defined types have the same set of capabilities and enable the same features (connections, app graph, recipes, etc) as system-defined types in Radius. 
+The [user-defined-types](https://github.com/radius-project/design-notes/blob/main/architecture/2024-07-user-defined-types.md) feature enables end-users to define their own resource types as part of their tenant of Radius. User-defined types have the same set of capabilities and enable the same features (connections, app graph, recipes, etc) as system-defined types in Radius. 
 
 User-defined types are created with rad resource-type create command, which takes a resource type manifest file as input. Here is a very simple resource manifest -
 
  ```yaml
-        name: 'Mycompany.Messaging'
-        types:
-            plaidResource:
-              apiVersions:
-                "2023-10-01-preview":
-                  schema: 
-                    openAPIV3Schema:
-                      type: object
-                      properties:
-                        type: object
-                              properties:
-                                host:
-                            type: string
-                          description: hostname 
-                          port:
-                            type: string
-                          description: port
-                      required:
-                      - host
-                      - port                  
-              capabilities: []
+name: 'Mycompany.Messaging'
+types:
+    plaidResource:
+      apiVersions:
+        "2023-10-01-preview":
+          schema:
+            type: object
+            openAPIV3Schema:
+              type: object
+              properties:
+                host:
+                  type: string
+                  description: hostname 
+                port:
+                  type: string
+                  description: port
+              required:
+              - host
+              - port                  
+      capabilities: []
 ```
 
-The `schema` serves as a contract to support users, defining what properties developers are allowed to set and what data is provided to applications. Essentially, the schema of a resource type is its API.
+The `schema` serves as a contract, defining what properties developers are allowed to set and what data is provided to applications. Essentially, the schema of a resource type is its API.
 
 The ability to define schema allows for differentiation and customization. For instance, in case of a databse UDT, an organization might use t-shirt sizes to describe the storage capacity of a database (e.g., S, M, L) or define their own vocabulary for fault domains (e.g., zonal, regional).
 
@@ -51,12 +50,11 @@ This document summarizes the key decisions that Radius makes on what constitutes
 
 ## Objectives
 
-To arrive at the initial "valid" schema for UDTs which will be the basis of schema validation implementation.
+https://dev.azure.com/azure-octo/Incubations/_workitems/edit/13731
 
 ### Guiding principles
 
-We begin with an initial subset of OpenAPI features that Radius would support. 
-Depending on user input, we would add more fatures in subsequent iterations.
+We begin with an initial subset of OpenAPI features that Radius UDTs would support. Depending on user input, we would add more fatures in subsequent iterations.
 
 ### Goals
 
@@ -64,11 +62,13 @@ Summarize the initial subset of OpenAPI features that Radius would support for u
 
 ### Non goals
 
-Validation of schema of a resource of a user-defined resource type
+Validation of a resource against its user defined resource type schema
   
 ### User scenarios 
 
-TBD
+Example #1
+
+
 
 ## User Experience (if applicable)
 
@@ -173,14 +173,14 @@ NA
 
 #### Structure
 
-Users provide us with the schema of UDT by defining `properties` in schema. 
-There is no support for defining custom fields outside of `properties`.
+Users provide us with the schema of UDT by defining `properties` in `openAPIV3Schema`. `openAPIV3Schema` is an `object` that holds properties of UDT. There is no support for defining custom fields outside of `properties`.
 
-This schema defines the structure and validation rules for the object.
+Each of the property is a user defined property of the UDT. It has a type and optional description and format. The type can be 
 
-`properties` is an `Object`. Each of the property is a user defined property of the UDT. It has a type and optional description and format. The type can be 
+* scalar
 
-* scalar. 
+We support all of the scalars supported by OpenAPI. 
+https://github.com/readmeio/oas-examples/blob/a331c65623f795af68602dd6f02e116f905d9297/3.0/yaml/schema-types.yaml details several examples covering the options available.
   
 ```
 schema: 
@@ -188,7 +188,7 @@ schema:
     type: object
     properties:
       size:
-        type: string
+        type: string  
         description: The size of database to provision
         enum:
         - S
@@ -202,7 +202,9 @@ schema:
 ```
 
 * array
-  
+
+`array` must specify a `type` for item
+
 ```
 schema:
   openAPIV3Schema: 
@@ -210,37 +212,31 @@ schema:
     properties:
       ports:
         type: array
-        items:
-          type: object
+        description: "ports this resource binds to"
+        item:
+          type: integer
+          format: uint32
 ```
 
 * map
-  
-example #1
+
+We support map through `adddiionalProperties`. This is useful when the resource type allows for dynamic(user defined) keys. We still must specify a type for the value of the property.
 
 ```
 schema:
   openAPIV3Schema:
     type: object
-    additionalProperties:
-      type: integer
+    properties:
+      name:
+        type: string
+        description: The name of the resource
+      labels:
+        type: object
+        description: A map of labels for the resource
+        additionalProperties:
+          type: string
 ```
 
-example #2
-
-```
-schema:
-  openAPIV3Schema:
-    type: object
-    additionalProperties:
-      type: object
-      properties:
-        value:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-```
 
 # Scalars
 
@@ -266,7 +262,7 @@ The exact URL and set of types that can be referenced is TBD.
 
 # Limitations
 
-All the limitations here are because at this point, we want to limit complexity and keep pur tooling simple. Based on feedback, we would likely add support for some of the more complex OpenAPI features. 
+All the limitations here are because at this point, we want to limit complexity and keep our tooling simple. Based on feedback, we would likely add support for some of the more complex OpenAPI features. 
 
 1. We are not supporting inheritence and polymorphism. Objects may not use the following constructs:
 
@@ -308,3 +304,5 @@ N/A
 
 ## References
 https://github.com/readmeio/oas-examples/tree/main/3.0/yaml
+https://kubernetes.io/blog/2019/06/20/crd-structural-schema/
+https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#properties
