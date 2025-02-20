@@ -171,12 +171,11 @@ Discuss the rationale behind architectural choices and alternative options
 considered during the design process.
 -->
 
-The solution would update the specification for the gateway resource in the bicep file to include a timeoutPolicy object. This object would contain the following properties:
-  **response:** The amount of time the gateway should wait for a response from the application before timing out.
-  **idle:** The amount of time the gateway should wait for a response from the application before timing out when the connection is idle.
-  **idleConnection:** The amount of time the gateway should wait for a response from the application before timing out when the connection is idle.
+The solution would update the specification for the gateway resource in the bicep file to include a timeoutPolicy object. This object would contain the following properties:  
+  **request:** The amount of time the gateway should wait for a response from the application before timing out.  
+  **backendrequest:** The amount of time the gateway should wait for a response from the application before timing out when the connection is idle.
 
-This maps to the contour timeoutPolicy - https://github.com/projectcontour/contour/blob/main/apis/projectcontour/v1/httpproxy.go#L1126
+This maps to the gateway API timeoutPolicy - https://gateway-api.sigs.k8s.io/api-types/httproute/#timeouts-optional
 
 #### Advantages (of each option considered)
 <!--
@@ -237,11 +236,10 @@ model GatewayRouteTimeoutPolicy {
   @doc("The response timeout in duration for the route. Defaults to 15 seconds.")
   response?: string;
   
-  @doc("The idle timeout in duration for the route. Defaults to 5 minutes.")
-  idle?: string;
+  @doc("The backend timeout in duration for the route. Cannot be more than the request timeout")
+  backendrequest?: string;
 
-  @doc("The idle connection timeout in duration for the route. Defaults to 1 hour.")
-  idleConnection?: string;
+  
 }
 ```
 
