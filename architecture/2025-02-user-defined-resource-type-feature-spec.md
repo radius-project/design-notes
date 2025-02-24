@@ -59,11 +59,7 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 **Resource type definition** – A structured description of a resource type including its namespace, name, API version, and OpenAPI-based schema
 
-**Resource provider** – A service with an associated API which manages the lifecycle of resources. Today, Radius ships with the `Application.Core` resource provider which manages the creation and deletion of core resource types locally, in Azure, and in AWS. User-defined resource types will offer a new resource provider which leverages recipes to create and delete resources.
-
-> [!WARNING]
->
-> As Radius has evolved, the concept of a resource provider has gotten less precise. It is clear for users that the `Application.Core` resource provider manages core resource types. With portable resource types and recipes, it is slightly less clear. However, once Radius adds user-defined resource types, the resource provider concept is semantically confusing since anything can be a resource provider. Work should be performed to clarify and simplify what exactly a resource provider is and is not and what functions it performs. 
+**Resource provider** – A service with an associated API which manages the lifecycle of resources. Today, Radius ships with the `Application.Core` resource provider which manages the creation and deletion of core resource types locally, in Azure, and in AWS. Now that Radius has user-defined resource types, the resource provider concept is less clear for users. Work should be performed to clarify and simplify what exactly a resource provider is and is not and what functions it performs. 
 
 **Recipe** – A Terraform configuration or Bicep template which creates or deletes a resource type within an environment
 
@@ -298,7 +294,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
         connection-string: {
           type: 'string'
           readOnly: true
-+          connected-resource-env-var: POSTGRESQL_CONNECTION_STRING
++          connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
         }
         // Output property set by the recipe
         credentials: {
@@ -307,11 +303,11 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
           properties: {
             username: {
               type: 'string'
-+              connected-resource-env-var: POSTGRESQL_USERNAME
++              connected-resource-environment-variable: POSTGRESQL_USERNAME
             }
             password: {
               type: 'string'
-+              connected-resource-env-var: POSTGRESQL_PASSWORD
++              connected-resource-environment-variable: POSTGRESQL_PASSWORD
             }
           }
         }
@@ -388,7 +384,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
         connection-string: {
           type: 'string'
           readOnly: true
-          connected-resource-env-var: POSTGRESQL_CONNECTION_STRING
+          connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
 +          description: 'Fully qualified string to connect to the resource'
         }
         // Output property set by the recipe
@@ -399,11 +395,11 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
             username: {
               type: 'string'
 +              description: 'Username for the database'
-              connected-resource-env-var: POSTGRESQL_USERNAME
+              connected-resource-environment-variable: POSTGRESQL_USERNAME
             }
             password: {
               type: 'string'
-              connected-resource-env-var: POSTGRESQL_PASSWORD
+              connected-resource-environment-variable: POSTGRESQL_PASSWORD
 +              description: 'Password for the database user'
             }
           }
@@ -640,7 +636,7 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
         connection-string: {
           type: 'string'
           description: 'The connection string to the external service'
-          connected-resource-env-var: EXTERNAL_SERVICE_CONNECTION_STRING
+          connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
         }
         credentials: {
           type: 'object'
@@ -648,12 +644,12 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
             username: {
               type: 'string'
               description: 'Username for the external service'
-              connected-resource-env-var: EXTERNAL_SERVICE_USERNAME
+              connected-resource-environment-variable: EXTERNAL_SERVICE_USERNAME
             }
             password: {
               type: 'string'
               description: 'Password for the external service user'
-              connected-resource-env-var: EXTERNAL_SERVICE_PASSSWORD
+              connected-resource-environment-variable: EXTERNAL_SERVICE_PASSSWORD
             }
           }
       }
@@ -1065,7 +1061,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
           type: 'string'
           readOnly: true
           description: 'Fully qualified string to connect to the resource'
-          connected-resource-env-var: POSTGRESQL_CONNECTION_STRING
+          connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
         }
         credentials: {
           type: 'object'
@@ -1074,12 +1070,12 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
             username: {
               type: 'string'
               description: 'Username for the database'
-              connected-resource-env-var: POSTGRESQL_USERNAME
+              connected-resource-environment-variable: POSTGRESQL_USERNAME
             }
             password: {
               type: 'string'
               description: 'Password for the database user'
-              connected-resource-env-var: POSTGRESQL_PASSWORD
+              connected-resource-environment-variable: POSTGRESQL_PASSWORD
             }
           }
         }
@@ -1176,7 +1172,7 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
         connection-string: {
           type: 'string'
           description: 'The connection string to the external service'
-          connected-resource-env-var: EXTERNAL_SERVICE_CONNECTION_STRING
+          connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
         }
         credentials: {
           type: 'object'
@@ -1184,12 +1180,12 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
             username: {
               type: 'string'
               description: 'Username for the external service'
-              connected-resource-env-var: EXTERNAL_SERVICE_USERNAME
+              connected-resource-environment-variable: EXTERNAL_SERVICE_USERNAME
             }
             password: {
               type: 'string'
               description: 'Password for the external service user'
-              connected-resource-env-var: EXTERNAL_SERVICE_PASSSWORD
+              connected-resource-environment-variable: EXTERNAL_SERVICE_PASSSWORD
             }
           }
       }
