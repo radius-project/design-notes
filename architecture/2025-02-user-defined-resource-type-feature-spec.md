@@ -4,9 +4,9 @@
 
 ## Summary
 
-Radius is a core component of internal developer platforms for organizations building cloud-native applications. It enables developers to model their application using portable resource types pre-defined within Radius and enables platform engineers to control the deployment of these resources within the environment they specify. Today, platform engineers can customize these system-defined types by exposing parameters for developers to specify or by building custom resource types using the `Applications.Core/extenders` resource type. However, these customization methods are insufficient for a mature developer platform within a sophisticated organization. 
+Radius is a core component of internal developer platforms for organizations building cloud-native applications. It enables developers to model their application using portable resource types pre-defined within Radius and enables platform engineers to control the deployment of these resources within the environment they specify. Today, Radius includes core resource types such as containers, gateways, secrets, and volumes as well as portable resource types such as MongoDB and Redis. Core resource types are considered foundational and cannot be customized. Radius can be customized by platform engineers by exposing parameters on portable resource types or allowing developers to use the `Applications.Core/extenders` resource type. However, these customization methods are insufficient for a mature developer platform within a sophisticated organization. 
 
-This document details the requirements and user experience for fully customizable user-defined resource types for Radius. User-defined resource types empower platform engineers to extend Radius to meet their organization's unique requirements and enable their developers to model their applications using organization-specific resource types while supporting all the capabilities of Radius. 
+This document details the requirements and user experience for user-defined resource types for Radius. User-defined resource types empower platform engineers to extend Radius to meet their organization's unique requirements and enable their developers to model their applications using organization-specific resource types while supporting all the capabilities of Radius. 
 
 ### **Vision** 
 
@@ -53,29 +53,29 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 ## Definition of Terms
 
-**Resource** – An abstraction representing an application, application component, or cloud resource
+**Resource** – An abstraction representing an application, application component, cloud resource, or Radius configuration item
 
-**Resource type** – The type for a resource which includes the name, an API schema, and version and developer documentation
+**Resource type** – The type for a resource which includes the name, namespace, and set of properties
 
 **Resource type definition** – A structured description of a resource type including its namespace, name, API version, and OpenAPI-based schema
 
-**Core resource types** – Primitive resource types which other resource types can build on; includes application, environment, container, gateway, secrets, and volumes
+**Resource provider** – A service with an associated API which manages the lifecycle of resources. Today, Radius ships with the `Application.Core` resource provider which manages the creation and deletion of core resource types locally, in Azure, and in AWS. User-defined resource types will offer a new resource provider which leverages recipes to create and delete resources.
 
-**User-defined resource type** – All resource types which are not core resource types
+> [!WARNING]
+>
+> As Radius has evolved, the concept of a resource provider has gotten less precise. It is clear for users that the `Application.Core` resource provider manages core resource types. With portable resource types and recipes, it is slightly less clear. However, once Radius adds user-defined resource types, the resource provider concept is semantically confusing since anything can be a resource provider. Work should be performed to clarify and simplify what exactly a resource provider is and is not and what functions it performs. 
 
-**Sample resource types** – Previously referred to as portable resource types; resource types which ship with Radius as examples of user-defined resource types; includes SQL Server, MongoDB, Redis, RabbitMQ, and Dapr and their respective recipes
+**Recipe** – A Terraform configuration or Bicep template which creates or deletes a resource type within an environment
+
+**Core resource types** – Foundational resource types which Radius has built-in logic for creating and deleting and which other resource types can be built upon; includes application, container, gateway, secrets, and volumes; the `Application.Core` resource provider manages these resource types
+
+**Portable resource types** – Resource types which are pre-defined in Radius but rely on recipes to be deployed
+
+**User-defined resource types** – A custom resource with a name, namespace, and set of properties
 
 **Resource type catalog** – The entire collection of user-defined resource types in a Radius tenant; may include multiple namespaces and resource types
 
 **Resource type namespace** – A logical grouping of resource types; resource type names are unique within a namespace
-
-**Resource provider** – A technical term used only in the implementation of Radius; adopted from Azure resource manager which orchestrates resource lifecycle events with services which actually provide resources (e.g. Azure VMs) whereas Radius user-defined resource types do not have a resource provider; existing references of resource providers in the UI are most likely referring to the resource type namespace
-
-> [!WARNING]
->
-> The term resource provider in the context of Radius is semantically confusing to users. A user-defined resource type inherently will never have a resource provider since the user-defined resource type is built on top of other resource providers (such as Azure VMs). Resource providers will remain in the implementation of Radius but not in the UI.
-
-**Recipe** – A Terraform configuration or Bicep template which deploys a resource type within an environment
 
 **Recipe manifest** –  A file containing a collection of resource type to recipe mappings; the mapping includes the location (but not the contents) of the Terraform configuration or Bicep template
 
@@ -99,13 +99,13 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 ### User Story 1 – Creating a basic resource type
 
-As a platform engineer, I need to create a resource type in Radius. I want to define typed parameters for my developers to use in their application definitions and include documentation and examples.
+As a platform engineer, I need to create a resource type in Radius. I want to define typed properties for my developers to use in their application definitions and include documentation and examples.
 
 **Summary**
 
 The platform engineer will create a resource type in their Radius tenant using the CLI. A basic resource type is a simple OpenAPI schema. More advanced uses such as modeling composite resource types are discussed in future use stories. 
 
-The initial technical design for resource types used YAML. OpenAPI schemas are typically modeled using YAML or JSON and users in the cloud-native space are comfortable with YAML. However, after evaluating more advanced use cases and discussing with users, YAML was determined to be too limiting and only works for this basic use case. Bicep was chosen because it is already used throughout Radius, had features such as string manipulation functions, and built-in support for advanced use cases such as child resources. 
+The initial technical design for resource types used YAML. OpenAPI schemas are typically modeled using YAML, JSON, or TypeSpec and users in the cloud-native space are comfortable with YAML. However, after evaluating more advanced use cases and discussing with users, YAML was determined to be too limiting and only works for basic use cases. Bicep was chosen because it is already used throughout Radius, had features such as string manipulation functions, and built-in support for advanced use cases such as child resources. 
 
 There was early concern about requiring platform engineers to use Bicep given their familiarity is centered on traditional infrastructure as code solutions, namely Terraform. However, feedback from users was that they would prefer to use Bicep because of the additional capabilities it provides, the limitations of using YAML for complex resource types, and the overall ease of use of Bicep.
 
@@ -120,7 +120,7 @@ There was early concern about requiring platform engineers to use Bicep given th
 ```bash
 # Create the resource type
 rad resource-type create --from-file postgreSQL-resource-type.bicep
-Creating resource type MyCompany.data/postgreSQL
+Creating resource type MyCompany.Data/postgreSQL
 The resource type MyCompany.Data/postgreSQL has been created
 ```
 
@@ -158,7 +158,7 @@ The operation fails and informs the user interactively if:
 
 1. The resource type already exists
 2. The resource type definition does not properly compile into a `System.Resources/resourceTypes` resource
-3. The API does is in conformance with the OpenAPI v3 specification
+3. The API is not in conformance with the OpenAPI v3 specification
 4. The user does not have permission to perform the create action on `System.Resources/resourceProviders`
 
 > [!NOTE]
@@ -167,7 +167,7 @@ The operation fails and informs the user interactively if:
 
 ### User Story 2 – Setting Properties
 
-As a platform engineer, as I am authoring a resource type, I need to include required and optional input parameters. I also want to include output parameters which will be set by my recipe. 
+As a platform engineer, as I am authoring a resource type, I need to include required and optional input properties. I also want to include output properties which will be set by my recipe. 
 
 **Summary**
 
@@ -271,7 +271,7 @@ The environment variables set specified by the developer are set in the containe
 
 **User Experience 2 – Automatically Injected by platform engineer** 
 
-The platform engineer can specify default environment variables which will automatically be injected into a container when a connection is established. This is similar to existing functionality for portable resource types in Radius today (see the [Redis type](https://docs.radapp.io/reference/resource-schema/cache/redis/#environment-variables-for-connections) for example). Note that user experience 1 and 2 can be used side by side.
+The platform engineer can specify default environment variables which will automatically be injected into a connected resource (only a container today) when a connection is established. This is similar to existing functionality for portable resource types in Radius today (see the [Redis type](https://docs.radapp.io/reference/resource-schema/cache/redis/#environment-variables-for-connections) for example). Note that user experience 1 and 2 can be used side by side.
 
 **`postgreSQL-resource-type.bicep`**:
 
@@ -298,7 +298,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
         connection-string: {
           type: 'string'
           readOnly: true
-+          env-variable: POSTGRESQL_CONNECTION_STRING
++          connected-resource-env-var: POSTGRESQL_CONNECTION_STRING
         }
         // Output property set by the recipe
         credentials: {
@@ -307,11 +307,11 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
           properties: {
             username: {
               type: 'string'
-+              env-variable: POSTGRESQL_USERNAME
++              connected-resource-env-var: POSTGRESQL_USERNAME
             }
             password: {
               type: 'string'
-+              env-variable: POSTGRESQL_PASSWORD
++              connected-resource-env-var: POSTGRESQL_PASSWORD
             }
           }
         }
@@ -388,7 +388,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
         connection-string: {
           type: 'string'
           readOnly: true
-          env-variable: POSTGRESQL_CONNECTION_STRING
+          connected-resource-env-var: POSTGRESQL_CONNECTION_STRING
 +          description: 'Fully qualified string to connect to the resource'
         }
         // Output property set by the recipe
@@ -399,11 +399,11 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
             username: {
               type: 'string'
 +              description: 'Username for the database'
-              env-variable: POSTGRESQL_USERNAME
+              connected-resource-env-var: POSTGRESQL_USERNAME
             }
             password: {
               type: 'string'
-              env-variable: POSTGRESQL_PASSWORD
+              connected-resource-env-var: POSTGRESQL_PASSWORD
 +              description: 'Password for the database user'
             }
           }
@@ -415,7 +415,9 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 }
 ```
 
-The description property on the resource type should be at least 2 KB, or approximately one page. Properties can be smaller.
+> [!NOTE]
+>
+> During implementation, the description property on the resource type should be at least 2 KB, or approximately one page. Properties can be smaller.
 
 **User Experience 1 – Command Line**
 
@@ -477,7 +479,7 @@ READ-ONLY PROPERTIES
   - credentials.username (string) The username for the database
   - credentials.password (string) The password for the database user
 
-ENVIRONMENT VARIABLES
+CONNECTED CONTAINER ENVIRONMENT VARIABLES
   - POSTGRESQL_CONNECTION_STRING (connection-string)
   - POSTGRESQL_USERNAME (credentials.username)
   - POSTGRESQL_PASSWORD (credentials.password)
@@ -513,10 +515,6 @@ rad recipe register postgreSQL \
 Registering recipe for MyCompany.Data/postgreSQL
 The recipe for MyCompany.Data/postgreSQL is registered in the my-env environment
 ```
-
-> [!IMPORTANT]
->
-> See Other Changes for changes related to the `rad recipe register` command. 
 
 **`postgreSQL.tf`**
 
@@ -573,16 +571,20 @@ output "connection-string" {
   value = "${hostname}:${port}/${database_name}"
 }
 
-output "credentials.username" {
+output "credentials-username" {
   value = "${username}"
 }
 
-output "credentials.password" {
+output "credentials-password" {
   value = "${password_secret}"
 }
 ```
 
- **Result**
+> [!NOTE]
+>
+> Terraform outputs can only contain letters, digits, underscores, and hyphens. The period in the nested property `credentials.username` is replaced with a hyphen here as an example.  
+
+**Result**
 
 1. Radius confirms the Terraform configuration file is accessible
 1. Recipe is registered in the environment
@@ -638,7 +640,7 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
         connection-string: {
           type: 'string'
           description: 'The connection string to the external service'
-          env-variable: EXTERNAL_SERVICE_CONNECTION_STRING
+          connected-resource-env-var: EXTERNAL_SERVICE_CONNECTION_STRING
         }
         credentials: {
           type: 'object'
@@ -646,12 +648,12 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
             username: {
               type: 'string'
               description: 'Username for the external service'
-              env-variable: EXTERNAL_SERVICE_USERNAME
+              connected-resource-env-var: EXTERNAL_SERVICE_USERNAME
             }
             password: {
               type: 'string'
               description: 'Password for the external service user'
-              env-variable: EXTERNAL_SERVICE_PASSSWORD
+              connected-resource-env-var: EXTERNAL_SERVICE_PASSSWORD
             }
           }
       }
@@ -867,10 +869,6 @@ Prior to deciding to remove the `extender` resource type, we considered:
 
 Both of these were excluded because user-defined resource types are the path forward and because no users are using the `extender` resource type in production today.
 
-### `rad recipe register` Arguments
-
-The arguments for `rad recipe` use the term template to refer to the recipe. These include `--template-kind`, `--template-path`, `--template-version`. Template is a Bicep-specific and Azure-specific term (HashiCorp refers to `.tf` files as configuration files). Since the majority of Radius users will be using Terraform or a combination of Terraform and other IaC solutions for their recipes, these arguments should be renamed to be semantically correct: `--recipe-kind`, `--recipe-location`, `--recipe-version`. 
-
 ## **Feature Summary** 
 
 This does not include Day 2 or developer workstation.
@@ -880,27 +878,27 @@ This does not include Day 2 or developer workstation.
 | p0 | XL | Create a resource type with a simple API defined in YAML |
 | p0 | M | Ability to register recipes for user-defined resource types |
 | p0 | M | Recipe context is enriched with the resource type's properties and can be referenced in Terraform |
-| p1 | S | `allowRecipes: false` option for resource types to represent external resources |
 | p1 | M | Read-only properties are automatically set based on Terraform outputs |
 | p1 | S | Add properties to a resource type marked as required, optional, or read-only |
 | p1 | Test only | Creating resources in an environment not tied to an application |
 | p1 | Test only | Referencing a shared resource in an environment using the `existing` keyword |
-|    ||————— First application launch cut line —————|
+|    ||——— Private preview release for early users ———|
 | p1 |XL|Create a resource type defined in Bicep|
 | p1 | L | Child resources |
 | p1 | L | Child resources appear in application graph and are denoted as a child resource |
+|  |  | ——— Included in main release ——— |
+| p1 | S | `allowRecipes: false` option for resource types to represent external resources |
 | p2 | M | `rad resource-type list` to list all resource types and `rad resource-type list --namespace` to filter by namespace |
 | p2 | S | Ability to add free form text as metadata on a resource type and properties |
 | p2 | S | `rad resource-type show` outputs rich detail including metadata, properties, and environment variables |
 | p2 | M | Environment variables on properties in the resource type definition are automatically created in connected containers |
 | p2 | Test only | Conditional resources |
-|  |  | ————— Minimum viable product ————— |
 | p2 | M | Migrate portable resource types to sample repository |
 | p2 | M | Remove `extenders` |
-| p2 | S | Rename `rad recipe register` arguments to be semantically correct |
+|  |  | ————— Minimum viable product ————— |
 | p3 | L | Developers can browse resource catalog in the Radius dashboard |
 | p3 | S | Radius confirms Terraform file is accessible by Radius when registering a recipe |
-| p4 | S | Data validation of parameter values |
+| p4 | S | Data validation of property values |
 | p4 | S | Add properties to a resource type with a default value |
 | p4 | ? | LLM-based application definition generation |
 
@@ -921,8 +919,8 @@ Two additional feature summaries are in development. All future work is not abov
 
 * **Modifying metadata** – As a platform engineer, I need to update the developer documentation for a resource type. 
 
-* **Modifying parameters** – As a platform engineer, I need to modify an existing parameter on a resource type. I may want to change whether a parameter is required, add a value to an enum, or change the parameter type. 
-* **Adding or deleting parameters** – As a platform engineer, I need to add or delete a parameter on a resource type. 
+* **Modifying properties** – As a platform engineer, I need to modify an existing property on a resource type. I may want to change whether a property is required, add a value to an enum, or change the property type. 
+* **Adding or deleting properties** – As a platform engineer, I need to add or delete a property on a resource type. 
 
 - **Rolling out minor software updates to new resources** – As a platform engineer, I need newly created resources to use an updated software version. This is a a minor update and the developer should not have to concern themselves with this change. 
 - **Rolling out minor software updates to existing resources** – As a platform engineer, I need a mechanism to update existing resources with a minor software update. Dependent upon the criticality of the application, for some applications I need to deploy updates without the developer’s involvement. For more critical applications, I will have the developer control when the update is applied. 
@@ -1067,7 +1065,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
           type: 'string'
           readOnly: true
           description: 'Fully qualified string to connect to the resource'
-          env-variable: POSTGRESQL_CONNECTION_STRING
+          connected-resource-env-var: POSTGRESQL_CONNECTION_STRING
         }
         credentials: {
           type: 'object'
@@ -1076,18 +1074,82 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
             username: {
               type: 'string'
               description: 'Username for the database'
-              env-variable: POSTGRESQL_USERNAME
+              connected-resource-env-var: POSTGRESQL_USERNAME
             }
             password: {
               type: 'string'
               description: 'Password for the database user'
-              env-variable: POSTGRESQL_PASSWORD
+              connected-resource-env-var: POSTGRESQL_PASSWORD
             }
           }
         }
       required: ['size']
     }
   }
+}
+```
+
+**`postgreSQL.tf`**
+
+```json
+terraform {
+  // Providers and other Terraform configurations
+  ...
+}
+
+variable "context" {
+  description = "This variable contains Radius recipe context."
+  type = any
+}
+
+// The required property from the resource type definition
+variable "size" {
+  description = "The size of database to provision"
+  type = string
+}
+
+// Map t-shirt sizes to CPU and memory requirements
+locals = {
+  cpu = {
+    var.resource.size == "S" ? 0.5 :
+    var.resource.size == 'M' ? 1.0 :
+    var.resource.size == 'L' ? 2.0 :
+    var.resource.size == 'XL' ? 4.0:
+    0.5 // Default
+  }
+  memory = {
+    var.resource.size == "S" ? 2 :
+    var.resource.size == 'M' ? 4 :
+    var.resource.size == 'L' ? 8 :
+    var.resource.size == 'XL' ? 16:
+    2 // Default
+  }  
+}
+
+// Provision database on the Kubernetes cluster
+// var.context values are set by Radius
+module "postgresql" {
+  source = "ballj/postgresql/kubernetes"
+  version = "~> 1.2"
+  namespace = var.context.runtime.kubernetes.namespace
+  object_prefix = var.context.application.name
+  database_name = var.context.resource.name
+  resources_requests_cpu = locals.cpu
+  resources_requests_memory = locals.memory
+  }
+}
+
+// Create outputs for each read-only resource type property
+output "connection-string" {
+  value = "${hostname}:${port}/${database_name}"
+}
+
+output "credentials-username" {
+  value = "${username}"
+}
+
+output "credentials-password" {
+  value = "${password_secret}"
 }
 ```
 
@@ -1114,7 +1176,7 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
         connection-string: {
           type: 'string'
           description: 'The connection string to the external service'
-          env-variable: EXTERNAL_SERVICE_CONNECTION_STRING
+          connected-resource-env-var: EXTERNAL_SERVICE_CONNECTION_STRING
         }
         credentials: {
           type: 'object'
@@ -1122,12 +1184,12 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
             username: {
               type: 'string'
               description: 'Username for the external service'
-              env-variable: EXTERNAL_SERVICE_USERNAME
+              connected-resource-env-var: EXTERNAL_SERVICE_USERNAME
             }
             password: {
               type: 'string'
               description: 'Password for the external service user'
-              env-variable: EXTERNAL_SERVICE_PASSSWORD
+              connected-resource-env-var: EXTERNAL_SERVICE_PASSSWORD
             }
           }
       }
