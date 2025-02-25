@@ -49,7 +49,7 @@ This document summarizes the key decisions that Radius makes on what constitutes
 
 ## Objectives
 
-https://dev.azure.com/azure-octo/Incubations/_workitems/edit/13731
+https://github.com/radius-project/radius/issues/6688
 
 ### Guiding principles
 
