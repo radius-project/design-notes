@@ -300,13 +300,13 @@ recipe: {
       }
     }
 ```
-- `name` is the anme of recipe for the type which should be used in this  deployment.
+- `name` is the name of recipe for the type which should be used in this  deployment.
 - `parameters` get passed to recipe. 
 
 However, we are choosing to have only the default recipe for each UDT type. 
 We are also choosing to pass all the properties in schema to recipe.
 
-If this is finalized, then we do not need recipe contruct in schema for UDT. 
+If this is finalized, then we do not need recipe construct in schema for UDT. 
 However, we have to find ways to "mark" a type as UDT or revisit/ reimplement existing design.
 
 ### Implementation Details
@@ -332,7 +332,6 @@ N/A
 
 
 ## Development plan
-
 
 ## References
 https://github.com/readmeio/oas-examples/tree/main/3.0/yaml
