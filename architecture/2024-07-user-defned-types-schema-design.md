@@ -74,9 +74,10 @@ Users author a manifest like the following to defind a user-defined resource typ
 **Sample Input:**
 
 ```yaml
-name: MyCompany.Resources
+namespace: MyCompany.Resources
 types:
   postgresDatabases:
+    description: A postgreSQL database
     apiVersions:
       '2025-01-01-preview':
         schema: 
@@ -84,37 +85,47 @@ types:
           properties:
             size:
               type: string
-              description: The size of database to provision
+              description: |
+                The size of database to provision:
+                  - 'S': 0.5 vCPU, 2 GiB memory, 20 GiB storage
+                  - 'M': 1 vCPU, 4 GiB memory, 40 GiB storage
+                  - 'L': 2 vCPU, 8 GiB memory, 60 GiB storage
+                  - 'XL': 4 vCPU, 16 GiB memory, 100 GiB storage
               enum:
-              - S
-              - M
-              - L
-              - XL
-            status:
+                - S
+                - M
+                - L
+                - XL
+            logging-verbosity:
+              type: string
+              description: >
+                The logging level for the database:
+                  - 'TERSE': Not recommended; does not provide guidance on what to do about an error
+                  - 'DEFAULT': Recommended level
+                  - 'VERBOSE': Use only if you plan to actually look up the Postgres source code
+              enum:
+                - TERSE
+                - DEFAULT
+                - VERBOSE
+            connection-string:
+              type: string
+              readOnly: true
+              description: 'Fully qualified string to connect to the resource'
+              env-variable: POSTGRESQL_CONNECTION_STRING
+            credentials:
               type: object
               readOnly: true
-              properties: 
-                binding:
-                  type: 'object'
-                  properties:
-                    hostname: 
-                      type: string
-                    username:
-                      type: string
-                    secret:
-                      type: string
-                      schema:
-                        type: 'object'
-                        properties:
-                          password:
-                            type: 'string'
-                recipe: 
-                  $ref: 'https://radapp.io/schemas/v1#RecipeStatus'
-                  
+              properties:
+                username:
+                  type: string
+                  description: 'Username for the database'
+                  env-variable: POSTGRESQL_USERNAME
+                password:
+                  type: string
+                  description: 'Password for the database user'
+                  env-variable: POSTGRESQL_PASSWORD
           required:
-          - size
-
-    capabilities: ["SupportsRecipes"]
+            - size
 ```
 **Sample Output:**
 
@@ -162,6 +173,7 @@ We should implement validations on both client and server since rad cli need not
 
 We expect users will provide the structural schema for new resource types and describe it use using [Open API v3](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#schema-object). Structural schema ensures explicit type definition for properties and enforces strict validation rules.
 
+
 ### Architecture Diagram
 
 NA 
@@ -176,7 +188,9 @@ Each of the property is a user defined property of the UDT. It has a type and op
 
 * scalar
 
-We support all of the scalars supported by OpenAPI. 
+We support all of the scalars supported by OpenAPI as documented in https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types. 
+
+
 https://github.com/readmeio/oas-examples/blob/a331c65623f795af68602dd6f02e116f905d9297/3.0/yaml/schema-types.yaml details several examples covering the options available.
   
 ```
@@ -250,9 +264,7 @@ Arrays must specify a type for `item`.
 
 # References
 
-Schemas are allowed to reference reusable built-in schemas of Radius using the `$ref` construct of OpenAPI. 
-
-The example above uses `$ref: 'https://radapp.io/schemas/v1#RecipeStatus'` to reference the schema for a "recipe status". This aids with consistency and reduces boilerplate for users. 
+Schemas are allowed to reference reusable built-in schemas of Radius using the `$ref` construct of OpenAPI. Example:`$ref: 'https://radapp.io/schemas/v1#RecipeStatus'` can reference the schema for a "recipe status". This aids with consistency and reduces boilerplate for users. 
 
 The exact URL and set of types that can be referenced is TBD.
 
@@ -273,6 +285,29 @@ All the limitations here are because at this point, we want to limit complexity 
 
 3. Schemas are not allowed to use `$ref` to reference other than what we provide in Radius. This reduces concept count and simplifies our tooling. We can reconsider this based on feedback. This also prevents the definition of recursive types and circular references. 
 
+4.  readOnly: true => user cant set this property, its available as output
+
+
+# Radius specific schema attributes:
+
+Typically, "recipes" block provides details on recipe used by a specific type. 
+Example:
+```
+recipe: {
+      name: 'default'
+      parameters: {
+        redis_cache_name: redisCacheName
+      }
+    }
+```
+- `name` is the anme of recipe for the type which should be used in this  deployment.
+- `parameters` get passed to recipe. 
+
+However, we are choosing to have only the default recipe for each UDT type. 
+We are also choosing to pass all the properties in schema to recipe.
+
+If this is finalized, then we do not need recipe contruct in schema for UDT. 
+However, we have to find ways to "mark" a type as UDT or revisit/ reimplement existing design.
 
 ### Implementation Details
 
