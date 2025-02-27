@@ -176,7 +176,7 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
 
 ### Step 2: Define a Radius Application for serverless
 
-The user defines a new Radius Application for serverless compute by creating a new Application definition file (e.g. `app.bicep`) and specifying the necessary settings for the container runtime platform. Note that the application definitions are container runtime platform-agnostic, thus this same application definition can be deployed to both Kubernetes and serverless compute platforms.
+The user defines a new Radius Application by creating a new Application definition file (e.g. `app.bicep`) and uses this same application definition to deploy to an Environment with either Kubernetes or serverless as its underlying compute platform. Via the `extension` property in the Application definition, the user can optionally configure custom settings that are specific to the container runtime platform and get applied only when deploying to that platform. For any `extension` properties that are not applicable to the targeted deployment container platform, they will be ignored.
 
 ```diff
 @description('The environment ID of your Radius Application. Set automatically by the rad CLI.')
@@ -205,7 +205,7 @@ resource app 'Applications.Core/applications@2023-10-01-preview' = {
 
 ### Step 3: Define a Radius Container for serverless
 
-The user defines a Radius Container within the application definition (e.g. `app.bicep`) and specifies relevant container properties, such as `extensions` or `runtimes` to set platform specific configurations. Note that the container definitions are container runtime platform-agnostic, thus this same container definition can be deployed to both Kubernetes and serverless compute platforms if common functionalities across compute platforms are used.
+The user defines a Radius Container within the application definition (e.g. `app.bicep`) including all the platform-agnostic [`container` properties](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#container), e.g. `image`, `env`, etc. and deploy the application container to the serverless environment. The user may also set platform specific configurations via the `extensions` or `runtimes` properties, but any properties that are not applicable to the targeted compute platform will be ignored at deploy time. Note that the container definitions should be container runtime platform-agnostic, thus this same container definition can be deployed to both Kubernetes and serverless compute platforms.
 
 ```diff
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
@@ -301,7 +301,7 @@ resource db 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
 
 > Note: This step is only applicable if the serverless compute platform has native support for Dapr.
 
-The user defines a Dapr sidecar in the container definition and connects it to a Dapr resource.
+The user defines a Dapr sidecar in the container definition and connects it to a Dapr resource. At deploy time, Radius will check if the serverless compute platform has native support for Dapr and if so, deploy the Dapr sidecar alongside the application containers and connect it to the Dapr resource.
 
 ```diff
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
