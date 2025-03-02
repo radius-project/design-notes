@@ -970,3 +970,5 @@ pdf
 pdfs
 Knative
 genericized
+Istio
+Flux
