@@ -935,3 +935,5 @@ GitRepository
 pyspelling
 Pyspelling
 CNCF
+Istio
+Flux
