@@ -908,3 +908,9 @@ SecOps
 kube
 workspace's
 Authorizer
+idleConnection
+timeoutPolicy
+httpproxy
+apis
+backendrequest
+sigs
