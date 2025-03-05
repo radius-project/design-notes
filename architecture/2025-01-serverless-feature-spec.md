@@ -69,16 +69,20 @@ Users can specify Radius [application](https://docs.radapp.io/reference/resource
 Allow for Radius abstraction of a [container](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/) resource that can be deployed to serverless compute platforms. Must be sure to include serverless platform specific configurations via [connections](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#connections), [extensions](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#extensions), and routing to other resources via [gateways](https://docs.radapp.io/reference/resource-schema/core-schema/gateway/).
 > One future idea to explore is whether we can we build extensibility via UDT and Recipes - i.e. allow Recipes to deploy predefined Container types, which themselves can be serverless containers. In other words, developers can deploy a UDT container resource using a Recipe such that all the user has to do when declaring a container is specifying the bare minimum (e.g. name, application) and let the predefined Recipe handle the rest. This will require the implementation of UDTs (e.g. defining specific types of containers as individual resource types).
 
-### Scenario 2: "Punch-through" to platform-specific features and incremental adoption of Radius into existing serverless applications
+### Scenario 2: Define and create core resources (i.e. Gateway, Secret Store, Extender) for use in serverless containers
+<!-- One or two sentence summary -->
+Enable the ability to define and create core Radius resources (i.e. Gateway, Secret Store, Extender) for use in serverless containers. Radius would leverage the solution available on the hosting platform to create and manage these resources. For example, if the serverless compute platform has a built-in secret store, Radius would use that instead of creating its own. This would allow for a consistent experience across different serverless compute platforms while still leveraging the unique features of each platform.
+
+### Scenario 3: "Punch-through" to platform-specific features and incremental adoption of Radius into existing serverless applications
 <!-- One or two sentence summary -->
 Allow for platform-specific features to be used in Radius applications via abstraction "punch-through" mechanisms, similar to how Kubernetes-specific features are supported in Radius via [base YAML or PodSpec patching](https://docs.radapp.io/guides/author-apps/containers/overview/#kubernetes) functionalities that is achieved through the [`runtimes`](https://docs.radapp.io/reference/resource-schema/core-schema/container-schema/#runtimes) property in the container definition. For example, ACI has a confidential containers offering that may not be common across serverless platforms, but Radius should allow for this feature to be used in ACI containers.
 > Stretch goal: Ability to add Radius to existing serverless applications without requiring a full rewrite of the application, similar to how Radius can be added to existing Kubernetes applications via [Kubernetes manifest](https://docs.radapp.io/tutorials/add-radius/) or [Helm chart](https://docs.radapp.io/tutorials/helm/) annotations. Note: The Kubernetes/Helm support works because Kubernetes itself is extensible. Other systems like ACI, ECS, ACA may not be extensible in the same way but we should explore if there are options to make this work.
 
-### Scenario 3: User interfaces for serverless--Radius API, CLI, Dashboard
+### Scenario 4: User interfaces for serverless--Radius API, CLI, Dashboard
 <!-- One or two sentence summary -->
 Enable deployment and management of serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
 
-### Scenario 4: Support for Dapr resources
+### Scenario 5: Support for Dapr resources
 <!-- One or two sentence summary -->
 Enable the ability to define and run Dapr resources in a Radius application definition file (e.g. `app.bicep`) if there is native support for Dapr built into the serverless compute platform. A user would declare a Dapr sidecar in the serverless container definition and connect it to a Dapr resource, much like how it can be done today in [Kubernetes containers](https://docs.radapp.io/guides/author-apps/dapr/how-to-dapr-building-block/).
 
@@ -252,9 +256,9 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 > - ACI schema reference: https://learn.microsoft.com/en-us/azure/container-instances/container-instances-reference-yaml
 > - ACI Container Group Profiles: https://learn.microsoft.com/en-us/azure/container-instances/container-instance-ngroups/container-instances-about-ngroups#container-group-profile-cg-profile
 
-### Step 4: Define and connect other resources to the serverless container
+### Step 4: Define and connect other portable resources to the serverless container
 
-The user defines other resources (e.g. databases, message queues, etc.) that the container can connect to. These resources can be defined in the same application definition file (e.g. `app.bicep`) and connected to the container using the `connections` property for serverless containers just as they can be today for Kubernetes containers.
+The user defines other portable resources (e.g. databases, message queues, etc.) that the container can connect to. These resources can be defined in the same application definition file (e.g. `app.bicep`) and connected to the container using the `connections` property for serverless containers just as they can be today for Kubernetes containers.
 
 ```diff
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
@@ -297,7 +301,128 @@ resource db 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
 }
 ```
 
-### Step 5: Define a Dapr sidecar for the serverless container and connect it to a Dapr resource
+> Note: The user should also be able to define `connections` between containers to enable service-to-service communication in the serverless application (see [service-to-service communication](https://docs.radapp.io/guides/author-apps/networking/overview/#service-to-service-communication)).
+
+### Step 5: Define a Radius Gateway for the serverless container
+The user defines an `Applications.Core/gateways` resource for the serverless container in the application definition file (e.g. `app.bicep`) and specifies traffic routing to the root path ("/") to the `demo` container, which can be hosted on serverless compute. The user may also optionally specify TLS Termination and SSL Passthrough in the Gateway.
+
+```diff
+resource gateway 'Applications.Core/gateways@2023-10-01-preview' = {
+  name: 'gateway'
+  properties: {
+    application: application
+    routes: [
+      {
+        path: '/'
++       destination: 'http://${demo.name}:3000'
+      }
+    ]
+  }
+}
+```
+
+> Note: For the Kubernetes implementation, Radius installs and configures Contour as the default ingress controller to enable Gateway features. For serverless platforms, we will need to evaluate the default ingress/gateway for each platform and implement it in a way that allows for flexibility in the future to support other ingress/gateway options.
+
+### Step 6: Define a Radius Secret Store for the serverless container
+The user defines a `Applications.Core/secretStores` resource in the `app.bicep` and then deploys it into the serverless environment. Radius leverages the serverless hosting platform's secrets management solution to create and store the secret. The user can then reference the secret store in the application definition file (e.g. `app.bicep`) and use it to store secrets for the serverless container.
+
+```diff
+resource secrets 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'secrets'
+  properties:{
+    application: application
+    type: 'generic'
++   data: {
++    'password': {
++      value: password
++    }
++  }
+  }
+}
+
+resource demo 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'demo'
+  properties: {
+    application: application
+    container: {
+      image: 'ghcr.io/radius-project/samples/demo:latest'
+      ports: {
+        web: {
+          containerPort: 3000
+        }
+      }
+      env:{
++        PASSWORD: {
++          valueFrom: {
++            secretRef: {
++              source: secrets.id
++              key: 'password'
++            }
++          }
++        }
+      }
+    }
+    runtimes: {
++     aci: {
++       // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
++       sku: 'Confidential' // 'Standard', 'Dedicated', etc.
++     }
++     ecs: {
++       // Add AWS ECS-specific properties here to punch-through the Radius abstraction
++     }
++      }
+  }
+}
+```
+
+> Note: "By default, Radius leverages the hosting platform's secrets management solution to create and store the secret. For example, if you are deploying to Kubernetes, the secret store will be created as a Kubernetes Secret." (source: [How To: Create new Secret Store](https://docs.radapp.io/guides/author-apps/secrets/howto-new-secretstore/))
+
+### Step 7: Define a Radius Extender (or UDT) resource for the serverless container
+The user defines a `Applications.Core/extenders` resource in the application definition file (e.g. `app.bicep`) and, if the deployment target is a serverless environment, Radius will enable me to reference properties and values from the Extender to connect to my serverless container. The same would apply to a UDT resource, once that feature is implemented.
+
+```diff
+resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
++ name: 'twilio'
+  properties: {
+    application: application
+    environment: environment
+    recipe: {
++     name: 'twilio'
+    }
+  }
+}
+
+resource demo 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'demo'
+  properties: {
+    application: application
+    container: {
+      image: 'ghcr.io/radius-project/samples/demo:latest'
+      ports: {
+        web: {
+          containerPort: 3000
+        }
+      }
++     env:{
++       TWILIO_ACCOUNT: {
++         value: twilio.listSecrets().authToken
++       }
++     }
+    }
+    runtimes: {
++     aci: {
++       // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
++       sku: 'Confidential' // 'Standard', 'Dedicated', etc.
++     }
++     ecs: {
++       // Add AWS ECS-specific properties here to punch-through the Radius abstraction
++     }
++      }
+  }
+}
+```
+
+### Step 8: Define a Dapr sidecar for the serverless container and connect it to a Dapr resource
 
 > Note: This step is only applicable if the serverless compute platform has native support for Dapr.
 
@@ -374,7 +499,15 @@ Add support for defining serverless compute resources in a Radius Application de
 <!-- One or two sentence summary -->
 Add support for defining serverless container resources for container functionalities that are common across all platforms (e.g. `image`, `env`, `volumes`, etc.) within a Radius application definition file. 
 
-### Feature 4: Punch-through to platform-specific features
+### Feature 4: Model Radius Connections for serverless
+<!-- One or two sentence summary -->
+Add support for defining serverless connections between containers and/or portable resources within a Radius application definition file. Connections should be defined in the same way as they are today for Kubernetes containers, but should also support serverless-specific connections. This includes connections between serverless containers to establish service-to-service communication, as well as connections to other portable resources (e.g. databases, message queues, etc.) that the serverless container can connect to.
+
+### Feature 5: Define and create core resources (i.e. Gateway, Secret Store, Extender) for use in serverless containers
+<!-- One or two sentence summary -->
+Add support for defining and creating core Radius resources (i.e. Gateway, Secret Store, Extender) for use in serverless containers. Radius would leverage the solution available on the hosting platform to create and manage these resources. Connections between serverless containers and these core resources can be specified in the application definition file (e.g. `app.bicep`) and Radius will create the necessary connections at deploy time.
+
+### Feature 6: Punch-through to platform-specific features
 <!-- One or two sentence summary -->
 Add support for platform-specific features for containers via abstraction "punch-through" mechanisms. This will allow users to use platform-specific features, such as confidential containers or spot instances, in Radius applications.
 
@@ -384,10 +517,18 @@ Add support for platform-specific features for containers via abstraction "punch
 
 > For example, in ACI, we would support punch-through via the [Container Group Profiles](https://learn.microsoft.com/en-us/azure/container-instances/container-instance-ngroups/container-instances-about-ngroups#container-group-profile-cg-profile)
 
-### Feature 5: Support for Dapr resources and sidecars
+### Feature 7: User interfaces for serverless--Radius API, CLI, Dashboard
+<!-- One or two sentence summary -->
+Add support for deploying and managing serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
+
+### Feature 8: Support for Dapr resources and sidecars
 <!-- One or two sentence summary -->
 Add support for adding a Dapr sidecar to a Radius container definition and connecting it to a Dapr resource. This will only be applicable if the serverless compute platform has native support for Dapr.
 
-### Feature 6: User interfaces for serverless--Radius API, CLI, Dashboard
-<!-- One or two sentence summary -->
-Add support for deploying and managing serverless compute resources via the existing Radius API and CLI commands. Serverless resources that are modeled in Radius should be available in the App Graph and Dashboard for visualization and management.
+## Design Review Notes
+- [x] Clarify the relationship between compute platform and environment (e.g. is it one-to-one or one-to-many?)
+- [x] Clarify the scope of multi-cluster deployments and how this will work with serverless compute platforms (i.e. users will have to host Radius on Kubernetes, but can deploy to serverless compute platforms)
+- [x] Specify how Radius will handle platform-specific features and how these will be modeled in the Radius application definition file
+- [x] Add more details about defining and creating Gateways for use in serverless platforms
+- [x] Add more details about defining and creating Secrets for use in serverless platforms
+- [x] Add more details about defining and creating Extenders/UDT for use in serverless platforms
