@@ -111,7 +111,7 @@ As an application developer using custom user-defined resources, I cannot specif
 
 [proposed feature] As a developer, I can reference an `Applications.Core/secretStores` in my `Applications.Dapr/*` resource definition so that Radius will use the Radius secret store to manage secrets for use in my Dapr components. I no longer have to create a Dapr secret store and manage the secrets in the Dapr secret store to be able to reference it in my `Applications.Dapr/*` resource.
 
-[future feature] As a developer, I can specify a `Applications.Core/secretStores` in my custom user-defined resource once the [user-defined types](https://github.com/radius-project/design-notes/blob/main/architecture/2024-07-user-defined-types.md) feature is implemented.
+[future feature] As a developer, I can specify a `Applications.Core/secretStores` in my custom user-defined resource once the [user-defined types](https://github.com/radius-project/design-notes/blob/main/architecture/2024-07-user-defined-types.md) feature is implemented. This is tracked in a separate [feature request](https://github.com/radius-project/radius/issues/8736).
 
 ### Detailed User Experience
 
@@ -232,7 +232,7 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 ```
 > Note: the`secrets`, `filePath`, `fileName` properties and default values are just proposals and may be changed during tech design. They should also be optional for the `volumes` property in `Applications.Core/containers` to write the secret into a file on disk/memory with a specified file path and name, with the proposed defaults being `/var/run/secrets/` and `secretfile.txt` respectively.
 
-(c) Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, or `Applications.Dapr/*` resource definition to securely manage secrets for use in their application. Radius then uses the secret to authenticate into the resource at deploy time. The secrets might be referenced in the resources within the `app.bicep` application definition as follows:
+(c) Developer references the `Applications.Core/secretStores` resource in their `Applications.Extenders`, `Applications.Datastores/*`, `Applications.Messaging/*`, or `Applications.Dapr/*` resource definition to securely manage secrets for use in their application. Radius then uses the secret to authenticate into the resource at deploy time, e.g. by injecting the necessary environment variables using the secret values to allow an application container to connect to that resource. The secrets might be referenced in the resources within the `app.bicep` application definition as follows:
 
 **In an extender resource:**
 ```diff
@@ -241,9 +241,8 @@ resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
   properties: {
     application: application
     environment: environment
-    recipe: {
-      name: 'twilio'
-    }
+    resourceProvisioning: 'manual'
+    fromNumber: '222-222-2222'
     secrets: {
 +        password: {
 +          valueFrom: {
@@ -359,16 +358,7 @@ resource customtype 'Applications.Core/udt@2023-10-01-preview' = {
   properties: {
     application: application
     environment: environment
-    env:{
-+        URI: {
-+          valueFrom: {
-+            secretRef: {
-+              source: authcreds.id
-+              key: 'uri'
-+            }
-+          }
-+        }
-      }
+    resourceProvisioning: 'manual'
     secrets: {
 +        password: {
 +          valueFrom: {
@@ -384,7 +374,7 @@ resource customtype 'Applications.Core/udt@2023-10-01-preview' = {
 ```
 > Note: This scenario is a future feature since UDT is not fully implemented yet, nor is its schema finalized. The proposal here is to follow the same `valueFrom` syntax as the `Applications.Core/containers` resource type for referencing Radius Secrets in the `Applications.Core/udt` resource type, but this may change during tech design and implementation.
 
-Step 3: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables, written to a file on a volume and mounted to the container, used as credentials for authentication into the extender, datastore, messaging, or Dapr resource at deploy time, or used in the custom UDT resource at deploy time.
+Step 3: Developer deploys the resources to Radius and the secrets required are either injected into the container as environment variables, written to a file on a volume and mounted to the container, used as credentials for authentication into the extender, datastore, messaging, or Dapr resource at deploy time (e.g. injected as env variables into the container), or used in the custom UDT resource at deploy time.
 
 ## Key investments
 <!-- List the features required to enable this scenario. -->
