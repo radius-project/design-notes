@@ -908,6 +908,8 @@ SecOps
 kube
 workspace's
 Authorizer
+Aditi
+Twilio
 CloudRun
 Fargate
 autoscaling
