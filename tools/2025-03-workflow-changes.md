@@ -176,7 +176,7 @@ Environment variables can be set on developer machines (and stored in `.env` fil
 
 ### Design options considered but not chosen
 
-- Adopt a new automation tool like Just or Task, and deprecate Make. These tools have advantages, but a side-effect of adopting a new tool would likely be the existince of a new tool in our toolbox without the removal of Make, which would increase complexity. Make currently meets our needs for invoking developer automation.
+- Adopt a new automation tool like [Just](https://github.com/casey/just) or [Task](https://taskfile.dev/), and deprecate Make. These tools have advantages, but a side-effect of adopting a new tool would likely be the existince of a new tool in our toolbox without the removal of Make, which would increase complexity. Make currently meets our needs for invoking developer automation.
 - Remove everything from GitHub workflows except the invocation of another tool: GitHub workflows have advantages when setting up the automation environment, e.g. retrieving credentials, cloning repos, configuring runners, installing tools, etc. 
 
 ## Security
