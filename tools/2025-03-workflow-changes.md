@@ -95,7 +95,7 @@ flowchart LR
     Developer --> Reviewer
     %%Reviewer --> Developer
 ```
-_Fig 1: The developer and PR reviewer steps_
+_Fig. 1: The developer and PR reviewer steps_
 ## Design
 
 ### High Level Workflow Design Principles
@@ -123,7 +123,7 @@ flowchart TD
 
     classDef io stroke-dasharray: 5 5
 ```
-_Fig 2: Testable automation that can run from a GitHub workflow or a dev machine_
+_Fig. 2: Testable automation that can run from a GitHub workflow or a dev machine_
 
 #### Workflows can be run on any fork without requiring access to the `radius-project` repos, and without having a Radius GitHub security role.
 
@@ -136,7 +136,7 @@ flowchart LR
     fork --> setupCreds
     setupCreds --> invoke
 ```
-
+_Fig. 3: Running a GitHub workflow on a fork_
 #### Use the GitHub CLI for default security context
 
 On a developer machine, if the dev is logged into the GitHub CLI, the security context is automatically passed to GitHub by the CLI. For any action that is taken in GitHub we should default to using the GH CLI so that this context works locally and within workflows. 
