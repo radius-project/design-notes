@@ -100,6 +100,16 @@ _Fig. 1: The developer and PR reviewer steps_
 
 ### High Level Workflow Design Principles
 
+#### Use GitHub workflows for CI/CD setup and workflow layout
+
+We will use GitHub workflows for these things:
+
+- Identity and Security
+- Test runner setup
+- Control flow, including matrix operations
+
+GitHub workflows will not contain core logic (unless the workflow is very simple).
+
 #### Core logic is debuggable and testable on a developer machine with minimal setup.
 
 ```mermaid
@@ -155,8 +165,6 @@ The use of actions should be limited to setup and cleanup that is unique to GitH
 > NOTE: The above exapmles are also needed on a developer machine, but the Implementation is different.
 
 :warning: When using GitHub actions that are published on other repositories, we are placing our trust in the authors of that repo that they will prevent malicious code from executing. Choose wisely, and consider forking and customizing a GitHub action instead of calling it directly.
-
-Matrix operations are a GitHub workflow feature that allows logic to be run in parallel on multiple runners. Matrix operations will remain in GitHub workflows, but the logic they perform will be runnable on developer machines. We can think of the logic within the matrix as a sub-workflow.
 
 #### Reusable logic exists in custom GitHub actions instead of copy/paste to multiple workflows.
 
