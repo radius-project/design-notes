@@ -160,7 +160,7 @@ Matrix operations are a GitHub workflow feature that allows logic to be run in p
 
 #### Reusable logic exists in custom GitHub actions instead of copy/paste to multiple workflows.
 
-No explanation needed here. Apply the DRY principle (don't repeat yourself).
+Apply the DRY principle (don't repeat yourself).
 
 #### Core logic is runnable from Make commands.
 
@@ -171,6 +171,8 @@ Any core logic that is currently in GitHub workflows will be moved to Make comma
 In some cases, the Make commands invoke scripts. This pattern will continue in order to keep all significant logic isolated to scripts. Simple composite commands should remain within the Make files.
 
 #### Configuration is provided through environment variables.
+
+Environment variables can be set on developer machines (and stored in `.env` files). GitHub workflows will set environment variables during setup steps. Core logic will read the environment variables.
 
 ### Design options considered but not chosen
 
