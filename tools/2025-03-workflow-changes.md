@@ -164,11 +164,11 @@ Apply the DRY principle (don't repeat yourself).
 
 #### Core logic is runnable from Make commands.
 
-Developer automation is provided through Make. Some of the GitHub workflows also use the same Make commands, e.g. `make build` is invoked from GitHub workflows. 
-
 Any core logic that is currently in GitHub workflows will be moved to Make commands that are runnable on a developer machine (with some environment setup).
 
-In some cases, the Make commands invoke scripts. This pattern will continue in order to keep all significant logic isolated to scripts. Simple composite commands should remain within the Make files.
+Developer automation is already provided through Make. Some of the GitHub workflows also use the same Make commands, e.g. `make build` is invoked from GitHub workflows. 
+
+Some of the existing Make commands invoke scripts. This pattern will continue in order to keep all significant logic isolated to scripts because we do not want to move the complexity problem from GitHub workflows into Make. Simple composite commands should remain within the Make files as they are today.
 
 #### Configuration is provided through environment variables.
 
