@@ -212,9 +212,10 @@ Existing workflows will evolve to implement the design principles. For example, 
 
 New GitHub workflows will adhere to the design principles. 
 
-## Open Questions
+## Open Questions and Actions
 
 - Which actions cannot be perfomed by the GitHub CLI? How will identity be provided to them?
 - Provide guidance on which git/gh commands allow a PR reviewer to check out a PR to their own fork.
+- We need a prototype of moderate complexity that implements these principles.
 
 ## Design Review Notes
