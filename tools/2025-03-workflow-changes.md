@@ -164,7 +164,7 @@ The use of actions should be limited to setup and cleanup that is unique to GitH
 
 > NOTE: The above exapmles are also needed on a developer machine, but the Implementation is different.
 
-:warning: When using GitHub actions that are published on other repositories, we are placing our trust in the authors of that repo that they will prevent malicious code from executing. Choose wisely, and consider forking and customizing a GitHub action instead of calling it directly.
+:warning: When using GitHub actions that are published on other repositories, we are [placing our trust](https://arstechnica.com/information-technology/2025/03/supply-chain-attack-exposing-credentials-affects-23k-users-of-tj-actions/) in the authors of that repo that they will prevent malicious code from executing. Choose wisely, and consider forking and customizing a GitHub action instead of calling it directly.
 
 #### Reusable logic exists in custom GitHub actions instead of copy/paste to multiple workflows.
 
