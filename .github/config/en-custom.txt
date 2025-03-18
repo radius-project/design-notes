@@ -921,3 +921,11 @@ Helly
 GitRepository
 Istio
 Flux
+reinstallation
+reinstallations
+gapped
+helmclient
+contourclient
+inmemory
+postgresclient
+PVs
