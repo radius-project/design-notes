@@ -8,6 +8,12 @@ Large GitHub workflows can be challenging to test and fix due to their complexit
 
 This design describes an evolutionary approach to managing our GitHub workflows which will decrease the difficulty and time it takes to test changes. The design is expressed through a set of design principles that can be applied to all workflows. 
 
+This design advocates for three high-level principles:
+
+- Workflows are testable from GitHub forks.
+- Workflow logic is testable on a developer machine.
+- Workflow logic is never duplicated.
+
 ## Terms and definitions
 
 - Workflow: A configurable automated process made up of one or more jobs. Workflows are defined in YAML files stored in the .github/workflows directory.
