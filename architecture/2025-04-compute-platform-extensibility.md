@@ -16,7 +16,7 @@ This document describes the initial integration with ACI, which is built upon an
 
 * To integrate Azure Container Instances (ACI) with Radius, enabling users to deploy and manage their applications and containers in ACI environments.
 * To provide a seamless user experience for deploying Radius applications to ACI, including environment setup, application definition, and deployment.
-* To ensure that the inital features are fully functional and ready for demonstration.
+* To ensure that the initial features are fully functional and ready for demonstration.
 
 > **Issue Reference:** <!-- (If appropriate) Reference an existing issue that describes the feature or bug. -->
 
