@@ -4,26 +4,19 @@
 
 ## Overview
 
-The Radius and ACI integration aims to enable deployments of applications and containers using the Radius control plane in Kubernetes to target ACI environments. The primary goals include deploying to ACI, setting up Radius environments targeting ACI, and managing ACI-specific configurations through the CLI and dashboard. However, the initial scope excludes establishing connections between ACI containers and resources, and the ACI Service Discovery feature, which is expected by September 2025. Moreover, managing external clusters and ensuring configurations remain portable between Kubernetes and ACI are highlighted as key areas of risk. The non-goals emphasize that multi-compute support per environment and full Dapr parity will not be available initially.
+The Radius and ACI integration aims to enable deployments of applications and containers using the Radius control plane in Kubernetes to target ACI environments. The primary goals include setting up Radius environments targeting ACI, deploying to ACI, and managing ACI-specific configurations through punch-through configurations, including confidential containers.
+
+This document describes the initial integration with ACI, which is built upon an earlier demo capability. Our longer-term approach will provide an extensibility capability to Radius for deploying to other compute platforms, which will be described in a separate document.
 
 ## Terms and definitions
 
-* Radius: A control plane that allows users to deploy, manage, and monitor applications and containers in various environments.
 * ACI: Azure Container Instances, a service that allows users to run Docker containers on Azure without managing servers.
-* Kubernetes: An open-source container orchestration system for automating software deployment, scaling, and management.
-* Environment: A defined setup comprising the necessary compute, storage, and networking resources to run applications and containers.
-* Application Definition File: A file that describes the configuration and deployment settings for an application (e.g., app.bicep).
-* Environment Definition File: A file that describes the configuration and deployment settings for an environment (e.g., env.bicep).
-* Container: A lightweight, standalone, and executable software package that includes everything needed to run a piece of software, including the code, runtime, libraries, and settings.
-* Control Plane: The part of a system that manages the infrastructure and configuration of an environment.
-* P0 Feature: A high-priority feature that is essential for the initial release and demonstration of the product at the Build conference.
 
 ## Objectives
 
 * To integrate Azure Container Instances (ACI) with Radius, enabling users to deploy and manage their applications and containers in ACI environments.
 * To provide a seamless user experience for deploying Radius applications to ACI, including environment setup, application definition, and deployment.
-* To ensure that the P0 features are fully functional and ready for demonstration at the Build conference (May 19-22).
-* To gather user feedback on the ACI functionality demonstrated at Ignite 2024 and incorporate it into the development process.
+* To ensure that the inital features are fully functional and ready for demonstration.
 
 > **Issue Reference:** <!-- (If appropriate) Reference an existing issue that describes the feature or bug. -->
 
@@ -33,19 +26,17 @@ The Radius and ACI integration aims to enable deployments of applications and co
 * Enable users to set up a Radius Environment targeted at ACI using environment definition files (e.g., env.bicep).
 * Allow users to deploy Radius applications to ACI using application definition files (e.g., app.bicep).
 * Support the deployment of application containers to ACI, ensuring that container definitions are platform-agnostic.
-* Provide CLI and Dashboard interfaces for users to view and manage ACI containers deployed using Radius.
 * Allow users to apply ACI-specific configurations to containers using extension properties.
+* Adding and configuring Dapr sidecars to ACI containers.
+* A default implementation of Azure Gateways on ACI.
+* Defining and creating Secret Stores for use in ACI containers. (The implementation is TBD: KeyVault or Dapr.)
 
 ### Non goals
 
-* Establishing connections between ACI containers and resources.
-* Defining and creating Gateways for use in ACI containers.
-* Defining and creating Secret Stores for use in ACI containers.
-* Adding and configuring Dapr sidecars to ACI containers.
+* Hosting the Radius control plane in ACI. The control plane will continue to be hosted in Kubernetes.
+* Defining and creating custom ingress for use in ACI containers.
 * Defining Extenders/UDT for use in ACI containers.
 * Providing a managed Radius offering in ACI.
-* Hosting the Radius control plane in ACI.
-* Enabling the Radius control plane hosted in ACI to deploy to Kubernetes clusters.
 
 ### User scenarios (optional)
 
@@ -102,38 +93,6 @@ resource env 'Applications.Core/environments@2023-10-01-preview' = {
 }
 ```
 
-### Sample Input: Containers Type with Unsupported Connections Section
-
-Input (this input should return an error):
-
-```bicep
-resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'frontend'
-  properties: {
-    application: app.id
-    container: {
-      image: 'ghcr.io/radius-project/samples/demo:latest'
-      ports: {
-        web: {
-          containerPort: 3000
-        }
-      }
-    }
-    connections: {
-      redis: {
-        source: redis.id
-      }
-    }
-  }
-}
-```
-
-### Sample Output
-
-```text
-UnsupportedElement: The environment specified for this deployment is of type 'aci', which does not support the 'connections' setting in containers.
-```
-
 ### Sample Input: Portable Resources
 
 [Portable Resources](https://docs.radapp.io/guides/author-apps/portable-resources/overview/) are expected to work on ACI with no changes from the way they would be configured for Kubernetes:
@@ -167,16 +126,14 @@ The integration with ACI will be achieved by extending the existing Radius contr
 
 1. Environment Definition and Setup: The Radius control plane will be updated to recognize and process environment definition files (env.bicep) that specify ACI as the target compute platform. This will involve adding support for ACI-specific configurations and parameters in the environment setup process.
 1. Application Definition and Deployment: The application definition files (app.bicep) will be extended to include ACI-specific properties and configurations. The Radius deployment engine will be enhanced to interpret these properties and deploy applications to ACI environments. This includes creating and managing ACI container groups, configuring networking, and handling ACI-specific resource settings.
-1. Container Definitions: The container definitions within the application definition files will be made platform-agnostic, allowing users to deploy their containers to both Kubernetes and ACI without significant changes. The Radius deployment engine will be updated to handle the creation of ACI container instances, including setting up container groups, load balancers, DNS, and other necessary resources.
-1. CLI and Dashboard Enhancements: The Radius CLI and Dashboard interfaces will be updated to support ACI deployments. This includes adding new CLI commands and Dashboard workflows for setting up ACI environments, deploying applications to ACI, and managing ACI-specific configurations. Users will be able to view and manage their ACI containers using the rad app graph command and the Application Graph in the Radius Dashboard.
-1. Extension Properties: The Radius codebase will be enhanced to support extension properties in the application definition files. These properties will allow users to apply ACI-specific configurations to their containers, such as custom resource settings, networking configurations, and other ACI-specific parameters.
-1. Recipe Contract Updates: The recipe contract will be updated to include ACI-specific parameters and outputs. This will ensure that the Radius deployment engine can correctly interpret and apply these parameters when deploying applications to ACI environments.
+1. Container Definitions: The container definitions within the application definition files will allow users to deploy their containers to both Kubernetes and ACI without significant changes.
+1. Extension Properties, aka "punch-through": The Radius codebase will be enhanced to support extension properties in the application definition files. These properties will allow users to apply ACI-specific configurations to their containers, such as custom resource settings, networking configurations, and other ACI-specific parameters.
 1. Error Handling and Logging: The error handling and logging mechanisms within the Radius codebase will be updated to account for ACI-specific scenarios. This includes handling errors related to ACI resource creation, configuration, and deployment, as well as providing detailed logs for troubleshooting and diagnostics.
-1. Secret Management: Radius will provision an Azure KeyVault resource on behalf of the user to store and manage secrets. These secrets can then be referenced in the application definition files to inject secret values as environment variables in ACI containers or to authenticate into services.
 1. Gateways: Radius will provision the necessary Azure resources to establish gateways for routing internet traffic to services hosted in ACI. This includes defining and creating gateways and secret stores for use in ACI containers.
+1. TBD: Secret Management: Radius will provision an Azure KeyVault resource on behalf of the user to store and manage secrets. These secrets can then be referenced in the application definition files to inject secret values as environment variables in ACI containers or to authenticate into services.
 
-### Architecture Diagram
 <!--
+### Architecture Diagram
 Provide a diagram of the system architecture, illustrating how different
 components interact with each other in the context of this proposal.
 
@@ -187,43 +144,17 @@ Include separate high level architecture diagram and component specific diagrams
 
 #### Key Components and Relationships
 
-1. Core Resource Provider
-    * The central framework for handling resources in Radius
-    * `datamodel` defines the core resources like Environment, Container, Gateway
-    * `model` configures the application model with renderers and handlers
-    * `frontend` handles API requests and communicates with the backend
-    * `backend/deployment` processes deployments across different compute environments
 1. Azure Container Instances (ACI) Integration
-    * `renderers/aci` implements ACI-specific resource rendering logic
-    * `renderers/aci/gateway` provides gateway functionality for ACI
-    * `renderers/aci/manualscale` handles scaling for ACI containers
-1. Kubernetes Integration
-    * Standard Kubernetes resource renderers for containers, gateways, volumes
-    * Extensions like Dapr support, manual scaling, and Kubernetes metadata
+    * `corerp/renderers/aci` implements ACI-specific resource rendering logic
+    * `corerp/renderers/aci/gateway` provides gateway functionality for ACI
+    * `corerp/renderers/aci/manualscale` handles scaling for ACI containers
 1. Renderer Multiplexer
-    * `renderers/mux` routes requests to appropriate renderers based on compute environment
+    * `corerp/renderers/mux` routes requests to appropriate renderers based on compute environment
     * Selects between Kubernetes and ACI renderers based on environment configuration
-1. Recipes Framework
-    * `recipes/configloader` loads configurations from Environment resources
-    * Supports both Kubernetes and ACI compute environments
-1. Resource Handlers
-    * Implement the deployment of rendered resources to target platforms
-    * Handle Azure and Kubernetes resources
 
 This architecture supports multi-cloud deployments with a unified programming model, where applications can be defined once and deployed to either Kubernetes or Azure Container Instances environments based on the environment configuration.
 
 #### Understanding the Radius/ACI Architecture Relationships
-
-##### Core Resource Model Flow
-
-1. API and Data Flow
-    * Client Requests → Frontend Controller → DataModel → Backend → Infrastructure
-    * The frontend controllers receive API requests, convert them to internal data models, and pass them to the backend for processing
-    * The backend renders these models into infrastructure-specific resources and deploys them
-1. Configuration Loading
-    * ConfigLoader → Environment/Application Resources → Runtime Configuration
-    * The `configloader` package extracts environment and application configurations from ARM resources
-    * It identifies compute platform (Kubernetes or ACI) and sets up appropriate runtime configurations
 
 #### Renderer Architecture
 
@@ -237,50 +168,6 @@ The rendering system is a key part of the architecture with several important re
    KubernetesCompute: kubernetesmetadata → manualscale → daprextension → container
    ACICompute: aci_manualscale → aci
     * Each layer handles a specific aspect of rendering, with inner renderers focusing on core functionality and outer renderers adding specialized features
-1. Extension Pattern
-    * Extensions like `daprextension`, `manualscale`, and `kubernetesmetadata` wrap inner renderers to add functionality
-    * This follows a decorator pattern where each extension enhances the resources produced by the inner renderer
-
-#### Resource Type Handling
-
-1. Resource Type Registration
-    * The application model (`model.ApplicationModel`) registers handlers and renderers for specific resource types
-    * It maps resource types like containers and gateways to their appropriate renderers
-    * Each resource type can have multiple renderers based on compute environment
-1. Deployment Process
-    * `deploymentprocessor` coordinates the entire rendering and deployment process
-    * It manages dependencies between resources, orchestrates rendering, and handles resource deployment
-    * After rendering, it uses appropriate handlers to deploy resources to target infrastructure
-
-#### Cross-Platform Abstractions
-
-1. Environment Abstraction
-    * The environment model provides a uniform interface for different compute platforms
-    * `EnvironmentCompute` can be specialized as `KubernetesCompute` or `AzureContainerInstanceCompute`
-    * This allows the system to handle both platforms with consistent APIs
-1. Resources and Connections
-    * Resources can define connections to other resources regardless of platform
-    * The renderer system translates these connections into platform-specific implementations
-    * For example, container-to-database connections are implemented differently in Kubernetes vs. ACI
-
-#### ACI-Specific Implementation
-
-1. ACI Resource Creation
-    * The ACI renderer translates Radius resources into Azure-specific resources:
-    * Creates subnets, NSGs, and network profiles for container groups
-    * Configures load balancers and gateways for networking
-1. ACI Gateway Integration
-    * `aci_gateway.Renderer` handles creating Application Gateway resources in Azure
-    * Manages DNS prefixes, public IPs, and routing rules specific to ACI deployments
-
-#### Extension Mechanism
-
-1. Resource Extensions
-    * The `datamodel.Extension` system allows resources to be extended with platform-specific capabilities
-    * Extensions like `ManualScaling`, `DaprSidecar`, and `AzureContainerInstance` provide platform-specific configurations
-    * The rendering system interprets these extensions to produce appropriate infrastructure resources
-
-This architecture separates the resource model from platform-specific implementations. The system can be extended to support additional compute platforms by implementing new renderers and integrating them through the multiplexer pattern.
 
 #### Key Type Relationships in the Multiplexer Pattern
 
@@ -294,10 +181,6 @@ This architecture separates the resource model from platform-specific implementa
 1. Concrete Renderer Implementations
     * Platform-specific renderers like `aci.Renderer` and `container.Renderer` (Kubernetes) implement the same interface
     * Resource-specific renderers like `gateway.Renderer` and `aci_gateway.Renderer` handle specific resource types
-1. Resource Type Hierarchy
-    * All resources implement the `v1.DataModelInterface`
-    * Specific resource types like `ContainerResource` and `Gateway` extend this interface
-    * Renderers process these resources based on their type and produce appropriate outputs
 1. Environment Configuration
     * `EnvironmentCompute` defines the compute environment with its `Kind` property
     * The multiplexer uses this to determine which inner renderer to invoke
@@ -599,11 +482,7 @@ Exit Criteria
 
 ## Open Questions
 
-<!--
-Describe (Q&A format) the important unknowns or things you're not sure about. 
-Use the discussion to answer these with experts after people digest the 
-overall design.
--->
+* Can we use Dapr for secret stores on ACI, or should we hard code KeyVault?
 
 ## Design Review Notes
 
