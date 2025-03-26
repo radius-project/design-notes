@@ -1,4 +1,4 @@
-# ACI Integraion
+# ACI Integration
 
 * **Author**: Brooke Hamilton
 
