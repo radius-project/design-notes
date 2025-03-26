@@ -1,6 +1,6 @@
 # Title
 
-* **Author**: [brooke-hamilton](https://github.com/brooke-hamilton)
+* **Author**: Brooke Hamilton
 
 ## Overview
 
@@ -569,7 +569,7 @@ A basic test scenario will be added to Radius that will be included in the cloud
 
 ## Security
 
-The Radius [Secret Store](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) portable type will create an Azure KeyValut when deploying to ACI.
+The Radius [Secret Store](https://docs.radapp.io/reference/resource-schema/core-schema/secretstore/) portable type will create an Azure KeyVault when deploying to ACI.
 
 ## Compatibility
 

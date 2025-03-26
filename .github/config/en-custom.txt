@@ -918,8 +918,10 @@ ConfigLoader
 ACICompute
 KubernetesCompute
 ACI
+aci
 daprextension
 kubernetesMetadata
+kubernetesmetadata
 manualscale
 NSGs
 IPs
