@@ -484,6 +484,19 @@ Exit Criteria
 
 * Can we use Dapr for secret stores on ACI, or should we hard code KeyVault?
 
+### Next Design: Extensibility for Other Platforms
+
+The next milestone of ACI integration is to develop extensibility interfaces that allow compute platforms to be added. We have two criteria for evaluating options: (1) loosely coupled and isolated, (2) versioned.
+
+Note: The scope does not include running Radius on a non-Kubernetes host.
+
+#### Options
+
+* A set of Go interfaces with the implementation of each compute platform in the Radius code, similar to the current ACI integration, except using interfaces instead of switch statements. Each platform would be added directly into the Radius code, or it could be in a separate repo that is compiled as a referenced module (the way Dapr does it).
+* Open API specifications that define a service interface, with each compute platform implemented as a separately deployed container. The code could be in any repo, and there would have to be a deploy-time registration or runtime discovery step. We would implement the ACI integration using these interfaces, and potentially move the kubernetes integration as well.
+* Select an industry standard technical definition of a compute platform and adopt that.
+* Are there other options?
+
 ## Design Review Notes
 
 <!--
