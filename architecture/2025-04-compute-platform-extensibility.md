@@ -483,6 +483,7 @@ Exit Criteria
 ## Open Questions
 
 * Can we use Dapr for secret stores on ACI, or should we hard code KeyVault?
+* What are we missing in terms of features/design/coding that will have to be done for the release of ACI capabilities?
 
 ### Next Design: Extensibility for Other Platforms
 
