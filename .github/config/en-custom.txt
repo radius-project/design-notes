@@ -910,3 +910,17 @@ workspace's
 Authorizer
 Aditi
 Twilio
+NGroups
+NGroup
+balancers
+renderers
+ConfigLoader
+ACICompute
+KubernetesCompute
+ACI
+daprextension
+kubernetesMetadata
+manualscale
+NSGs
+IPs
+KeyVault
