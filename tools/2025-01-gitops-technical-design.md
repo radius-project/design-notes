@@ -213,7 +213,7 @@ config:
 
 #### Compiling the Bicep File
 
-The controller will compile the Bicep file using the Bicep CLI, which is installed on the controller. It will use existing functionality to leverage the Bicep compiler: https://github.com/radius-project/radius/blob/87f7ea1b8d814a266fb89333ea4e5b38463ed7f9/pkg/cli/bicep/types.go#L46
+The controller will compile the Bicep file using the Bicep CLI, which is installed on the controller. It will use [existing functionality](https://github.com/radius-project/radius/blob/87f7ea1b8d814a266fb89333ea4e5b38463ed7f9/pkg/cli/bicep/types.go#L46) to leverage the Bicep compiler.
 
 #### Creating the `DeploymentTemplate` Resource
 
