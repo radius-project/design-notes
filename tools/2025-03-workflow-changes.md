@@ -188,6 +188,16 @@ Some of the existing Make commands invoke scripts. This pattern will continue in
 
 Environment variables can be set on developer machines (and stored in `.env` files). GitHub workflows will set environment variables during setup steps. Core logic will read the environment variables.
 
+#### Workflow schedules do not trigger on forks.
+
+Some workflows have scheduled executions. It does not make sense for these schedules to be triggered on forks; running scheduled workflows on forks only wastes compute time of the runners.
+
+#### All workflows can run on dispatch and run on branches.
+
+All workflows can be manually triggered, in addition to the other ways they can be triggered, like on pull requests and on a schedule. Allowing manual triggers enables testing from forks.
+
+All workflows can be run on branches so that fork owners do not have to merge the changes to the main branch of the fork. Having to run forks from the main branch makes fork synchronization more difficult.
+
 ### Design options considered but not chosen
 
 - Adopt a new automation tool like [Just](https://github.com/casey/just) or [Task](https://taskfile.dev/), and deprecate Make. These tools have advantages, but a side-effect of adopting a new tool would likely be the existince of a new tool in our toolbox without the removal of Make, which would increase complexity. Make currently meets our needs for invoking developer automation.
