@@ -192,11 +192,15 @@ Environment variables can be set on developer machines (and stored in `.env` fil
 
 Some workflows have scheduled executions. It does not make sense for these schedules to be triggered on forks; running scheduled workflows on forks only wastes compute time of the runners.
 
-#### All workflows can run on dispatch and run on branches.
+#### All workflows can run on dispatch and run on branches
 
 All workflows can be manually triggered, in addition to the other ways they can be triggered, like on pull requests and on a schedule. Allowing manual triggers enables testing from forks.
 
 All workflows can be run on branches so that fork owners do not have to merge the changes to the main branch of the fork. Having to run forks from the main branch makes fork synchronization more difficult.
+
+#### Workflows that perform PR checks should be configurable to run from the committing branch
+
+When a PR includes a change to a workflow, the workflow should be runnable from the branch if the person running the workflow has write access to the repo. (PRs submitted from forks where the contributor does not have write access should continue to require approval to run by someone with write access.)
 
 ### Design options considered but not chosen
 
