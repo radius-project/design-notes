@@ -929,3 +929,6 @@ KeyVault
 pluggable
 RESTful
 upgradeable
+DSL
+Helly
+GitRepository
