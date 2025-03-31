@@ -497,9 +497,12 @@ Note: The scope does not include running Radius on a non-Kubernetes host.
 * Open API specifications that define a service interface, with each compute platform implemented as a separately deployed container. The code could be in any repo, and there would have to be a deploy-time registration or runtime discovery step. We would implement the ACI integration using these interfaces, and potentially move the kubernetes integration as well.
 * Select an industry standard technical definition of a compute platform and adopt that.
 * Are there other options?
+* Recipes
+Note: We would have to move Kubernetes to the same level of implementation as other platforms.
+The operator sets up the environment based on compute type, and recipes follow.
 
 ## Design Review Notes
 
-<!--
-Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
--->
+- Expand terms and definitions
+- Clarify environment and application definitions
+- ACI supports containers, not Radius environments 
