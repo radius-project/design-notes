@@ -69,7 +69,6 @@ Provide a diagram of the system architecture, illustrating how different
 components interact with each other in the context of this proposal.
 
 Include separate high level architecture diagram and component specific diagrams, wherever appropriate.
--->
 
 #### Current State
 
@@ -78,6 +77,7 @@ Include separate high level architecture diagram and component specific diagrams
 
 
 ### Detailed Design
+-->
 
 <!--
 This section should be detailed and thorough enough that another developer
@@ -99,28 +99,28 @@ Discuss the rationale behind architectural choices and alternative options
 considered during the design process.
 -->
 
-#### Advantages (of each option considered)
 <!--
+#### Advantages (of each option considered)
 Describe what's good about this plan relative to other options. 
 Provides better user experience? Does it feel easy to implement? 
 Provides flexibility for future work?
 -->
 
-#### Disadvantages (of each option considered)
 <!--
+#### Disadvantages (of each option considered)
 Describe what's not ideal about this plan. Does it lock us into a 
 particular design for future changes or is it flexible if we were to 
 pivot in the future. This is a good place to cover risks.
 -->
 
-#### Proposed Option
 <!--
+#### Proposed Option
 Describe the recommended option and provide reasoning behind it.
 -->
 
+<!--
 ### API design (if applicable)
 
-<!--
 Include if applicable – any design that changes our public REST API, CLI
 arguments/commands, or Go APIs for shared components should provide this
 section. Write N/A here if not applicable.
@@ -130,25 +130,25 @@ section. Write N/A here if not applicable.
 - Describe the new or modified Go APIs for any shared components.
 -->
 
-### CLI Design (if applicable)
 <!--
+### CLI Design (if applicable)
 Include if applicable – any design that changes Radius CLI
 arguments/commands. Write N/A here if not applicable.
 - Describe new commands in the CLI or changes to existing CLI commands.
 -->
 
-### Implementation Details
 <!--
+### Implementation Details
 High level description of updates to each component. Provide information on 
 the specific sub-components that will be updated, for example, controller, processor, renderer,
 recipe engine, driver, to name a few.
--->
 
 #### UCP (if applicable)
 #### Bicep (if applicable)
 #### Deployment Engine (if applicable)
 #### Core RP (if applicable)
 #### Portable Resources / Recipes RP (if applicable)
+-->
 
 ### Error Handling
 
