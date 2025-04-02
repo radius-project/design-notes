@@ -910,6 +910,9 @@ workspace's
 Authorizer
 Aditi
 Twilio
+PATs
+runnable
+debuggable
 DSL
 Helly
 GitRepository
