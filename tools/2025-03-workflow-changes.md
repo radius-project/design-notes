@@ -1,6 +1,6 @@
 # GitHub Workflow Changes
 
-* **Author**: brooke-hamilton
+* **Author**: Brooke Hamilton
 
 ## Overview
 
@@ -160,7 +160,7 @@ _Fig. 3: Running a GitHub workflow on a fork_
 
 #### Use the GitHub CLI for default security context
 
-On a developer machine, if the dev is logged into the GitHub CLI, the security context is automatically passed to GitHub by the CLI. For any action that is taken in GitHub we should default to using the GH CLI so that this context works locally and within workflows. 
+On a developer machine, if the dev is logged into the GitHub CLI, the security context is automatically passed to GitHub by the CLI. For any action that is taken in GitHub we should default to using the GitHub CLI so that this context works locally and within workflows.
 
 In some cases we will choose to use a GitHub CLI call instead of a GitHub provided workflow action so that we can have runnable and testable code on a developer machine (because GitHub actions are not locally testable.)
 
@@ -209,7 +209,7 @@ When a PR includes a change to a workflow, the workflow should be runnable from 
 
 ### Design options considered but not chosen
 
-* Adopt a new automation tool like [Just](https://github.com/casey/just) or [Task](https://taskfile.dev/), and deprecate Make. These tools have advantages, but a side-effect of adopting a new tool would likely be the existince of a new tool in our toolbox without the removal of Make, which would increase complexity. Make currently meets our needs for invoking developer automation.
+* Adopt a new automation tool like [Just](https://github.com/casey/just) or [Task](https://taskfile.dev/), and deprecate Make. These tools have advantages, but a side-effect of adopting a new tool would likely be the existence of a new tool in our toolbox without the removal of Make, which would increase complexity. Make currently meets our needs for invoking developer automation.
 * Remove everything from GitHub workflows except the invocation of another tool: GitHub workflows have advantages when setting up the automation environment, e.g. retrieving credentials, cloning repos, configuring runners, installing tools, etc.
 
 ## Security
@@ -247,8 +247,8 @@ New GitHub workflows will adhere to the design principles.
 
 ## Open Questions and Actions
 
-* Which actions cannot be perfomed by the GitHub CLI? How will identity be provided to them?
-* Provide guidance on which git/gh commands allow a PR reviewer to check out a PR to their own fork.
+* Which actions cannot be performed by the GitHub CLI? How will identity be provided to them?
+* Provide guidance on which git/GitHub CLI commands allow a PR reviewer to check out a PR to their own fork.
 * We need a prototype of moderate complexity that implements these principles.
 * Can we separate the scheduling from the workflows so that forks do not automatically run the workflows?
 
