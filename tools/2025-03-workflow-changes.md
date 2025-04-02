@@ -253,3 +253,8 @@ New GitHub workflows will adhere to the design principles.
 * Can we separate the scheduling from the workflows so that forks do not automatically run the workflows?
 
 ## Design Review Notes
+
+* Add an example of moving logic into a Make command and show the before and after.
+* Consider [reusable workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows).
+* Create a checklist for reviewing workflows.
+* Workflow names should match the file names.
