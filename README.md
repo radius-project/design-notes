@@ -81,10 +81,6 @@ The repository is organized into several sections, each corresponding to a speci
 | [tools](./tools/) | Contains the designs for engineering tools, such as GitHub Action Workflow and test-infra. |
 | [template](./template/) | Contains the template for design documents.|
 
-## Tools
-
-
-
 ## Code of Conduct
 
 Please refer to our [Radius Community Code of Conduct](https://github.com/radius-project/radius/blob/main/CODE_OF_CONDUCT.md)
