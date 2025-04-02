@@ -1,12 +1,12 @@
 # Radius Compute Platform Extensibility
 
-* **Author**: Brooke Hamilton (@brooke-hamilton)
+* **Author**: Brooke Hamilton
 
 ## Overview
 
 This design describes how Radius will support deploying applications to new compute platforms in addition to Kubernetes. Radius will enable users to deploy and manage their applications on various compute environments, providing greater flexibility and choice.
 
-A pluggable service architecture will be implemented for extending Radius to new compute platorms. New platforms can be deployed, registered, upgraded, and removed independently from the Radius installation. Radius does not need compile-time knowlege of such platforms.
+A pluggable service architecture will be implemented for extending Radius to new compute platforms. New platforms can be deployed, registered, upgraded, and removed independently from the Radius installation. Radius does not need compile-time knowledge of such platforms.
 
 To achieve this, we will use an Open API specification written in TypeSpec to define a set of interfaces that must be implemented by compute platforms. Compute platforms will implement the Open API interfaces and be deployed in their own container(s). A registration process will allow adding and removing extensions, and discovery will be handled by Dapr.
 
@@ -22,7 +22,7 @@ We will re-implement the Kubernetes platform using these interfaces to ensure co
 ## Principles
 
 * API Versions should be strongly typed and support versioning.
-* Implementations should be independently upgradable in a runtime environment.
+* Implementations should be independently upgradeable in a runtime environment.
 * The logic should be isolated and over a network protocol.
 
 ### Goals
@@ -61,7 +61,7 @@ Service invocation to and from extensions will be handled through Dapr.
 
 Registration of new extensions will be handled by a new registration service hosted by Radius.
 
-A CLI command will be added that allows extensions to be listed, registered, and un-registered. Extensions can also register themselves by calling a service on Radius.
+A CLI command will be added that allows extensions to be listed, registered, and unregistered. Extensions can also register themselves by calling a service on Radius.
 
 ### Architecture Diagrams
 <!--
@@ -199,10 +199,12 @@ The second two milestones could be done in parallel.
 
 We considered using Go interfaces to define the extension point. In that scenario each extension would implemented as a module and would be compiled into the main Radius binaries. The Radius team would invite public contributors to add additional compute platforms, but they would control contributions through the established open-source contributing process.
 
-We decided against this option because it would not align with the design principles listed in this document; each change to a compute platform would require a full Radius release, implementations would not be independently upgradable in a runtime environment, and implementations would not be isolated over a network protocol.
+We decided against this option because it would not align with the design principles listed in this document; each change to a compute platform would require a full Radius release, implementations would not be independently upgradeable in a runtime environment, and implementations would not be isolated over a network protocol.
 
 ## Design Review Notes
 
 <!--
 Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
 -->
+
+- All RPs move behind service interface?

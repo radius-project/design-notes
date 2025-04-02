@@ -926,3 +926,6 @@ manualscale
 NSGs
 IPs
 KeyVault
+pluggable
+RESTful
+upgradeable
