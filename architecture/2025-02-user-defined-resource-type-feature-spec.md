@@ -161,7 +161,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 >
 > * Resource namespaces are two PascalCased segments separated by period and without a hyphen
 > * Resource type names are camelCased without a hyphen
-> * Resource properties are camcelCased without a hyphen
+> * Resource properties are camelCased without a hyphen
 >
 > However, Kubernetes and most cloud-native projects follow [RFC 1123](https://tools.ietf.org/html/rfc1123) or [RFC 1035](https://tools.ietf.org/html/rfc1035) for object naming which enforce:
 >
