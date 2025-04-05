@@ -924,3 +924,7 @@ OpenTelemetry
 LLM
 SBOMs
 SMS
+PascalCased
+IDEs
+camelCased
+SMS

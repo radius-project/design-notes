@@ -19,11 +19,11 @@ This document details the requirements and user experience for user-defined reso
 
 ### **Vision** 
 
-The vision for user-defined resource types is to significantly expand the set of resource types available to developers and PEs by democratizing the creation of new resource types. User-defined resource types will:
+The vision for user-defined resource types is to significantly expand the set of resource types available to developers and platform engineers by democratizing the creation of new resource types. User-defined resource types will:
 
 * Make the creation of new resource types easy to accomplish by platform engineers
 * Make it easy to distribute new resource types to internal developers including configuring developer tools to use the organization's resource types
-* Optimize the developer experience by integrating with popular developer portals and IDEs and enabling PEs to annotate resource types with documentation, examples, and point of contact details
+* Optimize the developer experience by integrating with popular developer portals and IDEs and enabling platform engineers to annotate resource types with documentation, examples, and point of contact details
 * Enable the Radius project to accelerate the number of resource types shipped as part of the project by eliminating the need to make code changes in order to ship a new resource type
 * Enable the Radius community to share user-defined resource types and associated recipes amongst other Radius users and ease the discover of new resource types from outside the user's organization
 
@@ -117,7 +117,7 @@ There was early concern about requiring platform engineers to use Bicep given th
 
 > [!NOTE]
 >
-> Since YAML has already been implemented, the initial release of user-defined resource types will use YAML. However, the format should change to Bicep very quickly and support for YAML deprecated and eventuallly removed. Radius will only support one file format. This change is reflected in the feature summary at the bottom of this document. 
+> Since YAML has already been implemented, the initial release of user-defined resource types will use YAML. However, the format should change to Bicep very quickly and support for YAML deprecated and eventually removed. Radius will only support one file format. This change is reflected in the feature summary at the bottom of this document. 
 
 **User Experience** 
 
