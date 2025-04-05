@@ -928,3 +928,9 @@ PascalCased
 IDEs
 camelCased
 SMS
+SMSx
+Aditi
+Twilio
+DSL
+Helly
+GitRepository
