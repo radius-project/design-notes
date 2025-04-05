@@ -923,4 +923,9 @@ Datadog
 OpenTelemetry
 LLM
 SBOMs
-SMS
+SMSx
+Aditi
+Twilio
+DSL
+Helly
+GitRepository
