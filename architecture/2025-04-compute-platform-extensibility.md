@@ -14,53 +14,47 @@ This document describes the initial integration with ACI, which is built upon an
 
 ## Objectives
 
-* To integrate Azure Container Instances (ACI) with Radius, enabling users to deploy and manage their applications and containers in ACI environments.
+* To integrate Azure Container Instances (ACI) with Radius, enabling users to deploy and manage their containers in ACI environments (with Radius running in Kubernetes).
 * To provide a seamless user experience for deploying Radius applications to ACI, including environment setup, application definition, and deployment.
-* To ensure that the initial features are fully functional and ready for demonstration.
 
 > **Issue Reference:** <!-- (If appropriate) Reference an existing issue that describes the feature or bug. -->
 
 ### Goals
 
-* Implement the capability for the Radius control plane hosted in Kubernetes to deploy to ACI.
+* Implement the capability for the Radius control plane hosted in Kubernetes to deploy to ACI, including command-line interface (CLI) compatibility.
 * Enable users to set up a Radius Environment targeted at ACI using environment definition files (e.g., env.bicep).
 * Allow users to deploy Radius applications to ACI using application definition files (e.g., app.bicep).
-* Support the deployment of application containers to ACI, ensuring that container definitions are platform-agnostic.
+* Support the deployment of containers to ACI, ensuring that container definitions are platform-agnostic.
 * Allow users to apply ACI-specific configurations to containers using extension properties.
 * Adding and configuring Dapr sidecars to ACI containers.
-* A default implementation of Azure Gateways on ACI.
+* A default implementation of [Azure Gateways](https://learn.microsoft.com/en-us/azure/templates/microsoft.network/applicationgateways?pivots=deployment-language-arm-template) on ACI.
 * Defining and creating Secret Stores for use in ACI containers. (The implementation is TBD: KeyVault or Dapr.)
 
 ### Non goals
 
 * Hosting the Radius control plane in ACI. The control plane will continue to be hosted in Kubernetes.
 * Defining and creating custom ingress for use in ACI containers.
-* Defining Extenders/UDT for use in ACI containers.
 * Providing a managed Radius offering in ACI.
 
 ### User scenarios (optional)
 
 #### User story 1
 
-As a user, I can use the instance of the Radius control plane hosted in my Kubernetes cluster to set up an ACI Environment and target that ACI environment to deploy my Applications and Containers.
+As a user, I can define a new Radius [Environment](https://docs.radapp.io/reference/resource-schema/core-schema/environment-schema/) that specifies ACI as the underlying compute platform by creating a new Environment definition file (e.g., env.bicep) and specifying the necessary settings before deploying the environment using rad deploy env.bicep. Applications and container resources that I deploy into this Environment will be targeted at my ACI instance.
 
 #### User story 2
 
-As a user, I can define a new Radius Environment that specifies ACI as the underlying compute platform by creating a new Environment definition file (e.g., env.bicep) and specifying the necessary settings before deploying the environment using rad deploy env.bicep. Applications and container resources that I deploy into this Environment will be targeted at my ACI cluster.
+As a user, I can define a new Radius Application by creating a new Application definition file (e.g., app.bicep) and use this same application definition to deploy to an Environment with either Kubernetes or ACI as its underlying compute platform. Via the extension property in the Application definition, the user can optionally configure custom settings that are specific to ACI and get applied only when deploying to ACI. For any extension properties that are not applicable to ACI, they will be ignored.
 
 #### User story 3
 
-As a user, I can define a new Radius Application by creating a new Application definition file (e.g., app.bicep) and use this same application definition to deploy to an Environment with either Kubernetes or ACI as its underlying compute platform. Via the extension property in the Application definition, the user can optionally configure custom settings that are specific to ACI and get applied only when deploying to ACI. For any extension properties that are not applicable to ACI, they will be ignored.
+As a user, I can declare a Radius Container within the application definition (e.g., app.bicep) including all the platform-agnostic container properties, e.g., image, env, etc., and deploy the application container to an ACI cluster. Radius will create the necessary resources in ACI for the application, including container instances, NGroups, container group profiles, load balancers, DNS, subnets, etc. Note that the container definitions should be container runtime platform-agnostic, thus this same container definition can be deployed to both Kubernetes and ACI.
 
 #### User story 4
 
-As a user, I can declare a Radius Container within the application definition (e.g., app.bicep) including all the platform-agnostic container properties, e.g., image, env, etc., and deploy the application container to an ACI cluster. Radius will create the necessary resources in ACI for the application, including container instances, NGroups, container group profiles, load balancers, DNS, subnets, etc. Note that the container definitions should be container runtime platform-agnostic, thus this same container definition can be deployed to both Kubernetes and ACI.
-
-#### User story 5
-
 As a user, upon the successful deployment of my application to my ACI environment, I can view the ACI containers in the CLI using the rad app graph command or via the Application Graph in the Radius Dashboard.
 
-#### User story 6
+#### User story 5
 
 As a user, I may set ACI-specific configurations for my containers via the extensions or runtimes properties. This allows me to make use of ACI-specific features like confidential containers or spot instances that may not be available on other container compute platforms. Note that any properties that are not applicable to the compute platform in the targeted deployment environment will be ignored.
 
@@ -125,10 +119,10 @@ The above example will deploy on either Kubernetes or ACI.
 The integration with ACI will be achieved by extending the existing Radius control plane, which will continue to be hosted in Kubernetes, to support ACI as a target deployment environment. The following summarizes the key changes and enhancements that will be made to the Radius codebase to support ACI deployments:
 
 1. Environment Definition and Setup: The Radius control plane will be updated to recognize and process environment definition files (env.bicep) that specify ACI as the target compute platform. This will involve adding support for ACI-specific configurations and parameters in the environment setup process.
-1. Application Definition and Deployment: The application definition files (app.bicep) will be extended to include ACI-specific properties and configurations. The Radius deployment engine will be enhanced to interpret these properties and deploy applications to ACI environments. This includes creating and managing ACI container groups, configuring networking, and handling ACI-specific resource settings.
+1. Application Definition and Deployment: The application definition files (app.bicep) will be extended to include ACI-specific properties and configurations.
 1. Container Definitions: The container definitions within the application definition files will allow users to deploy their containers to both Kubernetes and ACI without significant changes.
 1. Extension Properties, aka "punch-through": The Radius codebase will be enhanced to support extension properties in the application definition files. These properties will allow users to apply ACI-specific configurations to their containers, such as custom resource settings, networking configurations, and other ACI-specific parameters.
-1. Error Handling and Logging: The error handling and logging mechanisms within the Radius codebase will be updated to account for ACI-specific scenarios. This includes handling errors related to ACI resource creation, configuration, and deployment, as well as providing detailed logs for troubleshooting and diagnostics.
+1. Error Handling and Logging: The error handling and logging mechanisms within the Radius codebase will be updated to account for ACI-specific scenarios, especially for errors related to users attempting to use a Radius feature that is not supported for ACI deployments. This includes handling errors related to ACI resource creation, configuration, and deployment, as well as providing detailed logs for troubleshooting and diagnostics.
 1. Gateways: Radius will provision the necessary Azure resources to establish gateways for routing internet traffic to services hosted in ACI. This includes defining and creating gateways and secret stores for use in ACI containers.
 1. TBD: Secret Management: Radius will provision an Azure KeyVault resource on behalf of the user to store and manage secrets. These secrets can then be referenced in the application definition files to inject secret values as environment variables in ACI containers or to authenticate into services.
 
@@ -184,6 +178,7 @@ The rendering system is a key part of the architecture with several important re
 1. Environment Configuration
     * `EnvironmentCompute` defines the compute environment with its `Kind` property
     * The multiplexer uses this to determine which inner renderer to invoke
+    * The deployment processor requires the `ResourceGroup` property to be set for ACI deployments. 
 1. Input and Output Types
     * `renderers.RenderOptions` provides the context for rendering, including environment configuration
     * `renderers.RendererOutput` represents the standardized output of the rendering process
@@ -196,6 +191,10 @@ This pattern enables the system to:
 1. Easily extend the system with new compute environments by adding renderers to the map
 
 The design follows the Strategy Pattern, where the rendering strategy is selected based on the environment configuration, while maintaining a consistent interface for the rest of the system.
+
+#### Handlers
+
+Handler types will be added (in addition to the existing handlers for Kubernetes) for deploying resources required by ACI, including application gateway, NGroups, networking components, and the container resource.
 
 ### Options Considered
 
@@ -444,11 +443,11 @@ recipe engine, driver, to name a few.
 
 ### Error Handling
 
-The approach to error handling will stay the same, with two additional features:
+The approach to error handling will stay the same, however, we will ensure that users receive clear and actionable errors when they attempt to use Radius features that are not supported by the ACI integration.
 
 ## Test plan
 
-A basic test scenario will be added to Radius that will be included in the cloud functional tests.
+Cloud functional tests will be updated to cover all Radius features supported by the ACI integration.
 
 ## Security
 
@@ -457,7 +456,9 @@ The Radius [Secret Store](https://docs.radapp.io/reference/resource-schema/core-
 ## Compatibility
 
 * When a resource type is not supported by the compute kind, a descriptive error will be emitted.
+* When a type or setting that does not apply to ACI is ignored, an informational log entry will be emitted.
 * When a "punch through" specification is added to a bicep file to provide platform specific configuration, configurations that do not apply to the target environment will be ignored and not emit an error.
+* We will use the public Azure API specification to generate the Go types for the ACI integration. When new versions of the API are released we can consider updating our references to include the new version.
 
 ## Monitoring and Logging
 
@@ -470,6 +471,7 @@ No changes to monitoring and logging.
 Exit Criteria
 
 * The ACI integration is merged with the main branch in the Radius repo.
+* The ACI integration handles confidential container configurations.
 * A recorded presentation exists.
 * Customers can reproduce the demo on their own.
 
@@ -482,8 +484,8 @@ Exit Criteria
 
 ## Open Questions
 
-* Can we use Dapr for secret stores on ACI, or should we hard code KeyVault?
-* What are we missing in terms of features/design/coding that will have to be done for the release of ACI capabilities?
+* Can we use Dapr for secret stores on ACI, or should we hard code KeyVault? We already have an implementation for Azure KeyVault where we can mount a keyvault as a volume on a container.
+* Do we need to modify [update filters](https://github.com/radius-project/radius/blob/6b9df3b1c1ed6053531c12e9a96595a3ed86a0b5/pkg/corerp/setup/setup.go#L76)?
 
 ### Next Design: Extensibility for Other Platforms
 
