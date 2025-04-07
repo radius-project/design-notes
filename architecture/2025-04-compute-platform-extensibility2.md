@@ -142,9 +142,9 @@ resource app 'Applications.Core/applications@2023-10-01-preview' = {
 }
 ```
 
+<!--
 ## Design
 
-<!--
 ### High Level Design
 High level overview of the data flow and key components.
 

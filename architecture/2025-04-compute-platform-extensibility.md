@@ -178,7 +178,7 @@ The rendering system is a key part of the architecture with several important re
 1. Environment Configuration
     * `EnvironmentCompute` defines the compute environment with its `Kind` property
     * The multiplexer uses this to determine which inner renderer to invoke
-    * The deployment processor requires the `ResourceGroup` property to be set for ACI deployments. 
+    * The deployment processor requires the `ResourceGroup` property to be set for ACI deployments.
 1. Input and Output Types
     * `renderers.RenderOptions` provides the context for rendering, including environment configuration
     * `renderers.RendererOutput` represents the standardized output of the rendering process
@@ -477,34 +477,15 @@ Exit Criteria
 
 ### Milestone 2: Serverless Extensibility
 
-Exit Criteria
-
-* An extensibility interface that allows compute platforms to be added.
-* Documentation on how to create a compute environment.
+See the other platform extensibility design document for details.
 
 ## Open Questions
 
 * Can we use Dapr for secret stores on ACI, or should we hard code KeyVault? We already have an implementation for Azure KeyVault where we can mount a keyvault as a volume on a container.
 * Do we need to modify [update filters](https://github.com/radius-project/radius/blob/6b9df3b1c1ed6053531c12e9a96595a3ed86a0b5/pkg/corerp/setup/setup.go#L76)?
 
-### Next Design: Extensibility for Other Platforms
-
-The next milestone of ACI integration is to develop extensibility interfaces that allow compute platforms to be added. We have two criteria for evaluating options: (1) loosely coupled and isolated, (2) versioned.
-
-Note: The scope does not include running Radius on a non-Kubernetes host.
-
-#### Options
-
-* A set of Go interfaces with the implementation of each compute platform in the Radius code, similar to the current ACI integration, except using interfaces instead of switch statements. Each platform would be added directly into the Radius code, or it could be in a separate repo that is compiled as a referenced module (the way Dapr does it).
-* Open API specifications that define a service interface, with each compute platform implemented as a separately deployed container. The code could be in any repo, and there would have to be a deploy-time registration or runtime discovery step. We would implement the ACI integration using these interfaces, and potentially move the kubernetes integration as well.
-* Select an industry standard technical definition of a compute platform and adopt that.
-* Are there other options?
-* Recipes
-Note: We would have to move Kubernetes to the same level of implementation as other platforms.
-The operator sets up the environment based on compute type, and recipes follow.
-
 ## Design Review Notes
 
-- Expand terms and definitions
-- Clarify environment and application definitions
-- ACI supports containers, not Radius environments 
+* Expand terms and definitions
+* Clarify environment and application definitions
+* ACI supports containers, not Radius environments
