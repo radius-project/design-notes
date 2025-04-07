@@ -101,7 +101,7 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 **Open-Source Contributors** – A wide variety of organizations and personas may collaborate with other Radius contributors by building, testing, and providing feedback on user-defined resource types and their associated recipes. This includes platform engineers and developers discussed above, but also other open-source projects, system integrators, IT operations service providers, ISVs, and other cloud service providers. 
 
-## Scenario 1 – Using Resource Types
+## Scenario 1 – Using resource types
 
 ### User Story 1 – Creating a basic resource type
 
@@ -138,20 +138,19 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
   // Examples will use the ARM resource provider standard of two PascalCased segments, 
   // however, users are not restricted to using this format
   name: 'MyCompany.Data/postgreSQL'
-  api: {
+  versions: [
     // The API versioning scheme is left to the user to determine. It is just a string to Radius.
     // The Kubernetes scheme is used here to demonstrate that a variety of schemes may be used.
-    version: 'v1alpha1'
+    name: 'v1alpha1' 
     schema: {
-      properties: {
+      properties: [
         size: {
           type: 'string'
           enum: ['S', 'M', 'L', 'XL']
-        }
-      }
-      required: ['size']
+        }      
+      ]
     }
-  }
+  ]
 }
 ```
 
@@ -192,14 +191,14 @@ The operation fails and informs the user interactively if:
 
 1. The resource type already exists
 2. The resource type definition does not properly compile into a `System.Resources/resourceTypes` resource
-3. The API is not in conformance with the OpenAPI v3 specification
+3. The API is not in conformance with the OpenAPI v3.1 specification
 4. The user does not have permission to perform the create action on `System.Resources/resourceProviders`
 
 > [!NOTE]
 >
 > The behavior of failing if the resource type already exists may change dependent upon how the modifying a resource type user story is handled. Modifying resource types has not been designed yet.
 
-### User Story 2 – Setting Properties
+### User Story 2 – Setting properties
 
 As a platform engineer, as I am authoring a resource type, I need to include required and optional input properties. I also want to include output properties which will be set by my recipe. 
 
@@ -214,51 +213,46 @@ extension radius
 
 resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.Data/postgreSQL'
-    version: 'v1alpha1'
+  versions: [
+    name: 'v1alpha1' 
     schema: {
-+     // Specifying required properties; required is a attribute of the object in OpenAPI, not the property
 +      required: ['size']
-      properties: {
-+       // Required input property
+      properties: [
         size: {
++       // Required input property
           type: 'string'
           enum: ['S', 'M', 'L', 'XL']
-        }
+        },
 +        // Optional input property
         logging-verbosity: {
           type: string
           enum: ['TERSE', 'DEFAULT', 'VERBOSE']
-        }
+        },
 +        // Output property set by the recipe, note the readOnly property
         connection-string: {
           type: 'string'
 +          readOnly: true
-        }
+        },
 +        // Output property set by the recipe, note the readOnly property
         credentials: {
           type: 'object'
 +          readOnly: true
-          properties: {
+          properties: [
             username: {
               type: 'string'
-            }
+            },
             password: {
               type: 'string'
-            }
-          }
-        }
+            
+          ]
+        }      
+      ]
     }
-  }
+  ]
 }
 ```
 
-> [!CAUTION]
->
-> Radius enforces properties to be camelCased. 
-
-
-
-### User Story 3 – Reading Properties
+### User Story 3 – Reading properties
 
 As a developer, I need to read properties for resources in my application definition and set environment variables for my container. For example, when I create a database resource, I need to set an environment variable in my container which gives my application the connection string.
 
@@ -290,17 +284,17 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
         source: ordersDB.id
       }
 +      // Set environment variables in the container by referencing properties via Bicep
-+      env:{
++      env: [
 +        ORDERS_DB_CONNECTION_STRING: {
 +          value: ordersDB.connectionString
-+        }
++        },
 +        ORDERS_DB_USERNAME: {
 +          value: ordersDB.credentias.username
-+        }
++        },
 +        ORDERS_DB_PASSWORD: {
 +          value: ordersDB.credentias.password
 +        }
-      }
++      ]
    }
 }
 ```
@@ -309,7 +303,7 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
 
 The environment variables set specified by the developer are set in the container.
 
-**User Experience 2 – Automatically Injected by platform engineer** 
+**User Experience 2 – Automatically injected by platform engineer** 
 
 The platform engineer can specify default environment variables which will automatically be injected into a connected container when a connection is established. This is similar to existing functionality for portable resource types in Radius today (see the [Redis type](https://docs.radapp.io/reference/resource-schema/cache/redis/#environment-variables-for-connections) for example). Note that user experience 1 and 2 can be used side by side.
 
@@ -320,42 +314,41 @@ extension radius
 
 resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.Data/postgreSQL'
-  api: {
-    version: 'v1alpha1'
+  versions: [
+    name: 'v1alpha1' 
     schema: {
       required: ['size']
-      properties: {
+      properties: [
         size: {
           type: 'string'
           enum: ['S', 'M', 'L', 'XL']
-        }
+        },
         logging-verbosity: {
           type: string
           enum: ['TERSE', 'DEFAULT', 'VERBOSE']
-        }
-        // Output property set by the recipe
+        },
         connection-string: {
           type: 'string'
           readOnly: true
 +          connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
-        }
-        // Output property set by the recipe
+        },
         credentials: {
           type: 'object'
           readOnly: true
-          properties: {
+          properties: [
             username: {
               type: 'string'
 +              connected-resource-environment-variable: POSTGRESQL_USERNAME
-            }
+            },
             password: {
               type: 'string'
 +              connected-resource-environment-variable: POSTGRESQL_PASSWORD
             }
           }
-        }
+        }      
+      ]
     }
-  }
+  ]
 }
 ```
 
@@ -378,29 +371,28 @@ extension radius
 
 resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.Data/postgreSQL'
-+   metadata: {
-+    friendly-name: 'PostgreSQL'
-+    description: '''
-+        The MyCompany.Data/postgreSQL@v1alpha1 resource type
-+        is a standard configuration relational database configured with 
-+        corporate security settings enforced. 
-+      
-+        Example:
-+        ...
-+      
-+        Owner:
-+        author-platform-engineer@mycompany.com
-+      
-+        Change Log:
-+        ...
-+    '''
-  api: {
-    version: 'v1alpha1'
++  metadata: {
++   friendly-name: 'postgresql'
++   description: '''
++       The MyCompany.Data/postgreSQL@v1alpha1 resource type
++       is a standard configuration relational database configured with 
++       corporate security settings enforced. 
++     
++       Example:
++       ...
++     
++       Owner:
++       author-platform-engineer@mycompany.com
++     
++       Change Log:
++       ...
++   '''
+  }
+  versions: [
+    name: 'v1alpha1'
     schema: {
-      // Specifying required properties
       required: ['size']
-      properties: {
-        // Required input property
+      properties: [
         size: {
           type: 'string'
           enum: ['S', 'M', 'L', 'XL']
@@ -411,8 +403,7 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 +              - 'L': 2.0 vCPU, 8 GiB memory, 60 GiB storage
 +              - 'XL': 4.0 vCPU, 16 GiB memory, 100 GiB storage
 +            '''
-        }
-        // Optional input property
+        },
         logging-verbosity: {
           type: string
           enum: ['TERSE', 'DEFAULT', 'VERBOSE']
@@ -422,33 +413,32 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
 +              - 'DEFAULT': Recommended level
 +              - 'VERBOSE': Use only if you plan to actually look up the Postgres source code
 +          '''
-        }
-        // Output property set by the recipe
+        },
         connection-string: {
           type: 'string'
           readOnly: true
-          connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
 +          description: 'Fully qualified string to connect to the resource'
-        }
-        // Output property set by the recipe
+          connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
+        },
         credentials: {
           type: 'object'
           readOnly: true
-          properties: {
+          properties: [
             username: {
               type: 'string'
 +              description: 'Username for the database'
               connected-resource-environment-variable: POSTGRESQL_USERNAME
-            }
+            },
             password: {
               type: 'string'
-              connected-resource-environment-variable: POSTGRESQL_PASSWORD
 +              description: 'Password for the database user'
+              connected-resource-environment-variable: POSTGRESQL_PASSWORD
             }
-          }
-        }
+          ]
+        }  
+      ]
     }
-  }
+  ]
 }
 ```
 
@@ -553,13 +543,13 @@ Registering recipe for MyCompany.Data/postgreSQL
 The recipe for MyCompany.Data/postgreSQL is registered in the my-env environment
 ```
 
-> [!WARNING]
+> [!CAUTION]
 >
-> Today, Radius supports named recipes. When deploying a portable resource type, developers can override the default recipe by specifying a recipe name in their application definition. This is an anti-pattern which enables developers to punch through the separation of concerns between platform and developers. Based on strong user feedback, UDTs will not implement the ability to punch through and use alternate recipes. 
+> Today, Radius supports named recipes. When deploying a portable resource type, developers can override the default recipe by specifying a recipe name in their application definition. This enables developers to punch through the separation of concerns between platform and developers. Based on strong user feedback, UDTs will not implement the ability to punch through and use alternate recipes. 
 
 > [!NOTE]
 >
-> Radius is not opinionated about which infrastructure as code solution to use. Therefore, it is important that Radius is not biased towards one solution versus another. The parameter `--template-kind` and `--template-path` are biased towards Bicep as Bicep files are called templates and Terraform files are called configurations. While we do not plan to change these arguments, `--recipe-kind` and `--recipe-path` are more appropriate.
+> Radius is not opinionated about which infrastructure as code solution to use. Therefore, it is important that Radius is not biased towards one solution versus another. The parameter `--template-kind` and `--template-path` are biased towards Bicep as Bicep files are called templates and Terraform files are configurations. While we do not plan to change these arguments, `--recipe-kind` and `--recipe-path` would have been more appropriate.
 
 **`postgreSQL.tf`**
 
@@ -657,7 +647,7 @@ However, to represent an external resource, Radius will support creating resourc
 
 **User Experience** 
 
-The platform engineer creates a resource type which cannot have a recipe registered for it.
+The platform engineer creates a resource type which cannot have a recipe registered for it. In the resource type definition, the platform engineer will annotate the resource type with `  capabilities: ['createWithoutRecipe']`.
 
 ```bash
 # Create a recipe-less resource type just like other resource types
@@ -669,47 +659,53 @@ The resource type MyCompany.App/externalService has been created
 **`external-service-resource-type.bicep`**:
 
 ```yaml
+extension radius
+
 resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.App/externalService'
-  description: '''
-    The external service resource type represents a resource which
-    is not managed by Radius but appears in the application graph.
-  '''
+  metadata: {
+    description: '''
+      The external service resource type represents a resource which
+      is not managed by Radius but appears in the application graph.
+      '''
+  }  
   // The createWithoutRecipe capability allows resources of this type to be created in an
   // environment which does not have a recipe registered. If a recipe is not registered, 
   // and this capability does not exist, creating a resource in the environment will throw an exception.
   capabilities: ['createWithoutRecipe']
-  api: {
-    version: 'v1alpha1'
+  versions: [
+  	name: 'v1alpha1'
     schema: {
-      properties: {
+      properties: [
         connection-string: {
           type: 'string'
           description: 'The connection string to the external service'
           connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
-        }
+        },
         credentials: {
           type: 'object'
-          properties: {
+          properties: [
             username: {
               type: 'string'
               description: 'Username for the external service'
               connected-resource-environment-variable: EXTERNAL_SERVICE_USERNAME
-            }
+            },
             password: {
               type: 'string'
               description: 'Password for the external service user'
               connected-resource-environment-variable: EXTERNAL_SERVICE_PASSSWORD
             }
-          }
-      }
-  }
+          ]
+				}      
+      ]
+    }
+  ]
 }
 ```
 
 > [!NOTE]
 >
-> This example stores the username and password as cleartext in the Radius database. In a real example, the credentials would be stored in a secret. That was omitted from this example for simplicity. The next user story discusses child resources which could use used to embed a secret in this resource type.
+> This example stores the username and password as cleartext in the Radius database. In a real example, the credentials would be stored in a secret. That was omitted from this example for simplicity. The next user story discusses composite resources which could use used to embed a secret in this resource type.
 
 The platform engineer, or environment manager can then create a resource representing the external resource in the environment. For example, the platform engineer may create a resource representing a Twilio account.
 
@@ -748,24 +744,24 @@ resource twilio 'MyCompany.App/externalService@v1alpha1' = existing {
 
 resource backend 'Applications.Core/containers@2023-10-01-preview' = {
   name: 'backend'
-  properties: {
+  properties: [
     application: application
     container: {
       image: 'ghcr.io/my-company/simpleEshop/backend:latest'
       ...
       }
-    }
+    },
     // Environment variables are automatically injected into container via the connection
     connections: {
       twilio: {
         source: twilio.id
       }
     }
-  }
+  ]
 }
 ```
 
-### **User Story 7 – Child resources** 
+### **User Story 7 – Composite resources** 
 
 As a platform engineer, I need to define a resource type which is composed of many resources. Some of the embedded resources will be core Radius resources but others may be other resource types I have created.
 
@@ -775,61 +771,68 @@ The goal of user-defined resource types is to enable users and the broader Radiu
 
 Radius will continue to ship with core resource types including containers, auto-scalers, gateways, volumes, and secrets. It will have built-in logic for deploying these resources to various container platforms including Kubernetes, ECS, ACA, ACI, and CloudRun. In order to allow the creation of more abstract, application-oriented resource types, user-defined resource types will support the concept of child resources.
 
-Child resources are resources which get deployed when its parent resource is deployed. The lifecycle of the child resource is tied to that of the parent. These child resources can be a mix of core resource types and user-defined resource types. 
-
-> [!NOTE]
->
-> Bicep has built-in support for child resources which was a primary reason Bicep was chosen over YAML.
+Composite resource types are resource types which deploy multiple child resources when created. The lifecycle of the child resources is tied to that of the parent composite resource. These child resources can be a mix of core resource types and user-defined resource types. 
 
 **User Experience**
 
-The platform engineer creates a resource type which has a child resource embedded within the resource type definition. 
+The platform engineer creates a composite resource type which has a child resource embedded within the resource type definition. 
 
 **`service-resource-type.bicep`**:
 
 ```yaml
+extension radius
+
 resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.App/service'
-  description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
-  api: {
+  metadata: {
+    description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
+  }
+  capabilities: ['compositeResourceType']
+  versions: [
     version: 'v1alpha1'
     schema: {
-      properties: {
+      properties: [
         container-image: {
           type: 'string'
           description: 'Container image name'
+        },
+        ...      
+      ]
+    } 
+  ]
+  resources: [
+    // Child resource
+    resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
+      name: 'proxy'
+      properties: [
+        container: {
+          image: 'envoy:latest'
+          ...
+        },
+      ]
+    },
+    // Child resource; note the name is taken from the parent
+    resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
+      name: ${parent.name}
+      properties: [
+        container: {
+          // Use impage property from the parent resource
+          image: ${parent.image}
+          ...
         }
-        ...
-      }
+      ]
     }
-  } 
-  // Child resource
-  resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
-    name: 'proxy'
-    properties: {
-      container: {
-        image: 'envoy:latest'
-        ...
-      }
-    }
-  }
-  // Child resource; note the name is taken from the parent
-  resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
-    name: ${parent.name}
-    properties: {
-      container: {
-        // Use impage property from the parent resource
-        image: ${parent.image}
-        ...
-      }
-    }
-  }
+  ]
 }
 ```
 
 When a developer creates a `MyCompany.App/service` resource, they will not need to have any awareness that an Envoy proxy is also created. This abstraction enables the platform engineer to easily inject sidecar containers. Envoy is shown in the example here, but other common sidecars are container security scanning tools such as Aqua Security and observability tools such as OpenTelemetry or Datadog. 
 
 The developer will, however, see that Envoy is deployed when they inspect the application graph since the child resources are standard Radius resources and will appear in the application graph.
+
+> [!IMPORTANT]
+>
+> Composite resources rely on the recipes for the child resources. Therefore, when `capabilities: ['compositeResourceType']` is specified, a recipe cannot be registered against the resource type. 
 
 ### **User Story 8 – Conditional resources** 
 
@@ -848,51 +851,124 @@ The platform engineer adds a boolean property to the `service` resource type fro
 **`service-resource-type.bicep`**:
 
 ```diff
+extension radius
+
 resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.App/service'
-  description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
-  api: {
+  metadata: {
+    description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
+  }
+  capabilities: ['compositeResourceType']
+  versions: [
     version: 'v1alpha1'
     schema: {
-      properties: {
+      properties: [
         container-image: {
           type: 'string'
           description: 'Container image name'
-        }
+        },
 +        ingress: {
 +          type: 'bool'
 +          description: 'Expose web service to external connections'
 +        }
         ...
-      }
-    }
-  } 
-  
-+  // Only create ingress-gw if ingress is true
-+  resource ingress-gw 'Applications.Core/gateways@2023-10-01-preview' = if (ingress) {
-+    name: 'ingress-gw'
-+    properties: {
-+      hostname: {
-+        fullyQualifiedHostname: '${parent.name}.my-company.com'
-+      }
-+      routes: [
-+        ...
-+      ]
-+    } 
-+  }
-  
-  // Child resource
-  resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
--     ...
-  }
-  // Child resource; note the name is taken from the parent
-  resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
+      ]
+    } 
+  ]
+  resources: [
++    // Only create ingress-gw if ingress is true
++    resource ingress-gw 'Applications.Core/gateways@2023-10-01-preview' = if (ingress) {
++      name: 'ingress-gw'
++      properties: {
++        hostname: {
++          fullyQualifiedHostname: '${parent.name}.my-company.com'
++        }
++        routes: [
++          ...
++        ]
++      } 
++    },
+    // Child resource
+    resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
 -    ...
-  }
+    },
+    // Child resource; note the name is taken from the parent
+    resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
+-    ...
+    }
+  ]
 }
 ```
 
+### User Story 9 – Conditionally requiring properties
 
+As a platform engineer, as I am authoring a resource type, I need to define properties which are required only if another property matches a value.
+
+**Summary**
+
+When creating the resource type, the platform engineer can add an `if`, `then`, `else` properties which are supported in the OpenAPI 3.1 JSON Schema specification. In the example below, the developer must specify the `fullyQualifiedHostname` only when `ingress` is true.
+
+**`service-resource-type.bicep`**:
+
+```diff
+extension radius
+
+resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-preview' = {
+  name: 'MyCompany.App/service'
+  metadata: {
+    description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
+  }
+  capabilities: ['compositeResourceType']
+  versions: [
+    version: 'v1alpha1'
+    schema: {
+      properties: [
+        container-image: {
+          type: 'string'
+          description: 'Container image name'
+        },
+        ingress: {
+          type: 'bool'
+          description: 'Expose web service to external connections'
+        },
++        fullyQualifiedHostname: {
++          type: 'string'
++          description: 'Radius will use your fully-qualified domain name as the hostname'
++        },
+        ...
+      }
++      if: {
++        properties: {
++          ingress: {
++            const: true
++          }
++      }
++      then: {
++        required: fullyQualifiedHostname
++      }
+    ] 
+  ]
+  resources: [
+    // Only create ingress-gw if ingress is true
+    resource ingress-gw 'Applications.Core/gateways@2023-10-01-preview' = if (ingress) {
+    properties: {
+      hostname: {
+-        fullyQualifiedHostname: '${parent.name}.my-company.com'
++        fullyQualifiedHostname: '${parent.fullyQualifiedHostname}'
+-   ...
+      }
+    },
+    // Child resource
+    resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
+-    ...
+    },
+    // Child resource; note the name is taken from the parent
+    resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
+-    ...
+    }
+  ]
+}
+```
 
 ## Other Changes
 
@@ -1009,67 +1085,83 @@ Simple eShop also connects to Stripe for payment processing and Twilio for sendi
 **`service-resource-type.bicep`**
 
 ```yaml
+extension radius
+
 resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.App/service'
-  description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
-  api: {
+  metadata: {
+    description: 'The service resource type is a long-running process responding to HTTP requests over TLS.'
+  }
+  capabilities: ['compositeResourceType']
+  versions: [
     version: 'v1alpha1'
     schema: {
-      properties: {
+      properties: [
         container-image: {
           type: 'string'
           description: 'Container image name'
-        }
+        },
         ingress: {
           type: 'bool'
           description: 'Expose web service to external connections'
-        }
+        },
         cpu-request: {
           type: 'string'
           description: 'Number of CPUs required in CPUs or milliCPUs'
-        }
+        },
         memory-request: {
           type: 'string'
           description: 'Memory required in MiB or GiB'
-        }
-        dnsName: {
+        },
+        fullyQualifiedHostname: {
           type: 'string'
-          description: 'Fully qualified DNS of the service if ingress is true'
-        }
-        required: ['container-image', 'ingress']
-      }
-    }
-  } 
-  // Only create ingress-gw if ingress is true
-  resource ingress-gw 'Applications.Core/gateways@2023-10-01-preview' = if (ingress) {
-    name: 'ingress-gw'
-    properties: {
-      hostname: {
-        fullyQualifiedHostname: '${parent.name}.my-company.com'
-      }
-      routes: [
+          description: 'Radius will use your fully-qualified domain name as the hostname'
+        },
         ...
       ]
+      if: {
+        properties: {
+          ingress: {
+            const: true
+          }
+      }
+      then: {
+        required: fullyQualifiedHostname
+      }
     } 
-  }
-  resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
-    name: 'proxy'
-    properties: {
-      container: {
-        image: 'nginx:latest'
-        ...
+  ]
+  resources: [
+    // Only create ingress-gw if ingress is true
+    resource ingress-gw 'Applications.Core/gateways@2023-10-01-preview' = if (ingress) {
+      name: 'ingress-gw'
+      properties: {
+        hostname: {
+          fullyQualifiedHostname: '${parent.fullyQualifiedHostname}'
+        }
+        routes: [
+          ...
+        ]
+      } 
+    },
+    resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
+      name: 'proxy'
+      properties: {
+        container: {
+          image: 'nginx:latest'
+          ...
+        }
+      }
+    }, 
+    resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
+      name: 'proxy'
+      properties: {
+        container: {
+          image: 'parent.image'
+          ...
+        }
       }
     }
-  }   
-  resource ${parent.name} 'Applications.Core/containers@2023-10-01-preview' = {
-    name: 'proxy'
-    properties: {
-      container: {
-        image: 'parent.image'
-        ...
-      }
-    }
-  }
+  ]
 }
 ```
 
@@ -1080,15 +1172,35 @@ resource MyCompany.App/service 'System.Resources/resourceTypes@2023-10-01-previe
 **`postgreSQl-resource-type.bicep`** 
 
 ```yaml
+extension radius
+
 resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.Data/postgreSQL'
-  description: A postgreSQL database
-  api: {
-    version: 'v1alpha1'
+   metadata: {
+    friendly-name: 'PostgreSQL'
+    description: '''
+        The MyCompany.Data/postgreSQL@v1alpha1 resource type
+        is a standard configuration relational database configured with 
+        corporate security settings enforced. 
+      
+        Example:
+        ...
+      
+        Owner:
+        author-platform-engineer@mycompany.com
+      
+        Change Log:
+        ...
+    '''
+  }
+  versions: [
+    name: 'v1alpha1' {
     schema: {
-      properties: {
+      required: ['size']
+      properties: [
         size: {
           type: 'string'
+          enum: ['S', 'M', 'L', 'XL']
           description: '''
             The size of database to provision
               - 'S': 0.5 vCPU, 2 GiB memory, 20 GiB storage
@@ -1096,23 +1208,23 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
               - 'L': 2.0 vCPU, 8 GiB memory, 60 GiB storage
               - 'XL': 4.0 vCPU, 16 GiB memory, 100 GiB storage
             '''
-          enum: ['S', 'M', 'L', 'XL']
-        }
+        },
         logging-verbosity: {
           type: string
+          enum: ['TERSE', 'DEFAULT', 'VERBOSE']
           description: '''
             The logging level for the database
               - 'TERSE': Not recommended; does not provide guidance on what to do about an error
               - 'DEFAULT': Recommended level
-              - 'VERBOSE': Use only if you plan to actually look up the Postgres source code |
-          enum: ['TERSE', 'DEFAULT', 'VERBOSE']
-        }
+              - 'VERBOSE': Use only if you plan to actually look up the Postgres source code
+          '''
+        },
         connection-string: {
           type: 'string'
           readOnly: true
           description: 'Fully qualified string to connect to the resource'
           connected-resource-environment-variable: POSTGRESQL_CONNECTION_STRING
-        }
+        },
         credentials: {
           type: 'object'
           readOnly: true
@@ -1129,8 +1241,8 @@ resource MyCompany.Data/postgreSQL 'System.Resources/resourceTypes@2023-10-01-pr
             }
           }
         }
-      required: ['size']
-    }
+      ]
+    ]
   }
 }
 ```
@@ -1206,28 +1318,29 @@ output "credentials-password" {
 **`external-service-resource-type.bicep`**
 
 ```yaml
+extension radius
+
 resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-01-preview' = {
   name: 'MyCompany.App/externalService'
-  description: '''
-    The external service resource type represents a resource which
-    is not managed by Radius but appears in the application graph.
-    '''
-  // The createWithoutRecipe capability allows resources of this type to be created in an
-  // environment which does not have a recipe registered. If a recipe is not registered, 
-  // and this capability does not exist, creating a resource in the environment will throw an exception.
-  capabilities: ['createWithoutRecipe']
-  api: {
-    version: 'v1alpha1'
+  metadata: {
+    description: '''
+      The external service resource type represents a resource which
+      is not managed by Radius but appears in the application graph.
+      '''
+  }  
+  capabilities: ['compositeResourceType']
+  versions: [
+  	name: 'v1alpha1'
     schema: {
-      properties: {
+      properties: [
         connection-string: {
           type: 'string'
           description: 'The connection string to the external service'
           connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
-        }
+        },
         credentials: {
           type: 'object'
-          properties: {
+          properties: [
             username: {
               type: 'string'
               description: 'Username for the external service'
@@ -1239,21 +1352,25 @@ resource MyCompany.App/externalService 'System.Resources/resourceTypes@2023-10-0
               connected-resource-environment-variable: EXTERNAL_SERVICE_PASSSWORD
             }
           }
-      }
-  } 
-  resource credentials 'Applications.Core/secretStores@2023-10-01-preview' = {
-  name: 'credentials'
-    properties: {
-      data: {
-        'username': {
-          value: parent.credentials.username
         }
-        'password': {
-          value: parent.credentials.password
+      ]
+    }
+  ]
+  resources: [
+    resource credentials 'Applications.Core/secretStores@2023-10-01-preview' = {
+    name: 'credentials'
+      properties: {
+        data: {
+          'username': {
+            value: parent.credentials.username
+          }
+          'password': {
+            value: parent.credentials.password
+          }
         }
       }
     }
-  }
+  ]
 }
 ```
 
