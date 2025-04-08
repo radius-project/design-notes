@@ -45,7 +45,7 @@ Extensions should be:
 
 As a platform engineer I can initialize a new Radius environment that is connected to a non-Kubernetes compute platform so that Radius can authenticate and deploy to non-Kubernetes platforms.
 
-The ability to set a recipe on the environment will set up the integration with the compute platform.
+The ability to set a recipe on the environment will set up the integration with the compute platform or perform other validation and setup tasks for the environment.
 
 Changes include:
 
@@ -58,23 +58,14 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'myenv'
   properties: {
     compute: {
+-      kind: 'kubernetes' // The only option is 'kubernetes'
 +      kind: 'aci'   // Allow any name. This is a descriptive label only unless set to 'kubernetes'.
       namespace: 'default' // Only required for Kubernetes compute kind.
       identity: {          // Optional. External identity providers to use for connections
-        kind: 'azure.com.workload'
-        oidcIssuer: oidcIssuer
+        kind: 'azure.com.workload' // ‘azure.com.workload’ is the only supported value.
+        oidcIssuer: oidcIssuer // OIDC issuer URL
       }
     }
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-environment'
-+      // Set parameters that will be passed to every recipe in this environment unless overridden in the resource definitions. Platform-specific configuration goes here so taht it can be passed to each recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+        size: 'large'
-+      }
-+    }
    extensions: [ // Can be removed if we convert the current Kubernetes deployment to use recipes
       {
         kind: 'kubernetesMetadata'
@@ -83,11 +74,20 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
         }
       }
     ]
++   recipe: {
++      // Name a specific Recipe to use
++      name: 'azure-aci-environment'
++      // Set parameters that will be passed to every recipe in this environment unless overridden in the resource definitions. Platform-specific configuration goes here so that it can be passed to each recipe.
++      parameters: {
++        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
++        resourceGroup: 'myrg'
++      }
++    }
   }
 }
 ```
 
-> NOTE: Specifying a recipe in the Bicep above is optional. If there are multiple environments, e.g., development, staging, and production, a team may want to configure recipes with the `rad recipe register` command that is specific to each environment. That would allow setting parameters for each recipe in each environment, or have separate recipes for each environment.
+> NOTE: Recipes can also be added for each environment and core type with the `rad recipe register` command, allowing different recipes (or different parameter value) for every environment.
 
 #### Initialize a workspace
 
@@ -110,22 +110,13 @@ rad recipe register <recipe name> \
 
 #### Set recipes on core types
 
-As a platform engineer I can set recipes on the core resource types of application, container, gateway, and secret store so that I can configure my deployments for an environment.
+As a platform engineer I can set recipes on the core resource types of application, container, gateway, and secret store so that I can configure my deployments.
 
 ```diff
 resource app 'Applications.Core/applications@2023-10-01-preview' = {
   name: 'myapp'
   properties: {
     environment: environment
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-application'
-+      // Set parameters that will be passed to every recipe in this environment unless overridden in the resource definitions. Platform-specific configuration goes here so taht it can be passed to each recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+      }
-+    }
     extensions: [ // Extensions are only useful for Kubernetes deployments. Can be removed if we convert the current Kubernetes deployment to recipes.
       {
         kind: 'kubernetesNamespace'
@@ -138,9 +129,206 @@ resource app 'Applications.Core/applications@2023-10-01-preview' = {
         }
       }
     ]
++   recipe: {
++      // Name a specific Recipe to use
++      name: 'azure-aci-environment'
++      // Set parameters that will be passed to the recipe.
++      parameters: {
++        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
++        resourceGroup: 'myrg'
++      }
++    }
   }
 }
 ```
+
+> NOTE: The `extensions` section could be removed if we convert the Kubernetes deployments to recipes, which we could do separately from adding recipes.
+
+```diff
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'frontend'
+  properties: {
+    application: app.id
+    container: {
+      image: 'registry/container:tag'
+      env:{
+        DEPLOYMENT_ENV: {
+          value: 'prod'
+        }
+        DB_CONNECTION: {
+          value: db.listSecrets().connectionString
+        }
+      }
+      ports: {
+        http: {
+          containerPort: 80
+          protocol: 'TCP'
+        }
+      }
+      volumes: {
+        ephemeralVolume: {
+          kind: 'ephemeral'
+          mountPath: '/tmpfs'
+          managedStore: 'memory'
+        }
+        persistentVolume: {
+          kind: 'persistent'
+          source: volume.id
+        }
+      }
+      readinessProbe:{
+        kind:'httpGet'
+        containerPort:8080
+        path: '/healthz'
+        initialDelaySeconds:3
+        failureThreshold:4
+        periodSeconds:20
+      }
+      livenessProbe:{
+        kind:'exec'
+        command:'ls /tmp'
+      }
+      command: [
+        '/bin/sh'
+      ]
+      args: [
+        '-c'
+        'while true; do echo hello; sleep 10;done'
+      ]
+      workingDir: '/app'
+    }
+    connections: {
+      inventory: {
+        source: db.id
+      }
+      azureStorage: {
+        source: azureStorage
+        iam: {
+          kind: 'azure'
+          roles: [
+            'Storage Blob Data Contributor'
+          ]
+        }
+      }
+    }
+    extensions: [
+      {
+        kind: 'daprSidecar'
+        appId: 'frontend'
+      }
+      {
+        kind:  'manualScaling'
+        replicas: 5
+      }
+      {
+        kind: 'kubernetesMetadata'
+        labels: {
+          'team.contact.name': 'frontend'
+        }
+      }
+    ]
+    runtimes: {
+      kubernetes: {
+        base: loadTextContent('base-container.yaml')
+        pod: {
+          containers: [
+            {
+              name: 'log-collector'
+              image: 'ghcr.io/radius-project/fluent-bit:2.1.8'
+            }
+          ]
+          hostNetwork: true
+        }
+      }
+    }
++   recipe: {
++      // Name a specific Recipe to use
++      name: 'azure-aci-container'
++      // Set parameters that will be passed to the recipe.
++      parameters: {
++        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
++        resourceGroup: 'myrg'
++      }
++    }
+  }
+}
+```
+
+```diff
+resource gateway 'Applications.Core/gateways@2023-10-01-preview' = {
+  name: 'gateway'
+  properties: {
+    application: app.id
+    hostname: {
+      // Omitting hostname properties results in gatewayname.appname.PUBLIC_HOSTNAME_OR_IP.nip.io
+
+      // Results in prefix.appname.PUBLIC_HOSTNAME_OR_IP.nip.io
+      prefix: 'prefix'
+      // Alternately you can specify your own hostname that you've configured externally
+      fullyQualifiedHostname: 'hostname.radapp.io'
+    }
+    routes: [
+      {
+        path: '/frontend'
+        destination: 'http://${frontend.name}:3000'
+      }
+      {
+        path: '/backend'
+        destination: 'http://${backend.name}:8080'
+
+        // Enable websocket support for the route (default: false)
+        enableWebsockets: true
+      }
+    ]
+    tls: {
+      // Specify SSL Passthrough for your app (default: false)
+      sslPassthrough: false
+
+      // The Radius Secret Store holding TLS certificate data
+      certificateFrom: secretstore.id
+      // The minimum TLS protocol version to support. Defaults to 1.2
+      minimumProtocolVersion: '1.2'
+    }
++   recipe: {
++      // Name a specific Recipe to use
++      name: 'azure-aci-gateway'
++      // Set parameters that will be passed to the recipe.
++      parameters: {
++        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
++        resourceGroup: 'myrg'
++      }
++    }
+  }
+}
+```
+
+```diff
+resource appCert 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'appcert'
+  properties:{
+    application: app.id
+    type: 'certificate'
+    data: {
+      'tls.key': {
+        value: tlskey
+      }
+      'tls.crt': {
+        value: tlscrt
+      }
+    }
++   recipe: {
++      // Name a specific Recipe to use
++      name: 'azure-aci-gateway'
++      // Set parameters that will be passed to the recipe.
++      parameters: {
++        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
++        resourceGroup: 'myrg'
++      }
++    }
+  }
+}
+```
+
 
 <!--
 ## Design
@@ -299,8 +487,10 @@ estimates.
 
 ## Open Questions
 
-* Should we convert Kubernetes deployments to recipes with this work, after this work, or not at all?
+* How do we make the `environment.properties[identity]` section extensible? It is currently hard coded to a specific identity provider. Adding more identity providers would require more hard coding. Maybe identity should be left out of Radius because it is a platform engineer concern.
+* Do we need recipes on the environment core type?
 * Can the environment core type be configured to set environment variables or certain parameters to be passed to all recipes? For example, set subscription ID on the environment, and have it automatically flow to each recipe through a parameter.
+* Should we convert Kubernetes deployments to recipes with this work, after this work, or not at all?
 * Should we use the Radius group concept to manage resource groups in cloud providers?
 
 ## Alternatives considered
