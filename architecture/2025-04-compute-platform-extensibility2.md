@@ -45,13 +45,10 @@ Extensions should be:
 
 As a platform engineer I can initialize a new Radius environment that is connected to a non-Kubernetes compute platform so that Radius can authenticate and deploy to non-Kubernetes platforms.
 
-The ability to set a recipe on the environment will set up the integration with the compute platform or perform other validation and setup tasks for the environment.
-
 Changes include:
 
 * `kind` can be any string that identifies a platform. If set to `kubernetes` the existing logic will stay in place.
 * `namespace` will only be required for "kubernetes" compute kind. It will be deprecated or removed if we convert the Kubernetes deployments to a recipe.
-* `recipe` will be added, which allows configuring default values on all recipes that run in this environment. Platform-specific required parameters like subscription ID and resource group can be added here and provided to all recipes that run for this environment. `recipe` is not allowed if the `kind` is `kubernetes`.
 
 ```diff
 resource environment 'Applications.Core/environments@2023-10-01-preview' = {
@@ -74,20 +71,11 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
         }
       }
     ]
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-environment'
-+      // Set parameters that will be passed to every recipe in this environment unless overridden in the resource definitions. Platform-specific configuration goes here so that it can be passed to each recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+      }
-+    }
   }
 }
 ```
 
-> NOTE: Recipes can also be added for each environment and core type with the `rad recipe register` command, allowing different recipes (or different parameter value) for every environment.
+> NOTE: Recipes can be added for each environment and core type with the `rad recipe register` command, or by setting the `environment.recipes` property on the `environment core type. This capability is unchanged from the current version of Radius.
 
 #### Initialize a workspace
 
@@ -163,51 +151,6 @@ resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
         http: {
           containerPort: 80
           protocol: 'TCP'
-        }
-      }
-      volumes: {
-        ephemeralVolume: {
-          kind: 'ephemeral'
-          mountPath: '/tmpfs'
-          managedStore: 'memory'
-        }
-        persistentVolume: {
-          kind: 'persistent'
-          source: volume.id
-        }
-      }
-      readinessProbe:{
-        kind:'httpGet'
-        containerPort:8080
-        path: '/healthz'
-        initialDelaySeconds:3
-        failureThreshold:4
-        periodSeconds:20
-      }
-      livenessProbe:{
-        kind:'exec'
-        command:'ls /tmp'
-      }
-      command: [
-        '/bin/sh'
-      ]
-      args: [
-        '-c'
-        'while true; do echo hello; sleep 10;done'
-      ]
-      workingDir: '/app'
-    }
-    connections: {
-      inventory: {
-        source: db.id
-      }
-      azureStorage: {
-        source: azureStorage
-        iam: {
-          kind: 'azure'
-          roles: [
-            'Storage Blob Data Contributor'
-          ]
         }
       }
     }
@@ -488,10 +431,9 @@ estimates.
 ## Open Questions
 
 * How do we make the `environment.properties[identity]` section extensible? It is currently hard coded to a specific identity provider. Adding more identity providers would require more hard coding. Maybe identity should be left out of Radius because it is a platform engineer concern.
-* Do we need recipes on the environment core type?
-* Can the environment core type be configured to set environment variables or certain parameters to be passed to all recipes? For example, set subscription ID on the environment, and have it automatically flow to each recipe through a parameter.
 * Should we convert Kubernetes deployments to recipes with this work, after this work, or not at all?
 * Should we use the Radius group concept to manage resource groups in cloud providers?
+* Do we need to extend [`environment.recipeConfig`](https://docs.radapp.io/reference/resource-schema/core-schema/environment-schema/#recipeconfig) to include Bicep configuration?
 
 ## Alternatives considered
 
