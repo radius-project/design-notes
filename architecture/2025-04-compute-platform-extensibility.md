@@ -67,21 +67,97 @@ The integration of Azure Container Instances (ACI) with Radius will bring severa
 1. Deployment Process: The deployment process will have validation to ensure that when deploying to ACI users specify only configurations and properties that are valid for ACI.
 1. Container Definitions: The container definitions in the Bicep templates will be platform-agnostic, ensuring that users can deploy their containers to both Kubernetes and ACI without significant changes. However, users will have the option to apply ACI-specific configurations using extension properties in the Bicep templates.
 
-### Sample Input:Radius Environment*
+### Sample Input: Radius Environment
 
-```bicep
+```diff
 param aciscope string = '/subscriptions/<subscription id/resourceGroups/<resource group name>'
 resource env 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'aci-env'
   properties: {
-    compute: {
-      kind: 'aci'
-      resourceGroup: aciscope
-    }
+    compute: {  
+-        kind: 'kubernetes'
+-        namespace: 'default'
+-        identity: {
+-            kind: 'azure.com.workload'
+-            oidcIssuer: oidcIssuer
+-        }
+       // Either aci or kubernetes can be specified, but not both.
++      aci: {  
++          resourceGroup:
++          identity {
++              kind: 'managed-identity'
++              applicationResourceId: ''
++           }
++       }
++       kubernetes: {
++           namespace: 'default'
++           identity {
++               kind: 'azure.com.workload'
++               oidcIssuer: oidcIssuer
++           }
++       }
+    }  
     providers: {
       azure: {
         scope: aciscope
       }
+    }
+  }
+}
+```
+
+### Sample Input: Container Resource Type
+
+* Move `manualScaling` out of `extensions`.
+* Add add an ACI runtime that allows [container group profile properties](https://learn.microsoft.com/en-us/azure/container-instances/container-instance-ngroups/container-instances-about-ngroups#container-group-profile-cg-profile) to be set.
+
+```diff
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'frontend'
+  properties: {
+    application: app.id
+    container: {
+      image: 'registry/container:tag'
+      ports: {
+        web: {
+          containerPort: 8080
+        }
+      }
+    }
+    connections: {
+      inventory: {
+        source: db.id
+      }
+    }
++   manualScaling {
++       replicas: 5
++   }
+    extensions: [
+-     {
+-       kind:  'manualScaling'
+-       replicas: 5
+-     }
+    ]
+    runtimes: {
+      kubernetes: {
+        base: loadTextContent('base-container.yaml')
+        pod: {
+          containers: [
+            {
+              name: 'log-collector'
+              image: 'ghcr.io/radius-project/fluent-bit:2.1.8'
+            }
+          ]
+          hostNetwork: true
+        }
+      }
++     aci: { // Container group profile properties
++       location: 'westus3'
++       properties: {
++           sku: 'standard'
++           restartPolicy: 'Always'
++       }
++     }
     }
   }
 }
