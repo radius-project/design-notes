@@ -47,35 +47,46 @@ As a platform engineer I can initialize a new Radius environment that is connect
 
 Changes include:
 
+* New versions of the affected resource types. The old types can still be supported until we decide to remove them.
 * `kind` can be any string that identifies a platform. If set to `kubernetes` the existing logic will stay in place.
 * `namespace` will only be required for "kubernetes" compute kind. It will be deprecated or removed if we convert the Kubernetes deployments to a recipe.
 
 ```diff
-resource environment 'Applications.Core/environments@2023-10-01-preview' = {
++resource environment 'Applications.Core/environments@2025-05-01-preview' = {
   name: 'myenv'
   properties: {
-    compute: {
--      kind: 'kubernetes' // The only option is 'kubernetes'
-+      kind: 'aci'   // Allow any name. This is a descriptive label only unless set to 'kubernetes'.
-      namespace: 'default' // Only required for Kubernetes compute kind.
-      identity: {          // Optional. External identity providers to use for connections
-        kind: 'azure.com.workload' // ‘azure.com.workload’ is the only supported value.
-        oidcIssuer: oidcIssuer // OIDC issuer URL
+-    compute: {
+-      kind: 'kubernetes'
+-      namespace: 'default'
+-      }
+-    }
+    recipeConfig: {
+      env {
+        foo: 'bar'
       }
     }
-   extensions: [ // Can be removed if we convert the current Kubernetes deployment to use recipes
-      {
-        kind: 'kubernetesMetadata'
-        labels: {
-          'team.contact.name': 'frontend'
+    recipes: {
+      'Applications.Datastores/redisCaches':{
+        default: {
+          templateKind: 'bicep'
+          plainHttp: true
+          templatePath: 'ghcr.io/radius-project/recipes/azure/rediscaches:latest'
         }
       }
-    ]
+    }
+-   extensions: [
+-      {
+-        kind: 'kubernetesMetadata'
+-        labels: {
+-          'team.contact.name': 'frontend'
+-        }
+-      }
+-    ]
   }
 }
 ```
 
-> NOTE: Recipes can be added for each environment and core type with the `rad recipe register` command, or by setting the `environment.recipes` property on the `environment core type. This capability is unchanged from the current version of Radius.
+The `compute` platform is removed so that we do not have hard-coded support for specific platforms. The functionality enabled by the `compute.identity` property would be implemented via recipes so that we do not need hard-coded support for specific platforms. We could consider adding a recipe to the `environment` type if there are features enabled by `compute` that we could not achieve using recipes on the other core types.
 
 #### Initialize a workspace
 
@@ -83,7 +94,7 @@ As a platform engineer I can use `rad init` (or the equivalent rad `workspace`, 
 
 `rad init` would be unchanged. Platform engineers would have to add recipes for each core type and UDT they plan to use.
 
-We could consider adding a flag to `rad init` that would identify specific compute platforms and provide the registration of default recipes for that platform, based on a pre-defined set of compute type names. For example, `rad init aci` would install a set of default recipes for the ACI platform. However, this work is not in scope for this design.
+We could consider adding a flag to `rad init` that would identify a specific set of recipes. For example, `rad init aci` would install a set of default recipes for the ACI platform. However, this work is not in scope for this design.
 
 #### Extend Radius to a new platform by creating new recipes
 
@@ -101,22 +112,22 @@ rad recipe register <recipe name> \
 As a platform engineer I can set recipes on the core resource types of application, container, gateway, and secret store so that I can configure my deployments.
 
 ```diff
-resource app 'Applications.Core/applications@2023-10-01-preview' = {
++resource app 'Applications.Core/applications@2025-05-01-preview' = {
   name: 'myapp'
   properties: {
     environment: environment
-    extensions: [ // Extensions are only useful for Kubernetes deployments. Can be removed if we convert the current Kubernetes deployment to recipes.
-      {
-        kind: 'kubernetesNamespace'
-        namespace: 'myapp'
-      }
-      {
-        kind: 'kubernetesMetadata'
-        labels: {
-          'team.contact.name': 'frontend'
-        }
-      }
-    ]
+-   extensions: [
+-     {
+-       kind: 'kubernetesNamespace'
+-       namespace: 'myapp'
+-     }
+-     {
+-       kind: 'kubernetesMetadata'
+-       labels: {
+-         'team.contact.name': 'frontend'
+-       }
+-     }
+-   ]
 +   recipe: {
 +      // Name a specific Recipe to use
 +      name: 'azure-aci-environment'
@@ -130,10 +141,8 @@ resource app 'Applications.Core/applications@2023-10-01-preview' = {
 }
 ```
 
-> NOTE: The `extensions` section could be removed if we convert the Kubernetes deployments to recipes, which we could do separately from adding recipes.
-
 ```diff
-resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
++resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
   name: 'frontend'
   properties: {
     application: app.id
@@ -154,36 +163,36 @@ resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
         }
       }
     }
-    extensions: [
-      {
-        kind: 'daprSidecar'
-        appId: 'frontend'
-      }
-      {
-        kind:  'manualScaling'
-        replicas: 5
-      }
-      {
-        kind: 'kubernetesMetadata'
-        labels: {
-          'team.contact.name': 'frontend'
-        }
-      }
-    ]
-    runtimes: {
-      kubernetes: {
-        base: loadTextContent('base-container.yaml')
-        pod: {
-          containers: [
-            {
-              name: 'log-collector'
-              image: 'ghcr.io/radius-project/fluent-bit:2.1.8'
-            }
-          ]
-          hostNetwork: true
-        }
-      }
-    }
+-   extensions: [
+-     {
+-       kind: 'daprSidecar'
+-       appId: 'frontend'
+-     }
+-     {
+-       kind:  'manualScaling'
+-       replicas: 5
+-     }
+-     {
+-       kind: 'kubernetesMetadata'
+-       labels: {
+-         'team.contact.name': 'frontend'
+-       }
+-     }
+-   ]
+-   runtimes: {
+-     kubernetes: {
+-       base: loadTextContent('base-container.yaml')
+-       pod: {
+-         containers: [
+-           {
+-             name: 'log-collector'
+-             image: 'ghcr.io/radius-project/fluent-bit:2.1.8'
+-           }
+-         ]
+-         hostNetwork: true
+-       }
+-     }
+-   }
 +   recipe: {
 +      // Name a specific Recipe to use
 +      name: 'azure-aci-container'
@@ -198,7 +207,7 @@ resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
 ```
 
 ```diff
-resource gateway 'Applications.Core/gateways@2023-10-01-preview' = {
++resource gateway 'Applications.Core/gateways@2025-05-01-preview' = {
   name: 'gateway'
   properties: {
     application: app.id
@@ -246,7 +255,7 @@ resource gateway 'Applications.Core/gateways@2023-10-01-preview' = {
 ```
 
 ```diff
-resource appCert 'Applications.Core/secretStores@2023-10-01-preview' = {
++resource appCert 'Applications.Core/secretStores@2025-05-01-preview' = {
   name: 'appcert'
   properties:{
     application: app.id
@@ -430,10 +439,9 @@ estimates.
 
 ## Open Questions
 
-* How do we make the `environment.properties[identity]` section extensible? It is currently hard coded to a specific identity provider. Adding more identity providers would require more hard coding. Maybe identity should be left out of Radius because it is a platform engineer concern.
 * Should we convert Kubernetes deployments to recipes with this work, after this work, or not at all?
-* Should we use the Radius group concept to manage resource groups in cloud providers?
-* Do we need to extend [`environment.recipeConfig`](https://docs.radapp.io/reference/resource-schema/core-schema/environment-schema/#recipeconfig) to include Bicep configuration?
+* Is the Radius group concept affected by this design?
+* Do we need to extend [`environment.recipeConfig`](https://docs.radapp.io/reference/resource-schema/core-schema/environment-schema/#recipeconfig) to include Bicep configuration? (There is already a Terraform configuration.)
 
 ## Alternatives considered
 
