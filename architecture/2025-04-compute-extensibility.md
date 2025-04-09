@@ -86,6 +86,8 @@ Changes include:
 }
 ```
 
+> NOTE: The resource types shown here are new versions, e.g., `environments@2025-05-01-preview`, not changes to the existing versions of the resource types. This allows us to add recipe support to the core types without breaking existing deployments.
+
 The `compute` platform is removed so that we do not have hard-coded support for specific platforms. The functionality enabled by the `compute.identity` property would be implemented via recipes so that we do not need hard-coded support for specific platforms. We could consider adding a recipe to the `environment` type if there are features enabled by `compute` that we could not achieve using recipes on the other core types.
 
 #### Initialize a workspace
