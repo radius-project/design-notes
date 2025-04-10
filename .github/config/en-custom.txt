@@ -910,6 +910,9 @@ workspace's
 Authorizer
 Aditi
 Twilio
+DSL
+Helly
+GitRepository
 NGroups
 NGroup
 balancers
