@@ -8,9 +8,9 @@ Radius will enable users to deploy and manage their applications to multiple com
 
 Modifications to Radius include:
 
-* The [core resource types](https://docs.radapp.io/reference/resource-schema/core-schema/) of application, container, gateway, and secret store will support recipes.
+* The [core resource types](https://docs.radapp.io/reference/resource-schema/core-schema/) of `container`, `gateway`, and `secretStores` will support recipes.
 * Radius will provide default recipes for Azure Container Instances (ACI).
-* Customers can replace or modify default recipes, or create recipes for new platforms.
+* Customers can replace or modify default recipes, or create new recipes for new platforms.
 * Existing properties on the environment core type will be used to provide Bicep or Terraform environment configuration.
 
 > NOTE: This design builds upon and extends the [Serverless Container Runtimes](https://github.com/radius-project/design-notes/pull/77) feature spec.
@@ -111,7 +111,9 @@ rad recipe register <recipe name> \
 
 #### Set recipes on core types
 
-As a platform engineer I can set recipes on the core resource types of application, container, gateway, and secret store so that I can configure my deployments.
+As a platform engineer I can set recipes on the core resource types of container, gateway, and secret store so that I can configure my deployments.
+
+Extensions are removed from the `applications` core type because the type of data being set in extensions would be set as recipe parameters.
 
 ```diff
 +resource app 'Applications.Core/applications@2025-05-01-preview' = {
@@ -130,15 +132,6 @@ As a platform engineer I can set recipes on the core resource types of applicati
 -       }
 -     }
 -   ]
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-environment'
-+      // Set parameters that will be passed to the recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+      }
-+    }
   }
 }
 ```
@@ -441,9 +434,11 @@ estimates.
 
 ## Open Questions
 
-* Should we convert Kubernetes deployments to recipes with this work, after this work, or not at all?
+* What is the impact on the Radius graph, and how would we continue to support it?
+* Core types are currently deployed to Kubernetes using imperative Go code within Radius. Should we convert those Kubernetes deployments to recipes with this work, after this work, or not at all? We could ship a default recipe for Kubernetes.
 * Is the Radius group concept affected by this design?
-* Do we need to extend [`environment.recipeConfig`](https://docs.radapp.io/reference/resource-schema/core-schema/environment-schema/#recipeconfig) to include Bicep configuration? (There is already a Terraform configuration.)
+* For the container resource type, what features, if any, would be implemented by Radius vs. a recipe? For example, would Radius implement connections?
+* Can everything currently deployed by Go code be deployed using recipes? We think so, but need to prove it through prototyping.
 
 ## Alternatives considered
 
@@ -463,7 +458,3 @@ We did not select this option because:
 We could add the option to create custom resource types later if we see demand for more complex extension scenarios.
 
 ## Design Review Notes
-
-<!--
-Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
--->
