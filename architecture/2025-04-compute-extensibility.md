@@ -523,7 +523,7 @@ Instead of adding recipe support to existing core types, we could implement core
 
 ## Alternate Development Plan: Phase 1 Only
 
-Another alternative is to implement Phase 1 of the first development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. This would maintain the Radius built-in types as the recommended application model, while still allowing customers to create their own application models if they choose to do so.
+Another alternative is to implement Phase 1 of the first development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. This would maintain the Radius built-in types as the recommended application model, while still allowing customers to create their own application models using UDTs if they choose to do so.
 
 | Phase | Name | Size | Activities | Customer Capabilities |
 | ----- | ---- | ---- | ---------- | --------------------- |
