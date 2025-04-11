@@ -505,7 +505,7 @@ Instead of adding recipe support to existing core types, we could implement core
 | ----- | ---- | ---- | ---------- | --------------------- |
 | 1 | Create UDTs | L | - Create UDTs for `containers`, `gateways`, and `secretStores`<br>- Implement recipes for ACI using UDTs<br>- Deploy UDTs by default during Radius setup | - Deploy to ACI with UDT versions of core types<br>- Customize recipes for ACI deployments<br>- Create custom recipes for core UDTs |
 | 2 | Kubernetes Migration | XL | - Create Kubernetes recipes for UDT versions of core types<br>- Provide migration tools for existing Kubernetes deployments<br>- Enable dual deployment support during transition | - Deploy to Kubernetes with UDT versions of core types<br>- Migrate existing deployments with tooling |
-| 4 | Remove Core Types | L | - Remove core types from Radius<br>- Complete transition to UDT-only model<br> | - Fully extensible deployment model<br>- Consistent experience across all resource types |
+| 3 | Remove Core Types | L | - Remove core types from Radius<br>- Complete transition to UDT-only model<br> | - Fully extensible deployment model<br>- Consistent experience across all resource types |
 
 ### Advantages of Core Types as UDTs from the Start Plan
 
