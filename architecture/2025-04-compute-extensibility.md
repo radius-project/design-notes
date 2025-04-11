@@ -19,9 +19,14 @@ This design enables:
 A phased approach will minimize risk and enable fast delivery of value. See the development plan below for details.
 
 1. New versions of core types that support recipes. Provide recipes to provision ACI.
-2. Convert core types to user-defined types.
+2. Convert core types to user-defined types (UDTs).
 3. Move Kubernetes deployments to recipes.
 4. Remove hard-coded core types.
+
+There are two alternative development plans to consider:
+
+* Alternate 1: Skip phase 1 and start directly with UDTs.
+* Alternate 2: Implement phase 1 only. Do not convert core types to UDTs.
 
 ## Terms and definitions
 
@@ -47,11 +52,13 @@ A phased approach will minimize risk and enable fast delivery of value. See the 
 
 These are the design principles that apply to the customer experience of extending Radius to support multiple compute platforms.
 
-Extensions should be:
+Radius extensibility to support new platforms should enable creating extensions that are:
 
-* **Independently upgradeable in a runtime environment**: recipes are independently upgradeable.
-* **Isolated and over a network protocol**: recipes are currently implemented through Bicep and Terraform. Both run locally and communicate to the target platform over network protocols. We could separate recipe execution to its own container in Radius (but that is not currently planned).
-* **Strongly typed and support versioning**: recipes support versioning through the use of OCI-compliant registries. They are not strongly types in the sense of having compile-time validation, but they can be validated at the time they are registered as having the correct input parameters and output properties.
+| Principle | Description |
+|-----------|-------------|
+| **Independently upgradeable in a runtime environment** | Recipes are independently upgradeable. |
+| **Isolated and over a network protocol** | Recipes are currently implemented through Bicep and Terraform. Both run locally and communicate to the target platform over secure network protocols. |
+| **Strongly typed and support versioning** | Recipes support versioning through the use of OCI-compliant registries. They are not strongly typed in the sense of having compile-time validation, but they can be validated at the time they are registered as having the correct input parameters and output properties. |
 
 ### User scenarios
 
@@ -513,6 +520,24 @@ Instead of adding recipe support to existing core types, we could implement core
 * **Higher initial complexity**: Implementing core types as UDTs requires solving more architectural problems upfront.
 * **Delayed delivery**: Initial capabilities would take longer to deliver, delaying value to customers.
 * **Increased initial risk**: More substantial architectural changes increase the risk of unforeseen issues.
+
+## Alternate Development Plan: Phase 1 Only
+
+Another alternative is to implement Phase 1 of the first development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. This would maintain the Radius built-in types as the recommended application model, while still allowing customers to create their own application models if they choose to do so.
+
+| Phase | Name | Size | Activities | Customer Capabilities |
+| ----- | ---- | ---- | ---------- | --------------------- |
+| 1 | Support Recipes | M | - Enable recipes on new versions of core types<br>- Move ACI integration to recipes<br>- Support backward compatibility for existing types | - ACI is deployed via default recipes<br>- Recipes can be modified/replaced by customers |
+
+### Advantages of Supporting Recipes on Core Types Only
+
+* **Stable application model**: Maintains the familiar Radius application model that customers are already using.
+* **Earlier delivery**: Same early delivery advantage as the multi-phase plan.
+
+### Disadvantages of Supporting Recipes on Core Types Only
+
+* **Less architectural flexibility**: Core types remain hard-coded in Radius, limiting some extensibility options.
+* **Inconsistent resource type model**: Core types and UDTs would have different implementation approaches. However, customers can choose to ignore the core types and implement their own.
 
 ## Open Questions
 
