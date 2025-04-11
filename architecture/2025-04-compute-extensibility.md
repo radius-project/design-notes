@@ -345,26 +345,6 @@ Discuss the rationale behind architectural choices and alternative options
 considered during the design process.
 -->
 
-#### Advantages of this Design
-
-* **Recipe-based provisioning**: Puts infrastructure design in the hands of platform engineers without losing the advantages of Radius providing a default design.
-* **Community contributions**: Additional platforms can be publicly added by the community or privately by institutions without re-releasing Radius.
-* **Flexible application model**: Customers can start with the Radius-provided application model (containers, gateways, and secret stores) or they can build their own.
-* **Simplified customization workflow**: Platform engineers can customize deployments without having to modify core Radius code or wait for upstream changes.
-* **Increased flexibility**: Different compute platforms can be supported even if they have fundamentally different implementation requirements.
-* **Reduced coupling**: Core Radius components are decoupled from specific platform implementations, simplifying and reducing the size of the Radius code.
-* **Lower barrier to entry**: Adding support for new platforms requires knowledge of Bicep or Terraform rather than Go and the Radius codebase.
-* **Consistent extensibility model**: Using recipes for both user-defined types and core types provides a unified approach to customization.
-* **No changes to identity and security**: Recipes are already implemented in Radius, so adding recipe support to additional types will not change the identity or security configuration for customers.
-
-#### Disadvantages of this Design
-
-* **Connections and the Radius graph will be affected**: Connections and the Radius graph will be affected by this design because connections are currently only part of the `containers` core type. If customers deploy user-defined types without using the `containers` core type then the Radius graph will not be populated. Some possible mitigations include:
-  * Create Bicep and Terraform reusable modules that allow recipe authors to create connections and return a connection type as an output from recipes.
-  * Re-implement the graph to represent the relationships defined in the Bicep files provided to Radius, i.e., whatever relationships are defined in the input Bicep are the ones shown in the Radius graph.
-* **Increased complexity in debugging**: As deployments become more recipe-driven, debugging issues may become more complex due to the additional layer of abstraction.
-* **Migration requirements**: Existing users of the core types will need to migrate to the new recipe-based approach, which may require effort and cause disruption.
-
 #### Risks and Mitigations
 
 The primary risk mitigation is the phased approach. Phase 1 will prove whether recipes can deploy the core types and will uncover additional architectural or design changes that are needed, without breaking existing functionality. Phase 1 includes the development of recipe-based deployments for ACI, which will prove the recipe capability with a real-world implementation.
@@ -473,10 +453,10 @@ There will be a phased implementation:
 
 | Phase | Name | Size | Activities | Customer Capabilities |
 | ----- | ---- | ---- | ---------- | --------------------- |
-| 1 | Support Recipes | M | - Enable recipes on new versions of core types (still hard-coded core types)<br>- Move ACI integration to recipes<br>- Support backward compatibility for existing types | - ACI is deployed via default recipes<br> - Recipes can be modified/replaced by customers |
-| 2 | Convert Types | S | - Implement core types as user-defined types<br>- Load these types by default during Radius deployment<br>- Support side-by-side with existing core types | \<Same as Phase 1\> |
-| 3 | Migrate Kubernetes | XL | - Convert Kubernetes deployments to recipes<br>- Provide default recipes for Kubernetes platform<br>- Complete platform-agnostic implementation<br> - Deprecate core types | Customers can customize Kubernetes deployments with recipes |
-| 4 | Remove Core Types | L | - Remove core types that are hard coded into Radius<br> - Remove Kubernetes and ACI provisioning from Radius | Original core types are no longer available in Radius. |
+| 0 | Support Recipes | M | - Enable recipes on new versions of core types (still hard-coded core types)<br>- Move ACI integration to recipes<br>- Support backward compatibility for existing types | - ACI is deployed via default recipes<br> - Recipes can be modified/replaced by customers |
+| 1 | Convert Types | S | - Implement core types as user-defined types<br>- Load these types by default during Radius deployment<br>- Support side-by-side with existing core types | \<Same as Phase 1\> |
+| 2 | Migrate Kubernetes | XL | - Convert Kubernetes deployments to recipes<br>- Provide default recipes for Kubernetes platform<br>- Complete platform-agnostic implementation<br> - Deprecate core types | Customers can customize Kubernetes deployments with recipes |
+| 3 | Remove Core Types | L | - Remove core types that are hard coded into Radius<br> - Remove Kubernetes and ACI provisioning from Radius | Original core types are no longer available in Radius. |
 
 ### Advantages of Core Type Support for Recipes Plan
 
@@ -497,15 +477,9 @@ There will be a phased implementation:
 * **Inconsistent developer experience**: Until all phases are complete, developers will experience a mix of hard-coded and recipe-based resource types.
 * **Multiple migrations**: Users may need to migrate their resources multiple times as the architecture evolves.
 
-## Alternate Development Plan: Core Types as UDTs from the Start
+## Alternate Path: Eliminate Phase 0
 
 Instead of adding recipe support to existing core types, we could implement core types as UDTs from the beginning. This approach would involve:
-
-| Phase | Name | Size | Activities | Customer Capabilities |
-| ----- | ---- | ---- | ---------- | --------------------- |
-| 1 | Create UDTs | L | - Create UDTs for `containers`, `gateways`, and `secretStores`<br>- Implement recipes for ACI using UDTs<br>- Deploy UDTs by default during Radius setup | - Deploy to ACI with UDT versions of core types<br>- Customize recipes for ACI deployments<br>- Create custom recipes for core UDTs |
-| 2 | Kubernetes Migration | XL | - Create Kubernetes recipes for UDT versions of core types<br>- Provide migration tools for existing Kubernetes deployments<br>- Enable dual deployment support during transition | - Deploy to Kubernetes with UDT versions of core types<br>- Migrate existing deployments with tooling |
-| 3 | Remove Core Types | L | - Remove core types from Radius<br>- Complete transition to UDT-only model<br> | - Fully extensible deployment model<br>- Consistent experience across all resource types |
 
 ### Advantages of Core Types as UDTs from the Start Plan
 
@@ -521,13 +495,9 @@ Instead of adding recipe support to existing core types, we could implement core
 * **Delayed delivery**: Initial capabilities would take longer to deliver, delaying value to customers.
 * **Increased initial risk**: More substantial architectural changes increase the risk of unforeseen issues.
 
-## Alternate Development Plan: Phase 1 Only
+## Alternate Development Plan: Phase 0 Only
 
 Another alternative is to implement Phase 1 of the first development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. This would maintain the Radius built-in types as the recommended application model, while still allowing customers to create their own application models using UDTs if they choose to do so.
-
-| Phase | Name | Size | Activities | Customer Capabilities |
-| ----- | ---- | ---- | ---------- | --------------------- |
-| 1 | Support Recipes | M | - Enable recipes on new versions of core types<br>- Move ACI integration to recipes<br>- Support backward compatibility for existing types | - ACI is deployed via default recipes<br>- Recipes can be modified/replaced by customers |
 
 ### Advantages of Supporting Recipes on Core Types Only
 
