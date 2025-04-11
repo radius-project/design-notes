@@ -18,7 +18,7 @@ This design enables:
 
 A phased approach will minimize risk and enable fast delivery of value. See the development plan below for details.
 
-0. New versions of core types that support recipes. Provide recipes to provision ACI.
+0. Create new versions of core types that support recipes. Provide recipes to provision ACI.
 1. Convert core types to user-defined types (UDTs).
 2. Move Kubernetes deployments to recipes.
 3. Remove existing hard-coded core types.
@@ -26,7 +26,7 @@ A phased approach will minimize risk and enable fast delivery of value. See the 
 Two alternate paths exist:
 
 * Alternate 1: Skip phase 0 and start with phase 1.
-* Alternate 2: Implement phase 0 and stop. Do not convert core types to UDTs.
+* Alternate 2: Skip phase 1. (Do not convert core types to UDTs.)
 
 Phase 0 is the fastest to market because it builds upon existing patterns in the code. However, the first alternate path has the strength of avoiding throwaway code created in phase 0. The second alternate is good if we are committed to the concept of a core application model where the types are built into Radius. More details are below.
 
