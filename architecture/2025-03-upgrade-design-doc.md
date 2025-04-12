@@ -39,7 +39,6 @@ This feature introduces in-place upgrades for the Radius Control Plane, allowing
 
    - An air-gapped environment is one where systems are physically isolated from unsecured networks like the public internet.
    - These environments are common in high-security scenarios (military, financial, healthcare, government) where external network connectivity is restricted.
-   - Future implementations will need to address version validation without GitHub API access and provide mechanisms for offline image management.
 
 5. **Stable starting state**: The Radius installation being upgraded is in a healthy, stable state. Attempting to upgrade an already failing installation may lead to unpredictable results.
 
@@ -377,6 +376,11 @@ type UpgradeLock interface {
 }
 ```
 
+We can utilize data-store-level lock mechanisms for implementing the distributed locking mechanism:
+
+- PostgreSQL: <https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS>
+- etcd: <https://etcd.io/docs/v3.5/tutorials/how-to-create-locks/>
+
 We can utilize Kubernetes Lease objects (coordination.k8s.io/v1) for implementing the distributed locking mechanism (open to discussion and suggestions). Leases are purpose-built for this use case, providing built-in lease duration and automatic expiration capabilities. For more information, see: <https://kubernetes.io/docs/concepts/architecture/leases/>.
 
 Other CLI commands (`rad deploy app.bicep`, `rad delete app my-app` or other data-changing commands) that modify data will check for this lock before proceeding:
@@ -411,6 +415,9 @@ Checks will include:
 **User Data Backup and Restore System:**
 
 Rather than taking complete snapshots of the underlying databases (etcd/PostgreSQL), we'll implement a more targeted approach that backs up only the user application metadata and configuration that Radius manages:
+
+- **Included in backup**: User application, environment, recipe definitions, and all other resources that the user has deployed/added via Radius.
+- **Not included in backup**: Anything other than user data in the data store.
 
 ```go
 type UserDataBackup interface {
@@ -480,7 +487,7 @@ const (
 )
 ```
 
-#### Advantages (of each option considered)
+#### Advantages of this approach
 
 1. **User Experience**: Provides a single command for upgrading all Radius components, significantly simplifying the process compared to manual uninstall/reinstall
 1. **Safety**: Built-in user data backup and restore capabilities ensure user data is protected during upgrades
@@ -488,7 +495,7 @@ const (
 1. **Transparency**: Clear, step-by-step output keeps users informed of the upgrade process
 1. **Consistency**: Ensures all Radius components are upgraded together to compatible versions
 
-#### Disadvantages (of each option considered)
+#### Disadvantages of this approach
 
 1. **Additional Complexity**: Implementing backup/restore functionality adds complexity to the codebase
 1. **Limited Control**: Users have less granular control compared to manually upgrading components
@@ -662,16 +669,18 @@ The following outlines the key implementation steps required to deliver the Radi
 - **Upgrade notifications**: How should we notify users clearly about the CLI version mismatch after upgrading the control plane?
 - **Resource constraints**: How do we handle scenarios where the cluster lacks sufficient resources to perform a rolling upgrade?
 
-## Alternatives considered
-
-<!--
-Describe the alternative designs that were considered or should be considered.
-Give a justification for why alternative approaches should be rejected if
-possible.
--->
-
 ## Design Review Notes
 
-<!--
-Update this section with the decisions made during the design review meeting. This should be updated before the design is merged.
--->
+- Create a task for adding `How to do upgrade` to the design document template: <https://github.com/radius-project/design-notes/pull/87#discussion_r2032112381>.
+- Create a task to publish the resource requirements of `rad upgrade kubernetes` in the Radius docs: <https://github.com/radius-project/design-notes/pull/87#discussion_r2032080262>.
+- Create a task to point the users to the relevant docs page for upgrading CLI and Control Plane: <https://github.com/radius-project/design-notes/pull/87#discussion_r2032085654>.
+- Create a task to write a documentation on manually rolling back to an older version: <https://github.com/radius-project/design-notes/pull/87#discussion_r2032079932>.
+-
+
+## Topics to discuss
+
+- Incremental Upgrades
+- Lock in the Data Store layer
+- Compatibility between versions logic
+- Backup data storage location
+- Database migrations
