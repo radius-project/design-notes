@@ -10,25 +10,23 @@ Core resource types (`containers`, `gateways`, and `secretStores`) will be imple
 
 This design enables:
 
-* Platform owners to deploy to various compute platforms without Radius code changes
-* Custom recipes for any compute platform
-* Consistent platform engineering experience across all resource types
 * Architectural separation of Radius core logic from platform provisioning code
-* Community-provided extensions to support new compute platforms
+* Community-provided extensions to support new compute platforms without Radius code changes
+* Consistent platform engineering experience across all resource types
 
-A phased approach will minimize risk and enable fast delivery of value. See the development plan below for details.
+We have two options for implementation:
 
-0. Create new versions of core types that support recipes. Provide recipes to provision ACI.
-1. Convert core types to user-defined types (UDTs).
-2. Move Kubernetes deployments to recipes.
-3. Remove existing hard-coded core types.
+1. (Recommended) Create UDT versions of the core types paired with recipe-based provisioning for ACI and Kubernetes. Later, remove the core types and existing Kubernetes provisioning code.
+2. (More conservative) Phased plan:
+    * Add recipe support to existing core types and create recipe-based provisioning for ACI. (Kubernetes provisioning is unchanged.)
+    * Create UDT versions of the core types, add recipe-based provisioning for Kubernetes, and update the ACI recipes to use the UDT core types.
+    * Remove the core types and existing Kubernetes provisioning code.
 
-Two alternate paths exist:
+Option 1 is a more direct path to the end state, builds on the emerging capabilities of UDTs, and does not require modifying existing resource types. The disadvantage is a higher initial risk and cost before realizing value because we would be simultaneously creating new recipes for ACI and Kubernetes, and we would be building upon UDT, which is still under construction.
 
-* Alternate 1: Skip phase 0 and start with phase 1.
-* Alternate 2: Skip phase 1. (Do not convert core types to UDTs.)
+Option 2 is less risky and has faster initial time to value because the first usable release would be a recipe-based provisioning for ACI that works side-by-side with the existing Kubernetes provisioning logic. It has the advantages of not depending on the emerging UDT feature, and requiring less overall work at first. However, it requires some throwaway work to add recipe support to existing core types.
 
-Phase 0 is the fastest to market because it builds upon existing patterns in the code. However, the first alternate path has the strength of avoiding throwaway code created in phase 0. The second alternate is good if we are committed to the concept of a core application model where the types are built into Radius. More details are below.
+An alternate path is to add recipe support to the core types and create provisioning recipes for ACI and Kubernetes. This path would achieve the architectural separation of recipe provisioning while preserving the existing application model as defined in the core types.
 
 ## Terms and definitions
 
@@ -42,8 +40,7 @@ Phase 0 is the fastest to market because it builds upon existing patterns in the
 
 ### Goals
 
-* Provide platform owners with the ability to deploy to specific platforms other than Radius, like ACI.
-* Enable platform owners to extend Radius to deploy to any platform through custom recipes.
+* Provide platform engineers with the ability to deploy to specific platforms other than Radius, like ACI.
 * Provide a recipe-based platform engineering experience that is consistent for user-defined types and core types.
 
 ### Non-goals
@@ -52,15 +49,13 @@ Phase 0 is the fastest to market because it builds upon existing patterns in the
 
 ## Principles
 
-These are the design principles that apply to the customer experience of extending Radius to support multiple compute platforms.
-
-Radius extensibility to support new platforms should enable creating extensions that are:
+Radius extensibility should enable creating extensions that are:
 
 | Principle | Description |
 |-----------|-------------|
 | **Independently upgradeable in a runtime environment** | Recipes are independently upgradeable. |
 | **Isolated and over a network protocol** | Recipes are currently implemented through Bicep and Terraform. Both run locally and communicate to the target platform over secure network protocols. |
-| **Strongly typed and support versioning** | Recipes support versioning through the use of OCI-compliant registries. They are not strongly typed in the sense of having compile-time validation, but they can be validated at the time they are registered as having the correct input parameters and output properties. |
+| **Strongly typed and support versioning** | Recipes support versioning through the use of OCI-compliant registries. They are not strongly typed in the sense of having compile-time validation, but they can be validated upon registration in an environment as having the correct input parameters and output properties. |
 
 ### User scenarios
 
