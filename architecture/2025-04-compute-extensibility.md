@@ -358,6 +358,9 @@ The primary risk mitigation is to begin with provisioning ACI using UDTs and rec
 | `containers.connections` | Recipes will have to create connections, which may uncover complexity. | This risk is related to the graph risk, and we will use Phase 1 to provide early detection. |
 | `containers` type complexity | The `containers` type has a large surface area.  | Maintain versioned support for older types during transition, provide clear migration paths. |
 
+add: risk that bicep cannot do things we do in imperative code - kubernetes bicep extension, can we add a bicep provider?
+Connections = DNS, so if DNS succeeds the connection exists
+
 <!--
 Describe what's not ideal about this plan. Does it lock us into a 
 particular design for future changes or is it flexible if we were to 
@@ -505,16 +508,19 @@ Phase 0 shown below is added to the development plan above.
 
 ## Alternate Development Plan Option 2: Phase 0 Only
 
-Another alternative is to implement Phase 0 of the alternate development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. The advantage would be keeping the Radius built-in types as the recommended application model, while still allowing customers to create their own application models using UDTs if they choose to do so. We would choose this plan if we want the Radius application model to be expressed through built-in resource types instead of UDTs.
+Another alternative is to implement Phase 0 of the alternate development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. 
+
+The advantage would be keeping the Radius built-in types as the recommended application model, while still allowing customers to create their own application models using UDTs if they choose to do so. We would choose this plan if we want the Radius application model to be expressed through built-in resource types instead of UDTs.
 
 ### Advantages vs Other Development Plans
 
 * **Stable application model**: Maintains the familiar Radius application model that customers are already using.
+* **Incremental change**: Adding recipe support to core types is an additive change, and adding ACI provisioning with recipes is not disruptive to the existing provisioning logic.
 * **Earlier delivery**: Same early delivery advantage as the alternate multi-phase plan.
 
 ### Disadvantages vs Other Development Plans
 
-* **Less architectural flexibility**: Core types remain hard-coded in Radius, limiting some extensibility options, e.g., the ability to copy and modify a core type.
+* **Less architectural flexibility**: Core types remain hard-coded in Radius, limiting some extensibility options, e.g., the ability of a customer to copy and modify a core type.
 * **Inconsistent resource type model**: Core types and UDTs would have different implementation approaches. However, customers can choose to ignore the core types and implement their own.
 
 ## Open Questions
