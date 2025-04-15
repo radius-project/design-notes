@@ -429,14 +429,12 @@ The alternate plan is to keep the core types (`containers`, `gateways`, and `sec
 
 | Phase | Name | Size | Activities | Customer Capabilities |
 | ----- | ---- | ---- | ---------- | --------------------- |
-| 1 | Support Recipes on Core Types | M | - Enable recipes on new versions of core types (still hard-coded core types)<br>- Move ACI integration to recipes<br>- Support backward compatibility for existing types | Recipes can be registered for core resource types. |
+| 1 | Support Recipes on Core Types | M | Enable recipes on new versions of core types | Recipes can be registered for core resource types. |
 | | Release | | | |
 | 2 | ACI recipes | M | Implement ACI provisioning from recipes |- ACI is deployed via default recipes<br> - ACI recipes can be modified/replaced by customers |
 | | Release | | | |
 | 3 | Kubernetes recipes | L | - Implement Kubernetes provisioning from recipes<br>- Remove existing Kubernetes provisioning code |- Kubernetes is deployed via default recipes<br> - Kubernetes recipes can be modified/replaced by customers |
 | | Release | | | |
-
-We would choose this plan if we want the Radius application model to be expressed through built-in resource types instead of UDTs.
 
 ### Advantages vs Recommended Plan
 
@@ -457,7 +455,7 @@ We would choose this plan if we want the Radius application model to be expresse
 
 ## Architecture Alternatives Considered for Extensibility
 
-An alternative architecture for extensibility that we considered, but did not select, was to enable the registration of custom resource providers. This architecture could be added to Radius later; it does not conflict with or replace with recipe-based provisioning.
+An alternative architecture for extensibility that we considered was to enable the registration of custom resource providers. This architecture could be added to Radius later; it does not conflict with or replace with recipe-based provisioning.
 
 * Customers can register their own RPs for UDTs.
 * Customer RPs implement an OpenAPI specification generated from UDT type definitions that defines a set of REST endpoints.
@@ -467,8 +465,7 @@ An alternative architecture for extensibility that we considered, but did not se
 
 We did not select this option because:
 
-* The chosen option is simpler for users because extending Radius through recipes makes the overall Radius user experience more consistent across all resource types.
-* Recipes are simpler and lower effort for users to implement.
+* Recipes are simpler and lower effort for users to implement than custom RPs.
 * Having recipes on the core types will enable most customization scenarios.
 * Implementing recipes does not exclude adding custom RPs later as an additional extensibility point.
 
