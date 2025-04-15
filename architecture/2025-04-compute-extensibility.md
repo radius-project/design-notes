@@ -6,7 +6,7 @@
 
 Radius will provide extensible support for multiple compute platforms through recipes rather than hard-coded support for each platform.
 
-Core resource types (`containers`, `gateways`, and `secretStores`) will be implemented as user-defined types with default recipes for Kubernetes and Azure Container Instances (ACI). Only `environments` and `applications` will remain as built-in types.
+Core resource types (`containers`, `gateways`, and `secretStores`) will be implemented as user-defined types with default recipes for Kubernetes and Azure Container Instances (ACI). Only `environments` and `applications` will remain as built-in core types.
 
 This design enables:
 
@@ -42,10 +42,12 @@ An alternate path for Option 2 is to stop work after adding recipe support to th
 
 * Provide platform engineers with the ability to deploy to specific platforms other than Radius, like ACI.
 * Provide a recipe-based platform engineering experience that is consistent for user-defined types and core types.
+* Expand the ability to provision a single application definition to multiple clouds by adding the capability to provision to multiple compute platforms like ACI and other serverless technologies.
 
 ### Non-goals
 
 * Running the Radius control plane on a non-Kubernetes platform
+* Changes to portable types
 
 ## Principles
 
@@ -62,6 +64,8 @@ Radius extensibility should enable creating extensions that are:
 #### Configure a non-Kubernetes Radius environment
 
 As a platform engineer I can initialize a new Radius environment that is connected to a non-Kubernetes compute platform so that Radius can authenticate and deploy to non-Kubernetes platforms.
+
+##### Changes to `environments` Core Resource Type
 
 A new version of `environments` will be added that does not have a hard coded list of compute kinds.
 
@@ -104,28 +108,7 @@ A new version of `environments` will be added that does not have a hard coded li
 
 The `compute` platform is removed so that we do not have hard-coded support for specific platforms. The functionality enabled by the `compute.identity` property would be implemented via recipes so that we do not need hard-coded support for specific platforms. We could consider adding a recipe to the `environment` type if there are features enabled by `compute` that we could not achieve using recipes on the other core types.
 
-#### Initialize a workspace
-
-As a platform engineer I can use `rad init` (or the equivalent rad `workspace`, `group` and `environment` commands), plus `rad recipe register`, to set up a non-Kubernetes compute platform.
-
-`rad init` would be unchanged (in terms of the user experience). Platform engineers would have to add recipes for each core type and UDT they plan to use. By default, the command will register resource types and recipes for Kubernetes provisioning.
-
-We could consider adding a flag to `rad init` that would identify a specific set of recipes. For example, `rad init aci` would install a set of default recipes for the ACI platform. However, this work is not in scope for this design.
-
-#### Extend Radius to a new platform by creating new recipes
-
-The `rad recipe register` CLI command would be unchanged, as it already has the ability to associate a recipe to an environment and a resource type, and it supports setting default values for specified recipe parameters for that environment.
-
-```shell
-rad recipe register <recipe name> \
-  --environment <environment name> \
-  --resource-type <core or UDT resource type name> \
-  --parameters throughput=400
-```
-
-#### Register recipes for types
-
-As a platform engineer I can set recipes on the resource types of container, gateway, and secret store so that I can configure my deployments.
+##### Changes to `applications` Core Resource Type
 
 Extensions are removed from the `applications` core type because the type of data being set in extensions would be set as recipe parameters. This is a new version of `applications`.
 
@@ -150,7 +133,30 @@ Extensions are removed from the `applications` core type because the type of dat
 }
 ```
 
-#### Container resource type
+#### Initialize a workspace
+
+As a platform engineer I can use `rad init` (or the equivalent rad `workspace`, `group` and `environment` commands), plus `rad recipe register`, to set up a non-Kubernetes compute platform.
+
+`rad init` would be unchanged (in terms of the user experience). Platform engineers would have to add recipes for each core type and UDT they plan to use. By default, the command will register resource types and recipes for Kubernetes provisioning.
+
+We could consider adding a flag to `rad init` that would identify a specific set of recipes. For example, `rad init aci` would install a set of default recipes for the ACI platform. However, this work is not in scope for this design.
+
+#### Extend Radius to a new platform by creating new recipes
+
+The `rad recipe register` CLI command would be unchanged, as it already has the ability to associate a recipe to an environment and a resource type, and it supports setting default values for specified recipe parameters for that environment.
+
+```shell
+rad recipe register <recipe name> \
+  --environment <environment name> \
+  --resource-type <core or UDT resource type name> \
+  --parameters throughput=400
+```
+
+#### Register recipes for types
+
+As a platform engineer I can set recipes on the resource types of container, gateway, and secret store so that I can configure my deployments.
+
+#### `containers` Resource Type
 
 Extensions and runtimes are removed from `containers` because the data in those sections would be set as parameters to a recipe.
 
@@ -208,106 +214,44 @@ This is a new version of `containers`. `Applications.Core` remains as the namesp
 -       }
 -     }
 -   }
-+   // Recipe would only be added if the selected dev plan includes the step of enabling recipes on core types. The recipe property is not needed if the core types are created as UDTs.
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-container'
-+      // Set parameters that will be passed to the recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+      }
-+    }
   }
 }
 ```
 
-#### Gateways resource type
+#### `gateways` and `secretStores` Resource Types
 
-```diff
-+resource gateway 'Applications.Core/gateways@2025-05-01-preview' = {
-  name: 'gateway'
-  properties: {
-    application: app.id
-    hostname: {
-      // Omitting hostname properties results in gatewayname.appname.PUBLIC_HOSTNAME_OR_IP.nip.io
+The `gateways` resource type will be created as a UDT with a new version, as in `Applications.Core/gateways@2025-05-01-preview`, with no schema changes.
 
-      // Results in prefix.appname.PUBLIC_HOSTNAME_OR_IP.nip.io
-      prefix: 'prefix'
-      // Alternately you can specify your own hostname that you've configured externally
-      fullyQualifiedHostname: 'hostname.radapp.io'
-    }
-    routes: [
-      {
-        path: '/frontend'
-        destination: 'http://${frontend.name}:3000'
-      }
-      {
-        path: '/backend'
-        destination: 'http://${backend.name}:8080'
+The `secretStores` resource type will be created as a UDT with a new version, as in `Applications.Core/secretStores@2025-05-01-preview`, with no schema changes.
 
-        // Enable websocket support for the route (default: false)
-        enableWebsockets: true
-      }
-    ]
-    tls: {
-      // Specify SSL Passthrough for your app (default: false)
-      sslPassthrough: false
+#### Extenders
 
-      // The Radius Secret Store holding TLS certificate data
-      certificateFrom: secretstore.id
-      // The minimum TLS protocol version to support. Defaults to 1.2
-      minimumProtocolVersion: '1.2'
-    }
-+   // Recipe would only be added if the selected dev plan includes the step of enabling recipes on core types. The recipe property is not needed if the core types are created as UDTs.
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-gateway'
-+      // Set parameters that will be passed to the recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+      }
-+    }
-  }
-}
-```
-
-#### secretStores resource type
-
-```diff
-+resource appCert 'Applications.Core/secretStores@2025-05-01-preview' = {
-  name: 'appcert'
-  properties:{
-    application: app.id
-    type: 'certificate'
-    data: {
-      'tls.key': {
-        value: tlskey
-      }
-      'tls.crt': {
-        value: tlscrt
-      }
-    }
-+   // Recipe would only be added if the selected dev plan includes the step of enabling recipes on core types. The recipe property is not needed if the core types are created as UDTs.
-+   recipe: {
-+      // Name a specific Recipe to use
-+      name: 'azure-aci-gateway'
-+      // Set parameters that will be passed to the recipe.
-+      parameters: {
-+        subscriptionId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-+        resourceGroup: 'myrg'
-+      }
-+    }
-  }
-}
-```
+The `extenders` type (`Applications.Core/extenders@2023-10-01-preview`) will be removed when all development phases are complete because the capability provided by them will be replaced by UDTs.
 
 <!--
 ## Design
 
 ### High Level Design
-High level overview of the data flow and key components.
+
+This design covers the removal of imperative provisioning code, Bicep-based provisioning for Kubernetes and other platforms, and the opportunity to create reusable Bicep modules for customers to use in their recipes.
+
+> NOTE: This design builds upon the existing designs for Radius UDTs in order to provide extensible provisioning for multiple platforms. 
+
+The recommended development option builds upon existing designs for Radius UDTs in order to provide extensible provisioning to multiple platforms. We could provide ACI and other platform support, as well as an alternate recipe-based Kubernetes provisining path without making any changes to Radius. However, the plan includes removing the core resource types and the associated provisioning logic is a meaningful change, as is the provisioning logic that must be implemented in Bicep. We also believe we can provide reusable components in Bicep.
+
+### Bicep Language Features for Recipe Extensibility
+
+Bicep provides several powerful language features that can be leveraged to create a modular, reusable recipe system for compute platform extensibility:
+
+#### Modules and Module Libraries
+
+Base type declarations that can be extended in customer recipes
+Standard types used in parameter lists and outputs
+Module registry
+
+#### Extension Points and Hooks
+
+Can we provide extension points in the Bicep recipes?
 
 Provide a high-level description, using diagrams as appropriate, and top-level
 explanations to convey the architectural/design overview. Don’t go into a lot
@@ -356,10 +300,8 @@ The primary risk mitigation is to begin with provisioning ACI using UDTs and rec
 |------|-------------|------------|
 | Radius graph | Updates to the Radius graph may prove difficult and time consuming | Phase 1 will provide early detection of this risk if it becomes an issue. |
 | `containers.connections` | Recipes will have to create connections, which may uncover complexity. | This risk is related to the graph risk, and we will use Phase 1 to provide early detection. |
-| `containers` type complexity | The `containers` type has a large surface area.  | Maintain versioned support for older types during transition, provide clear migration paths. |
-
-add: risk that bicep cannot do things we do in imperative code - kubernetes bicep extension, can we add a bicep provider?
-Connections = DNS, so if DNS succeeds the connection exists
+| `containers` type complexity | The `containers` type has a large surface area, which may affect effort and schedule.  | Maintain versioned support for older types during transition, provide clear migration paths. |
+| Bicep capabilities and limitations | Does the imperative Go provisioning code for Kubernetes contain logic that would be difficult or impossible to implement in Bicep using the Kubernetes extension for Bicep? | Early POC, plus implementing ACI provisioning first will provide an early indicator of limitations. |
 
 <!--
 Describe what's not ideal about this plan. Does it lock us into a 
@@ -409,8 +351,18 @@ recipe engine, driver, to name a few.
 Describe the error scenarios that may occur and the corresponding recovery/error handling and user experience.
 -->
 
-<!--
+<!-- 
 ## Test plan
+
+* How much of our functional testing is directly loading RPs vs using application Bicep files and measuring the result of a deployment?
+
+### Recipe Testing
+
+* Interface implementation of recipes: does each recipe implement the right parameters and return the right outputs? This should be available for customers, too, and run upon recipe registration. (What tests are currently done upon recipe registration?)
+* Reusable modules - what capabilities of Bicep would make a reusable module testable?  
+-->
+
+<!--
 
 Include the test plan to validate the features including the areas that
 need functional tests.
@@ -465,21 +417,22 @@ The recommended option is to implement core types as UDTs, and later remove the 
 
 ### Advantages vs Alternate Plans
 
+* **Builds upon existing UDT feature**: Adding core types as UDTs is additive in nature and does not require any architectural or design changes to what is already planned for Radius. (However, removing core resource types and the related imperative provisioning is a change.)
 * **Single migration path**: Users would only need to migrate their resources once, reducing disruption.
 * **Simplest path to the target architecture**: This plan immediately implements a clear architectural separation between core functionality (environments and applications) and platform-specific provisioning (UDTs and recipes).
-* **Simplified transitional**: Transitional phases and code is avoided.
+* **Simplified transition**: Transitional phases and code is avoided.
 * **More focused development effort**: Engineering resources can focus on the target architecture instead of transitional states.
 * **Simplified testing strategy**: Testing can focus on the final implementation rather than multiple transitional states.
 
 ### Disadvantages vs Alternate Plans
 
-* **Higher initial complexity**: Implementing core types as UDTs requires solving more problems simultaneously, including 
+* **Higher initial complexity**: Implementing core types as UDTs requires solving more problems simultaneously.
 * **Delayed delivery**: Initial capabilities will take longer to deliver.
 * **Increased initial risk**: More substantial architectural changes increase the risk of unforeseen issues.
 
-## Alternate Development Plan Option 1: Core Type Support for Recipes
+## Alternate Development Plan: Add Phase 0 to Add Recipe Support to Core Types
 
-This is an alternate to the recommended development plan in which we add recipe support to new versions of the core resource types, which has the advantage of being a more phased approach, but the disadvantage of creating some throwaway work in phase 0.
+In this alternate we add a phase zero in which we add recipe support to new versions of the core resource types. This plan has the advantage of being a more phased approach with earlier initial delivery, but the disadvantage of creating throwaway work in phase 0 and a longer overall timeline.
 
 Phase 0 shown below is added to the development plan above.
 
@@ -490,25 +443,19 @@ Phase 0 shown below is added to the development plan above.
 ### Advantages vs Recommended Plan
 
 * **Earlier delivery**: Recipe capabilities and ACI support using recipes can be delivered more quickly since they don't depend on a complete UDT implementation.
-* **We could stop at phase 1**: If phases 2 and 3 become problematic for technical reasons, we could stop at phase 1.
-* **Lower initial adoption barrier**: Adding recipe support to existing core types allows users to gradually adopt the new approach without immediate migration.
-* **Incremental implementation**: The phased approach allows for testing and validation at each step, reducing overall risk.
-* **Backward compatibility**: Existing applications continue to work throughout most of the transition process.
-* **Customer familiarity**: Users can continue using the same resource types they're familiar with while gaining recipe capabilities.
-* **Reduced initial development effort**: Phase 1 has a smaller scope compared to creating full UDTs from scratch.
+* **We could stop at after phase 0**: If later phases become problematic for technical reasons, we could stop after completing phase 0.
+* **Customer familiarity**: Users can use new versions of the same resource types they're familiar with while gaining recipe capabilities.
 
 ### Disadvantages vs Recommended Plan
 
 * **Throwaway code**: The recipe support added in Phase 1 will be removed when core types are removed.
 * **Extended transition period**: The complete transition takes longer across four phases compared to the alternative approach.
 * **Potential confusion**: Users may be confused about which version of core types to use during the transition period.
-* **Delayed architecture benefits**: The clean separation of core functionality from implementation details is achieved later in the process.
-* **Inconsistent developer experience**: Until all phases are complete, developers will experience a mix of hard-coded and recipe-based resource types.
 * **Multiple migrations**: Users may need to migrate their resources multiple times as the architecture evolves.
 
-## Alternate Development Plan Option 2: Phase 0 Only
+## Alternate Development Plan: Phase 0 Only
 
-Another alternative is to implement Phase 0 of the alternate development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them. 
+Another alternative is to implement Phase 0 of the alternate development plan and stop there. This approach would keep the core types (`containers`, `gateways`, and `secretStores`) as built-in types in the Radius application model, but add recipe support to them.
 
 The advantage would be keeping the Radius built-in types as the recommended application model, while still allowing customers to create their own application models using UDTs if they choose to do so. We would choose this plan if we want the Radius application model to be expressed through built-in resource types instead of UDTs.
 
