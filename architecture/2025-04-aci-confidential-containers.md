@@ -201,12 +201,12 @@ type ContainerGroupProfile struct {
 **Azure CG Profile handler**  
 To enable confidential container support, the Azure Container Group Profile handler requires updates. Following the official guidance for confidential containers [here](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-tutorial-deploy-confidential-containers-cce-arm), Radius will automate the setup process through these implementation steps:
 
-1. Prior to deployment, the Azure CLI and `confcon` extension should have been downloaded. This would have been set up during `rad init` by the user when they elected to support confidential containers on ACI.
-2. In the ACI renderer, populate a container group profile object using the default values or the user-provided inputs. See the previous section on the ACI renderer for details. 
-3. In the container group profile handler, generate a temporary ARM template that contains the same data in the container group profile object. The container group profile object is passed as in input to the handler. 
-4. Run the following command on the ARM template to generate a CCE policy: `az confcom acipolicygen -a .\template.json`. This command modifies the existing template to include the base64 encoded CCE policy.
-5. Extract the CCE policy string from the ARM template and add it to the existing container group profile object. 
-6. Create the container group profile using the ACI SDK with the CCE policy set.
+1. In the ACI renderer, populate a container group profile object using the default values or the user-provided inputs. See the previous section on the ACI renderer for details. 
+2. In the container group profile handler, generate a temporary ARM template that contains the same data in the container group profile object. The container group profile object is passed as in input to the handler. 
+3. Run the following command on the ARM template to generate a CCE policy: `az confcom acipolicygen -a .\template.json`. This command modifies the existing template to include the base64 encoded CCE policy. 
+  1. The user is expected to have the CLI and extension installed to use confidential containers. If the extension is not installed or not accessible, we'll return an error to the user here. 
+4. Extract the CCE policy string from the ARM template and add it to the existing container group profile object. 
+5. Create the container group profile using the ACI SDK with the CCE policy set.
 
 #### Advantages (of each option considered)
 <!--
