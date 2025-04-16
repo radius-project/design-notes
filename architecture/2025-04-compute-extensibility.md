@@ -293,7 +293,7 @@ The primary risk mitigation is to begin with provisioning ACI using UDTs and rec
 
 | Risk | Description | Mitigation |
 |------|-------------|------------|
-| Bicep capabilities and limitations | Does the imperative Go provisioning code for Kubernetes contain logic that would be difficult or impossible to implement in Bicep using the Kubernetes extension for Bicep? | Early POC, plus implementing ACI provisioning first will provide an early indicator of limitations. |
+| Bicep capabilities and limitations | Does the imperative Go provisioning code for Kubernetes contain logic that would be difficult or impossible to implement in Bicep using the Kubernetes extension for Bicep? | Early POC, plus implementing ACI provisioning first will provide an early indicator of limitations. Terraform could also be used for Kubernetes provisioning. |
 | Radius graph | Updates to the Radius graph may prove difficult and time consuming | Phase 1 will provide early detection of this risk if it becomes an issue. |
 | `containers.connections` | Recipes will have to create connections, which may uncover complexity. | This risk is related to the graph risk, and we will use Phase 1 to provide early detection. |
 | `containers` type complexity | The `containers` type has a large surface area, which may affect effort and schedule.  | Maintain versioned support for older types during transition, provide clear migration paths. |
