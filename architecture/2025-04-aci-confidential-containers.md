@@ -16,6 +16,7 @@ The key components that will be deployed by Radius to support ACI are container 
 - TEE: Trusted Execution Environment
 - Confidential Containers: Containers that run in a hardware-backed TEE to provide enhanced security features
 - Container Group Profile: A configuration template in Azure Container Instances that defines the properties and settings for a container group. It includes specifications such as container images, resource allocations (CPU/memory), networking settings, storage mounts, OS type, SKU (Standard/Dedicated/Confidential), and security policies. For confidential containers, the Container Group Profile contains the CCE policy that enables the Trusted Execution Environment.
+- CCE policy: The confidential computing enforcement policy is used for attestation. The policy enforces the specific container images, environment variables, mounts, and commands, which can then be validated when the container group starts up.
 
 ## Objectives
 
@@ -59,30 +60,7 @@ Ted is a developer trying to run his applications on a serverless compute platfo
 
 **Setup**
 
-1. Run `rad init`.
-2. When prompted to create an environment, choose the `aci` compute option.
-3. When prompted, choose whether or not to support confidential containers. This will download the Azure CLI and the `confcom` extension. 
-
-Note: The Kubernetes flow will not change, minus the extra step to select Kubernetes compute. 
-
-**Sample Input:**
-<!--
-Provide a sample CLI command input and/or bicep/helm code.
--->
-```
-rad init --full 
-
-Enter an environment name              
-> default  
-                                                      
-Select the compute for the environment
-  >  1. kubernetes 
-  >  2. aci
-
-Setup support for confidential containers? Selecting 'Yes' will install the Azure CLI and the `confcom` extension that are required to support confidential containers on ACI.  
-  >  1. Yes
-  >  2. No    
-```
+We will require the user to have the Azure CLI and `confcon` extension installed and available to use by Radius. 
 
 **Authoring:**
 <!--
