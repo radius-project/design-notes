@@ -168,7 +168,7 @@ Upgrade complete! Radius has been successfully upgraded to v0.44.0 with your cus
 
 **Exceptions:**
 
-1. If custom configuration parameters are invalid (or should it be ignored?)
+1. If custom configuration parameters are invalid
 
 #### Scenario 3: Handling upgrade failure and recovery
 
@@ -361,27 +361,46 @@ This interface will be implemented (or existing will be improved) to handle vers
 
 **Upgrade Lock Mechanism:**
 
-To prevent concurrent modifications during upgrades, we'll implement a lock system that's acquired early in the process:
+- To prevent concurrent data‐modifying operations during `rad upgrade kubernetes`, we’ll rely exclusively on datastore locks (no Kubernetes leases).
 
 ```go
+// UpgradeLock is implemented per datastore (Postgres, etcd) to serialize upgrades.
 type UpgradeLock interface {
-    // Acquires the upgrade lock, preventing other commands from modifying data
+    // AcquireLock blocks until it obtains an exclusive lock or the context deadline is exceeded.
     AcquireLock(ctx context.Context) error
 
-    // Releases the upgrade lock, allowing other commands to proceed
+    // ReleaseLock frees the lock immediately so others can proceed.
     ReleaseLock(ctx context.Context) error
 
-    // Checks if an upgrade is currently in progress
+    // IsUpgradeInProgress returns true if a valid (non‑stale) lock is held by another process.
     IsUpgradeInProgress(ctx context.Context) (bool, error)
 }
+```
+
+**Timeouts:** callers must supply a context with a finite deadline (e.g. 2 min) to avoid blocking forever.
+**Stale‑lock detection:** each lock has a TTL/heartbeat; expired leases are auto‑cleaned before AcquireLock.
+Force cleanup: --force flag allows manual removal of stale/orphaned locks.
+
+Usage in CLI commands:
+
+```go
+ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+defer cancel()
+
+// attempt to acquire (with timeout + stale‐lock cleanup)
+// AcquireLock must first scan for & remove any expired/orphaned locks before locking.
+if err := upgradeLock.AcquireLock(ctx); err != nil {
+    return fmt.Errorf("cannot start upgrade: %w", err)
+}
+defer func(){
+    _ = upgradeLock.ReleaseLock(context.Background())
+}()
 ```
 
 We can utilize data-store-level lock mechanisms for implementing the distributed locking mechanism:
 
 - PostgreSQL: <https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS>
 - etcd: <https://etcd.io/docs/v3.5/tutorials/how-to-create-locks/>
-
-We can utilize Kubernetes Lease objects (coordination.k8s.io/v1) for implementing the distributed locking mechanism (open to discussion and suggestions). Leases are purpose-built for this use case, providing built-in lease duration and automatic expiration capabilities. For more information, see: <https://kubernetes.io/docs/concepts/architecture/leases/>.
 
 Other CLI commands (`rad deploy app.bicep`, `rad delete app my-app` or other data-changing commands) that modify data will check for this lock before proceeding:
 
@@ -533,7 +552,7 @@ The implementation will primarily focus on the following components:
 
 1. **Upgrade Command**: The `rad upgrade kubernetes` command implementation in the CLI codebase
 2. **Version Validation**: Logic to verify compatibility between versions
-3. **Lock Mechanism**: Kubernetes Lease-based distributed locking system
+3. **Lock Mechanism**: Data-store-level distributed locking system
 4. **Backup/Restore**: User data protection system using ConfigMaps/PVs
 5. **Helm Integration**: Enhanced wrapper around Helm's upgrade capabilities
 6. **Health Verification**: Component readiness and health check mechanisms
@@ -592,6 +611,8 @@ behaviors or APIs.
 
 The following outlines the key implementation steps required to deliver the Radius Control Plane upgrade feature. Each step includes necessary unit and functional tests to ensure reliability and correctness, along with dependency information.
 
+### Version 1: Simple `rad upgrade kubernetes` command with incremental upgrade
+
 1. **Radius Helm Client Updates**
 
    - Implement the upgrade functionality in the Radius Helm client: [helmclient.go](https://github.com/radius-project/radius/blob/main/pkg/cli/helm/helmclient.go).
@@ -642,6 +663,92 @@ The following outlines the key implementation steps required to deliver the Radi
    - Include detailed CLI output and logging for user visibility.
    - Add necessary unit and functional tests to validate command behavior.
    - This task depends on all previous tasks (1-6) and should be implemented last.
+
+### Version 2: Data Store Migrations and Rollbacks
+
+1. Pick & embed a migration tool
+
+   - Add `migrations/` dir and versioned SQL (or Go) files
+   - Vendor or import the tool (e.g. golang-migrate) so we have a single binary
+
+2. Define migration tracking schema
+
+   - For Postgres: create a `schema_migrations` table (tool-standard)
+   - For etcd: track applied migrations via a reserved key prefix
+
+3. Wiring in the CLI/server
+
+   - On install/upgrade: run `migrate up` before Helm chart upgrade
+   - On rollback: run `migrate down` (or tool-provided rollback) if upgrade fails
+   - (Optional) Expose `rad migrate status|up|down` commands for operators
+
+4. Schema evolution helpers
+
+   - Provide utilities for common ops (add column, rename, rekey in etcd)
+   - Write examples/migrations: e.g. move key-value → Postgres row
+
+5. Testing migrations
+
+   - Unit tests for each migration file (idempotent, up/down)
+   - Integration tests: start with old schema + data → apply migrations → verify shape
+
+6. Documentation & patterns
+
+   - Doc: “How to write a new migration”
+   - Versioning rules (major/minor jumps, compatibility guarantees)
+   - Rollback advice: when to write reversible vs. irreversible migrations
+
+### Version 3: Rollback to the most recent successful version of Radius
+
+1. **Version History Tracking**
+
+   - Extend the backup system to record the last successful control-plane version (e.g. in a reserved etcd key or Postgres table).
+   - Ensure every successful `rad upgrade kubernetes` run writes an entry with timestamp and version.
+
+2. **`rad rollback` CLI Command**
+
+   - Introduce `rad rollback kubernetes` that reads the recorded “last known good” version and invokes the same upgrade path in reverse.
+   - Integrate rollback into the existing lock and backup/restore interfaces.
+
+3. **Stateful Rollback Validation**
+
+   - Implement post-rollback health checks (component health, data-integrity assertions).
+   - Fail early if rollback target is stale or schema mismatches prevent safe restoration.
+
+4. **End-to-End Test Matrix**
+   - Add scenarios: v0.43 → v0.44 upgrade → failure → `rad rollback` → verify control plane matches pre-upgrade state.
+   - Test edge cases where no previous version is recorded.
+
+### Version-4: Skip versions during `rad upgrade kubernetes`
+
+1. **Skip-Aware Pre-flight Checks**
+
+   - Enhance `VersionValidator` to detect multi-version jumps and verify compatibility (e.g. migrations available).
+   - Warn or block skips if there are known incompatible intermediate releases.
+
+2. **Migration Plan Bundles**
+
+   - Generate a composite plan when skipping (e.g. v0.42 → v0.45):  
+     • List required data migrations in sequence  
+     • Group Helm chart upgrades and backup points for each intermediate step
+
+3. **User Confirmation & Dry-Run**
+
+   - Prompt the user with a clear “You're jumping from A→D. We'll run migrations for B and C in turn. Proceed?”
+   - Offer a `--dry-run` mode that prints the full step list without making changes.
+
+4. **Automated Integration Tests**
+
+   - Cover a variety of version skip paths in CI (adjacent vs. multi‑minor).
+   - Fail if any migration or Helm chart upgrade in the skip path is missing.
+
+### Version 5: Support for Air-Gapped Environments
+
+This can be discussed later.
+
+### Version 6: Upgrading Radius on other platforms like `rad upgrade aci`
+
+This can be discussed later.
 
 ### Out of Scope for Implementation
 
