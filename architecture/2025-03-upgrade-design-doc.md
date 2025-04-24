@@ -97,8 +97,6 @@ Initiating Radius upgrade from v0.44.0 to v0.45.0...
 Pre-flight checks:
   ✓ Valid version target
   ✓ Compatible upgrade path
-Creating backup of current user data...
-  ✓ Backup created successfully
 Upgrading control plane components:
   ✓ Universal Control Plane
   ✓ Deployment Engine
@@ -115,10 +113,9 @@ Note: Your local Radius CLI is still v0.44.0. To upgrade your CLI, download the 
 **Result:**
 
 1. Pre-flight checks validate the upgrade is possible
-1. System automatically creates a user data backup for recovery
-1. All control plane components are upgraded in sequence
-1. Post-upgrade verification confirms system health
-1. User is notified about the CLI version mismatch
+2. All control plane components are upgraded in sequence
+3. Post-upgrade verification confirms system health
+4. User is notified about the CLI version mismatch
 
 **Exceptions:**
 
@@ -143,8 +140,6 @@ Pre-flight checks:
   ✓ Valid version target
   ✓ Compatible upgrade path
   ✓ Custom configuration validated
-Creating backup of current user data...
-  ✓ Backup created successfully
 Upgrading control plane components with custom configuration:
   ✓ Universal Control Plane
   ✓ Deployment Engine
@@ -184,8 +179,6 @@ Initiating Radius upgrade from v0.43.0 to v0.44.0...
 Pre-flight checks:
   ✓ Valid version target
   ✓ Compatible upgrade path
-Creating backup of current user data...
-  ✓ Backup created successfully
 Upgrading control plane components:
   ✓ Universal Control Plane
   ✓ Deployment Engine
@@ -193,7 +186,6 @@ Upgrading control plane components:
 
 ERROR: Upgrade failed during Applications Resource Provider update.
 Initiating automatic rollback to v0.43.0...
-  ✓ Restoring from backup (Not sure if this is needed)
   ✓ Universal Control Plane reverted
   ✓ Deployment Engine reverted
   ✓ System verification complete
@@ -206,13 +198,13 @@ Review Kubernetes events and logs for more details on the failure.
 **Result:**
 
 1. System detects failure during the upgrade process
-1. Automatic restore is initiated using the pre-upgrade backup
-1. All components are restored to their previous state
-1. User is informed of the failure and suggested next steps
+2. Helm-based rollback is initiated to revert Kubernetes resources
+3. Control plane components are reverted to their previous version
+4. User is informed of the failure and suggested next steps
 
 **Exceptions:**
 
-1. If the user data backup restoration fails (rare but possible)
+1. If Helm rollback fails (would require manual intervention)
 
 #### Scenario 4: Upgrading across multiple versions
 
@@ -235,8 +227,6 @@ Pre-flight checks:
   ✓ Multiple version jump detected (v0.40.0 → v0.44.0)
   ✓ Compatible upgrade path confirmed
   ✓ Database schema changes detected
-Creating backup of current user data...
-  ✓ Backup created successfully
 Upgrading control plane components:
   ✓ Universal Control Plane
   ✓ Deployment Engine
@@ -284,8 +274,6 @@ graph TD
   CLI -->|Logs Progress| User["User"]
   CLI -->|Performs Pre-flight Checks| PreFlight["Pre-flight Checks"]
   PreFlight -->|Validates| KubernetesAPI
-  CLI -->|Creates User Data Backup| Backup["User Data Backup"]
-  Backup -->|Restores on Failure| Restore["Restore Mechanism"]
 ```
 
 - **Important Note:** As of April 2025, Postgres is not fully implemented yet as the data store of Radius. We use etcd in production.
@@ -298,10 +286,8 @@ graph TD
     CLI -->|"Initiates Upgrade"| K8sAPI["Kubernetes API"]
 
     K8sAPI --> PreflightChecks["Preflight Checks"]
-    PreflightChecks --> UserDataBackup["Backup Creation"]
-    UserDataBackup --> ComponentUpgrade["Component Upgrade"]
+    PreflightChecks --> ComponentUpgrade["Component Upgrade"]
     ComponentUpgrade --> PostUpgradeVerify["Post-Upgrade Verification"]
-    ComponentUpgrade -- "Failure" --> UserDataRestore["User Data Restore"]
 
     subgraph "Radius Control Plane"
         UCP["Universal Control Plane"]
@@ -331,15 +317,13 @@ graph TD
     ParseArgs --> ValidateVersion[Validate version compatibility]
     ValidateVersion --> AcquireLock[Acquire upgrade lock]
     AcquireLock --> RunPreflights[Run pre-flight checks]
-    RunPreflights --> UserDataBackup[Create user data backup]
-    UserDataBackup --> PlanUpgrade[Calculate upgrade plan]
+    RunPreflights --> PlanUpgrade[Calculate upgrade plan]
     PlanUpgrade --> ExecuteHelmUpgrade[Execute Helm chart upgrade]
     ExecuteHelmUpgrade --> MonitorProgress[Monitor upgrade progress]
     MonitorProgress --> VerifyComponents[Verify component health]
     VerifyComponents --> Success{Successful?}
     Success -- Yes --> ReleaseLock[Release upgrade lock]
-    Success -- No --> UserDataRestore[Restore user data]
-    UserDataRestore --> RollbackHelm[Rollback Helm changes]
+    Success -- No --> RollbackHelm[Rollback Helm changes]
     RollbackHelm --> ReleaseLock
     ReleaseLock --> End[Display results to user]
 ```
@@ -364,21 +348,38 @@ This interface will be implemented (or existing will be improved) to handle vers
 - To prevent concurrent data‐modifying operations during `rad upgrade kubernetes`, we’ll rely exclusively on datastore locks (no Kubernetes leases).
 
 ```go
-// UpgradeLock is implemented per datastore (Postgres, etcd) to serialize upgrades.
+// UpgradeLock is implemented per datastore (Postgres, etcd) to serialize upgrades (with enhanced resilience)
 type UpgradeLock interface {
-    // AcquireLock blocks until it obtains an exclusive lock or the context deadline is exceeded.
-    AcquireLock(ctx context.Context) error
+    // AcquireLock obtains an exclusive lock with a TTL or fails
+    AcquireLock(ctx context.Context, ttl time.Duration) error
 
-    // ReleaseLock frees the lock immediately so others can proceed.
+    // ExtendLock refreshes the TTL on an existing lock (heartbeat)
+    ExtendLock(ctx context.Context, ttl time.Duration) error
+
+    // ReleaseLock explicitly releases a lock
     ReleaseLock(ctx context.Context) error
 
-    // IsUpgradeInProgress returns true if a valid (non‑stale) lock is held by another process.
+    // IsUpgradeInProgress checks if a valid lock exists
     IsUpgradeInProgress(ctx context.Context) (bool, error)
+
+    // GetLockInfo returns metadata about the current lock
+    GetLockInfo(ctx context.Context) (LockInfo, error)
+
+    // ForceReleaseLock allows admin override with reason tracking
+    ForceReleaseLock(ctx context.Context, reason string) error
+}
+
+type LockInfo struct {
+    AcquiredAt      time.Time
+    ExpiresAt       time.Time
+    LockedBy        string
+    LastHeartbeatAt time.Time
+    IsStale         bool
 }
 ```
 
 **Timeouts:** callers must supply a context with a finite deadline (e.g. 2 min) to avoid blocking forever.
-**Stale‑lock detection:** each lock has a TTL/heartbeat; expired leases are auto‑cleaned before AcquireLock.
+**Stale-lock detection:** each lock has a TTL/heartbeat; expired leases are auto-cleaned before AcquireLock.
 Force cleanup: --force flag allows manual removal of stale/orphaned locks.
 
 Usage in CLI commands:
@@ -431,7 +432,7 @@ Checks will include:
 3. Database connectivity
 4. Custom configuration validation
 
-**User Data Backup and Restore System:**
+**[Future Version] User Data Backup and Restore System:**
 
 Rather than taking complete snapshots of the underlying databases (etcd/PostgreSQL), we'll implement a more targeted approach that backs up only the user application metadata and configuration that Radius manages:
 
@@ -473,8 +474,8 @@ type UpgradeOptions struct {
     Values map[string]interface{} // Custom configuration values
     Timeout time.Duration // Maximum time allowed for upgrade
 
-    EnableUserDataBackup  bool // Whether automatic user data backup is enabled
-    BackupID              string // ID of user data backup to use for recovery
+    EnableUserDataBackup  bool // Future Version: Whether automatic user data backup is enabled
+    BackupID              string // Future Version: ID of user data backup to use for recovery
 }
 ```
 
@@ -513,6 +514,7 @@ const (
 1. **Flexibility**: Support for custom configuration parameters allows adaptation to different environments
 1. **Transparency**: Clear, step-by-step output keeps users informed of the upgrade process
 1. **Consistency**: Ensures all Radius components are upgraded together to compatible versions
+1. **Safety**: Comprehensive preflight checks prevent upgrades in unsuitable conditions, while built-in user data backup and restore capabilities ensure user data is protected during upgrades
 
 #### Disadvantages of this approach
 
@@ -553,9 +555,10 @@ The implementation will primarily focus on the following components:
 1. **Upgrade Command**: The `rad upgrade kubernetes` command implementation in the CLI codebase
 2. **Version Validation**: Logic to verify compatibility between versions
 3. **Lock Mechanism**: Data-store-level distributed locking system
-4. **Backup/Restore**: User data protection system using ConfigMaps/PVs
-5. **Helm Integration**: Enhanced wrapper around Helm's upgrade capabilities
-6. **Health Verification**: Component readiness and health check mechanisms
+4. **Preflight Checks**: Validation system to ensure prerequisites are met before upgrade
+5. **[Future Version] Backup/Restore**: User data protection system using ConfigMaps/PVs
+6. **Helm Integration**: Enhanced wrapper around Helm's upgrade capabilities
+7. **Health Verification**: Component readiness and health check mechanisms
 
 All components will follow Radius coding standards and include comprehensive unit tests.
 
@@ -563,18 +566,20 @@ All components will follow Radius coding standards and include comprehensive uni
 
 The upgrade process will implement the following error handling strategies:
 
-1. **Pre-flight Validation**: Catch incompatibility issues before starting the upgrade
-2. **Graceful Timeouts**: All operations will respect user-defined or default timeouts
-3. **Automatic Rollback**: Failed upgrades trigger automatic restoration of previous state
-4. **Detailed Error Reporting**: Clear error messages with troubleshooting guidance
-5. **Idempotent Operations**: Commands can be safely retried after addressing issues
-6. **Resource Cleanup**: Temporary resources created during the upgrade are properly removed
+1. **Pre-flight Validation**: Catch incompatibility issues before starting the upgrade.
+2. **Graceful Timeouts**: All operations will respect user-defined or default timeouts.
+3. **Helm-based Rollback**: For version 1, failed upgrades will leverage Helm's built-in rollback capability to revert Kubernetes resources to their previous state. Note that this does not include restoration of any user data that might have been modified during the failed upgrade attempt. Full user data backup and restore capabilities will be added in a future version.
+4. **Detailed Error Reporting**: Clear error messages with troubleshooting guidance.
+5. **Idempotent Operations**: Commands can be safely retried after addressing issues.
+6. **Resource Cleanup**: Temporary resources created during the upgrade are properly removed.
 
 ## Test Plan
 
 ### Unit Tests
 
 - Test each interface implementation independently
+- Test each preflight check with various input scenarios (pass/fail/warning)
+- Test preflight check registry with multiple checks of different severities
 
 ### Integration Tests
 
@@ -617,13 +622,13 @@ The following outlines the key implementation steps required to deliver the Radi
 
    - Implement the upgrade functionality in the Radius Helm client: [helmclient.go](https://github.com/radius-project/radius/blob/main/pkg/cli/helm/helmclient.go).
    - Add unit tests to validate Helm upgrade logic.
-   - This task can be worked on in parallel with items 2-4. It is a blocker for item 6.
+   - This task can be worked on in parallel with items 2-3, 4-5. It is a blocker for item 6.
 
 2. **Radius Contour Client Updates**
 
    - Implement the upgrade functionality in the Radius Contour client: [contourclient.go](https://github.com/radius-project/radius/blob/main/pkg/cli/helm/contourclient.go).
    - Add unit tests to verify correct behavior.
-   - This task can be worked on in parallel with items 1, 3-4. It is a blocker for item 6.
+   - This task can be worked on in parallel with items 1, 3, 4-5. It is a blocker for item 6.
 
 3. **Cluster Upgrade Interface**
 
@@ -631,40 +636,37 @@ The following outlines the key implementation steps required to deliver the Radi
    - Implement this method in all relevant interface implementations.
    - Integrate with version validation and custom configuration handling.
    - Add comprehensive unit tests for this functionality.
-   - This task can be worked on in parallel with items 1-2, 4. It is a blocker for item 6.
+   - This task can be worked on in parallel with items 1-2, 4-5. It is a blocker for item 6.
 
-4. **User Data Backup and Restore Interfaces**
-
-   - Define two new interfaces in the `components/database` package:
-     - `UserDataBackup`: Responsible for creating backups of user data before the upgrade.
-     - `UserDataRestore`: Responsible for restoring data from the backup in case of rollback.
-   - Design versioned backup formats to handle schema migrations between versions.
-   - This task can be worked on in parallel with items 1-3. It's a blocker for item 5.
-
-5. **User Data Backup and Restore Implementation**
-
-   - Implement the backup and restore interfaces in the following data store implementations:
-     - **In-memory datastore**: [inmemory/client.go](https://github.com/radius-project/radius/blob/main/pkg/components/database/inmemory/client.go)
-     - **Postgres datastore**: [postgresclient.go](https://github.com/radius-project/radius/blob/main/pkg/components/database/postgres/postgresclient.go)
-   - Add comprehensive unit tests for each implementation.
-   - Implement backup storage mechanism in Kubernetes (ConfigMaps or PVs depending on size).
-   - This task depends on item 4 (interfaces) and blocks item 6 (CLI implementation).
-
-6. **Upgrade Lock Mechanism**
+4. **Upgrade Lock Mechanism**
 
    - Implement the upgrade lock interface to prevent concurrent modifications.
    - Update existing CLI commands to check for locks before data modification.
-   - Can be implemented in parallel with items 1-5. Required for item 7.
+   - Can be implemented in parallel with items 1-3, 5. Required for item 6.
 
-7. **CLI Command Implementation**
+5. **Preflight Checks Implementation**
+
+   - Implement the `PreflightCheck` interface and create concrete check implementations:
+     - **VersionCompatibilityCheck**: Validates target version is newer than current version
+     - **ClusterResourceCheck**: Verifies the cluster has sufficient resources (CPU, memory)
+     - **ControlPlaneHealthCheck**: Confirms current installation is in a healthy state
+     - **CustomConfigValidationCheck**: Validates any custom configuration parameters
+   - Create a preflight checks registry to manage and execute checks in sequence
+   - Implement severity levels (Error, Warning, Info) and appropriate user feedback
+   - Add unit tests for each check implementation
+   - This task can be implemented in parallel with items 1-4 and is required for item 6.
+
+6. **CLI Command Implementation**
 
    - Implement the `rad upgrade kubernetes` command, integrating all previously defined components and interfaces.
-   - Ensure the command performs pre-flight checks, user data backup creation, component upgrades, rollback on failure, and post-upgrade verification.
+   - Ensure the command performs pre-flight checks, component upgrades, Helm-based rollback on failure, and post-upgrade verification.
    - Include detailed CLI output and logging for user visibility.
    - Add necessary unit and functional tests to validate command behavior.
-   - This task depends on all previous tasks (1-6) and should be implemented last.
+   - This task depends on all previous tasks (1-5) and should be implemented last.
 
-### Version 2: Data Store Migrations and Rollbacks
+### Future Versions
+
+#### Data Store Migrations and Rollbacks
 
 1. Pick & embed a migration tool
 
@@ -698,7 +700,26 @@ The following outlines the key implementation steps required to deliver the Radi
    - Versioning rules (major/minor jumps, compatibility guarantees)
    - Rollback advice: when to write reversible vs. irreversible migrations
 
-### Version 3: Rollback to the most recent successful version of Radius
+#### Integrate User Data Backup and Restore
+
+1. **User Data Backup and Restore Interfaces**
+
+   - Define two new interfaces in the `components/database` package:
+     - `UserDataBackup`: Responsible for creating backups of user data before the upgrade.
+     - `UserDataRestore`: Responsible for restoring data from the backup in case of rollback.
+   - Design versioned backup formats to handle schema migrations between versions.
+   - This task can be worked on in parallel with items 1-3. It's a blocker for item 5.
+
+2. **User Data Backup and Restore Implementation**
+
+   - Implement the backup and restore interfaces in the following data store implementations:
+     - **In-memory datastore**: [inmemory/client.go](https://github.com/radius-project/radius/blob/main/pkg/components/database/inmemory/client.go)
+     - **Postgres datastore**: [postgresclient.go](https://github.com/radius-project/radius/blob/main/pkg/components/database/postgres/postgresclient.go)
+   - Add comprehensive unit tests for each implementation.
+   - Implement backup storage mechanism in Kubernetes (ConfigMaps or PVs depending on size).
+   - This task depends on item 4 (interfaces) and blocks item 6 (CLI implementation).
+
+#### Rollback to the most recent successful version of Radius
 
 1. **Version History Tracking**
 
@@ -719,7 +740,7 @@ The following outlines the key implementation steps required to deliver the Radi
    - Add scenarios: v0.43 → v0.44 upgrade → failure → `rad rollback` → verify control plane matches pre-upgrade state.
    - Test edge cases where no previous version is recorded.
 
-### Version-4: Skip versions during `rad upgrade kubernetes`
+#### Skip versions during `rad upgrade kubernetes`
 
 1. **Skip-Aware Pre-flight Checks**
 
@@ -739,14 +760,14 @@ The following outlines the key implementation steps required to deliver the Radi
 
 4. **Automated Integration Tests**
 
-   - Cover a variety of version skip paths in CI (adjacent vs. multi‑minor).
+   - Cover a variety of version skip paths in CI (adjacent vs. multi-minor).
    - Fail if any migration or Helm chart upgrade in the skip path is missing.
 
-### Version 5: Support for Air-Gapped Environments
+#### Support for Air-Gapped Environments
 
 This can be discussed later.
 
-### Version 6: Upgrading Radius on other platforms like `rad upgrade aci`
+#### Upgrading Radius on other platforms like `rad upgrade aci`
 
 This can be discussed later.
 
@@ -758,13 +779,13 @@ This can be discussed later.
 
 ### Implementation Risks and Mitigations
 
-- **Backup Reliability**: User data backup and restore mechanisms must be thoroughly tested to ensure reliability. Consider edge cases such as backup corruption or restoration failures.
+- **Rollback Reliability**: Helm-based rollback mechanisms should be thoroughly tested to ensure they can return the control plane to a working state if upgrades fail.
 - **Lock Persistence**: Ensure upgrade locks have proper timeout mechanisms to avoid permanently locked systems if a process terminates unexpectedly.
 
 ### Testing Strategy
 
-- **Unit Tests**: Cover all new code paths, especially backup and restore logic, upgrade logic, and error handling.
-- **Functional Tests**: Validate end-to-end upgrade scenarios, including successful upgrades, upgrades with custom configurations, failure scenarios, and rollback procedures.
+- **Unit Tests**: Cover all new code paths, especially version validation, upgrade logic, lock mechanisms, and error handling.
+- **Functional Tests**: Validate end-to-end upgrade scenarios, including successful upgrades, upgrades with custom configurations, failure scenarios, and Helm-based rollback procedures.
 - **Compatibility Tests**: Verify compatibility between different Radius CLI versions and control plane components.
 
 ## Open Questions
