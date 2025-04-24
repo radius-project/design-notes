@@ -510,9 +510,9 @@ Add support for defining serverless container resources for container functional
 <!-- One or two sentence summary -->
 Add support for defining serverless connections between containers and/or portable resources within a Radius application definition file. Connections should be defined in the same way as they are today for Kubernetes containers, but should also support serverless-specific connections. This includes connections between serverless containers to establish service-to-service communication, as well as connections to other portable resources (e.g. databases, message queues, etc.) that the serverless container can connect to.
 
-### Feature 5: Define and create core resources (i.e. Gateway, Secret Store, Extender) for use in serverless containers
+### Feature 5: Define and create core resources (i.e. Gateway, Secret Store) for use in serverless containers
 <!-- One or two sentence summary -->
-Add support for defining and creating core Radius resources (i.e. Gateway, Secret Store, Extender) for use in serverless containers. Radius would leverage the solution available on the hosting platform to create and manage these resources. Connections between serverless containers and these core resources can be specified in the application definition file (e.g. `app.bicep`) and Radius will create the necessary connections at deploy time.
+Add support for defining and creating core Radius resources (i.e. Gateway, Secret Store) for use in serverless containers. Radius would leverage the solution available on the hosting platform to create and manage these resources. Connections between serverless containers and these core resources can be specified in the application definition file (e.g. `app.bicep`) and Radius will create the necessary connections at deploy time.
 
 ### Feature 6: Punch-through to platform-specific features
 <!-- One or two sentence summary -->
@@ -531,6 +531,10 @@ Add support for deploying and managing serverless compute resources via the exis
 ### Feature 8: Support for Dapr resources and sidecars
 <!-- One or two sentence summary -->
 Add support for adding a Dapr sidecar to a Radius container definition and connecting it to a Dapr resource. This will only be applicable if the serverless compute platform has native support for Dapr.
+
+### Feature 9: Define and create Extender and Custom Type (UDT) resources for use in serverless containers
+<!-- One or two sentence summary -->
+Add support for defining and creating Extender and Custom Type (UDT) resources for use in serverless containers. Radius would be able to reference properties and values from the Extender or Custom Type to connect the resource to the serverless container. Connections between serverless containers and these core resources can be specified in the application definition file (e.g. `app.bicep`) and Radius will create the necessary connections at deploy time. This will allow users to leverage the extensibility of Radius in serverless applications.
 
 ## Design Review Notes
 - [x] Clarify the relationship between compute platform and environment (e.g. is it one-to-one or one-to-many?)
