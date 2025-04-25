@@ -46,6 +46,11 @@ priority decisions, and how we will determine success.
 The goal of this feature is to allow the user to configure a timeout on the gateway for an application within the applications bicep file.
 
 ### Non goals
+Other forms of routing configuration are not in scope for this feature. This includes but is not limited to:
+* Configuring timeouts for other types of resources
+* Configuring timeouts for other types of routing
+* Configuring timeouts for other types of applications
+* Configuring timeouts for other types of gateways
 
 <!--
 Describe non-goals to identify something that we won’t be focusing on 
@@ -97,13 +102,10 @@ resource gateway 'Applications.Core/gateways@2023-10-01-preview' = {
         destination: 'http://${ui.name}:3000'
       }
       {
-        {
-          timeoutPolicy: {
-            response: '30s'
-            idle: '5m'
-            idleConnection: '1h'
+        timeoutPolicy: {
+            request: '30s'
+            backendrequest: '1m'
           }
-        }
         path: '/api'
         destination: 'http://${api.name}'
       }
