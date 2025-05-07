@@ -929,6 +929,12 @@ IDEs
 camelCased
 SMS
 SMSx
+idleConnection
+timeoutPolicy
+httpproxy
+apis
+backendrequest
+sigs
 Aditi
 Twilio
 DSL
