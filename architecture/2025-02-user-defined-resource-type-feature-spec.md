@@ -52,7 +52,6 @@ These new resource types can be:
 
 ## Non-Goals (out of scope)
 
-* TODO Configuring and keeping up to date Radius and Bicep tooling on developer workstations
 * Modifying, versioning, and deprecation of resource types
 * Deployment of updates to resources
 * Radius-maintained and tested sample repository 
@@ -84,8 +83,6 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 **Resource type catalog** – The entire collection of user-defined resource types in a Radius tenant; may include multiple namespaces and resource types
 
 **Resource type namespace** – A logical grouping of resource types; resource type names are unique within a namespace
-
-**Recipe manifest** –  A file containing a collection of resource type to recipe mappings; the mapping includes the location (but not the contents) of the Terraform configuration or Bicep template TODO is this needed instead of an environment spec?
 
 **Create** – A Radius API action where a resource gets created in the Radius tenant; i.e. the contents of the request payload is copied into the control plane; e.g., resource types are created
 
@@ -122,6 +119,17 @@ The platform engineer will create a resource type in their Radius tenant using t
 > * There is a need to support TypeSpec for resource type definition. Implementing user-defined resource types in Bicep complicates this objective because it introduces the ability to build functionality into the type definition rather than into the recipe. By modeling user-defined resource types only in YAML and TypeSpec, there is a clear separation of interface and implementation.
 > * Long-term, we envision Radius being polyglot rather than purely Bicep. Not only will Radius support multiple IaC solutions, but could also have language specific SDKs for developers. Imagine a cloud development kit with support for Python, Java, Node, etc. which was built on resource types defined by the platform engineer.
 > * YAML has already been implemented and is getting positive feedback from early users.
+>
+> Thew original proposal for Bicep was based on this user feedback:
+>
+> - **Child resources.** Users want to embed core resources such as containers and secrets in a UDT wrapping these core resources behind a custom schema. They also want to embed a UDT within a UDT. For example, one user wanted to model a web service which has a proxy such as NGINX, a container, and various sidecar containers. 
+>   - Child resources are implemented via recipes in this feature spec. Both Bicep and Terraform (with enhancements proposed in this spec) recipes can build deployments composed of Radius and non-Radius resource types. Therefore, YAML format is simpler.
+>
+> - **Conditional resources.** Building on child resources, provisioning resources based on the value of developer-specified properties was a use case identified. In the Comcast web service example, they want to have a single web service resource type which has a boolean specifying whether an ingress gateway is provisioned or not. (More concretely, a boolean to control whether the Kubernetes service is of type cluster IP or load balancer.) 
+>   - This feature spec demonstrates how to do conditional resources via recipes.
+>
+> - **Data manipulation and validation functions**. For example, one user wanted to be able to concatenate two properties which gets passed to the recipe. They need data validation functions with property specific error messages when validation does not pass. Regular expressions were proposed but their feedback was regex may be too complex. 
+>   - One advantage of Bicep-based resource type definitions was bringing the data validation earlier in the deployment. This type of validation is still possible in a Bicep and Terraform recipe.
 
 **User Experience 1 – Using YAML** 
 
@@ -858,7 +866,7 @@ types:
 
 When a developer creates a postgreSQL resource and a connection to that resource from a container, the environment variables are automatically set in the container.
 
-### User Story 10 – UDT→UDT
+### User Story 9 – Connection: UDT→UDT
 
 As a developer, I need to deploy a `webservice` resource type which connects to a cloud service, in this case Jira. The platform engineer has defined a `webservice` resource type which is similar to a container but also deploys other containers in addition to the application container. This includes a reverse proxy container and a container runtime security scanning container.
 
@@ -976,7 +984,7 @@ resource ${context.resource.name}-frontend 'Applications.Core/containers@2023-10
 }
 ```
 
-### User Story 10 – Container→UDT
+### User Story 10 – Connection: Container→UDT 
 
 As a developer I need to add a database to my application. The platform engineer has created a PostgreSQL resource type which I am adding to my application. The PostgreSQL resource type has been configured with environment variables by the platform engineer. I expect the environment variables the platform engineer has specified to be automatically created in my connected container.
 
