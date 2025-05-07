@@ -949,3 +949,5 @@ manualProvisioning
 webService
 jira
 CoPilot
+balancer
+NGINX
