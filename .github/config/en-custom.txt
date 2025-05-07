@@ -946,3 +946,6 @@ webservice
 Papercut
 manualResourceProvisioning
 manualProvisioning
+webService
+jira
+CoPilot
