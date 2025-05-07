@@ -874,7 +874,7 @@ The developer creates an application definition which looks like:
 
 **`myWebApp-application-definition.bicep`**
 
-```json
+```
 extension radiusCore
 extension radiusResources
 
@@ -917,7 +917,7 @@ Prior to this the platform engineer deployed the Jira resource:
 
 **`jira-resource.bicep`**
 
-```json
+```
 // Shared resource for all applications representing an external service
 resource jira 'Radius.Resources/externalService@2023-10-01-preview' = {
   name: 'jira'
@@ -936,7 +936,7 @@ And registered a recipe for the webService resource in the environment:
 
 **`webservice-recipe.bicep`**
 
-```json
+```
 extension radiusCore
 param context object
 
