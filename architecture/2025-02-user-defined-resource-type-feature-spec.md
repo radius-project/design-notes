@@ -584,7 +584,7 @@ resource "radius_applications_core_containers" "proxy" {
   container_image     = "envoy:latest"
 }
 
-resource "radius_applications_core_containers" "serviceContainer" {
+resource "radius_applications_core_containers" "webServiceContainer" {
   name                = "${var.context.resource.name}-container"
   environment         = var.context.environment.id
   application         = var.context.application.id
@@ -617,7 +617,7 @@ resource proxy 'Applications.Core/containers@2023-10-01-preview' = {
   ]
 }
 
-resource serviceContainer 'Applications.Core/containers@2023-10-01-preview' = {
+resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' = {
   name: '${context.resource.name}-container'
   properties: {
     application: context.application.id
@@ -661,6 +661,8 @@ types:
 
 **User Experience 1 – Using Terraform configuration**
 
+**`/recipes/webservice/main.tf`**
+
 ```diff
 terraform {
   required_providers {
@@ -683,13 +685,13 @@ variable "context" {
     application         = var.context.application
     routes = {
       path              = "/"
-      destination       = "http://${local.serviceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
+      destination       = "http://${local.webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
     }     
 
   }
 }
 
-resource "applications_core_containers" "serviceContainer" {
+resource "applications_core_containers" "webServiceContainer" {
   name                = "${var.context.resource.name}-container"
   environment         = var.context.environment.id
   application         = var.context.application.id
@@ -717,13 +719,13 @@ param context object
     routes: [
       {
         path: '/'
-        destination: 'http://${serviceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
+        destination: 'http://${webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
       }
     ]
   }
 }
 
-resource serviceContainer 'Applications.Core/containers@2023-10-01-preview' = {
+resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' = {
   name: '${context.resource.name}-container'
   properties: {
     application: context.application.id
@@ -766,7 +768,7 @@ Given this, the `--template-kind` and `--template-path` arguments will be rename
 
 ## Scenario 3 – Using resource types
 
-### User Story 8 – Reading properties
+### User Story 8 – Injecting environment variables
 
 As a developer, I need to read properties for resources in my application definition and set environment variables for my container. For example, when I create a database resource, I need to set an environment variable in my container which gives my application the connection string.
 
@@ -924,30 +926,19 @@ resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
 }
 ```
 
-
-
-### **User Story 9 – Connecting to an external resource** 
+### **User Story 9 – Modeling an external resource** 
 
 As a platform engineer, I need to enable my developers to connect to already deployed resources outside of the environment. I need a method of publishing these external resources for my developers to connect their application to. 
 
 **Summary**
 
-Almost all applications connect to other systems which are managed independently. These systems could be other applications within the organization or software as a service applications managed by other vendors. These dependencies present challenges in a complex, interconnected organization. The Radius application graph is designed to help managed these dependencies by documenting connections between application components and visualizing them via the Radius dashboard and API. However, today, the application graph only supports connections between Radius-managed components. With user-defined resource types, organizations can represent application dependencies which are external to the application, environment, or organization.
-
-Radius already restricts the ability to create resources which do not have an associated recipe in the target environment. If a resource is created in an environment without a recipe for that resource type, it will fail with an error stating that no recipe was found for the corresponding resource type. Not having a recipe for a resource type in an environment is how the platform engineer controls which resources can be deployed in which environment. 
+Today, Radius restricts the ability to create resources which do not have an associated recipe in the target environment. If a resource is created in an environment without a recipe for that resource type, it will fail with an error stating that no recipe was found for the corresponding resource type. Not having a recipe for a resource type in an environment is how the platform engineer controls which resources can be deployed in which environment. 
 
 However, to represent an external resource, Radius will support creating resource types which do not, and cannot, have a recipe registered to it. These recipe-less resource types are only resources within the Radius application graph—there is no deployed resource or other functionality associated with them aside from reading the properties such as reading the name, description, or connection string.
 
 **User Experience** 
 
-The platform engineer creates a resource type which cannot have a recipe registered for it. In the resource type definition, the platform engineer will annotate the resource type with `capabilities: ["manualResourceProvisioning"]`
-
-```bash
-# Create a recipe-less resource type just like other resource types
-rad resource-type create --from-file external-service-resource-type.yaml
-Creating resource type Radius.Resources/externalService
-The resource type Radius.Resources/externalService has been created
-```
+The platform engineer creates a resource type with `capabilities: ["manualResourceProvisioning"]`.
 
 **`external-service-resource-type.yaml`**:
 
@@ -972,8 +963,9 @@ types:
               description: "Optional: The application which the resource is associated with"
             connectionString:
               type: string
-              description: "Required: When true, provisions an L7 ingress gateway mapped to the port named http"
+              description: "Required: The connection string to the external resource"
               connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
+            # The recipe should store these in a secret
             credentials:
               type: object
               description: "Optional: Properties for storing authentication credentials"
@@ -1005,7 +997,7 @@ types:
           - credentials
 ```
 
-The platform engineer, or environment manager can then create a resource representing the external resource in the environment. For example, the platform engineer may create a resource representing a Twilio account.
+The platform engineer, or environment manager, can then create a resource representing the external resource in the environment. For example, the platform engineer may create a resource representing a Twilio account.
 
 **`production-environment.bicep`**
 
@@ -1017,18 +1009,14 @@ resource environment 'Applications.Core/environments@2023-10-01-preview' = {
   ...
 }
 
-var twilioAccountSid = 'ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-var twilioUsername = 'twilio-prod-user'
-var twilioPassword = 'o84nouvTiHWiw97sbq6B'
-
 resource twilio 'Radius.Resources/externalService@v1alpha1' = {
   name: 'twilio'
   properties: {
     environment: production
-    connectionString: 'https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}'
+    connectionString: 'https://api.twilio.com/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     credentials:
-      username: ${twilioUsername}
-      password: ${twilioPassword}
+      username: 'twilio-prod-user'
+      password: 'o84nouvTiHWiw97sbq6B'
 }
 ```
 
@@ -1075,7 +1063,7 @@ resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
 + }
 ```
 
-### User Story 10 – Connections: Injected Environment Variables
+### User Story 10 – Connections: Injecting Environment Variables into Application.Core/containers
 
 As a developer, when I connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container.
 
@@ -1092,7 +1080,7 @@ types:
     ...
             connectionString:
               type: string
-              description: "Required: When true, provisions an L7 ingress gateway mapped to the port named http"
+              description: "Required: The connection string to the external resource"
 +              connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
             credentials:
               type: object
@@ -1166,40 +1154,7 @@ resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
 }
 ```
 
-### User Story 11 – Connections: Application Graph
-
-As a developer, when I connect to an external resource, I can add a connection to the external resource and expect that to be visible in the application graph.
-
-**User Experience**
-
-After the developer adds a connection to the twilio resource, twilio appears in the application graph.
-
-```bash
-$ rad app graph -a myApp
-Displaying application: myApp
-
-Name: frontend (Applications.Core/containers)
-Connections:
-  backend (Applications.Core/containers) -> frontend
-Resources:
-...
-
-Name: backend (Applications.Core/containers)
-Connections:
-  backend -> frontend (Applications.Core/containers)
-  ordersDB (Radius.Resources/postgreSQL) -> backend
-  twilio (Radius.Resources/externalService) -> backend
-Resources:
-...
-  
-Name: ordersDB (Radius.Resources/postgreSQL)
-Connections:
-  ordersDB -> backend (Application.Core/containers)
-Resources:
-...
-```
-
-### User Story 12 – Connections: UDT→UDT
+### User Story 11 – Connections: Injecting Environment Variables into UDTs
 
 As a developer, when I am using a webservice user-defined resource type to connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container and the application graph to show all my resources.
 
@@ -1248,6 +1203,50 @@ resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
 
 Prior to this the platform engineer created the webService recipe which sets the properties on the container:
 
+**Using Terraform configuration**
+
+**`/recipes/webservice/main.tf`**
+
+```diff
+terraform {
+  required_providers {
+    radius = {
+      source  = "terraform.radapp.io"
+      version = "~> 0.46"
+    }
+  }
+}
+
+variable "context" {
+  description = "This variable contains Radius recipe context."
+  type = any
+}
+
+if var.context.resource.properties.ingress {
+  resource "applications_core_gateways" "gateway" {
+    name                = "gateway"
+    environment         = var.context.environment.id
+    application         = var.context.application
+    routes = {
+      path              = "/"
+      destination       = "http://${local.webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
+    }     
+
+  }
+}
+
+resource "applications_core_containers" "webServiceContainer" {
+  name                = "${var.context.resource.name}-container"
+  environment         = var.context.environment.id
+  application         = var.context.application.id
+  container_image     = var.context.resource.properties.container.image
++  connections         = var.context.resource.properties.connections
+  ...
+}
+```
+
+**Using Bicep template**
+
 **`webservice-recipe.bicep`**
 
 ```diff
@@ -1256,12 +1255,6 @@ extension radius
 @description('Information about what resource is calling this Recipe. Generated by Radius.')
 param context object
 
-
-// Existing resource in the resource group
-resource twilio 'Radius.Resources/externalService@2025-05-05' = existing {
-  name: 'jira'
-}
-
 resource gateway 'Applications.Core/gateways@2023-10-01-preview' = if (context.resource.properties.ingress) {
   name: 'gateway'
   properties: {
@@ -1269,21 +1262,54 @@ resource gateway 'Applications.Core/gateways@2023-10-01-preview' = if (context.r
     routes: [
       {
         path: '/'
-        destination: 'http://${serviceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
+        destination: 'http://${webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
       }
     ]
   }
 }
 
-resource serviceContainer 'Applications.Core/containers@2023-10-01-preview' = {
+resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' = {
   name: '${context.resource.name}-container'
   properties: {
     application: context.application.id
     container: context.resource.properties.container
-    connections: context.resource.properties.connections
++    connections: context.resource.properties.connections
     ...
   }
 }
+```
+
+### User Story 12 – Connections: Application Graph
+
+As a developer, when I connect to an external resource, I can add a connection to the external resource and expect that to be visible in the application graph.
+
+**User Experience**
+
+After the developer adds a connection to the twilio resource, twilio appears in the application graph.
+
+```bash
+$ rad app graph -a myApp
+Displaying application: myApp
+
+Name: frontend (Radius.Resources/webService)
+Connections:
+  backend (Radius.Resources/webService) -> frontend
+Resources:
+...
+
+Name: backend (Radius.Resources/webService)
+Connections:
+  backend -> frontend (Radius.Resources/webService)
+  ordersDB (Radius.Resources/postgreSQL) -> backend
+  twilio (Radius.Resources/externalService) -> backend
+Resources:
+...
+  
+Name: ordersDB (Radius.Resources/postgreSQL)
+Connections:
+  ordersDB -> backend (Radius.Resources/webService)
+Resources:
+...
 ```
 
 ## Other Changes
