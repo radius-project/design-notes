@@ -635,7 +635,7 @@ As a platform engineer, I need to write a recipe which creates additional resour
 
 The platform engineer adds a boolean property to the `webservice` resource type from the previous user story.
 
-**`service-resource-type.yaml`**:
+**`webservice-resource-type.yaml`**:
 
 ```diff
 namespace: Radius.Resources
@@ -1175,7 +1175,17 @@ resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
 }
 
 + resource frontend 'Radius.Resources/webService@2025-05-05' = {
-...
+  name: 'frontend'
+  properties: {
+    container: {
+      image: 'frontend:latest'
+      connections: {
+      backend: {
+        source: backend.id
+      }
++      ingress: true
+   }
+}
 }
 
 +resource backend 'Radius.Resources/webService@2025-05-05' = {
@@ -1295,7 +1305,8 @@ Name: frontend (Radius.Resources/webService)
 Connections:
   backend (Radius.Resources/webService) -> frontend
 Resources:
-...
+  frontend-container (Applications.Core/containers)
+  gateway (Applications.Core/gateways)
 
 Name: backend (Radius.Resources/webService)
 Connections:
@@ -1303,13 +1314,13 @@ Connections:
   ordersDB (Radius.Resources/postgreSQL) -> backend
   twilio (Radius.Resources/externalService) -> backend
 Resources:
-...
+  backend-container (Applications.Core/containers)
   
 Name: ordersDB (Radius.Resources/postgreSQL)
 Connections:
   ordersDB -> backend (Radius.Resources/webService)
 Resources:
-...
+  ordersDB-container (Applications.Core/containers)
 ```
 
 ## Other Changes
