@@ -114,13 +114,14 @@ The platform engineer will create a resource type in their Radius tenant using t
 >
 > A previous version of this document proposed defining resource types using Bicep. After the initial launch of user-defined resource types, this proposal has been withdrawn for the following reasons:
 >
+> * The previous proposal mixed interface and implementation. By using YAML and TypeSpec we maintain that separation. The only implementation will by via recipes.
 > * A primary driver of Bicep was the need to define composite resource types (e.g., a web service with a reverse proxy, application container, and sidecar, or a database with a secret). The previous proposal used Bicep to define a resource type which had a schema as well as child resources (not just child resource types). We learned that recipes was a more appropriate place to define these composite resource types because recipes can, not only use resources from traditional resource providers like Azure services, but can also use Radius resource types.
 > * We have already prototyped the ability to use Radius resource types in a Terraform recipe via a new Radius provider for Terraform.
 > * There is a need to support TypeSpec for resource type definition. Implementing user-defined resource types in Bicep complicates this objective because it introduces the ability to build functionality into the type definition rather than into the recipe. By modeling user-defined resource types only in YAML and TypeSpec, there is a clear separation of interface and implementation.
 > * Long-term, we envision Radius being polyglot rather than purely Bicep. Not only will Radius support multiple IaC solutions, but could also have language specific SDKs for developers. Imagine a cloud development kit with support for Python, Java, Node, etc. which was built on resource types defined by the platform engineer.
 > * YAML has already been implemented and is getting positive feedback from early users.
 >
-> Thew original proposal for Bicep was based on this user feedback:
+> The original proposal for Bicep was based on this user feedback:
 >
 > - **Child resources.** Users want to embed core resources such as containers and secrets in a UDT wrapping these core resources behind a custom schema. They also want to embed a UDT within a UDT. For example, one user wanted to model a web service which has a proxy such as NGINX, a container, and various sidecar containers. 
 >   - Child resources are implemented via recipes in this feature spec. Both Bicep and Terraform (with enhancements proposed in this spec) recipes can build deployments composed of Radius and non-Radius resource types. Therefore, YAML format is simpler.
@@ -142,7 +143,7 @@ The resource type Radius.Resources/postgreSQL has been created
 
 > [!NOTE]
 >
-> This document uses `Radius.Resources` for the namespace for resource types and the documentation will instruct uses to use the same. In previous examples, you may see `MyCompany.App` or `MyCompany.Resources`. While that it still possible, having uses use ``Radius.Resources` simplifies the experience and there is no benefit to using the company name.
+> This document uses `Radius.Resources` for the namespace for resource types and the documentation will instruct uses to use the same. In previous examples, you may see `MyCompany.App` or `MyCompany.Resources`. While that it still possible, having uses use `Radius.Resources` simplifies the experience and there is no benefit to using the company name.
 
 **`postgreSQL-resource-type.yaml`**:
 
@@ -425,7 +426,7 @@ Radius.Resources         postgreSQL
 rad resource-type show Radius.Resources/postgreSQL
 NAMESPACE                Radius.Resources
 RESOURCE TYPE            postgreSQL
-VERSION                  2025-05-05
+DEFAULT VERSION          2025-05-05
 
 DESCRIPTION
   The Radius.Resources/postgreSQL resource type
@@ -513,7 +514,7 @@ When the developer executes rad CLI commands Radius will:
 
 * `rad workspace create` – Creating a new workspace will create a bicepconfig.json in the working directory which has a reference to each Radius-hosted Bicep extension (if bicepconfig.json exists in the working directory, update the file to ensure it has each of the Radius-hosted Bicep extensions)
 * `rad workspace update` – This is a new command which will refresh the local configuration with the latest Bicep extensions
-* `rad workspace switch`, `rad run`, or `rad deploy` – If the bicepconfig.json file is out of date relative to the Radius-hosted version, the command will fail and instruct the user to run ``rad workspace update`.
+* `rad workspace switch`, `rad run`, or `rad deploy` – If the bicepconfig.json file is out of date relative to the Radius-hosted version, the command will fail and instruct the user to run `rad workspace update`.
 
 ## Scenario 2 – Authoring recipes 
 
@@ -527,9 +528,9 @@ The goal of user-defined resource types is to enable users and the broader Radiu
 
 A microservice, for example, could be composed of an application container, an in-memory cache, a reverse proxy, and a container security sidecar. In order to model the microservice resource type, the platform engineer needs the ability to specify a schema for the resource type, as well as the resources that compose the microservice. What makes this user story unique compared to those previously discussed is that the resources composing this microservice are other Radius resource types—not only infrastructure. 
 
-**`webservice-resource-type.bicep`**:
+**`webservice-resource-type.yaml`**:
 
-`````yaml
+```yaml
 namespace: Radius.Resources
 types:
   webService:
@@ -599,7 +600,7 @@ The recipe for the service resource type will leverage Radius resource types.
 **`webservice-recipe.bicep`**:
 
 ```yaml
-extension radiusCore
+extension radius
 
 @description('Information about what resource is calling this Recipe. Generated by Radius.')
 param context object
@@ -634,7 +635,7 @@ As a platform engineer, I need to write a recipe which creates additional resour
 
 The platform engineer adds a boolean property to the `webservice` resource type from the previous user story.
 
-**`service-resource-type.bicep`**:
+**`service-resource-type.yaml`**:
 
 ```diff
 namespace: Radius.Resources
@@ -704,7 +705,7 @@ The recipe will have a conditional on the ingress property to determine whether 
 **`webservice-recipe.bicep`**:
 
 ```diff
-extension radiusCore
+extension radius
 
 @description('Information about what resource is calling this Recipe. Generated by Radius.')
 param context object
@@ -757,7 +758,7 @@ There are two changes here:
 
 **Retirement of named recipes** – Today, Radius supports named recipes. When deploying a portable resource type, developers can override the default recipe by specifying a recipe name in their application definition. This enables developers to punch through the separation of concerns between platform and developers. Based on strong user feedback, user-defined resource types will not implement the ability to punch through and use alternate recipes. 
 
-Furthermore, once portable resource types are refactored into user-defined resource types, the ability to specify a recipe name will be retired. The command will change from ``rad recipe register <recipeName>` to `rad recipe register`. This also has the benefit of not having to build developer documentation for discovering available recipes. 
+Furthermore, once portable resource types are refactored into user-defined resource types, the ability to specify a recipe name will be retired. The command will change from `rad recipe register <recipeName>` to `rad recipe register`. This also has the benefit of not having to build developer documentation for discovering available recipes. 
 
 **Rename of template-kind and template-path** – Radius is not opinionated about which infrastructure as code solution to use. Therefore, it is important that Radius is not biased towards one solution versus another. The parameter `--template-kind` and `--template-path` are biased towards Bicep as Bicep files are called templates and Terraform files are configurations. 
 
@@ -777,25 +778,36 @@ The develop can manually inject environment variables into the container using B
 >
 > This functionality exists today. There are no changes. It is included here for context with the other examples.
 
-**`my-backend-application.bicep`**:
+**`myApp.bicep`**:
 
 ```diff
-resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
-  name: 'ordersDB'
+extension radius
+extension radiusResources
+
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
+  name: 'todolist'
   properties: {
-     size: 'M' 
+    environment: environment
   }
+}
+
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'frontend'
+  properties: {
+    container: {
+      image: 'frontend:latest'
+      connections: {
+      backend: {
+        source: backend.id
+      }
+   }
 }
 
 resource backend 'Applications.Core/containers@2023-10-01-preview' = {
   name: 'backend'
   properties: {
     container: {
-      image: 'my-applicatio-container:latest'
-      connections: {
-      ordersDB: {
-        source: ordersDB.id
-      }
+      image: 'backend:latest'
 +      // Set environment variables in the container by referencing properties via Bicep
 +      env: [
 +        ORDERS_DB_CONNECTION_STRING: {
@@ -809,6 +821,13 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
 +        }
 +      ]
    }
+}
+
+resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
+  name: 'ordersDB'
+  properties: {
+     size: 'M' 
+  }
 }
 ```
 
@@ -864,135 +883,50 @@ types:
 
 **Result**
 
-When a developer creates a postgreSQL resource and a connection to that resource from a container, the environment variables are automatically set in the container.
+When a developer creates a postgreSQL resource and a connection to that resource from a container, the environment variables are automatically set in the container. The `env` property does not need to be set on the container resource.
 
-### User Story 9 – Connection: UDT→UDT
+**`myApp.bicep`**:
 
-As a developer, I need to deploy a `webservice` resource type which connects to a cloud service, in this case Jira. The platform engineer has defined a `webservice` resource type which is similar to a container but also deploys other containers in addition to the application container. This includes a reverse proxy container and a container runtime security scanning container.
-
-**Summary**
-
-The developer reads the developer documentation for the internal developer platform and sees there is a way to connect to Jira already defined by the platform engineers. The documentation provides explicit instructions which says:
-
-1. Add an existing resource named jira to the application definition
-2. Add a connection to the jira resource on the webservice resource
-3. Read the `JIRA_URL` and `JIRA_API_KEY` environment variables in the container
-
-The developer creates an application definition which looks like:
-
-**`myWebApp-application-definition.bicep`**
-
-```
-extension radiusCore
+```diff
+extension radius
 extension radiusResources
 
-resource myWebApp 'Applications.Core/applications@2023-10-01-preview' = {
-  name: 'myWebApp'
-  properties: {
-    environment: environment
-  }
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
+...
 }
 
-// Existing resource in the resource group
-resource jira 'Radius.Resources/externalService@2023-10-01-preview' = existing {
-  name: 'jira'
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+...
 }
 
-// webservice resource, not core container
-resource frontend 'Radius.Resources/webServices@2025-05-05' = {
-  name: 'frontend'
+resource backend 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'backend'
   properties: {
-    application: myWebApp.id
-    environment: environment
-    connection: {
-      jira:
-        source: jira.id
-    }
     container: {
-      image: 'ghcr.io/Radius.Resourcess/myWebApp:latest'
-        ports: {
-          web: {
-            containerPort: 3000
-          }
-        }  
-      }
-    }
-  }
+      image: 'backend:latest'
+-      // Set environment variables in the container by referencing properties via Bicep
+-      env: [
+-        ORDERS_DB_CONNECTION_STRING: {
+-          value: ordersDB.connectionString
+-        },
+-        ORDERS_DB_USERNAME: {
+-          value: ordersDB.credentias.username
+-        },
+-        ORDERS_DB_PASSWORD: {
+-          value: ordersDB.credentias.password
+-        }
+-      ]
+   }
+}
+
+resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
+...
 }
 ```
 
-Prior to this the platform engineer deployed the Jira resource:
 
-**`jira-resource.bicep`**
 
-```
-// Shared resource for all applications representing an external service
-resource jira 'Radius.Resources/externalService@2023-10-01-preview' = {
-  name: 'jira'
-  properties:{
-    connectionString: 'https://api.atlassian.com/ex/jira/<cloudId>/rest/api/3/<resource-name>'
-    credentials: {
-      type: 'apiKey'
-      apiKey: 'your-api-key'
-    }
-    environment: nimble.id 
-  }
-}
-```
-
-And registered a recipe for the webService resource in the environment:
-
-**`webservice-recipe.bicep`**
-
-```
-extension radiusCore
-param context object
-
-// Existing resource in the resource group
-resource jira 'Radius.Resources/externalService@2025-05-05' = existing {
-  name: 'jira'
-}
-
-// Reverse proxy
-resource ${context.resource.name}-proxy Applications.Core/containers@2023-10-01-preview' = {
-  name: '${context.resource.name}-proxy'
-  ...
-}
-
-resource ${context.resource.name}-frontend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: '${context.resource.name}-frontend'
-  properties: {
-    application: context.application.id
-    container: {
-      image: context.resource.properties.image
-      ports: context.resource.properties.ports
-      }
-      env: {
-        JIRA_URL: {
-          value: jira.properties.connectionString
-        }
-        JIRA_API_KEY: {
-          value: jira.properties.apiKey
-        }
-      }
-    }
-    connection: {
-      jira:
-        source: jira.id
-    }
-  }
-}
-```
-
-### User Story 10 – Connection: Container→UDT 
-
-As a developer I need to add a database to my application. The platform engineer has created a PostgreSQL resource type which I am adding to my application. The PostgreSQL resource type has been configured with environment variables by the platform engineer. I expect the environment variables the platform engineer has specified to be automatically created in my connected container.
-
-**Summary**
-
-The developer reads the documentation for the PostgreSQL resource type and see that he or she can read the `POSTGRESQL_HOST`, `POSTGRESQL_PORT` `POSTGRESQL_USERNAME`, and `POSTGRESQL_PASSWORD` environment variables.
-
-### **User Story 11 – Connecting to an external resource** 
+### **User Story 9 – Connecting to an external resource** 
 
 As a platform engineer, I need to enable my developers to connect to already deployed resources outside of the environment. I need a method of publishing these external resources for my developers to connect their application to. 
 
@@ -1054,19 +988,15 @@ types:
                 basicUserName:
                   type: string
                   description: "Optional: The username used for basic HTTP authentication"
-                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_USERNAME
                 basicPassword:
                   type: string
                   description: "Optional: The password used for basic HTTP authentication"
-                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_PASSWORD
                 apiKey:
                   type: string
                   description: "Optional: apiKey string"
-                  connected-resource-environment-variable: EXTERNAL_SERVICE_API_KEY
                 jwt:
                   type: string
                   description: "Optional: JSON web token"
-                  connected-resource-environment-variable: EXTERNAL_SERVICE_JWT
               required:
               - type
           required:
@@ -1080,7 +1010,7 @@ The platform engineer, or environment manager can then create a resource represe
 **`production-environment.bicep`**
 
 ```yaml
-extension radiusCore
+extension radius
 
 resource environment 'Applications.Core/environments@2023-10-01-preview' = {
   name: 'production'
@@ -1104,31 +1034,257 @@ resource twilio 'Radius.Resources/externalService@v1alpha1' = {
 
 Then the developer can connect to the Twilio resource in their application by using the `existing` keyword.
 
-```yaml
-// Existing resource in the resource group
-resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
-  name: 'twilio'
+**`myApp.bicep`**:
+
+```diff
+extension radius
+extension radiusResources
+
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
+...
+}
+
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+...
 }
 
 resource backend 'Applications.Core/containers@2023-10-01-preview' = {
   name: 'backend'
-  properties: [
-    application: application
+  properties: {
     container: {
-      image: 'ghcr.io/my-company/simpleEshop/backend:latest'
-      ...
-      }
-    },
-    // Environment variables are automatically injected into container via the connection
-    connections: {
-      twilio: {
-        source: twilio.id
-      }
-    }
-  ]
+      image: 'backend:latest'
+      // Set environment variables in the container by referencing properties via Bicep
++      env: [
++        TWILIO_URL: {
++          value: twilio.properties.connectionString
++        },
++        TWILIO_API_KEY: {
++          value: twilio.properties.apiKey
++        }
++      ]
+   }
+}
+
+resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
+...
+}
+
++ // Existing resource in the resource group
++ resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
++   name: 'twilio'
++ }
+```
+
+### User Story 10 – Connections: Injected Environment Variables
+
+As a developer, when I connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container.
+
+**Summary**
+
+This user story is fulfilled by combining user story 8 and 9.  First the platform engineer adds environment variables to the resource type definition.
+
+**`external-service-resource-type.yaml`**:
+
+```diff
+namespace: Radius.Resources
+types:
+  externalService:
+    ...
+            connectionString:
+              type: string
+              description: "Required: When true, provisions an L7 ingress gateway mapped to the port named http"
++              connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
+            credentials:
+              type: object
+              description: "Optional: Properties for storing authentication credentials"
+              properties:
+                ...
+                basicUserName:
+                  type: string
+                  description: "Optional: The username used for basic HTTP authentication"
++                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_USERNAME
+                basicPassword:
+                  type: string
+                  description: "Optional: The password used for basic HTTP authentication"
++                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_PASSWORD
+                apiKey:
+                  type: string
+                  description: "Optional: apiKey string"
++                  connected-resource-environment-variable: EXTERNAL_SERVICE_API_KEY
+                jwt:
+                  type: string
+                  description: "Optional: JSON web token"
++                  connected-resource-environment-variable: EXTERNAL_SERVICE_JWT
+              ...
+```
+
+Then the developer can remove the manually added environment variables and add a connection block.
+
+**`myApp.bicep`**:
+
+```diff
+extension radius
+extension radiusResources
+
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
+...
+}
+
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+...
+}
+
+resource backend 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'backend'
+  properties: {
+    container: {
+      image: 'backend:latest'
++      // Connection automatically injects EXTERNAL_SERVICE_CONNECTION_STRING and EXTERNAL_SERVICE_API_KEY
++      connections: {
++        twilio:
++          source: twilio.id
++      }
+-      // Set environment variables in the container by referencing properties via Bicep
+-      env: [
+-        TWILIO_URL: {
+-          value: twilio.properties.connectionString
+-        },
+-        TWILIO_API_KEY: {
+-          value: twilio.properties.apiKey
+-        }
+-      ]
+   }
+}
+
+resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
+...
+}
+
+// Existing resource in the resource group
+resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
+  name: 'twilio'
 }
 ```
 
+### User Story 11 – Connections: Application Graph
+
+As a developer, when I connect to an external resource, I can add a connection to the external resource and expect that to be visible in the application graph.
+
+**User Experience**
+
+After the developer adds a connection to the twilio resource, twilio appears in the application graph.
+
+```bash
+$ rad app graph -a myApp
+Displaying application: myApp
+
+Name: frontend (Applications.Core/containers)
+Connections:
+  backend (Applications.Core/containers) -> frontend
+Resources:
+...
+
+Name: backend (Applications.Core/containers)
+Connections:
+  backend -> frontend (Applications.Core/containers)
+  ordersDB (Radius.Resources/postgreSQL) -> backend
+  twilio (Radius.Resources/externalService) -> backend
+Resources:
+...
+  
+Name: ordersDB (Radius.Resources/postgreSQL)
+Connections:
+  ordersDB -> backend (Application.Core/containers)
+Resources:
+...
+```
+
+### User Story 12 – Connections: UDT→UDT
+
+As a developer, when I am using a webservice user-defined resource type to connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container and the application graph to show all my resources.
+
+**Summary**
+
+The only different in this user story is that the developer is using a `Radius.Resources/webService` resource type instead of a `Applications.Core/containers`. 
+
+The developer creates the application definition:
+
+**`myApp.bicep`**:
+
+```diff
+extension radius
+extension radiusResources
+
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
+...
+}
+
++ resource frontend 'Radius.Resources/webService@2025-05-05' = {
+...
+}
+
++resource backend 'Radius.Resources/webService@2025-05-05' = {
+  name: 'backend'
+  properties: {
+    container: {
+      image: 'backend:latest'
+      // Connection automatically injects EXTERNAL_SERVICE_CONNECTION_STRING and EXTERNAL_SERVICE_API_KEY
+      connections: {
+        twilio:
+          source: twilio.id
+      }
+   }
+}
+
+resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
+...
+}
+
+// Existing resource in the resource group
+resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
+  name: 'twilio'
+}
+```
+
+Prior to this the platform engineer created the webService recipe which sets the properties on the container:
+
+**`webservice-recipe.bicep`**
+
+```diff
+extension radius
+
+@description('Information about what resource is calling this Recipe. Generated by Radius.')
+param context object
+
+
+// Existing resource in the resource group
+resource twilio 'Radius.Resources/externalService@2025-05-05' = existing {
+  name: 'jira'
+}
+
+resource gateway 'Applications.Core/gateways@2023-10-01-preview' = if (context.resource.properties.ingress) {
+  name: 'gateway'
+  properties: {
+    application: context.application.id
+    routes: [
+      {
+        path: '/'
+        destination: 'http://${serviceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
+      }
+    ]
+  }
+}
+
+resource serviceContainer 'Applications.Core/containers@2023-10-01-preview' = {
+  name: '${context.resource.name}-container'
+  properties: {
+    application: context.application.id
+    container: context.resource.properties.container
+    connections: context.resource.properties.connections
+    ...
+  }
+}
+```
 
 ## Other Changes
 
