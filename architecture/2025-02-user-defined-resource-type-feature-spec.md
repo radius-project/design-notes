@@ -76,7 +76,7 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 **Core resource types** – Foundational resource types which Radius has built-in logic for creating and deleting and which other resource types can be built upon; includes application, container, gateway, secrets, and volumes; the `Application.Core` resource provider manages these resource types
 
-**Portable resource types** – Resource types which are pre-defined in Radius but rely on recipes to be deployed
+**Portable resource types** – Pre-defined resource types which model open-source application components which can be deployed across multiple cloud environments via recipes
 
 **User-defined resource types** – A custom resource with a name, namespace, and an OpenAPI schema
 
@@ -84,21 +84,15 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 **Resource type namespace** – A logical grouping of resource types; resource type names are unique within a namespace
 
-**Create** – A Radius API action where a resource gets created in the Radius tenant; i.e. the contents of the request payload is copied into the control plane; e.g., resource types are created
+**Create** – A Radius API action where a resource gets created in the Radius tenant, i.e. the contents of the request payload is copied into the control plane, e.g., resource types are created
 
-**Register** – A Radius API action where a the <u>location</u> of a resource is created in the Radius tenant; i.e. a pointer to a resource is created; e.g. recipes are registered
+**Register** – A Radius API action where the <u>location</u> of a resource is created in the Radius tenant; i.e. a pointer to a resource is created, e.g. recipes are registered
 
 ## User Personas
 
 **Platform Engineers** – Platform engineers are responsible for building and maintaining the internal developer platform used by application developers within their organization. This developer platform provides the tooling and services which enables developers to build applications in a self-service manner using standardized practices within the organization. These practices include the consistent use of cloud services, continuous integration and testing, enforcement of security and operational best practices, accurate cost attribution, and other capabilities. In addition to enforcing these best practices, the developer platform performs also perform automated deployments to local and shared non-production environments (continuous delivery). 
 
 **Application Developers** – Application developers, or simply developers, are responsible for building applications within their organization. They are responsible for technical design, implementation, and test cases. Developers typically build, run, and test their applications on a local development workstation then deploy the application to a cloud-based environment. Some organizations provide a cloud environment for individual developers, while others require developers to commit their code to a source code repository; after which the developer platform's continuous delivery capability will deploy to the cloud environment. 
-
-**System Reliability Engineers (SREs) and Operators** – SRE and operators are responsible for managing the infrastructure and ensuring that the applications are running smoothly. They are responsible for maintaining the infrastructure and providing support for the infrastructure.  
-
-**Security Engineer** – Security engineers are responsible for identifying and remediating security vulnerabilities within an organization's applications and infrastructure. When a vulnerability is identified, they need tools and processes to identify which software components need to be updated and the ability to quickly apply those updates across their non-production and production environments. 
-
-**Open-Source Contributors** – A wide variety of organizations and personas may collaborate with other Radius contributors by building, testing, and providing feedback on user-defined resource types and their associated recipes. This includes platform engineers and developers discussed above, but also other open-source projects, system integrators, IT operations service providers, ISVs, and other cloud service providers. 
 
 ## Scenario 1 – Defining resource types
 
@@ -115,10 +109,10 @@ The platform engineer will create a resource type in their Radius tenant using t
 > A previous version of this document proposed defining resource types using Bicep. After the initial launch of user-defined resource types, this proposal has been withdrawn for the following reasons:
 >
 > * The previous proposal mixed interface and implementation. By using YAML and TypeSpec we maintain that separation. The only implementation will by via recipes.
-> * A primary driver of Bicep was the need to define composite resource types (e.g., a web service with a reverse proxy, application container, and sidecar, or a database with a secret). The previous proposal used Bicep to define a resource type which had a schema as well as child resources (not just child resource types). We learned that recipes was a more appropriate place to define these composite resource types because recipes can, not only use resources from traditional resource providers like Azure services, but can also use Radius resource types.
+> * A primary driver of Bicep was the need to define composite resource types (e.g., a web service with a reverse proxy, application container, and sidecar, or a database with a secret). The previous proposal used Bicep to define a resource type which had a schema as well as child resources (not just child resource types). We learned that recipes was a more appropriate place to define these composite resource types because recipes can, not only use resources from traditional resource providers like Azure services but can also use Radius resource types.
 > * We have already prototyped the ability to use Radius resource types in a Terraform recipe via a new Radius provider for Terraform.
 > * There is a need to support TypeSpec for resource type definition. Implementing user-defined resource types in Bicep complicates this objective because it introduces the ability to build functionality into the type definition rather than into the recipe. By modeling user-defined resource types only in YAML and TypeSpec, there is a clear separation of interface and implementation.
-> * Long-term, we envision Radius being polyglot rather than purely Bicep. Not only will Radius support multiple IaC solutions, but could also have language specific SDKs for developers. Imagine a cloud development kit with support for Python, Java, Node, etc. which was built on resource types defined by the platform engineer.
+> * Long-term, we envision Radius being polyglot rather than purely Bicep. Not only will Radius support multiple IaC solutions but could also have language specific SDKs for developers. Imagine a cloud development kit with support for Python, Java, Node, etc. which was built on resource types defined by the platform engineer.
 > * YAML has already been implemented and is getting positive feedback from early users.
 >
 > The original proposal for Bicep was based on this user feedback:
@@ -143,7 +137,7 @@ The resource type Radius.Resources/postgreSQL has been created
 
 > [!NOTE]
 >
-> This document uses `Radius.Resources` for the namespace for resource types and the documentation will instruct uses to use the same. In previous examples, you may see `MyCompany.App` or `MyCompany.Resources`. While that it still possible, having uses use `Radius.Resources` simplifies the experience and there is no benefit to using the company name.
+> This document uses `Radius.Resources` for the namespace for resource types and the documentation will instruct uses to use the same. In previous examples, you may see `MyCompany.App` or `MyCompany.Resources`. We are setting a user convention of using `Radius.Resources` for simplicity. Advanced users can use a custom namespace if they choose.
 
 **`postgreSQL-resource-type.yaml`**:
 
@@ -171,7 +165,7 @@ types:
               - M
               - L
               - XL
-            # Read only property
+            # Read only property set by recipe
             host:
               type: string
               readOnly: true
@@ -225,17 +219,6 @@ model PostgreSQL {
   };
 }
 ```
-**Result** 
-
-1. The postgreSQL resource type is created or updated
-
-**Exceptions**
-
-The operation fails and informs the user interactively if:
-
-1. The API is not in conformance with the OpenAPI v3.1 specification
-2. The user does not have permission to perform the create action on `System.Resources/resourceProviders`
-
 This example demonstrates several features:
 
 * Required properties using the `required` property
@@ -395,7 +378,7 @@ types:
 
 > [!NOTE]
 >
-> During implementation, the description property on the resource type should be large enough to have at least one page of documentation. Properties can be smaller.
+> During implementation, the description property on the resource type should be large enough to have at least one page of documentation. Other properties can be smaller.
 
 **User Experience 1 – Command Line**
 
@@ -560,6 +543,8 @@ types:
 
 **User Experience 1 – Using  Terraform configuration**
 
+To enable composite resources when using Terraform, platform engineers can add radius as a Terraform provider just like they can today with Bicep.
+
 **`/recipes/webservice/main.tf`**
 
 ```
@@ -680,15 +665,13 @@ variable "context" {
 
 + if var.context.resource.properties.ingress {
 +  resource "applications_core_gateways" "gateway" {
-    name                = "gateway"
-    environment         = var.context.environment.id
-    application         = var.context.application
-    routes = {
-      path              = "/"
-      destination       = "http://${local.webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
-    }     
-
-  }
++    name                = "gateway"
++    environment         = var.context.environment.id
++    application         = var.context.application
++    routes = {
++      path              = "/"
++      destination       = "http://${local.webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
++  }
 }
 
 resource "applications_core_containers" "webServiceContainer" {
@@ -713,17 +696,17 @@ extension radius
 param context object
 
 +resource gateway 'Applications.Core/gateways@2023-10-01-preview' = if (context.resource.properties.ingress) {
-  name: 'gateway'
-  properties: {
-    application: context.application.id
-    routes: [
-      {
-        path: '/'
-        destination: 'http://${webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
-      }
-    ]
-  }
-}
++  name: 'gateway'
++  properties: {
++    application: context.application.id
++    routes: [
++      {
++        path: '/'
++        destination: 'http://${webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
++      }
++    ]
++  }
++}
 
 resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' = {
   name: '${context.resource.name}-container'
@@ -768,7 +751,7 @@ Given this, the `--template-kind` and `--template-path` arguments will be rename
 
 ## Scenario 3 – Using resource types
 
-### User Story 8 – Injecting environment variables
+### User Story 8 – Injecting environment variables into Applications.Core/containers
 
 As a developer, I need to read properties for resources in my application definition and set environment variables for my container. For example, when I create a database resource, I need to set an environment variable in my container which gives my application the connection string.
 
@@ -798,11 +781,13 @@ resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
   properties: {
     container: {
       image: 'frontend:latest'
-      connections: {
+    }
+    connections: {
       backend: {
         source: backend.id
       }
-   }
+    }
+  }
 }
 
 resource backend 'Applications.Core/containers@2023-10-01-preview' = {
@@ -918,6 +903,12 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
 -          value: ordersDB.credentias.password
 -        }
 -      ]
+    }
++    // Connection automatically injects POSTGRESQL_HOSTNAME, etc.
++    connections: {
++      ordersDB:
++        source: ordersDB.id
++    }
    }
 }
 
@@ -926,235 +917,7 @@ resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
 }
 ```
 
-### **User Story 9 – Modeling an external resource** 
-
-As a platform engineer, I need to enable my developers to connect to already deployed resources outside of the environment. I need a method of publishing these external resources for my developers to connect their application to. 
-
-**Summary**
-
-Today, Radius restricts the ability to create resources which do not have an associated recipe in the target environment. If a resource is created in an environment without a recipe for that resource type, it will fail with an error stating that no recipe was found for the corresponding resource type. Not having a recipe for a resource type in an environment is how the platform engineer controls which resources can be deployed in which environment. 
-
-However, to represent an external resource, Radius will support creating resource types which do not, and cannot, have a recipe registered to it. These recipe-less resource types are only resources within the Radius application graph—there is no deployed resource or other functionality associated with them aside from reading the properties such as reading the name, description, or connection string.
-
-**User Experience** 
-
-The platform engineer creates a resource type with `capabilities: ["manualResourceProvisioning"]`.
-
-**`external-service-resource-type.yaml`**:
-
-```yaml
-namespace: Radius.Resources
-types:
-  externalService:
-    description: |
-      The external service resource type represents a resource which
-      is not managed by Radius but appears in the application graph.
-    capabilities: ["manualResourceProvisioning"]
-    apiVersions:
-      '2025-05-05':
-        schema: 
-          type: object
-          properties:
-            environment:
-              type: string
-              description: "Required: The Radius environment; typically set by the rad CLI"
-            application:
-              type: string
-              description: "Optional: The application which the resource is associated with"
-            connectionString:
-              type: string
-              description: "Required: The connection string to the external resource"
-              connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
-            # The recipe should store these in a secret
-            credentials:
-              type: object
-              description: "Optional: Properties for storing authentication credentials"
-              properties:
-                type:
-                  type: string
-                  description: "Required: The type of authentication used"
-                  enum:
-                  - basic
-                  - apiKey
-                  - jwt
-                basicUserName:
-                  type: string
-                  description: "Optional: The username used for basic HTTP authentication"
-                basicPassword:
-                  type: string
-                  description: "Optional: The password used for basic HTTP authentication"
-                apiKey:
-                  type: string
-                  description: "Optional: apiKey string"
-                jwt:
-                  type: string
-                  description: "Optional: JSON web token"
-              required:
-              - type
-          required:
-          - environment
-          - connectionString
-          - credentials
-```
-
-The platform engineer, or environment manager, can then create a resource representing the external resource in the environment. For example, the platform engineer may create a resource representing a Twilio account.
-
-**`production-environment.bicep`**
-
-```yaml
-extension radius
-
-resource environment 'Applications.Core/environments@2023-10-01-preview' = {
-  name: 'production'
-  ...
-}
-
-resource twilio 'Radius.Resources/externalService@v1alpha1' = {
-  name: 'twilio'
-  properties: {
-    environment: production
-    connectionString: 'https://api.twilio.com/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    credentials:
-      username: 'twilio-prod-user'
-      password: 'o84nouvTiHWiw97sbq6B'
-}
-```
-
-Then the developer can connect to the Twilio resource in their application by using the `existing` keyword.
-
-**`myApp.bicep`**:
-
-```diff
-extension radius
-extension radiusResources
-
-resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
-...
-}
-
-resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
-...
-}
-
-resource backend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'backend'
-  properties: {
-    container: {
-      image: 'backend:latest'
-      // Set environment variables in the container by referencing properties via Bicep
-+      env: [
-+        TWILIO_URL: {
-+          value: twilio.properties.connectionString
-+        },
-+        TWILIO_API_KEY: {
-+          value: twilio.properties.apiKey
-+        }
-+      ]
-   }
-}
-
-resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
-...
-}
-
-+ // Existing resource in the resource group
-+ resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
-+   name: 'twilio'
-+ }
-```
-
-### User Story 10 – Connections: Injecting Environment Variables into Application.Core/containers
-
-As a developer, when I connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container.
-
-**Summary**
-
-This user story is fulfilled by combining user story 8 and 9.  First the platform engineer adds environment variables to the resource type definition.
-
-**`external-service-resource-type.yaml`**:
-
-```diff
-namespace: Radius.Resources
-types:
-  externalService:
-    ...
-            connectionString:
-              type: string
-              description: "Required: The connection string to the external resource"
-+              connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
-            credentials:
-              type: object
-              description: "Optional: Properties for storing authentication credentials"
-              properties:
-                ...
-                basicUserName:
-                  type: string
-                  description: "Optional: The username used for basic HTTP authentication"
-+                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_USERNAME
-                basicPassword:
-                  type: string
-                  description: "Optional: The password used for basic HTTP authentication"
-+                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_PASSWORD
-                apiKey:
-                  type: string
-                  description: "Optional: apiKey string"
-+                  connected-resource-environment-variable: EXTERNAL_SERVICE_API_KEY
-                jwt:
-                  type: string
-                  description: "Optional: JSON web token"
-+                  connected-resource-environment-variable: EXTERNAL_SERVICE_JWT
-              ...
-```
-
-Then the developer can remove the manually added environment variables and add a connection block.
-
-**`myApp.bicep`**:
-
-```diff
-extension radius
-extension radiusResources
-
-resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
-...
-}
-
-resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
-...
-}
-
-resource backend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'backend'
-  properties: {
-    container: {
-      image: 'backend:latest'
-+      // Connection automatically injects EXTERNAL_SERVICE_CONNECTION_STRING and EXTERNAL_SERVICE_API_KEY
-+      connections: {
-+        twilio:
-+          source: twilio.id
-+      }
--      // Set environment variables in the container by referencing properties via Bicep
--      env: [
--        TWILIO_URL: {
--          value: twilio.properties.connectionString
--        },
--        TWILIO_API_KEY: {
--          value: twilio.properties.apiKey
--        }
--      ]
-   }
-}
-
-resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
-...
-}
-
-// Existing resource in the resource group
-resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
-  name: 'twilio'
-}
-```
-
-### User Story 11 – Connections: Injecting Environment Variables into UDTs
+### User Story 9 – Injecting environment variables into user-defined resource types
 
 As a developer, when I am using a webservice user-defined resource type to connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container and the application graph to show all my resources.
 
@@ -1179,13 +942,13 @@ resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
   properties: {
     container: {
       image: 'frontend:latest'
-      connections: {
+    }
+    connections: {
       backend: {
         source: backend.id
       }
-+      ingress: true
-   }
-}
+    }
+  }
 }
 
 +resource backend 'Radius.Resources/webService@2025-05-05' = {
@@ -1193,21 +956,16 @@ resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
   properties: {
     container: {
       image: 'backend:latest'
-      // Connection automatically injects EXTERNAL_SERVICE_CONNECTION_STRING and EXTERNAL_SERVICE_API_KEY
-      connections: {
-        twilio:
-          source: twilio.id
-      }
+    }
+    connections: {
+      ordersDB:
+        source: ordersDB.id
+    }
    }
 }
 
 resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
 ...
-}
-
-// Existing resource in the resource group
-resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
-  name: 'twilio'
 }
 ```
 
@@ -1289,7 +1047,7 @@ resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' =
 }
 ```
 
-### User Story 12 – Connections: Application Graph
+### User Story 10 – Application Graph
 
 As a developer, when I connect to an external resource, I can add a connection to the external resource and expect that to be visible in the application graph.
 
@@ -1321,6 +1079,140 @@ Connections:
   ordersDB -> backend (Radius.Resources/webService)
 Resources:
   ordersDB-container (Applications.Core/containers)
+```
+
+### **User Story 11 – Modeling an external resource** 
+
+As a platform engineer, I need to enable my developers to connect to already deployed resources outside of the environment. I need a method of publishing these external resources for my developers to connect their application to. 
+
+**Summary**
+
+Today, Radius restricts the ability to create resources which do not have an associated recipe in the target environment. If a resource is created in an environment without a recipe for that resource type, it will fail with an error stating that no recipe was found for the corresponding resource type. Not having a recipe for a resource type in an environment is how the platform engineer controls which resources can be deployed in which environment. 
+
+However, to represent an external resource, Radius will support creating resource types which do not, and cannot, have a recipe registered to it. These recipe-less resource types are only resources within the Radius application graph—there is no deployed resource or other functionality associated with them aside from reading the properties such as reading the name, description, or connection string.
+
+**User Experience** 
+
+The platform engineer creates a resource type with `capabilities: ["manualResourceProvisioning"]`.
+
+**`external-service-resource-type.yaml`**:
+
+```yaml
+namespace: Radius.Resources
+types:
+  externalService:
+    description: |
+      The external service resource type represents a resource which
+      is not managed by Radius but appears in the application graph.
+    capabilities: ["manualResourceProvisioning"]
+    apiVersions:
+      '2025-05-05':
+        schema: 
+          type: object
+          properties:
+            environment:
+              type: string
+              description: "Required: The Radius environment; typically set by the rad CLI"
+            application:
+              type: string
+              description: "Optional: The application which the resource is associated with"
+            connectionString:
+              type: string
+              description: "Required: The connection string to the external resource"
+              connected-resource-environment-variable: EXTERNAL_SERVICE_CONNECTION_STRING
+            # The recipe should store these in a secret
+            credentials:
+              type: object
+              description: "Optional: Properties for storing authentication credentials"
+              properties:
+                type:
+                  type: string
+                  description: "Required: The type of authentication used"
+                  enum:
+                  - basic
+                  - apiKey
+                  - jwt
+                basicUserName:
+                  type: string
+                  description: "Optional: The username used for basic HTTP authentication"
+                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_USERNAME
+                basicPassword:
+                  type: string
+                  description: "Optional: The password used for basic HTTP authentication"
+                  connected-resource-environment-variable: EXTERNAL_SERVICE_BASIC_PASSWORD
+                apiKey:
+                  type: string
+                  description: "Optional: apiKey string"
+                  connected-resource-environment-variable: EXTERNAL_SERVICE_API_KEY
+                jwt:
+                  type: string
+                  description: "Optional: JSON web token"
+                  connected-resource-environment-variable: EXTERNAL_SERVICE_JWT
+              required:
+              - type
+          required:
+          - environment
+          - connectionString
+          - credentials
+```
+
+The platform engineer, can then create a resource representing the external resource in the environment. For example, the platform engineer may create a resource representing a Twilio account.
+
+**`production-environment.bicep`**
+
+```yaml
+extension radius
+
+resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'production'
+  ...
+}
+
+resource twilio 'Radius.Resources/externalService@v1alpha1' = {
+  name: 'twilio'
+  properties: {
+    environment: production
+    connectionString: 'https://api.twilio.com/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    credentials:
+      username: <username>
+      password: <password>
+}
+```
+
+Then the developer can connect to the Twilio resource in their application by using the `existing` keyword.
+
+**`myApp.bicep`**:
+
+```diff
+extension radius
+extension radiusResources
+
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
+...
+}
+
+resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
+...
+}
+
+resource backend 'Applications.Core/containers@2023-10-01-preview' = {
+  name: 'backend'
+  properties: {
+    container: {
+      image: 'backend:latest'
+    }
++    connections: {
++      twilio:
++        source: twilio.id
++    }
++  }
+}
+
+
++ // Existing resource in the resource group
++ resource twilio 'Radius.Resources/externalService@v1alpha1' = existing {
++   name: 'twilio'
++ }
 ```
 
 ## Other Changes
