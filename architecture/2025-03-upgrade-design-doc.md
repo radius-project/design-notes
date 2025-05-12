@@ -219,7 +219,7 @@ RELEASE   VERSION   BICEP     COMMIT
 0.40.0    v0.40.0   0.31.93   1dd17270ec9bc9e725f314fa62c249406034edda
 
 # Upgrade directly to latest version
-> rad upgrade kubernetes --version latest
+> rad upgrade kubernetes --version latest (Future Version)
 
 Initiating Radius upgrade from v0.40.0 to v0.44.0 (latest stable)...
 Pre-flight checks:
@@ -571,7 +571,6 @@ The upgrade process will implement the following error handling strategies:
 3. **Helm-based Rollback**: For version 1, failed upgrades will leverage Helm's built-in rollback capability to revert Kubernetes resources to their previous state. Note that this does not include restoration of any user data that might have been modified during the failed upgrade attempt. Full user data backup and restore capabilities will be added in a future version.
 4. **Detailed Error Reporting**: Clear error messages with troubleshooting guidance.
 5. **Idempotent Operations**: Commands can be safely retried after addressing issues.
-6. **Resource Cleanup**: Temporary resources created during the upgrade are properly removed.
 
 ## Test Plan
 
@@ -580,12 +579,6 @@ The upgrade process will implement the following error handling strategies:
 - Test each interface implementation independently
 - Test each preflight check with various input scenarios (pass/fail/warning)
 - Test preflight check registry with multiple checks of different severities
-
-### Integration Tests
-
-- Verify interactions between components during upgrade process
-- Test lock acquisition and release across multiple commands
-- Validate backup/restore operations against actual databases
 
 ### End-to-End Tests
 
@@ -596,15 +589,12 @@ The upgrade process will implement the following error handling strategies:
 
 ## Security
 
-No changes to the existing security model needed.
+No changes to the existing security model needed. However, when the backup/restore functionality is implemented in future versions, several security considerations will apply:
 
-## Compatibility (optional)
-
-<!--
-Describe potential compatibility issues with other components, such as
-incompatibility with older CLIs, and include any breaking changes to
-behaviors or APIs.
--->
+- **Backup storage location**: User data backups will be stored as Kubernetes resources (ConfigMaps or PersistentVolumes) within the same namespace as the Radius installation, inheriting the cluster's security boundaries.
+- **Access control**: Only users with appropriate Kubernetes RBAC permissions to the Radius namespace will be able to access or manage these backups, following the principle of least privilege.
+- **Backup lifecycle**: Backups will have configurable retention policies with automatic pruning of older backups after successful upgrades, preventing accumulation of sensitive historical data.
+- **Data sensitivity**: Since backups contain only metadata about user applications (not the applications themselves), the security risk is limited to configuration exposure rather than direct workload compromise.
 
 ## Monitoring and Logging
 
