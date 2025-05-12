@@ -980,3 +980,15 @@ contourclient
 inmemory
 postgresclient
 PVs
+AcquireLock
+postgresql
+preflight
+Preflight
+severities
+PersistentVolumes
+VersionCompatibilityCheck
+ClusterResourceCheck
+ControlPlaneHealthCheck
+CustomConfigValidationCheck
+dir
+rekey
