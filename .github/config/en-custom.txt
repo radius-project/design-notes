@@ -908,6 +908,12 @@ SecOps
 kube
 workspace's
 Authorizer
+idleConnection
+timeoutPolicy
+httpproxy
+apis
+backendrequest
+sigs
 Aditi
 Twilio
 PATs
