@@ -908,8 +908,17 @@ SecOps
 kube
 workspace's
 Authorizer
+idleConnection
+timeoutPolicy
+httpproxy
+apis
+backendrequest
+sigs
 Aditi
 Twilio
+DSL
+Helly
+GitRepository
 CloudRun
 Fargate
 autoscaling
