@@ -948,3 +948,5 @@ KeyVault
 pluggable
 RESTful
 upgradeable
+pyspelling
+Pyspelling
