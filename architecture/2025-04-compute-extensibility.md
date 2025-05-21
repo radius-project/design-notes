@@ -58,7 +58,7 @@ Radius extensibility should enable creating extensions that are:
 
 #### Configure a non-Kubernetes Radius environment
 
-As a platform engineer I can initialize a new Radius environment that is connected to a non-Kubernetes compute platform so that Radius can authenticate and deploy to non-Kubernetes platforms.
+As a platform engineer I can initialize a new Radius environment for a non-Kubernetes compute platform so that Radius can authenticate and deploy to non-Kubernetes platforms.
 
 ##### Changes to `environments` Core Resource Type
 
@@ -455,7 +455,7 @@ The alternate plan is to keep the core types (`containers`, `gateways`, and `sec
 
 ## Architecture Alternatives Considered for Extensibility
 
-An alternative architecture for extensibility that we considered was to enable the registration of custom resource providers. This architecture could be added to Radius later; it does not conflict with or replace with recipe-based provisioning.
+An alternative architecture for extensibility that we considered was to enable the registration of custom resource providers. This architecture could be added to Radius later; it does not conflict with or replace recipe-based provisioning.
 
 * Customers can register their own RPs for UDTs.
 * Customer RPs implement an OpenAPI specification generated from UDT type definitions that defines a set of REST endpoints.
@@ -469,6 +469,10 @@ We did not select this option because:
 * Having recipes on the core types will enable most customization scenarios.
 * Implementing recipes does not exclude adding custom RPs later as an additional extensibility point.
 
-<!-- 
 ## Design Review Notes
+* Migration and upgrades must be considered in detail designs.
+* We may need more robust validation of recipes during registration.
+* A separate feature spec and design is planned to cover the user experience for extensibility.
+<!-- 
+* More detail on what an environment means as it relates to a target platform.
 -->
