@@ -929,3 +929,5 @@ Twilio
 DSL
 Helly
 GitRepository
+pyspelling
+Pyspelling

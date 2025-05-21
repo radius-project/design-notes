@@ -17,7 +17,7 @@ Our design note review review process is based on pull-requests to this reposito
 
 Our design review meeting is currently a **closed meeting**.
 
-### Creating a pull-request 
+### Creating a pull-request
 
 Follow the following steps to create a pull-request:
 
@@ -32,6 +32,18 @@ Follow the following steps to create a pull-request:
   - Open a pull-request on this repository.
 
 Please open your pull-request **before** the design meeting where you want to review the document. Community members that are subscribed to the repository will be notified when the pull-request is opened.
+
+#### Spell Checking
+
+The PR check workflow runs a spell checker ([pyspelling](https://pypi.org/project/pyspelling/)) using a [custom dictionary](./.github/config/en-custom.txt) file. If the spell check fails look at the [workflow output](https://github.com/radius-project/design-notes/actions/workflows/spellcheck.yaml) for which words are misspelled. Add words to the dictionary file if they are spelled correctly but pyspelling doesn't know them.
+
+If you install pyspelling locally you can run the spell check on your machine with this command (from the root folder of the repo):
+
+```bash
+pyspelling --verbose --config ./.github/config/.pyspelling.yml
+```
+
+Note: Pyspelling has a dependency on [Aspell](http://aspell.net/), which must also be present on your system to run pyspelling.
 
 ### During the review
 
