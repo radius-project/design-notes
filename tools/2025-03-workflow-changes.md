@@ -27,7 +27,7 @@ This design advocates for three high-level principles:
 * Matrix: A strategy that allows you to create multiple job runs for different combinations of variables, such as different versions of a programming language or operating system.
 * Secrets: Encrypted environment variables that you create in a repository or organization. They are used to store sensitive information like API keys and tokens.
 * Environment: A set of secrets, variables, and protection rules that are scoped to a specific environment, such as development, staging, or production.
-* Core logic: the set of operations that is the reason for having a workflow.
+* Core logic: the essential set of operations that represent the primary purpose and functionality of a workflow, i.e. the central processing that delivers the core value or outcome that the workflow was designed to achieve, separate from peripheral concerns like job definition, error reporting.
 
 ## Objectives
 
@@ -144,6 +144,32 @@ flowchart TD
 
 _Fig. 2: Testable automation that can run from a GitHub workflow or a dev machine_
 
+Here is an example of logic that is embedded within a workflow, which prevents it from being tested on a developer machine:
+
+```yaml
+    - name: Publish UDT types
+        if: steps.skip-build.outputs.SKIP_BUILD != 'true'
+        run: |
+          mkdir ./bin
+          cp ./dist/linux_amd64/release/rad ./bin/rad
+          chmod +x ./bin/rad
+          export PATH=$GITHUB_WORKSPACE/bin:$PATH
+          which rad || { echo "cannot find rad"; exit 1; }
+          rad bicep download
+          rad version
+          rad bicep publish-extension -f ./test/functional-portable/dynamicrp/noncloud/resources/testdata/testresourcetypes.yaml --target br:${{ env.TEST_BICEP_TYPES_REGISTRY}}/testresources:latest --force
+```
+
+An updated workflow step might look like this.
+
+```yaml
+    - name: Publish UDT types
+        if: steps.skip-build.outputs.SKIP_BUILD != 'true'
+        run: make workflow-udt-tests-publish-types
+```
+
+The above `make` command would encapsulate the logic in the first example above, making it runnable from a dev machine. A composite make command would run the above step along with the other steps in the workflow.
+
 #### Workflows can be run on any fork without requiring access to the `radius-project` repos, and without having a Radius GitHub security role.
 
 ```mermaid
@@ -173,13 +199,13 @@ The use of actions should be limited to setup and cleanup that is unique to GitH
 * Retrieving stored secrets
 * Publishing results
 
-> NOTE: The above examples are also needed on a developer machine, but the Implementation is different.
+> NOTE: Most of the items in the list above also happen on developer machines, but the implementation is different. For example, a dev machine is more likely to have a long-lived git repo, whereas a GitHub workflow will clone a repo for each workflow run. 
 
-:warning: When using GitHub actions that are published on other repositories, we are [placing our trust](https://arstechnica.com/information-technology/2025/03/supply-chain-attack-exposing-credentials-affects-23k-users-of-tj-actions/) in the authors of that repo that they will prevent malicious code from executing. Choose wisely, and consider forking and customizing a GitHub action instead of calling it directly.
+:warning: When using GitHub actions that are published on other repositories, we are [placing trust](https://arstechnica.com/information-technology/2025/03/supply-chain-attack-exposing-credentials-affects-23k-users-of-tj-actions/) in the authors of that repo that they will prevent malicious code from executing. Choose wisely, and consider forking and customizing a GitHub action instead of calling it directly. Our trust in GitHub actions is similar to the way we trust code dependencies: we trust our code the most, we highly trust code published by GitHub, Microsoft, CNCF, or other trusted entities, we mostly trust code created by people we trust, and least of all trust code created by people we do not know.
 
-#### Reusable logic exists in custom GitHub actions instead of copy/paste to multiple workflows
+#### Reusable logic exists in custom GitHub actions instead of copy/pasted to multiple workflows
 
-Apply the DRY principle (don't repeat yourself).
+Apply the DRY principle (don't repeat yourself). Consider using [custom actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/about-custom-actions), [reusable workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows) and [composite actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action) to [avoid duplication](https://docs.github.com/en/actions/sharing-automations/avoiding-duplication) of the same logic in multiple workflows.
 
 #### Core logic is runnable from Make commands
 
@@ -207,6 +233,10 @@ All workflows can be run on branches so that fork owners do not have to merge th
 
 When a PR includes a change to a workflow, the workflow should be runnable from the branch if the person running the workflow has write access to the repo. (PRs submitted from forks where the contributor does not have write access should continue to require approval to run by someone with write access.)
 
+#### Workflow names should match yaml file names
+
+This is a simple way to prevent confusion when trying to match items in the list of workflows on the GitHub Actions tab with the files in the git repo.
+
 ### Design options considered but not chosen
 
 * Adopt a new automation tool like [Just](https://github.com/casey/just) or [Task](https://taskfile.dev/), and deprecate Make. These tools have advantages, but a side-effect of adopting a new tool would likely be the existence of a new tool in our toolbox without the removal of Make, which would increase complexity. Make currently meets our needs for invoking developer automation.
@@ -226,7 +256,17 @@ Where possible, the automation logic will use the GitHub CLI, which has identity
 
 ### Docs: Contributing Automation Code
 
-A new folder exists in the `radius/docs` folder that provides a `README.md` file with guidance on creating and editing GitHub workflows and other repo automation like `make`.
+* A new folder exists in the `radius/docs` folder that provides a `README.md` file with guidance on creating and editing GitHub workflows and other repo automation like `make`.
+* The `README.md` document contains a real-world example of converting complex workflow logic into a `make` command that invokes a shell script.
+* The `README.md` document contains a checklist for reviewing workflow edits. Examples of checklist items are: 
+
+    [ ] Workflow logic is testable on a developer machine by running `make` commands and with minimal setup.
+    [ ] The workflow is runnable from a repo fork using `workflow_dispatch` (manually invoked).
+    [ ] Workflow schedules do not trigger on forks.
+    [ ] The GitHub CLI is used for GitHub operations.
+    [ ] Logic is not copy/pasted in multiple workflows.
+    [ ] Configuration is provided through environment variables.
+    [ ] The workflow file name is the same as the display name.
 
 ### PR Template
 
@@ -253,8 +293,9 @@ New GitHub workflows will adhere to the design principles.
 * Can we separate the scheduling from the workflows so that forks do not automatically run the workflows?
 
 ## Design Review Notes
-
-* Add an example of moving logic into a Make command and show the before and after.
-* Consider [reusable workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows).
-* Create a checklist for reviewing workflows.
-* Workflow names should match the file names.
+| Action | Follow-Up |
+| ------ | --------- |
+| Add an example of moving logic into a Make command and show the before and after. | Added a task to the development plan. |
+| Consider [reusable workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows). | Added links to the principles section. |
+| Create a checklist for reviewing workflows. | Added a checklist to the development plan. |
+| Workflow names should match the file names. | Added a principle. |
