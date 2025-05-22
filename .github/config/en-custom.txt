@@ -934,3 +934,4 @@ Helly
 GitRepository
 pyspelling
 Pyspelling
+CNCF
