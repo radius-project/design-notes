@@ -926,9 +926,13 @@ backendrequest
 sigs
 Aditi
 Twilio
+PATs
+runnable
+debuggable
 DSL
 Helly
 GitRepository
 upgradeable
 pyspelling
 Pyspelling
+CNCF
