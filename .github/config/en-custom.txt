@@ -111,6 +111,16 @@ SSL
 STATESTORE
 StatefulSet
 StatefulSets
+apiVersions
+openAPIV
+OAI
+af
+oas
+readmeio
+additionalProperties
+inheritence
+polymorphism
+readOnly
 StatusCode
 Subnet
 SubnetGroup
@@ -937,6 +947,9 @@ backendrequest
 sigs
 Aditi
 Twilio
+PATs
+runnable
+debuggable
 DSL
 Helly
 GitRepository
@@ -953,3 +966,6 @@ balancer
 NGINX
 webServiceContainer
 twilio
+pyspelling
+Pyspelling
+CNCF
