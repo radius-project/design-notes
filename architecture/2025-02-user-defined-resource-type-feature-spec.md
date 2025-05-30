@@ -100,31 +100,11 @@ At the conclusion of the user stories, the Feature Summary section lists specifi
 
 As a platform engineer, I need to create a resource type in Radius. I want to define typed properties for my developers to use in their application definitions and include documentation and examples.
 
+**Priority:** p0 – Critical (core functionality)
+
 **Summary**
 
 The platform engineer will create a resource type in their Radius tenant using the CLI. The resource type will have a namespace and an OpenAPI schema. 
-
-> [!NOTE]
->
-> A previous version of this document proposed defining resource types using Bicep. After the initial launch of user-defined resource types, this proposal has been withdrawn for the following reasons:
->
-> * The previous proposal mixed interface and implementation. By using YAML and TypeSpec we maintain that separation. The only implementation will by via recipes.
-> * A primary driver of Bicep was the need to define composite resource types (e.g., a web service with a reverse proxy, application container, and sidecar, or a database with a secret). The previous proposal used Bicep to define a resource type which had a schema as well as child resources (not just child resource types). We learned that recipes was a more appropriate place to define these composite resource types because recipes can, not only use resources from traditional resource providers like Azure services but can also use Radius resource types.
-> * We have already prototyped the ability to use Radius resource types in a Terraform recipe via a new Radius provider for Terraform.
-> * There is a need to support TypeSpec for resource type definition. Implementing user-defined resource types in Bicep complicates this objective because it introduces the ability to build functionality into the type definition rather than into the recipe. By modeling user-defined resource types only in YAML and TypeSpec, there is a clear separation of interface and implementation.
-> * Long-term, we envision Radius being polyglot rather than purely Bicep. Not only will Radius support multiple IaC solutions but could also have language specific SDKs for developers. Imagine a cloud development kit with support for Python, Java, Node, etc. which was built on resource types defined by the platform engineer.
-> * YAML has already been implemented and is getting positive feedback from early users.
->
-> The original proposal for Bicep was based on this user feedback:
->
-> - **Child resources.** Users want to embed core resources such as containers and secrets in a UDT wrapping these core resources behind a custom schema. They also want to embed a UDT within a UDT. For example, one user wanted to model a web service which has a proxy such as NGINX, a container, and various sidecar containers. 
->   - Child resources are implemented via recipes in this feature spec. Both Bicep and Terraform (with enhancements proposed in this spec) recipes can build deployments composed of Radius and non-Radius resource types. Therefore, YAML format is simpler.
->
-> - **Conditional resources.** Building on child resources, provisioning resources based on the value of developer-specified properties was a use case identified. In the web service example, they want to have a single web service resource type which has a boolean specifying whether an ingress gateway is provisioned or not. (More concretely, a boolean to control whether the Kubernetes service is of type cluster IP or load balancer.) 
->   - This feature spec demonstrates how to do conditional resources via recipes.
->
-> - **Data manipulation and validation functions**. For example, one user wanted to be able to concatenate two properties which gets passed to the recipe. They need data validation functions with property specific error messages when validation does not pass. Regular expressions were proposed but their feedback was regex may be too complex. 
->   - One advantage of Bicep-based resource type definitions was bringing the data validation earlier in the deployment. This type of validation is still possible in a Bicep and Terraform recipe.
 
 **User Experience 1 – Using YAML** 
 
@@ -227,11 +207,7 @@ This example demonstrates several features:
 * Enumerations as shown in the `size` property
 * Nested properties as demonstrated with the credentials property
 
-> [!NOTE]
->
-> Today's implementation is very resource provider-centric. The behavior of `rad resource-type create` for example is different dependent upon if the resource provider exists or not and users are notified about resource providers being created. Since users are defining types and not providers, they have no concept of what a resource provider is. The implementation will change to remove resource providers from the user experience.
-
-> [!CAUTION]
+> [!WARNING]
 >
 > Today, Radius enforces the ARM naming standards. This includes enforcing that:
 >
@@ -248,21 +224,22 @@ This example demonstrates several features:
 >
 > Complicating enforcing a naming convention is that Terraform uses an underscore for resource and variable names (e.g., `resource "aws_instance"` and `variable "web_instance_count"`).
 >
-> Given Radius is cloud provider-agnostic, the current restriction will be removed and replaced with RFC 1035. Underscores will not be allowed as it is common practice for Terraform users to substitute underscores for hyphens.
+> We will observe users to understand how much, if at all, usability challenges this creates.
 >
-> However, all examples in the documentation will conform to the more restrictive ARM standard to encourage consistency.
 
-> [!CAUTION]
+> [!WARNING]
 >
-> Today, Radius enforces the ARM API versioning standard. From the [source code](https://github.com/radius-project/radius/blob/main/pkg/cli/manifest/validation.go#L33) `An API version must be a date in YYYY-MM-DD format, and may optionally have the suffix '-preview'. Example: 2025-01-01"`. However, Kubernetes and most cloud-native project follow a [different versioning scheme](https://kubernetes.io/docs/reference/using-api/). The [Terraform versioning scheme](https://developer.hashicorp.com/terraform/plugin/best-practices/versioning) is similar to Kubernetes. Because Radius is cloud provider-agnostic, Radius will not enforce a specific API versioning scheme on the user.
+> Today, Radius enforces the ARM API versioning standard. From the [source code](https://github.com/radius-project/radius/blob/main/pkg/cli/manifest/validation.go#L33) `An API version must be a date in YYYY-MM-DD format, and may optionally have the suffix '-preview'. Example: 2025-01-01"`. However, Kubernetes and most cloud-native project follow a [different versioning scheme](https://kubernetes.io/docs/reference/using-api/). The [Terraform versioning scheme](https://developer.hashicorp.com/terraform/plugin/best-practices/versioning) is similar to Kubernetes. 
 >
->  However, all examples in the documentation will continue to use the date schema used today.
+>  We will observe users to understand how much, if at all, usability challenges this creates. 
 >
 > In the fullness of time, Radius needs to support a semantic versioning scheme rather than only specific API versions.
 
 ### User Story 2 – Conditionally requiring properties
 
 As a platform engineer, as I am authoring a resource type, I need to define properties which are required only if another property matches a value.
+
+**Priority:** p3 – Low (nice to haves one day) 
 
 **Summary**
 
@@ -382,6 +359,8 @@ types:
 
 **User Experience 1 – Command Line**
 
+**Priority:** p0 – Critical (core functionality)
+
 
 The developer can:
 
@@ -452,6 +431,8 @@ CONNECTED CONTAINER ENVIRONMENT VARIABLES
 
 **User Experience 2 – Radius Dashboard**
 
+**Priority:** p3 – Low (nice to haves one day) 
+
 The developer can browse the resource catalog via the Radius dashboard. Resources are organized by namespace.
 
 ![image-20250205155136117](2025-02-user-defined-resource-type-feature-spec/image-20250205155136117.png)
@@ -459,6 +440,8 @@ The developer can browse the resource catalog via the Radius dashboard. Resource
 ### User Story 4 – Configuring developer workstations
 
 As a platform engineer, I need to configure my developer's workstations and keep them up to date with the latest resource types.
+
+**Priority:** p2 – Medium (workaround exists)
 
 **Summary**
 
@@ -483,7 +466,7 @@ Creating the Bicep extension, distributing it to workstations, and updating the 
      * Update the local bicepconfig.json
 3. Repeat this process for each new or modified resource type
 
-**To Be User Experience**
+**To-Be User Experience**
 
 When the platform engineer creates or modifies a resource type via `rad resource-type create` Radius will:
 
@@ -543,6 +526,8 @@ types:
 
 **User Experience 1 – Using  Terraform configuration**
 
+**Priority:** p2 – Medium (workaround exists)
+
 To enable composite resources when using Terraform, platform engineers can add radius as a Terraform provider just like they can today with Bicep.
 
 **`/recipes/webservice/main.tf`**
@@ -580,6 +565,8 @@ resource "radius_applications_core_containers" "webServiceContainer" {
 
 **User Experience 2 – Using Bicep template**
 
+**Priority:** p0 – Critical (core functionality)
+
 The recipe for the service resource type will leverage Radius resource types.
 
 **`webservice-recipe.bicep`**:
@@ -615,6 +602,10 @@ resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' =
 ### **User Story 6 – Conditional resources** 
 
 As a platform engineer, I need to write a recipe which creates additional resources dependent upon the properties set by the developer.
+
+> [!NOTE]
+>
+> No engineering work is expected for this use case.
 
 **Summary**
 
@@ -722,6 +713,8 @@ resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' =
 
 As a platform engineer, I need to register a recipe which implements my new resource type. 
 
+**Priority:** p0 – Critical (core functionality)
+
 **Summary**
 
 Registering recipes works as expected just like existing portable resource types. However, since user-defined resource types introduces new capabilities, there are adjustments made to the recipe capabilities of Radius.
@@ -741,311 +734,88 @@ The recipe for Radius.Resources/postgreSQL is registered in the myEnv environmen
 
 There are two changes here:
 
-**Retirement of named recipes** – Today, Radius supports named recipes. When deploying a portable resource type, developers can override the default recipe by specifying a recipe name in their application definition. This enables developers to punch through the separation of concerns between platform and developers. Based on strong user feedback, user-defined resource types will not implement the ability to punch through and use alternate recipes. 
+**Retirement of named recipes**
+
+**Priority: **p2 – Medium (workaround exists)
+
+Today, Radius supports named recipes. When deploying a portable resource type, developers can override the default recipe by specifying a recipe name in their application definition. This enables developers to punch through the separation of concerns between platform and developers. Based on strong user feedback, user-defined resource types will not implement the ability to punch through and use alternate recipes. 
 
 Furthermore, once portable resource types are refactored into user-defined resource types, the ability to specify a recipe name will be retired. The command will change from `rad recipe register <recipeName>` to `rad recipe register`. This also has the benefit of not having to build developer documentation for discovering available recipes. 
 
-**Rename of template-kind and template-path** – Radius is not opinionated about which infrastructure as code solution to use. Therefore, it is important that Radius is not biased towards one solution versus another. The parameter `--template-kind` and `--template-path` are biased towards Bicep as Bicep files are called templates and Terraform files are configurations. 
+**Rename of template-kind and template-path**
+
+**Priority: **p2 – Medium (workaround exists)
+
+Radius is not opinionated about which infrastructure as code solution to use. Therefore, it is important that Radius is not biased towards one solution versus another. The parameter `--template-kind` and `--template-path` are biased towards Bicep as Bicep files are called templates and Terraform files are configurations. 
 
 Given this, the `--template-kind` and `--template-path` arguments will be renamed `--recipe-kind` and `--recipe-path`. The previous commands will be retained for backwards compatibility.
 
-## Scenario 3 – Using resource types
+## Scenario 3 – Connections
 
-### User Story 8 – Injecting environment variables into Applications.Core/containers
+### User Story 8 – Connections into Applications.Core/containers
 
-As a developer, I need to read properties for resources in my application definition and set environment variables for my container. For example, when I create a database resource, I need to set an environment variable in my container which gives my application the connection string.
+As a developer, I need to read properties from a connected resource using environment variables injected into my container.
 
-**User Experience 1 – Set manually by the developer**
-
-The develop can manually inject environment variables into the container using Bicep. 
-
-> [!NOTE]
->
-> This functionality exists today. There are no changes. It is included here for context with the other examples.
-
-**`myApp.bicep`**:
-
-```diff
-extension radius
-extension radiusResources
-
-resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
-  name: 'todolist'
-  properties: {
-    environment: environment
-  }
-}
-
-resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'frontend'
-  properties: {
-    container: {
-      image: 'frontend:latest'
-    }
-    connections: {
-      backend: {
-        source: backend.id
-      }
-    }
-  }
-}
-
-resource backend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'backend'
-  properties: {
-    container: {
-      image: 'backend:latest'
-+      // Set environment variables in the container by referencing properties via Bicep
-+      env: [
-+        ORDERS_DB_CONNECTION_STRING: {
-+          value: ordersDB.connectionString
-+        },
-+        ORDERS_DB_USERNAME: {
-+          value: ordersDB.credentias.username
-+        },
-+        ORDERS_DB_PASSWORD: {
-+          value: ordersDB.credentias.password
-+        }
-+      ]
-   }
-}
-
-resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
-  name: 'ordersDB'
-  properties: {
-     size: 'M' 
-  }
-}
-```
-
-**Result**
-
-The environment variables set specified by the developer are set in the container.
-
-**User Experience 2 – Automatically injected by platform engineer** 
-
-The platform engineer can specify default environment variables which will automatically be injected into a connected container when a connection is established. This is similar to existing functionality for portable resource types in Radius today (see the [Redis type](https://docs.radapp.io/reference/resource-schema/cache/redis/#environment-variables-for-connections) for example). Note that user experience 1 and 2 can be used side by side.
-
-**`postgreSQL-resource-type.yaml`**:
-
-```diff
-namespace: Radius.Resources
-types:
-  postgreSQL:
-    description: |
-      ...
-    apiVersions:
-      '2025-05-05':
-        schema: 
-          type: object
-          properties:
-            ...
-            host:
-              type: string
-              description: "Read only: Fully qualified host name of the database server"
-              readOnly: true
-+              connected-resource-environment-variable: POSTGRESQL_HOSTNAME
-            port:
-              type: integer
-              description: "Read only: The port number of the database server"
-              readOnly: true
-+              connected-resource-environment-variable: POSTGRESQL_PORT
-            credentials:
-              type: object
-              properties:
-              username:
-                type: string
-                description: "Read only: The username for the database"
-                readOnly: true
-+                connected-resource-environment-variable: POSTGRESQL_USERNAME
-              password:
-                type: string
-                description: "Read only: The password for the database"
-                readOnly: true
-+                connected-resource-environment-variable: POSTGRESQL_PASSWORD
-            required:
-            - environment
-            - database
-```
-
-**Result**
-
-When a developer creates a postgreSQL resource and a connection to that resource from a container, the environment variables are automatically set in the container. The `env` property does not need to be set on the container resource.
-
-**`myApp.bicep`**:
-
-```diff
-extension radius
-extension radiusResources
-
-resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
-...
-}
-
-resource frontend 'Applications.Core/containers@2023-10-01-preview' = {
-...
-}
-
-resource backend 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'backend'
-  properties: {
-    container: {
-      image: 'backend:latest'
--      // Set environment variables in the container by referencing properties via Bicep
--      env: [
--        ORDERS_DB_CONNECTION_STRING: {
--          value: ordersDB.connectionString
--        },
--        ORDERS_DB_USERNAME: {
--          value: ordersDB.credentias.username
--        },
--        ORDERS_DB_PASSWORD: {
--          value: ordersDB.credentias.password
--        }
--      ]
-    }
-+    // Connection automatically injects POSTGRESQL_HOSTNAME, etc.
-+    connections: {
-+      ordersDB:
-+        source: ordersDB.id
-+    }
-   }
-}
-
-resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
-...
-}
-```
-
-### User Story 9 – Injecting environment variables into user-defined resource types
-
-As a developer, when I am using a webservice user-defined resource type to connect to an external resource, I expect environment variables that the platform engineer defined to be automatically injected into my container and the application graph to show all my resources.
+**Priority:** p0 – Critical (core functionality)
 
 **Summary**
 
-The only different in this user story is that the developer is using a `Radius.Resources/webService` resource type instead of a `Applications.Core/containers`. 
+All resource in Radius will support connections to other resources, no matter the type. When a connection exists from a connecting resource (destination) to another connected resource (source), the source resource's properties will be available within the destination resource. In the case of `Applications.Core/containers` these properties are manifested as environment variables.
 
-The developer creates the application definition:
+**User Experience**
 
-**`myApp.bicep`**:
+When a developer adds a connection to a `Applications.Core/containers` resource, environment variables for each of the source resource's properties are created within the environment. 
 
-```diff
-extension radius
-extension radiusResources
+For example, the developer creates a connection to the PostgreSQL resource type from User Story 1. 
 
-resource myApp 'Applications.Core/applications@2023-10-01-preview' = {
-...
-}
-
-+ resource frontend 'Radius.Resources/webService@2025-05-05' = {
-  name: 'frontend'
-  properties: {
-    container: {
-      image: 'frontend:latest'
-    }
-    connections: {
-      backend: {
-        source: backend.id
-      }
-    }
-  }
-}
-
-+resource backend 'Radius.Resources/webService@2025-05-05' = {
-  name: 'backend'
-  properties: {
-    container: {
-      image: 'backend:latest'
-    }
-    connections: {
-      ordersDB:
-        source: ordersDB.id
-    }
-   }
-}
-
-resource ordersDB 'Radius.Resources/postgreSQL@2025-05-05' = {
-...
+```yaml
+connections: {
+  ordersDB:
+    source: ordersDB.id
 }
 ```
 
-Prior to this the platform engineer created the webService recipe which sets the properties on the container:
+The following environment variables are automatically created in the container:
 
-**Using Terraform configuration**
+| Environment Variable Name                              | Property Name                              |
+| ------------------------------------------------------ | ------------------------------------------ |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_ENVIRONMENT`          | `ordersDB.properties.environment`          |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_APPLICATION`          | `ordersDB.properties.application`          |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_DATABASE`             | `ordersDB.properties.database`             |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_SIZE`                 | `ordersDB.properties.size`                 |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_HOST`                 | `ordersDB.properties.host`                 |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_PORT`                 | `ordersDB.properties.port`                 |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_CREDENTIALS_USERNAME` | `ordersDB.properties.credentials.username` |
+| `CONNECTIONS_ORDERSDB_PROPERTIES_CREDENTIALS_PASSWORD` | `ordersDB.properties.credentials.password` |
 
-**`/recipes/webservice/main.tf`**
+If the developer prefers for these environment variables to not be created, he/she can set the existing `disableDefaultEnvVars` boolean property to TRUE.
 
-```diff
-terraform {
-  required_providers {
-    radius = {
-      source  = "terraform.radapp.io"
-      version = "~> 0.46"
-    }
-  }
-}
+### User Story 9 – Connections into recipes
 
-variable "context" {
-  description = "This variable contains Radius recipe context."
-  type = any
-}
+As a platform engineer, when I am defining a webservice user-defined resource type, I need to use properties from source resources in my recipe. For example, I need to create a secret to store a connected database's credentials in the recipe.
 
-if var.context.resource.properties.ingress {
-  resource "applications_core_gateways" "gateway" {
-    name                = "gateway"
-    environment         = var.context.environment.id
-    application         = var.context.application
-    routes = {
-      path              = "/"
-      destination       = "http://${local.webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
-    }     
+**Priority:** p0 – Critical (core functionality)
 
-  }
-}
+**Summary**
 
-resource "applications_core_containers" "webServiceContainer" {
-  name                = "${var.context.resource.name}-container"
-  environment         = var.context.environment.id
-  application         = var.context.application.id
-  container_image     = var.context.resource.properties.container.image
-+  connections         = var.context.resource.properties.connections
-  ...
-}
-```
+In the previous user story, the source resources' properties were manifested as environment variables. In this user story, the same properties are manifested in the recipe `context` object. 
 
-**Using Bicep template**
+**User Experience**
 
-**`webservice-recipe.bicep`**
+When a developer adds a connection to a `Radius.Resources/webServices` resource from a `Radius.Resources/postgreSQL` resource, the recipe `context` object includes the properties for the PostgreSQL resource.
 
-```diff
-extension radius
+* `context.resource.connections.ordersDB.properties.environment`
+* `context.resource.connections.ordersDB.properties.application`
+* `context.resource.connections.ordersDB.properties.database`
+* `context.resource.connections.ordersDB.properties.size`
+* `context.resource.connections.ordersDB.properties.host`
+* `context.resource.connections.ordersDB.properties.port`
+* `context.resource.connections.ordersDB.properties.credentials.username`
+* `context.resource.connections.ordersDB.properties.credentials.password`
 
-@description('Information about what resource is calling this Recipe. Generated by Radius.')
-param context object
+This is true for both Bicep and Terraform recipes.
 
-resource gateway 'Applications.Core/gateways@2023-10-01-preview' = if (context.resource.properties.ingress) {
-  name: 'gateway'
-  properties: {
-    application: context.application.id
-    routes: [
-      {
-        path: '/'
-        destination: 'http://${webServiceContainer.name}:${context.resource.properties.container.ports.http.containerPort}'
-      }
-    ]
-  }
-}
-
-resource webServiceContainer 'Applications.Core/containers@2023-10-01-preview' = {
-  name: '${context.resource.name}-container'
-  properties: {
-    application: context.application.id
-    container: context.resource.properties.container
-+    connections: context.resource.properties.connections
-    ...
-  }
-}
-```
+## Scenario 4 – Other Use Cases
 
 ### User Story 10 – Application Graph
 
@@ -1059,16 +829,16 @@ After the developer adds a connection to the twilio resource, twilio appears in 
 $ rad app graph -a myApp
 Displaying application: myApp
 
-Name: frontend (Radius.Resources/webService)
+Name: frontend (Radius.Resources/webServices)
 Connections:
-  backend (Radius.Resources/webService) -> frontend
+  backend (Radius.Resources/webServices) -> frontend
 Resources:
   frontend-container (Applications.Core/containers)
   gateway (Applications.Core/gateways)
 
-Name: backend (Radius.Resources/webService)
+Name: backend (Radius.Resources/webServices)
 Connections:
-  backend -> frontend (Radius.Resources/webService)
+  backend -> frontend (Radius.Resources/webServices)
   ordersDB (Radius.Resources/postgreSQL) -> backend
   twilio (Radius.Resources/externalService) -> backend
 Resources:
@@ -1076,7 +846,7 @@ Resources:
   
 Name: ordersDB (Radius.Resources/postgreSQL)
 Connections:
-  ordersDB -> backend (Radius.Resources/webService)
+  ordersDB -> backend (Radius.Resources/webServices)
 Resources:
   ordersDB-container (Applications.Core/containers)
 ```
@@ -1240,35 +1010,23 @@ Both of these were excluded because user-defined resource types are the path for
 
 This feature summary is an updated snapshot as of early May after the initial release of user-defined resource types.
 
-| **Priority** | **Complexity** | **Feature** |
-| ------------ | -------------- | ----------- |
-| p0 | L | Connections: Container → UDT |
-| p0 | M | Cleaned up schema, replace status.binding with readonly: true; auto set read-only properties from recipe |
-| p0 | S | [Change `name` to `namespace` in resource type definition](https://github.com/radius-project/radius/issues/8664) |
-| p0 | S | [Support API versions other than 2023-10-01-preview](https://github.com/radius-project/radius/issues/9357) |
-| p1 | S | [Bulk resource type creation](https://github.com/radius-project/radius/issues/9158) |
-| p1 | L | All resources created by recipe appear in app graph |
-| p1 | XL | [Configure developer workstation with resource type extension](https://github.com/radius-project/roadmap/issues/66) |
-| p1 | XL             | Radius provider for Terraform                                |
-| p1           | L              | [Connections: UDT-->UDT](https://github.com/radius-project/roadmap/issues/63) |
-| p1           | M              | [Developer documentation via CLI](https://github.com/radius-project/roadmap/issues/64) |
-| p1           | S              | Enum value enforcement                                       |
-| p1           | S              | Array types                                                  |
-| p1           | S              | Property type enforcement                                    |
-| p1           | S              | [Papercut: rad run and rad deploy returns inaccurate error message when deploying without a recipe for a UDT ](https://github.com/radius-project/radius/issues/9157) |
-| p1           | S              | [Improve Error if Environment ID is not set in resource ](https://github.com/radius-project/radius/issues/8930) |
-| p2           | M              | [Environment variable injection](https://github.com/radius-project/roadmap/issues/68) |
-| p2           | L              | Developer documentation via dashboard                        |
-| p2           | L              | Conditionally requiring properties                           |
-| p2           | S              | [manualResourceProvisioning for resource types](https://github.com/radius-project/roadmap/issues/62) |
-| p2           | S              | Remove resource provider from resource-type command          |
-| p2           | S              | Rename --template-kind to --recipe-kind                      |
-| p2           | XL             | Refactor of portable resource types                          |
-| p2           | M              | Retirement of recipe names                                   |
-| p2           | S              | [rad recipe register registers a Recipe for a resource-type that doesn't exist](https://github.com/radius-project/radius/issues/9164) |
-| p3           | S              | [rad cli could use auto completion to make the commands more user friendly](https://github.com/radius-project/radius/issues/8667) |
-| p3           | M              | Retirement of extenders                                      |
-| p3           | L              | TypeSpec                                                     |
+| Priority | Complexity | **Feature**                                                  |
+| -------- | ---------- | ------------------------------------------------------------ |
+| p0       | L          | Connections (Containers --> UDT) with environment variable injection |
+| p0       | L          | Connections (UDT --> UDT)                                    |
+| p0       | M          | Show properties via CLI (developer documentation)            |
+| p1       | M          | Schema validation, array types, type and enum value enforcement |
+| p1       | L          | Resources from composite recipe appear in app graph CLI      |
+| p2       | S          | Bulk resource type creation                                  |
+| p2       | XL         | Refactoring portable resource types to custom resource types and retirement of developers choosing recipe name |
+| p2       | M          | Retirement of extenders                                      |
+| p2       | XL         | Easier Bicep extension storage and distribution for non-ACR users |
+| p2       | M          | TypeSpec                                                     |
+| p2       | XL         | Radius provider for Terraform                                |
+| p3       | XL         | Resource type API versions                                   |
+| p3       | L          | Developer documentation in dashboard                         |
+| p3       | L          | Enhancements to app graph visual in dashboard                |
+| p3       | L          | Conditionally requiring properties in YAML (we get for free in TypeSpec) |
 
 ## Future Work
 
