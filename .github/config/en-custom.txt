@@ -937,3 +937,4 @@ Pyspelling
 CNCF
 Istio
 Flux
+preflight
