@@ -1,0 +1,218 @@
+# Topic: Radius Control Plane Upgrades
+
+- **Author**: Yetkin Timocin (@ytimocin)
+
+## Topic Summary
+
+The Radius in-place upgrade feature aims to streamline the process of upgrading the control plane components of Radius, ensuring minimal downtime and disruption. **Importantly, user applications deployed through Radius continue running without interruption during the upgrade process, as Radius only maintains metadata about these applications and does not manage their runtime execution.**
+
+**Radius Components (as of June 2025):**
+
+- Universal Control Plane
+- Radius Deployment Engine
+- Applications Resource Provider
+- Dynamic Resource Provider
+- Dashboard
+- Controller
+
+**Dependencies:**
+
+- Contour
+- etcd (current datastore)
+
+**Key Features:**
+
+- **Compatibility:** Ensures compatibility with new versions through robust preflight checks.
+- **Safety:** Utilizes Helm's built-in rollback capability for recovery in case of failure (with full data backup/restore planned for future versions).
+- **Seamless Experience:** Provides a smooth and reliable upgrade process with minimal downtime.
+- **Application Continuity:** User applications remain operational throughout the upgrade process, as Radius only manages deployment metadata, not runtime execution.
+- **Distributed Locking:** Prevents concurrent data modifications during upgrades to maintain system integrity.
+
+This feature will significantly improve the user experience by automating the upgrade process, reducing the risk of errors, and maintaining system stability.
+
+### Top level goals
+
+- Deliver a seamless and intuitive upgrade experience for users through a single `rad upgrade kubernetes` command.
+- Ensure a smooth and reliable upgrade process for the components and dependencies of Radius.
+- Minimize downtime and disruption during upgrades, ensuring that the Radius Control Plane is available as soon as possible.
+- Implement robust preflight checks to prevent upgrades in unsuitable conditions.
+- Implement Helm-based rollback capability to recover from failed upgrades.
+- Provide clear documentation and guidance for users performing upgrades.
+- Implement a data-store-level lock mechanism to prevent concurrent modifications during upgrades.
+
+### Non-goals (out of scope)
+
+- Downgrades are not supported in the initial version. The upgrade process is designed to move forward to newer versions only. Please see the design document and the development plan for more details.
+- User data backup and restore will be implemented in a future version. This includes on-demand backup creation and the ability to reference specific backups during upgrades or rollbacks. Version 1 will use Helm's built-in rollback capability for recovery in case of failure, without custom data backup/restore mechanisms.
+- The upgrade process does not include features for managing upgrades across multiple clusters simultaneously as Radius doesn't support multiple clusters per installation as of June 2025.
+- Upgrading major versions of dependencies like Contour is not covered by this process. These upgrades should be handled separately following their respective guidelines.
+- Upgrading the Radius control plane using Helm directly. We can run `helm upgrade` on the Radius Helm installation but that is not going to put all the necessary pieces together for the control plane to work. Making this work is not in the scope of this work.
+- Zero-downtime control plane upgrades. While we aim to minimize disruption, guaranteeing absolutely no downtime for control plane components is not a goal for this initial release.
+- Automatic CLI upgrades. Users must manually update their local CLI version after upgrading the control plane.
+- Direct GitOps workflow integration for version 1. While users who manage Radius through HelmReleases in their GitOps pipeline will be able to update Helm charts, the complete upgrade process (including preflight checks, locking, and health verification) requires the `rad upgrade kubernetes` command in this initial version. Future versions will provide better GitOps integration options.
+
+## User profile and challenges
+
+The primary users of this feature are system administrators and DevOps engineers responsible for maintaining and upgrading the Radius platform.
+
+### User persona(s)
+
+- **System Administrator**: Responsible for managing the infrastructure and ensuring the smooth operation of the Radius platform.
+- **DevOps Engineer**: Focused on automating deployment processes and maintaining the CI/CD pipeline.
+
+### Challenge(s) faced by the user
+
+- As of June 2025, Radius does not support in-place upgrades or upgrades via the Radius CLI. Users can achieve this using Helm, but this method does not update the local Radius CLI version to the desired version. The current steps are:
+  - `helm install radius oci://ghcr.io/radius-project/helm-chart/radius --version 0.43.0`
+  - `helm upgrade radius oci://ghcr.io/radius-project/helm-chart/radius --version 0.44.0`
+- This approach is cumbersome and does not provide a good user experience. Additionally, it does not automatically install dependencies like Contour, requiring users to handle these installations manually.
+- Another way to upgrade Radius to the desired version involves the following steps:
+  - Uninstall the existing Radius installation by running `rad uninstall kubernetes`. This command doesn't delete any user data or the `radius-system` namespace.
+  - Download and install the desired version locally. Ensure it is the correct version by running `rad version`.
+  - Run `rad install kubernetes` or `rad init` to finalize the upgrade.
+- This process is also not as seamless as a `rad upgrade kubernetes --version desired.version` command could be.
+
+### Positive user outcome
+
+- By running the `rad upgrade kubernetes --version desired.version` command, users will be able to initiate the upgrade process seamlessly.
+  - The desired version must be higher than the current version.
+- By setting a global flag indicating that an upgrade is in progress, we ensure that users do not start data-changing commands like `rad deploy app.bicep` or `rad delete app` in a different terminal.
+- A snapshot of Radius and user data is taken right before the upgrade starts. In case of failure, the snapshot can be restored to ensure data integrity.
+- At the end of this process, users will have Radius upgraded to the desired version, ensuring compatibility and stability.
+
+## Key scenarios
+
+### Scenario 1: Upgrading the control plane using the Radius CLI
+
+After the implementation of this feature, the Radius CLI will provide a streamlined approach to upgrade the control plane components with minimal disruption. Users can execute various upgrade scenarios through the `rad upgrade kubernetes` command with appropriate flags.
+
+```bash
+# Basic upgrade to a specific version
+rad upgrade kubernetes --version v0.44.0
+
+# Upgrade with custom configuration values
+rad upgrade kubernetes --version v0.44.0 --set global.monitoring.enabled=true
+
+# Upgrade with extended timeout for large deployments
+rad upgrade kubernetes --version v0.44.0 --timeout 600
+```
+
+The upgrade process will:
+
+1. **Pre-flight checks**: Detect existing installation, check versions, verify version compatibility, validate cluster health, and ensure sufficient resources.
+2. **Distributed locking**: Acquire an upgrade lock to prevent concurrent data modifications.
+3. **Upgrade**: Apply necessary Helm changes (including timeouts, set args, etc.) in a rolling fashion to minimize downtime.
+4. **Health verification**: Validate that new control plane components are healthy and confirm the upgrade was successful.
+5. **Helm-based rollback (on failure)**: If something goes wrong, use Helm's built-in rollback capability to revert Kubernetes resources to their previous state
+
+## Key dependencies and risks
+
+- **Dependency Name**: Helm – The upgrade process relies on Helm for managing the upgrade process. Issues/concerns/risks: Compatibility with new versions of Helm.
+- **Dependency Name**: Contour – The upgrade process relies on Contour for routing requests. Issues/concerns/risks: Compatibility with new versions of Contour.
+
+## Key assumptions to test and questions to answer
+
+### Core Assumptions
+
+- **Version Compatibility:** If you are upgrading from a version of Radius that does not include the `rad upgrade kubernetes` command, you must first update to a release that provides the upgrade functionality. Older versions do not support automated upgrades in the CLI.
+- **User Permissions:** Users have the necessary permissions and access to perform upgrades, including cluster-admin roles where required.
+- **Data Integrity:** The upgrade process will maintain data integrity and prevent corruption during migration operations (particularly for database migrations) by using snapshots and the ability to restore in case of failure.
+- **Dependency Management:** We use a specific version of Contour (<https://github.com/radius-project/radius/blob/main/pkg/cli/helm/cluster.go#L34>) and they can not be updated with the configuration. This ensures consistent dependency management. There is a case where the default chart versions may be updated in a newer version of Radius but that means that those versions of Contour are probably tested with that new version of Radius and shouldn't provide problems during the upgrade from the current version and the desired version which is the newer version that we just discussed about.
+- **Resource Requirements:** The upgrade process won't exceed available cluster resources during the transition period when both old and new components may be running simultaneously.
+
+### Success Metrics & Validation
+
+- **Upgrade Success Rate:** Define metrics to track successful vs. failed upgrades
+- **Performance Impact:** Measure and minimize performance degradation during upgrades
+- **Downtime Duration:** Establish acceptable limits for component unavailability during the process
+- **Validation Testing:** Define comprehensive test cases to verify proper operation post-upgrade
+
+### Research Plan
+
+- Analyze upgrade approaches from similar platforms (Dapr, Crossplane, Istio, Flux) to adopt best practices
+- Develop and test rollback procedures for various failure scenarios
+
+## Current state
+
+Upgrading the Radius control plane currently involves manual steps and limited documentation. These manual steps include:
+
+1. Downloading and installing a newer version of Radius locally.
+2. Running `rad uninstall kubernetes` to remove the existing Radius installation from the Kubernetes cluster.
+3. Running `rad install kubernetes` to install the newly downloaded version locally.
+
+This procedure is time-consuming and prone to error, often leading to unwanted downtime and disruptions. Improved automation and clear documentation are critical to streamline this process.
+
+## Details of user problem
+
+As a system administrator, I need to upgrade the Radius control plane components to ensure compatibility with new versions and maintain the stability of my systems. However, the current upgrade process is complex and prone to errors, leading to downtime and disruption.
+
+## Desired user experience outcome
+
+After this scenario is implemented, I can upgrade the Radius control plane components seamlessly, with minimal downtime and disruption. As a result, my systems remain stable and compatible with new versions.
+
+### Detailed user experience
+
+1. User initiates the upgrade process using the Radius CLI.
+2. The system performs pre-upgrade checks to ensure compatibility.
+3. The upgrade process is executed, with rolling upgrades to minimize downtime.
+4. The system performs post-upgrade checks to verify the success of the upgrade.
+5. User receives a notification confirming the successful upgrade.
+
+## Key investments
+
+### Feature 1: Preflight Check System
+
+Implement comprehensive pre-upgrade checks to ensure compatibility and verify prerequisites:
+
+1. **Version Compatibility:** Ensure the current version is behind the desired version to prevent downgrades.
+2. **Cluster Resource Check:** Verify the cluster has sufficient resources for the rolling upgrade.
+3. **Control Plane Health Check:** Confirm current installation is in a healthy state before proceeding.
+4. **Custom Configuration Validation:** Validate any custom parameters provided with the upgrade command.
+
+### Feature 2: Distributed Locking Mechanism
+
+Implement a robust distributed locking system to prevent concurrent modifications during upgrades:
+
+1. **Data-store Level Locks**: Utilize etcd or PostgreSQL's native locking capabilities.
+2. **Heartbeat Mechanism**: Prevent stale locks through periodic renewal.
+3. **Force Override Option**: Allow administrators to release stale locks when necessary.
+4. **CLI Command Integration**: Update all data-modifying commands to check for active upgrade locks.
+
+### Feature 3: Helm-based Upgrade and Rollback System
+
+Implement a reliable upgrade system using Helm with built-in rollback capability:
+
+1. **Helm Chart Management**: Enhanced wrapper around Helm's upgrade capabilities.
+2. **Component Health Verification**: System to verify all components are healthy after upgrade.
+3. **Automated Rollback**: Use Helm's built-in rollback capability if health checks fail.
+4. **Manual Rollback Command**: Provide `rad rollback kubernetes` command to manually trigger rollback after upgrade completion, supporting scenarios where post-upgrade testing (such as recipe validation) fails.
+5. **Custom Configuration Support**: Apply user-provided configuration values during upgrade.
+
+### Plan for `rad upgrade kubernetes`
+
+The `rad upgrade kubernetes` command will be designed to facilitate the upgrade process for the Radius control plane components. Here is the plan for implementing the `rad upgrade kubernetes` command:
+
+1. **Command Structure**: The `rad upgrade kubernetes` command will follow a similar structure to the `rad install kubernetes` command, with additional options for performing upgrades.
+2. **Pre-Upgrade Checks**: The command will perform pre-upgrade checks to ensure compatibility with the existing configuration and identify any potential issues.
+3. **Upgrade Execution**: The command will execute the upgrade process, including updating the control plane components, applying any necessary database migrations, and updating configurations.
+4. **Post-Upgrade Checks**: The command will perform post-upgrade checks to verify the success of the upgrade and ensure that the system is functioning as expected.
+5. **Rollback Support**: Implement a separate `rad rollback kubernetes` command to allow manual rollback to the previous version after upgrade completion, enabling users to revert changes if their own application-specific testing (like recipes) fails.
+
+By following this plan, the `rad upgrade kubernetes` command will provide a reliable and user-friendly way to upgrade the Radius control plane components, ensuring compatibility with new versions and minimizing downtime and disruption.
+
+## Future Work
+
+### GitOps Workflow Integration
+
+In future versions, we plan to enhance GitOps integration to support users who manage Radius through HelmReleases as part of their GitOps workflow. This will include developing a Kubernetes operator that watches for HelmRelease changes and automatically performs the necessary upgrade procedures including preflight checks, locking, and health verification. This integration will allow teams to manage Radius upgrades through their existing GitOps pipelines without requiring manual CLI commands.
+
+### Air-gapped Environment Support
+
+Future versions will include support for upgrading Radius in air-gapped environments where direct internet access is limited or unavailable. This will include:
+
+1. Offline version validation and compatibility checking
+2. Support for pre-pulled container images and private registries
+3. Ability to provide upgrade artifacts via local file paths
+4. Documentation and tooling for preparing upgrade bundles for air-gapped deployments
+
+This will enable organizations with strict network security requirements to safely upgrade their Radius installations without requiring internet connectivity.
