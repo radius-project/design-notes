@@ -938,3 +938,6 @@ CNCF
 Istio
 Flux
 preflight
+HelmRelease
+HelmReleases
+gapped

@@ -43,12 +43,13 @@ This feature will significantly improve the user experience by automating the up
 ### Non-goals (out of scope)
 
 - Downgrades are not supported in the initial version. The upgrade process is designed to move forward to newer versions only. Please see the design document and the development plan for more details.
-- User data backup and restore will be implemented in a future version.
+- User data backup and restore will be implemented in a future version. This includes on-demand backup creation and the ability to reference specific backups during upgrades or rollbacks. Version 1 will use Helm's built-in rollback capability for recovery in case of failure, without custom data backup/restore mechanisms.
 - The upgrade process does not include features for managing upgrades across multiple clusters simultaneously as Radius doesn't support multiple clusters per installation as of June 2025.
 - Upgrading major versions of dependencies like Contour is not covered by this process. These upgrades should be handled separately following their respective guidelines.
 - Upgrading the Radius control plane using Helm directly. We can run `helm upgrade` on the Radius Helm installation but that is not going to put all the necessary pieces together for the control plane to work. Making this work is not in the scope of this work.
 - Zero-downtime control plane upgrades. While we aim to minimize disruption, guaranteeing absolutely no downtime for control plane components is not a goal for this initial release.
 - Automatic CLI upgrades. Users must manually update their local CLI version after upgrading the control plane.
+- Direct GitOps workflow integration for version 1. While users who manage Radius through HelmReleases in their GitOps pipeline will be able to update Helm charts, the complete upgrade process (including preflight checks, locking, and health verification) requires the `rad upgrade kubernetes` command in this initial version. Future versions will provide better GitOps integration options.
 
 ## User profile and challenges
 
@@ -184,7 +185,8 @@ Implement a reliable upgrade system using Helm with built-in rollback capability
 1. **Helm Chart Management**: Enhanced wrapper around Helm's upgrade capabilities.
 2. **Component Health Verification**: System to verify all components are healthy after upgrade.
 3. **Automated Rollback**: Use Helm's built-in rollback capability if health checks fail.
-4. **Custom Configuration Support**: Apply user-provided configuration values during upgrade.
+4. **Manual Rollback Command**: Provide `rad rollback kubernetes` command to manually trigger rollback after upgrade completion, supporting scenarios where post-upgrade testing (such as recipe validation) fails.
+5. **Custom Configuration Support**: Apply user-provided configuration values during upgrade.
 
 ### Plan for `rad upgrade kubernetes`
 
@@ -194,6 +196,23 @@ The `rad upgrade kubernetes` command will be designed to facilitate the upgrade 
 2. **Pre-Upgrade Checks**: The command will perform pre-upgrade checks to ensure compatibility with the existing configuration and identify any potential issues.
 3. **Upgrade Execution**: The command will execute the upgrade process, including updating the control plane components, applying any necessary database migrations, and updating configurations.
 4. **Post-Upgrade Checks**: The command will perform post-upgrade checks to verify the success of the upgrade and ensure that the system is functioning as expected.
-5. **Rollback Option**: The command will include a rollback option to revert to the previous version in case of any issues during the upgrade process.
+5. **Rollback Support**: Implement a separate `rad rollback kubernetes` command to allow manual rollback to the previous version after upgrade completion, enabling users to revert changes if their own application-specific testing (like recipes) fails.
 
 By following this plan, the `rad upgrade kubernetes` command will provide a reliable and user-friendly way to upgrade the Radius control plane components, ensuring compatibility with new versions and minimizing downtime and disruption.
+
+## Future Work
+
+### GitOps Workflow Integration
+
+In future versions, we plan to enhance GitOps integration to support users who manage Radius through HelmReleases as part of their GitOps workflow. This will include developing a Kubernetes operator that watches for HelmRelease changes and automatically performs the necessary upgrade procedures including preflight checks, locking, and health verification. This integration will allow teams to manage Radius upgrades through their existing GitOps pipelines without requiring manual CLI commands.
+
+### Air-gapped Environment Support
+
+Future versions will include support for upgrading Radius in air-gapped environments where direct internet access is limited or unavailable. This will include:
+
+1. Offline version validation and compatibility checking
+2. Support for pre-pulled container images and private registries
+3. Ability to provide upgrade artifacts via local file paths
+4. Documentation and tooling for preparing upgrade bundles for air-gapped deployments
+
+This will enable organizations with strict network security requirements to safely upgrade their Radius installations without requiring internet connectivity.
