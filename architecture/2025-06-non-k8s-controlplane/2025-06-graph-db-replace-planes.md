@@ -8,9 +8,11 @@
 
 ### Overview
 
-Project Radius currently defines and manages application graphs, representing resources and their relationships within cloud-native applications. Currently Radius relies on Kubernetes, where these graph structures are stored using Kubernetes Custom Resource Definitions (CRDs) and the Kubernetes API server as a backing store. As we are adding support for nested recipes the imperative Go code is becoming complex and brittle because it needs to implement basic graph traversal logic not present in etcd.
+Project Radius currently defines and manages application graphs, representing resources and their relationships within cloud-native applications. Currently Radius relies on Kubernetes to install etcd, the default datastore, where these graph structures are stored as key value pairs. As we are adding support for nested connections the imperative Go code is becoming complex and brittle because it needs to implement basic graph traversal logic not present in etcd. Additionally we are already hitting performance limits in test environments which inspired the work @superbeeny has done to swap the key value operations out to use postgres.
 
-This proposal outlines a plan to modify Project Radius to utilize Kùzu, an embedded, high-performance graph database, as the primary store for its application graph. This change aims to decouple the core graph logic and operations from the underlying Kubernetes infrastructure, enabling more powerful graph queries, potentially improving performance for complex relationship traversals, and offering a more specialized and efficient graph persistence layer. This will also pave the way for Radius to operate more seamlessly in environments beyond Kubernetes or where direct Kubernetes API access for graph storage is not ideal.
+This proposal outlines a plan to modify Project Radius to utilize Kùzu, an embedded, high-performance graph database, as the primary store for its application graph. This change aims to decouple the core graph logic and operations from the underlying Kubernetes infrastructure, enabling more powerful graph queries, potentially improving performance for complex relationship traversals, and offering a more specialized and efficient graph persistence layer. One of the benefits to recipe authors is this will allow them to define nested connections of types to both return complex relationships and properties to a recipe as well as see these relationships in the graph/dashboard. This will also pave the way for Radius to operate more seamlessly in environments beyond Kubernetes or where direct Kubernetes API access for graph storage is not ideal.
+
+Delivering this will allow us to shift to a far better user experience where connections become a rich re-usable concept that shares data and exposes deep relationships currently obfuscated by monolithic types with embedded objects (database has a credentials object with username and password properties).
 
 ### Terms and Definitions
 
@@ -42,45 +44,68 @@ This proposal outlines a plan to modify Project Radius to utilize Kùzu, an embe
 * First step in allowing the Radius control plane to run outside Kubernetes.
 * Integrate Kùzu as an embedded graph database within relevant Radius components (e.g., Core RP, Deployment Engine).
 * Define a clear schema for the Radius application graph within Kùzu.
-* Migrate existing graph data representation (currently in K8s CRDs) to the Kùzu data model.
-* Implement a data access layer (DAL) service that abstracts Kùzu operations (CRUD, queries) for other Radius components.
+* Migrate existing graph data representation (currently in etcd/postgres) to the Kùzu data model.
+* Implement a data access layer (DAL, name TBD) service that abstracts Kùzu operations (CRUD, queries) for other Radius components.
 * Update Radius RPs and controllers to use the new Kùzu-backed DAL for all graph-related operations.
 * Provide mechanisms for backup and potential restore of the Kùzu database as part of Radius install/upgrade/rollback operations.
 * Develop a comprehensive test suite covering graph operations with Kùzu.
+* Build this in a way that Kùzu could be swapped out for a network accessible graph database such as Neo4J or Postgres with Apache AGE extension.
+
 
 ### Non-goals
 
 * Re-architecting more of Radius to eliminate Kubernetes as a dependency beyond the graph storage and access layer.
 * Providing a distributed Kùzu cluster as part of this initial integration (Kùzu is primarily embedded; clustering would be a separate, future consideration if needed).
 * Exposing direct Kùzu Cypher query capabilities to end-users of Radius (interaction should remain through Radius APIs and abstractions).
-* Replacing all uses of the Kubernetes API server by Radius, only those related to storing and querying the core application graph structure.
-* Migrating existing Radius clusters to the new graph, a fresh install is required.
+* Replacing all uses of the Kubernetes CRDs by Radius.
+* Migrating existing Radius clusters to the new graph, a fresh install is required. (up for debate)
 
 ### User Scenarios (optional)
 
-* **Scenario 1 (Developer):** A Radius developer needs to implement a new feature that requires finding all resources connected to a specific environment that also have a particular tag. Using Cypher through the Kùzu DAL would be more expressive and potentially faster than multiple K8s API calls and client-side filtering. This is currently a sticking point with nested Recipes.
-* **Scenario 2 (Operator):** An operator managing a large Radius deployment experiences performance degradation when listing complex application relationships. Moving to Kùzu could alleviate these bottlenecks.
-* **Scenario 3 (Platform Engineer):** A platform engineer wants to run Radius without Kubernetes, this is one of the decoupling features required. 
+* **Scenario 1 (Developer):** A Radius developer needs to address performance issues for application graphs containing many resources. Retriving all resources connected to a specific environment, which is a very expensive operation. Using Cypher through the Kùzu DAL would be more expressive and orders of magnitude faster than multiple etcd calls and client-side filtering.
+* **Scenario 2 (Platform Engineer):** A platform engineer wants to run Radius without Kubernetes, this is one of the decoupling features required. 
 
 ### User Experience (if applicable)
 
 * **End-users (Application Developers using Radius CLI/APIs):** The change should be largely transparent. Existing commands and APIs for managing applications and resources should continue to work. Performance improvements might be noticeable.
 * **Radius Developers/Contributors:** Will need to learn how to interact with the new Kùzu DAL and potentially understand the Kùzu data model and Cypher for advanced debugging or development.
-* **Operators:** Will need to be aware of the new Kùzu database component for backup, monitoring, and troubleshooting purposes. The operational burden of managing K8s CRDs for graph data would be shifted.
+* **Operators:** Will need to be aware of the new Kùzu database component for backup, monitoring, and troubleshooting purposes. The operational burden of managing etcd for graph data would be shifted.
 
 ### Sample Input/Output:
 
-* **Sample Input (Conceptual Cypher Query via DAL):**
+* **Sample Input (Conceptual Cypher Query via DAL, replicating `rad app graph todo`):**
     ```
-    // Find all 'applications' that 'contain' a 'container' resource with 'image' = 'nginx'
-    MATCH (app:Application)-[:CONTAINS]->(res:Resource {type: 'Applications.Core/container', properties_image: 'nginx'})
-    RETURN app.name, res.name
+    // Show the full graph for the "todo" application
+    MATCH (app:Application {name: 'todo'})-[rel]->(res:Resource)
+    RETURN app.name AS application, type(rel) AS relationship, res.name AS resource, res.type AS resourceType
     ```
 * **Sample Output (from DAL):**
     ```json
     [
-      { "appName": "myWebApp", "resourceName": "frontendContainer" },
-      { "appName": "myService", "resourceName": "workerContainer" }
+      {
+        "application": "todo",
+        "relationship": "CONTAINS",
+        "resource": "frontend",
+        "resourceType": "Applications.Core/container"
+      },
+      {
+        "application": "todo",
+        "relationship": "CONTAINS",
+        "resource": "backend",
+        "resourceType": "Applications.Core/container"
+      },
+      {
+        "application": "todo",
+        "relationship": "CONNECTS_TO",
+        "resource": "todo-db",
+        "resourceType": "Applications.Core/postgres"
+      },
+      {
+        "application": "todo",
+        "relationship": "CONNECTS_TO",
+        "resource": "redis-cache",
+        "resourceType": "Applications.Core/redis"
+      }
     ]
     ```
 
@@ -118,7 +143,7 @@ graph TD
 1.  **Kùzu Integration:**
     * The Kùzu Go driver (`github.com/kuzudb/go-kuzu`) will be used.
     * Kùzu database will be initialized during `rad init`. The database file (`radius_app_graph.kuzu`) will be stored on ephemeral or persistent storage accessible to the Radius control plane. (requiring setup of a volume for laptop installations seems excessive)
-    * Initially CoreRP will move CRUD operations to K8s planes to the DAL without using Kùzu.
+    * Initially CoreRP will move CRUD operations using etcd to the DAL without using Kùzu.
     * Once the DAL is released Kùzu support will be added in a pluggable way, allowing for future network graph db support vs the embedded solution.
 
 2.  **Schema Management:**
@@ -175,13 +200,46 @@ graph TD
 
 #### Advantages (of Kùzu over K8s CRDs for graph storage)
 
-* **Rich Querying:** Cypher provides significantly more powerful and expressive graph query capabilities than filtering K8s resources by labels/annotations.
+* **Rich Querying:** Cypher provides significantly more powerful and expressive graph query capabilities than filtering etcd values client side.
 * **Performance:** For complex graph traversals (multi-hop queries, pathfinding), Kùzu is likely to be much faster as it's optimized for such operations. For Radius this would be during most recipe execution as the entire graph is rendered.
 * **Specialized Data Store:** Kùzu is purpose-built for graph data, leading to efficient storage and indexing for graph structures.
 * **Decoupling from Kubernetes:** Reduces dependency on the K8s API server for core graph logic, improving portability and potentially reducing load on the K8s control plane for graph-heavy operations.
 * **Not strongly tied to Kùzu** The DAL will allow for Radius users to use any Cypher compatible graph database such as Neo4J or CosmosDB with Gremlin.
 * **Transactional Guarantees:** Kùzu provides ACID transactions for graph operations.
 * **Schema Enforcement:** Better ability to define and enforce a graph schema within Kùzu.
+
+---
+
+**Modeling Deep Relationships Instead of Monolithic Types**
+
+Currently, many Radius resource types (such as databases) are modeled as monolithic objects with embedded properties or sub-objects. For example, a database resource might have a `credentials` object, which itself contains `username` and `password` properties. This approach makes it difficult to express and traverse relationships between resources, and limits reusability and visibility in the application graph.
+
+With a graph database like Kùzu, these relationships can be modeled explicitly. Instead of embedding credentials as an object within the database resource, the database node can be connected to a separate `credentials` node (e.g., named `db_creds` of type `Credentials`). This credentials node can then be connected to two `secret` nodes representing the username and password. This approach enables:
+
+- **Reusability:** Credentials or secrets can be shared across multiple resources.
+- **Visibility:** Relationships between resources, credentials, and secrets are explicit and queryable.
+- **Extensibility:** New types of relationships or properties can be added without changing the monolithic resource schema. Future API versions could allow some properties to be private (not exposed by connection).
+
+
+**Example Graph Structure:**
+```mermaid
+graph TD
+    db[Database]
+    creds[Credentials: db_creds]
+    user[Secret: username]
+    pass[Secret: password]
+
+    db -- "CONNECTION" --> creds
+    creds -- "CONNECTION" --> user
+    creds -- "CONNECTION" --> pass
+```
+
+In this model:
+- The `Database` node is connected to a `Credentials` node via a connection.
+- The `Credentials` node is connected to two `Secret` nodes (for username and password) via connections.
+
+This structure enables richer queries and recipe author use cases like `context.connected_resources.database.credentials.username` instead of only being able to access the embedded `credentials` object and requiring the recipe author to parse.
+Additionally it provides a better separation of concerns, and a more flexible, maintainable application graph.
 
 #### Disadvantages (of Kùzu integration)
 
