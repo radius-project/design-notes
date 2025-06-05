@@ -9,6 +9,7 @@ Radius will be enhanced to support multiple compute platforms, secret stores, an
 ### Top level goals
 <!-- At the most basic level, what are we trying to accomplish? -->
 - Provide platform engineers with the ability to deploy Radius applications to specific platforms other than the default Kubernetes, such as Azure Container Instances (ACI), and other compute, secret store, and gateway platforms.
+- Provide abstraction punch-through mechanisms to allow platform engineers and developers to leverage platform-specific features and configurations not directly supported by Radius core (e.g. confidential containers).
 - Provide a recipe-based platform engineering experience that is consistent for user-defined types and core types.
 - Expand the ability to provision a single application definition to multiple clouds by adding the capability to provision to multiple compute platforms, secret stores, and gateway types.
 - Architecturally separate Radius core logic from platform-specific provisioning code.
@@ -19,6 +20,7 @@ Radius will be enhanced to support multiple compute platforms, secret stores, an
 - Running the Radius control plane on a non-Kubernetes platform.
 - Changes to portable types beyond what's necessary to support recipe-based provisioning for core functionalities.
 - Implementing a new custom resource provider (RP) framework beyond the existing UDT and recipe mechanism for this specific feature.
+- Versioning support for Recipes is out of scope, this is tracked as a separate feature in [#3 Versioning for Recipes, resource types, apis, etc.](https://github.com/radius-project/roadmap/issues/3)
 
 ## User profile and challenges
 <!-- Define the primary user and the key problem / pain point we intend to address for that user. If there are multiple users or primary and secondary users, call them out.   -->
@@ -34,7 +36,7 @@ Radius will be enhanced to support multiple compute platforms, secret stores, an
 
 ### Challenge(s) faced by the user
 <!-- What challenges do the user face? Why are they experiencing pain and why do current offerings not meet their need? -->
-- **Limited Platform Support:** Current Radius versions primarily target Kubernetes, making it difficult to use Radius in organizations that have standardized on or require other compute platforms (e.g., ACI, AWS Fargate, Google Cloud Run), or different types of secret stores and gateways.
+- **Limited Platform Support:** Current Radius versions primarily target Kubernetes with recent hardcoded expansion to ACI, making it difficult to use Radius in organizations that have standardized on or require other compute platforms (e.g., AWS Fargate, Google Cloud Run), or different types of secret stores and gateways.
 - **Lack of Customization:** The provisioning logic for core Radius resources is hard-coded, offering limited ways to customize deployments to meet specific organizational policies (e.g., specific labels, sidecars, network configurations) without forking Radius.
 - **Extensibility Barriers:** Extending Radius to support new, unsupported platforms requires modifying Radius core code, which is a significant barrier for most platform teams and leads to maintenance overhead.
 - **Inconsistent Tooling:** Managing applications across different platform types often requires different toolsets and deployment pipelines, increasing complexity.
@@ -55,9 +57,6 @@ A platform engineer customizes the default Kubernetes recipes for `Applications.
 ### Scenario 3: Extend Radius to a new, unsupported platform
 A platform engineer creates new Bicep or Terraform recipes to enable Radius to deploy `Applications.Core/containers@2025-05-01-preview` to AWS Fargate, `Applications.Core/gateways@2025-05-01-preview` to an AWS Application Load Balancer, and `Applications.Core/secretStores@2025-05-01-preview` to AWS Secrets Manager. They then register these recipes in their Radius environment.
 
-### Scenario 4: Manage and version recipes for different environments
-A platform engineer maintains different versions of recipes (e.g., `v1.0` for stable, `v1.1-beta` for testing) in an OCI-compliant registry and registers specific versions for different Radius environments (dev, staging, prod) to ensure controlled rollouts and consistency.
-
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
 <!-- What other risks are you aware of that need to be mitigated. If you have a mitigation in mind, summarize here. -->
@@ -68,7 +67,7 @@ A platform engineer maintains different versions of recipes (e.g., `v1.0` for st
     - Mitigation: Early Proof of Concept (POC) for Kubernetes provisioning in Bicep/Terraform. Implement ACI provisioning first as a less complex target to identify limitations. Consider Terraform if Bicep has significant gaps for certain platforms.
 - **Radius Application Graph Integrity**: Ensuring that recipes can correctly define and maintain relationships and connections between resources (e.g., `containers.connections`) as the current system does.
     - Risk: Recipes might not fully capture or might incorrectly represent resource relationships, leading to broken application deployments or incorrect graph data.
-    - Mitigation: Design and provide reusable Bicep/Terraform modules or clear patterns for recipes to declare outputs that contribute to the Radius graph. Phase 1 (ACI UDTs/recipes) will provide early detection.
+    - Mitigation: Design and provide reusable Bicep/Terraform modules or clear patterns for recipes to declare outputs that contribute to the Radius graph.
 - **Complexity of Core Types**: The `containers` resource type, in particular, has a large and complex schema.
     - Risk: Re-implementing its provisioning via recipes could be a large effort and error-prone.
     - Mitigation: Phased approach, thorough testing, and clear documentation. Maintain versioned support for older types during transition.
@@ -93,11 +92,11 @@ A platform engineer maintains different versions of recipes (e.g., `v1.0` for st
 
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
-Radius currently has built-in support for Kubernetes as its primary compute platform. Core resource types like `Applications.Core/containers`, `Applications.Core/gateways`, and `Applications.Core/secretStores` have hard-coded provisioning logic that targets Kubernetes. While Radius supports User-Defined Types (UDTs) and recipes for custom resources, this mechanism is not used for the core functionalities mentioned. Extending Radius to other platforms or significantly customizing the provisioning of these core resources typically requires forking the Radius codebase. The `environments` resource type has a hard-coded `compute` property primarily designed for Kubernetes.
+Radius currently has built-in support for Kubernetes as its primary compute platform, as well as initial support for ACI. Core resource types like `Applications.Core/containers`, `Applications.Core/gateways`, and `Applications.Core/secretStores` have hard-coded provisioning logic that targets Kubernetes or Azure for ACI. While Radius supports User-Defined Types (UDTs) and recipes for custom resources, this mechanism is not used for the core functionalities mentioned. Extending Radius to other platforms or significantly customizing the provisioning of these core resources typically requires modifying the Radius codebase. The `environments` resource type has a hard-coded `compute` property primarily designed for Kubernetes and ACI.
 
 ## Details of user problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a user am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on my work and or business.> -->
-When I, as a platform engineer, try to use Radius to deploy and manage applications across my organization, I face significant hurdles if our infrastructure strategy involves more than just Kubernetes, or if I need to enforce specific deployment patterns for our Kubernetes workloads. For example, if a development team wants to deploy a service to Azure Container Instances for cost or simplicity, or if we need to integrate with a managed cloud gateway service instead of the default Radius gateway on Kubernetes, I can't easily make Radius do this. I'm forced to tell my teams they can only use Radius for Kubernetes, or I have to build and maintain complex workarounds outside of Radius. If I need to ensure all Kubernetes deployments include our standard logging sidecar and specific security annotations, I can't enforce this through Radius's core container resource without modifying Radius itself. This means either Radius doesn't fit our diverse needs, or I'm stuck maintaining a custom version of Radius, which is a huge operational burden and makes upgrades very risky. These limitations prevent us from fully leveraging Radius as a unified application platform across our varied infrastructure.
+When I, as a platform engineer, try to use Radius to deploy and manage applications across my organization, I face significant hurdles if our infrastructure strategy involves more than just Kubernetes. For example, if a development team wants to deploy a service to AWS Elastic Container Service (ECS) for cost or simplicity, or if we need to integrate with a managed cloud gateway service instead of the default Radius gateway on Kubernetes, I can't easily make Radius do this. I'm forced to tell my teams they can only use Radius for Kubernetes, or I have to build and maintain complex workarounds outside of Radius. This means either Radius doesn't fit our diverse needs, or I'm stuck maintaining a custom version of Radius or else needing to contribute core code changes upstream in to Radius, which is a huge operational burden and makes upgrades very risky. These limitations prevent us from fully leveraging Radius as a unified application platform across our varied infrastructure.
 
 ## Desired user experience outcome
 <!-- <Write this as an “I statement” that expresses the new capability from user perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly etc... As a result <summarize positive impact on my work / business>  -->
