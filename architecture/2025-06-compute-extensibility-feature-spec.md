@@ -107,25 +107,94 @@ After this feature is implemented, I can confidently use Radius as our central a
 <!-- Step 1
 Step 2
 … -->
+#### Setting up and deploying an application to a Radius environment using existing Recipes for core types:
+
+1.  **Discover existing Recipes**:
+    *   Find community-provided recipes for desired platforms (e.g., ACI, AWS Fargate) from an OCI registry or Terraform module repo.
 1.  **Initialize Workspace & Environment (as Platform Engineer)**:
-    *   Use `rad init` or equivalent `rad workspace`, `group`, and `environment` commands. The new environment version (e.g., `Applications.Core/environments@2025-05-01-preview`) will not have a hard-coded `compute` kind.
-    *   By default, `rad init` might still register UDTs and recipes for Kubernetes provisioning for core types like `Applications.Core/containers@2025-05-01-preview`.
-2.  **Discover/Create Recipes**:
-    *   Find community-provided recipes for desired platforms (e.g., ACI, AWS Fargate) from an OCI registry or Radius documentation.
-    *   Or, create custom Bicep/Terraform recipes for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` to target a specific platform or customize existing behavior.
-3.  **Register Recipes for Core Types**:
+    *   Use `rad workspace`, `group`, and `environment` commands to create a Radius Environment and/or Workspace. 
+    *   Define an environment in a Bicep file and then deploy it using `rad deploy env.bicep`. The new environment version (e.g., `Applications.Core/environments@2025-05-01-preview`) will not have a hard-coded `compute` kind. For example, an ACI environment might look like:
+        ```diff
+        extension radius
+
+        resource env 'Applications.Core/environments@2025-05-01-preview' = {
+            name: 'my-aci-env'
+            properties: {
+        -       compute: {
+        -           // compute kind is no longer hard-coded here
+        -       }
+                recipes: {
+                    'Applications.Core/containers': {
+                        default: {
+                        templateKind: 'bicep'
+                        plainHttp: true
+                        templatePath: 'ghcr.io/radius-project/recipes/azure/aci-container:latest'
+                        parameters: {
+                            defaultCpu: 1
+                            defaultMemoryInGB: 2
+                        }
+                        }
+                    }
+                    'Applications.Core/gateways': {
+                        default: {
+                            templateKind: 'bicep'
+                            plainHttp: true
+                            templatePath: 'ghcr.io/radius-project/recipes/azure/aci-gateway:latest'
+                            parameters: {
+                                defaultCpu: 1
+                                defaultMemoryInGB: 2
+                            }
+                        }
+                    }
+                    'Applications.Core/secretStores': {
+                        default: {
+                            templateKind: 'bicep'
+                            plainHttp: true
+                            templatePath: 'ghcr.io/radius-project/recipes/azure/aci-keyvault:latest'
+                            parameters: {
+                                defaultSku: 'standard'
+                            }
+                        }
+                    }
+                    'Applications.Datastores/redisCaches': {
+                        default: {
+                            templateKind: 'bicep'
+                            plainHttp: true
+                            templatePath: 'ghcr.io/radius-project/recipes/azure/rediscaches:latest'
+                        }
+                    }
+                }
+        -       providers: {
+        -           // provider configurations no longer hard-coded here
+        -       }
+            }
+        }
+        ```
+        > Note: the `compute` and `providers` properties are removed in favor of Recipe configurations for all the core resource types registered to the Environment.
+    *   By default, `rad init` might still register UDTs and recipes for Kubernetes provisioning for core types like `Applications.Core/containers@2025-05-01-preview` to provide a local kubernetes experience out of the box.
+1.  **Developers Define Applications**:
+    *   Application developers define their applications using the new UDT versions of core types (e.g., `resource myapp 'Applications.Core/containers@2025-05-01-preview' = { ... }`). They do not need to be aware of the underlying recipe details if default parameters are suitable.
+1.  **Deploy Applications**:
+    *   Developers (or CI/CD) run `rad deploy <bicep-file>`. Radius uses the registered recipes for the UDTs in the target environment to provision the resources.
+
+#### Creating and registering custom Recipes for core types:
+1.  **Create and Register Recipes for Core Types**:
+    *   Create custom Bicep/Terraform recipes for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` to target a specific platform or customize existing behavior.
+    * Publish these recipes to an OCI registry for Bicep or a Terraform module repository.
     *   Use `rad recipe register <recipe-name> --environment <env-name> --resource-type Applications.Core/containers@2025-05-01-preview --template-path <path-to-recipe-or-oci-uri> [--parameters <key=value> ...]` to associate a recipe with the new UDT version of the container type in a specific environment.
     *   Repeat for `gateways` and `secretStores` UDTs.
     *   Example: `rad recipe register aci-container-recipe --environment my-aci-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path oci://ghcr.io/radius-project/recipes/core/aci-container:1.0.0 --parameters defaultCpu=1 defaultMemoryInGB=2`
-4.  **Configure Environment-Specific Recipe Parameters (Optional)**:
-    *   If recipes have parameters that need to be set globally for an environment, configure them using `rad recipe update` or during registration.
-5.  **Developers Define Applications**:
-    *   Application developers define their applications using the new UDT versions of core types (e.g., `resource myapp 'Applications.Core/containers@2025-05-01-preview' = { ... }`). They do not need to be aware of the underlying recipe details if default parameters are suitable.
-6.  **Deploy Applications**:
-    *   Developers (or CI/CD) run `rad deploy <bicep-file>`. Radius uses the registered recipes for the UDTs in the target environment to provision the resources.
-7.  **Manage and Update Recipes**:
+1.  **Manage and Update Recipes**:
     *   Platform engineers can update recipe definitions (e.g., to a new version from OCI or a modified local file) and re-register them using `rad recipe register` (which would effectively update the association).
     *   They can list registered recipes and their associations.
+1.  **Configure Environment-Specific Recipe Parameters (Optional)**:
+    *   If recipes have parameters that need to be set globally for an environment, configure them using `rad recipe update` or during registration.
+
+#### Contributing new Recipes for core types to the Radius repo:
+
+#### Registering multiple Recipes for core types in a single Environment:
+
+#### Migrating existing Radius applications to use the new UDT-based core types and recipes:
 
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
