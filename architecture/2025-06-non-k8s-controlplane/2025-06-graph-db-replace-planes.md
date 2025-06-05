@@ -29,7 +29,7 @@ Delivering this will allow us to shift to a far better user experience where con
 
 ### Objectives
 
-1.  **Decouple Graph Storage:** Abstract the application graph storage from Kubernetes CRDs, allowing Radius to use a dedicated graph database.
+1.  **Decouple Graph Storage:** Abstract the application graph storage from etcd, allowing Radius to use a dedicated graph database.
 2.  **Enhance Query Capabilities:** Leverage Kùzu's Cypher query language for more complex and efficient graph traversals and relationship analysis than what is easily achievable with Kubernetes API queries.
 3.  **Improve Performance:** Potentially improve the performance of graph read and write operations, especially for large or complex application graphs.
 4.  **Increase Portability:** Facilitate the use of Radius in non-Kubernetes environments or scenarios where a dedicated graph store is preferred.
@@ -117,7 +117,7 @@ Delivering this will allow us to shift to a far better user experience where con
 2.  **Graph Abstraction Layer:** A new internal service or Data Access Layer (DAL) will be created. This layer will provide an API for all graph operations (e.g., `listDeployments`, `listResources`, and allow new operations like `showDependencies(resource)`). Internally, this DAL will translate these requests into Kùzu operations (Cypher queries, API calls to Kùzu's Go driver).
 3.  **Schema Definition:** A formal schema for Radius entities (Applications, Environments, Resources, etc. as nodes) and their relationships (as edges with types and properties) will be defined and enforced in Kùzu.
 4.  **Data Synchronization/Migration:** No migration is planned.
-5.  **Component Updates:** All Radius components that currently interact with Kubernetes CRDs for graph information will be updated to use the new Graph Abstraction Layer.
+5.  **Component Updates:** All Radius components that currently interact with etcd or postgrest for graph information will be updated to use the new Graph Abstraction Layer.
 
 #### Architecture Diagram
 
@@ -135,7 +135,7 @@ graph TD
     D <-->|"Interacts with"| E
 ```
 
-* **Current (Simplified):** Radius Core Components <-> Kubernetes API Server (for CRD-based graph)
+* **Current (Simplified):** Radius Core Components <-> etcd
 * **Proposed:** Radius Core Components <-> Graph Abstraction Layer <-> Kùzu Embedded DB
 
 #### Detailed Design
@@ -198,7 +198,7 @@ graph TD
     * All compound operations (e.g., creating a resource node and its relationship edge) must be performed within a Kùzu transaction to ensure atomicity. The DAL will manage this.
     * Radius upgrades and rollbacks would need to coordinate with the DAL.
 
-#### Advantages (of Kùzu over K8s CRDs for graph storage)
+#### Advantages (of Kùzu over etcd/key value stores for graph storage)
 
 * **Rich Querying:** Cypher provides significantly more powerful and expressive graph query capabilities than filtering etcd values client side.
 * **Performance:** For complex graph traversals (multi-hop queries, pathfinding), Kùzu is likely to be much faster as it's optimized for such operations. For Radius this would be during most recipe execution as the entire graph is rendered.
@@ -258,7 +258,7 @@ Integrate **Kùzu as an embedded graph database** managed by a new Radius servic
 
 ### API design
 
-The primary API change will be internal, within the Graph Abstraction Layer (DAL) as described in "Detailed Design." External Radius APIs (e.g., `rad resource list`, `rad application graph`) should remain functionally the same, but their implementation will now call the DAL instead of directly querying Kubernetes CRDs.
+The primary API change will be internal, within the Graph Abstraction Layer (DAL) as described in "Detailed Design." External Radius APIs (e.g., `rad resource list`, `rad application graph`) should remain functionally the same, but their implementation will now call the DAL instead of directly querying etcd.
 
 No changes to the public Radius REST API are anticipated initially, other than potential performance improvements or new (future) API endpoints that leverage advanced graph queries.
 
@@ -294,9 +294,8 @@ No changes to the public Radius REST API are anticipated initially, other than p
 3.  **End-to-End (E2E) Tests:**
     * Adapt existing Radius E2E tests to ensure all application deployment and management scenarios function correctly with Kùzu as the graph backend.
     * Include tests for data persistence across Radius restarts.
-    * Test migration from CRD store to Kùzu store (if applicable).
 4.  **Performance Tests:**
-    * Benchmark graph read/write operations with Kùzu against the current CRD-based implementation for representative workloads.
+    * Benchmark graph read/write operations with Kùzu against the current key/value based implementation for representative workloads.
     * Test concurrent access to the graph.
     * Add checks to LRT Cluster for graph operations.
 5.  **Backup/Restore Tests:**
@@ -312,7 +311,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
 ### Compatibility (optional)
 
 * **Backward Compatibility:**
-    * For existing Radius deployments using Kubernetes CRDs as the graph store, a migration path will be necessary. This could involve a period where Radius supports both backends, or a one-time migration tool. Currently we don't promise backward compatibility so no migration tool is planned.
+    * For existing Radius deployments using etcd as the graph store, a migration path will be necessary. This could involve a period where Radius supports both backends with concurrent writes, or a one-time migration tool. Currently we don't promise backward compatibility so no migration tool is planned.
     * The public Radius API and CLI should remain backward compatible.
 * **Data Format:** The structure of the application graph (apps, resources, properties) should remain conceptually the same, even though the storage backend changes.
 
@@ -334,7 +333,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
     * Create the DAL.
     * Implement CRUD endpoints representing Radius abstraction level graph operations.
     * Develop initial unit & integration tests for the DAL.
-    * Ensure via debug logging that no components are communicating with the planes CRD other than the DAL.
+    * Ensure via debug logging that no components are communicating with etcd other than the DAL.
 1.  **Phase 1: Core Integration (Milestone 1)**
     * Research Kùzu Go driver capabilities and limitations in detail.
     * Set up Kùzu as an embedded dependency - but as a pluggable architecture where the embedded calls could be swapped for network calls to any Cypher compatible graph database.
@@ -352,14 +351,14 @@ No changes to the public Radius REST API are anticipated initially, other than p
 ### Open Questions
 
 1.  **Kùzu Performance under Concurrent Go Routines:** How well does Kùzu's Go driver and embedded database handle high concurrency from multiple goroutines within a single Radius process? Are there internal locking mechanisms in Kùzu to be aware of?
-2.  **Schema Evolution:** How will schema changes in Kùzu (e.g., adding new node/edge types, new properties) be managed over time with Radius updates?
+2.  **Schema Evolution:** How will schema changes in Kùzu (e.g., adding new node/edge types, new properties) be managed over time with Radius updates? With the introduction of Radius Types this should remain fairly stable as aside from Environment and Application all nodes would be resources with a type property based on the backing type.
 3.  **Kùzu Resource Footprint:** What is the typical CPU, memory, and disk I/O footprint of an embedded Kùzu instance for representative Radius graph sizes?
 
 ### Alternatives considered
 
-1.  **Continue using Kubernetes CRDs:**
-    * **Advantages:** Leverages existing Kubernetes infrastructure and expertise. No new database dependency.
-    * **Disadvantages:** Limited query capabilities, potential performance bottlenecks for complex graph operations, nested rendering logic very manual and complex, tightly coupled to Kubernetes.
+1.  **Continue using etcd:**
+    * **Advantages:** Leverages existing Kubernetes provided etcd installation and expertise. No new database dependency.
+    * **Disadvantages:** Limited query capabilities, known performance bottlenecks for sizeable application graphs, nested rendering logic very manual and complex, tightly coupled to key value stores.
 2.  **Other Embedded Graph Databases (e.g., a Go-native one if a mature one exists):**
     * **Advantages:** Could offer tighter integration if fully Go-native.
     * **Disadvantages:** Kùzu is chosen for its performance, Cypher support, and active development. A pure Go alternative might lack some of these mature features or performance characteristics.
