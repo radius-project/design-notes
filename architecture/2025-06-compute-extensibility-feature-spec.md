@@ -190,11 +190,129 @@ Step 2
 1.  **Configure Environment-Specific Recipe Parameters (Optional)**:
     *   If recipes have parameters that need to be set globally for an environment, configure them using `rad recipe update` or during registration.
 
-#### Contributing new Recipes for core types to the Radius repo:
+#### Packaging and Registering a "Recipe Pack" for an Environment:
 
-#### Registering multiple Recipes for core types in a single Environment:
+1.  **Define a Recipe Pack**:
+    *   A platform engineer creates a manifest file (e.g., `recipe-pack.json` or `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`) and associate it with a specific recipe (OCI URI or local path) and its default parameters.
+    *   Example `recipe-pack.yaml`:
+        ```yaml
+        name: aci-production-pack
+        version: 1.0.0
+        description: "Recipe Pack for deploying to ACI in production."
+        recipes:
+            - resourceType: "Applications.Core/containers@2025-05-01-preview"
+            name: "aci-prod-container" # Optional: a friendly name for this recipe registration
+            templateKind: "bicep"
+            templatePath: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
+            parameters:
+                cpu: "1.0"
+                memoryInGB: "2.0"
+                environmentVariables:
+                LOG_LEVEL: "Information"
+            - resourceType: "Applications.Core/gateways@2025-05-01-preview"
+            name: "aci-prod-gateway"
+            templateKind: "bicep"
+            templatePath: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
+            parameters:
+                sku: "Standard_v2"
+            - resourceType: "Applications.Core/secretStores@2025-05-01-preview"
+            name: "aci-prod-keyvault"
+            templateKind: "bicep"
+            templatePath: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
+            parameters:
+                skuName: "premium"
+        ```
+1.  **Package the Recipe Pack (Optional but Recommended)**:
+    *   The manifest file and any local recipe files (if not using OCI URIs exclusively) could be bundled into an OCI artifact or a simple archive (e.g., .zip, .tar.gz) for easier distribution and versioning.
+1.  **Register the Recipe Pack to an Environment**:
+    *   The platform engineer uses a new CLI command to register the entire pack to a Radius environment.
+    *   Example: `rad recipe-pack register --environment my-aci-env --manifest-path ./recipe-pack.yaml`
+    *   Or, if packaged as an OCI artifact: `rad recipe-pack register --environment my-aci-env --oci-ref oci://ghcr.io/my-org/recipe-packs/aci-production-pack:1.0.0`
+    *   This command would iterate through the recipes defined in the manifest and register each one to the specified environment, similar to individual `rad recipe register` calls.
+1.  **Environment Utilizes Recipes from the Pack**:
+    *   Once the Recipe Pack is registered, the environment is configured with all the specified recipes for the core UDTs.
+    *   When applications are deployed to this environment, Radius automatically uses the corresponding recipes from the pack to provision `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` resources.
+1.  **Manage and Update Recipe Packs**:
+    *   Platform engineers can update the Recipe Pack manifest (e.g., point to new recipe versions, change default parameters) and re-register it. The CLI could offer options to overwrite existing registrations or manage versions of the pack within the environment.
+    *   Commands like `rad recipe-pack list --environment my-env` or `rad recipe-pack show <pack-name> --environment my-env` would allow inspection of registered packs.
+
+#### Registering default recipes for core types in a Radius Environment:
+
+1.  **Identify the Default Recipe Pack**:
+    *   The platform engineer consults Radius documentation to find the OCI URI for the default Recipe Pack corresponding to their target platform (e.g., Kubernetes, ACI). Radius will publish these official packs to a well-known OCI registry (e.g., `ghcr.io/radius-project/radius-recipe-packs/kubernetes-default:latest`).
+2.  **Initialize or Select Radius Environment**:
+    *   Ensure a Radius environment (e.g., `my-k8s-env`) is created and configured. This environment should be based on the new extensible environment model (e.g., `Applications.Core/environments@2025-05-01-preview`).
+    *   If using `rad init --full` for a new setup, this command could potentially automatically register a default Recipe Pack (e.g., for Kubernetes) as part of its scaffolding.
+3.  **Register the Default Recipe Pack**:
+    *   The platform engineer uses the `rad recipe-pack register` command to apply the chosen default Recipe Pack from Radius's OCI registry to their environment.
+    *   Example for Kubernetes: `rad recipe-pack register --environment my-k8s-env --oci-ref oci://ghcr.io/radius-project/radius-recipe-packs/kubernetes-default:1.0.0`
+    *   Example for ACI: `rad recipe-pack register --environment my-aci-env --oci-ref oci://ghcr.io/radius-project/radius-recipe-packs/aci-default:1.0.0`
+    *   This command fetches the Recipe Pack manifest and registers each recipe defined within it (for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`, etc.) to the specified environment with their default parameters.
+4.  **Verify Recipe Registration (Optional)**:
+    *   The platform engineer can verify that the recipes from the pack have been correctly registered to the environment.
+    *   Example: `rad recipe list --environment my-k8s-env`
+    *   This should show the default recipes for core UDTs associated with the environment.
+5.  **Environment Ready**:
+    *   The Radius environment is now configured with the default, Radius-provided recipes for core functionalities. Developers can deploy applications using the UDT versions of core types (e.g., `Applications.Core/containers@2025-05-01-preview`), and Radius will use these registered recipes for provisioning.
+
+#### Contributing new Recipes and Recipe Packs for core types to the Radius repo:
+
+1.  **Understand Contribution Guidelines**:
+    *   Familiarize yourself with the Radius project's general contribution guidelines (often found in `CONTRIBUTING.md`).
+    *   Check for any specific guidelines related to recipes or extensibility.
+2.  **Develop Your Recipe(s)**:
+    *   Create high-quality, well-tested Bicep or Terraform recipes for one or more core types (`Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`).
+    *   Ensure recipes are generic enough for broad use or clearly document their specific use case.
+    *   Follow established patterns for parameters, outputs, and resource naming within the Radius ecosystem.
+3.  **Document Your Recipe(s)**:
+    *   Provide clear documentation for each recipe, including:
+        *   The platform it targets.
+        *   Prerequisites for using the recipe.
+        *   Input parameters (with descriptions, types, and defaults).
+        *   Output values and their significance.
+        *   An example of how to use the recipe.
+4.  **(If contributing a Recipe Pack) Define the Recipe Pack Manifest**:
+    *   Create a `recipe-pack.yaml` (or similar) manifest file as described in the "Packaging and Registering a 'Recipe Pack'" scenario.
+    *   Ensure all referenced recipes (OCI URIs or local paths if bundled) are correct and accessible.
+    *   Document the purpose and intended use of the Recipe Pack.
+5.  **Test Thoroughly**:
+    *   Locally test the recipes and/or Recipe Pack in a Radius environment to ensure they deploy correctly and integrate as expected.
+    *   Verify that applications deployed using these recipes function correctly.
+6.  **Prepare Your Contribution**:
+    *   Fork the [radius-project/recipes](https://github.com/radius-project/recipes) repository.
+    *   Create a new branch for your contribution.
+    *   Organize your recipe files, documentation, and Recipe Pack manifest (if applicable) in a clear and logical directory structure, likely within a designated `recipes` or `contributions` area of the repository.
+7.  **Submit a Pull Request (PR)**:
+    *   Push your changes to your fork and open a Pull Request against the main Radius repository.
+    *   In the PR description, clearly explain:
+        *   What your recipes/Recipe Pack do.
+        *   The problem they solve or the functionality they add.
+        *   How to test them.
+        *   Any relevant issue numbers.
+8.  **Engage in the Review Process**:
+    *   Respond to feedback and questions from Radius maintainers.
+    *   Be prepared to make changes to your code, documentation, or structure based on the review.
+9.  **Iteration and Merge**:
+    *   Work with the maintainers to address any concerns until the PR is approved.
+    *   Once approved, your contribution will be merged into the Radius repository where your contributed Recipes and/or Recipe Packs will be published to the Radius GHCR registry, making your Recipes/Recipe Pack available to the community.
 
 #### Migrating existing Radius applications to use the new UDT-based core types and recipes:
+
+1.  **Understand the New Model**:
+    *   Platform engineers and developers review documentation on the UDT-based core types (`Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`) and the recipe-driven approach.
+2.  **Update Radius Environment**:
+    *   Platform engineers update their Radius environment definition to use the new `Applications.Core/environments@2025-05-01-preview` (or later) resource type.
+    *   They register recipes for the new UDT versions of core types in their respective environments. For users migrating from existing Kubernetes or ACI setups, they would register the default recipes provided by Radius for these platforms.
+3.  **Update Application Bicep Files**:
+    *   Developers modify their application Bicep files to reference the new versioned UDTs (e.g., change `Applications.Core/containers` to `Applications.Core/containers@2025-05-01-preview`).
+    *   They adjust any application properties to align with the schema of the new UDTs and the parameters expected by the registered recipes.
+4.  **Test Migrated Applications**:
+    *   Deploy the updated application Bicep files to the upgraded Radius environment.
+    *   Thoroughly test the application's functionality, connectivity, and configuration to ensure it behaves as expected under the new recipe-based provisioning.
+5.  **Iterate and Adjust**:
+    *   If issues arise, consult migration logs, recipe documentation, and UDT schemas to make necessary adjustments to application definitions or recipe parameters in the environment.
+6.  **Update CI/CD Pipelines**:
+    *   Modify CI/CD pipelines to use the updated application Bicep files and any new CLI commands or Radius versions required for the UDT model.
 
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
@@ -205,16 +323,24 @@ Re-implement existing core types (`Applications.Core/containers`, `Applications.
 
 ### Feature 2: Extensible Environment Configuration
 <!-- One or two sentence summary -->
-Introduce a new version of the `Applications.Core/environments` resource type (e.g., `Applications.Core/environments@2025-05-01-preview`) that removes the hard-coded `compute` property and relies on recipe configurations and parameters for platform-specific settings.
+Introduce a new version of the `Applications.Core/environments` resource type (e.g., `Applications.Core/environments@2025-05-01-preview`) that removes the hard-coded `compute` and `providers` properties and relies on recipe configurations and parameters for platform-specific settings.
 
 ### Feature 3: Default Recipes for Kubernetes and ACI
 <!-- One or two sentence summary -->
 Develop and provide default, production-quality Bicep/Terraform recipes for the new UDT versions of `containers`, `gateways`, and `secretStores` that target Kubernetes (replicating current functionality) and Azure Container Instances (ACI). These will serve as out-of-the-box solutions and examples.
 
-### Feature 4: Enhanced Recipe Management and Validation
+### Feature 4: Recipe Pack Creation and Management
 <!-- One or two sentence summary -->
-Improve `rad recipe` CLI capabilities for registering, managing, and validating recipes associated with UDTs. This includes robust validation of recipe parameters and outputs upon registration.
+Implement a system for packaging and versioning sets of related recipes (Recipe Packs) to simplify distribution and management. This includes defining a clear structure for Recipe Packs and providing CLI commands for creating, updating, and applying them. Default Recipes for Kubernetes and ACI will be provided by Radius as part of the initial Recipe Packs.
 
-### Feature 5: Migration Path and Documentation
+### Feature 5: CLI Enhancements for Recipe Management (as necessary)
+<!-- One or two sentence summary -->
+Validate that `rad recipe` CLI capabilities for registering, managing, and validating recipes associated with core type UDTs are sufficient for compute extensibility scenarios. This includes robust validation of recipe parameters and outputs upon registration. Implement any necessary enhancements to the CLI to support this.
+
+### Feature 6: Migration Path and Documentation
 <!-- One or two sentence summary -->
 Develop comprehensive documentation, examples, and potentially tooling to guide existing Radius users in migrating their applications and environments from the old hard-coded core types to the new UDT-based, recipe-driven model.
+
+### Feature 7: Community Contribution Process
+<!-- One or two sentence summary -->
+Establish a clear process and guidelines for community members to contribute new recipes and Recipe Packs for core types, including documentation standards, testing requirements, and PR submission processes. This will encourage community engagement and extension of Radius capabilities.
