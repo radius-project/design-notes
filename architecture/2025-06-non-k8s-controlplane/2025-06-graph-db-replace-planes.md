@@ -353,6 +353,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
 1.  **Kùzu Performance under Concurrent Go Routines:** How well does Kùzu's Go driver and embedded database handle high concurrency from multiple goroutines within a single Radius process? Are there internal locking mechanisms in Kùzu to be aware of?
 2.  **Schema Evolution:** How will schema changes in Kùzu (e.g., adding new node/edge types, new properties) be managed over time with Radius updates? With the introduction of Radius Types this should remain fairly stable as aside from Environment and Application all nodes would be resources with a type property based on the backing type.
 3.  **Kùzu Resource Footprint:** What is the typical CPU, memory, and disk I/O footprint of an embedded Kùzu instance for representative Radius graph sizes?
+4.  **Dashboard:** The changes proposed here such as nested types and expanded use of connections will make the app graph both richer and larger, the existing dashboard will probably need some UX design and work in order to leverage that effectively and intuitively (I would want to click a gateway to see the types it depends on and their sources in an environment).
 
 ### Alternatives considered
 
