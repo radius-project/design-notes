@@ -935,3 +935,11 @@ GitRepository
 pyspelling
 Pyspelling
 CNCF
+Balancer
+Fargate
+aci
+defaultCpu
+defaultMemoryInGB
+defaultSku
+gz
+URI

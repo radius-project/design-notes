@@ -2,6 +2,16 @@
 
 * **Author**: Will Tsai (@willtsai)
 
+## Terms and definitions
+
+| Term | Definition |
+|------|------------|
+| **Compute platform** | An environment where applications can be deployed and run, such as Kubernetes, Azure Container Instances (ACI), etc. |
+| **Core types** | Built-in resource types provided by Radius, including `containers`, `gateways`, `secretStores`, `environments`, and `applications`. |
+| **User-defined type (UDT)** | A custom resource type defined separately from Radius core types and loaded into Radius without requiring a new Radius release. |
+| **Recipe** | A set of instructions that provisions a Radius resource to a Radius environment. Recipes are implemented in Bicep or Terraform. |
+| **Resource Provider (RP)** | A component responsible for handling create, read, update, delete, and list (CRUDL) operations for a specific resource type. |
+
 ## Topic Summary
 <!-- A paragraph or two to summarize the topic area. Just define it in summary form so we all know what it is. -->
 Radius will be enhanced to support multiple compute platforms, secret stores, and gateway resources through a recipe-based extensibility model. This approach decouples Radius's core logic from platform-specific provisioning code. Core resource types (`containers`, `gateways`, and `secretStores`) will be implemented as User-Defined Types (UDTs) and will allow platform engineers to register Bicep or Terraform recipes for them. Radius will provide default recipes for Kubernetes and Azure Container Instances (ACI), but platform engineers can use, modify, or replace these to customize how Radius provisions resources to different environments, or to add support for entirely new platforms without requiring changes to Radius core.
@@ -177,6 +187,119 @@ Step 2
 1.  **Deploy Applications**:
     *   Developers (or CI/CD) run `rad deploy <bicep-file>`. Radius uses the registered recipes for the UDTs in the target environment to provision the resources.
 
+#### Deploying an application with mixed standard and confidential containers
+
+This scenario demonstrates how a single application definition, containing both standard and confidential compute requirements, can be deployed to different environments, with Radius leveraging environment-specific recipes to fulfill those requirements.
+
+1.  **Platform Engineer: Configure Environments with Appropriate Recipes**
+    *   **Standard Environment (`std-env`):**
+        *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). These recipes might ignore or log a warning for confidential container requests if they don't support them.
+        *   Example recipe registration (conceptual):
+            ```bash
+            rad recipe register std-container-recipe --environment std-env \
+              --resource-type Applications.Core/containers@2025-05-01-preview \
+              --template-path oci://ghcr.io/radius-project/recipes/core/aci-standard-container:1.0.0
+            rad recipe register std-redis-recipe --environment std-env \
+              --resource-type Applications.Datastores/redisCaches \
+              --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0
+            ```
+    *   **Confidential Environment (`confi-env`):**
+        *   The platform engineer configures `confi-env` with specialized recipes for `Applications.Core/containers@2025-05-01-preview` that support deploying confidential containers (e.g., ACI Confidential Containers). These recipes will interpret a specific property on the container resource to provision confidential compute.
+        *   Example recipe registration (conceptual):
+            ```bash
+            rad recipe register confi-container-recipe --environment confi-env \
+              --resource-type Applications.Core/containers@2025-05-01-preview \
+              --template-path oci://ghcr.io/radius-project/recipes/core/aci-confidential-container:1.0.0
+            rad recipe register confi-redis-recipe --environment confi-env \
+              --resource-type Applications.Datastores/redisCaches \
+              --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0 
+            ```
+            (Note: The Redis recipe might be the same if its deployment doesn't change based on the compute's confidentiality.)
+
+2.  **Developer: Define Application with Mixed Container Types and Connections**
+    *   The developer defines an application in a Bicep file (`app.bicep`). This definition includes:
+        *   A standard container (e.g., a frontend web server).
+        *   A confidential container (e.g., a backend service processing sensitive data), marked with a property like `confidential: true` (the exact property name and structure to be defined by the UDT schema).
+        *   A data store, like a Redis cache.
+        *   A connection from the confidential backend container to the Redis cache.
+    *   Example `app.bicep`:
+        ```bicep
+        import radius as radius
+
+        @description('The Radius Application ID')
+        param application string
+
+        resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
+          name: 'frontend'
+          properties: {
+            application: application
+            container: {
+              image: 'nginx:latest'
+              ports: {
+                web: {
+                  containerPort: 80
+                }
+              }
+            }
+            // This container is standard by default
+          }
+        }
+
+        resource backend 'Applications.Core/containers@2025-05-01-preview' = {
+          name: 'backend'
+          properties: {
+            application: application
+            container: {
+              image: 'mycorp/sensitive-processor:v1.2'
+              ports: {
+                api: {
+                  containerPort: 5000
+                }
+              }
+              env: {
+                REDIS_CONNECTION: cache.properties.connectionStrings.default
+              }
+            }
+            // This container requests confidential compute
+            extensions: [
+              {
+                kind: 'confidentialCompute' // Example extension kind
+                // Additional properties for confidential compute if needed by the recipe
+              }
+            ]
+            connections: {
+              cache: {
+                source: cache.id
+              }
+            }
+          }
+        }
+
+        resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = { // Assuming existing Redis type
+          name: 'mycache'
+          properties: {
+            application: application
+            // Redis specific properties
+          }
+        }
+        ```
+
+3.  **Developer/CI/CD: Deploy the Same Application Definition to Both Environments**
+    *   **Deploy to Standard Environment:**
+        *   `rad deploy ./app.bicep --environment std-env`
+        *   Radius uses the `std-container-recipe` registered in `std-env`.
+        *   The `frontend` container is deployed as a standard container.
+        *   The `backend` container, despite its `extensions.confidentialCompute` property, is deployed as a standard container because the `std-container-recipe` does not support confidential compute (or is configured to treat it as standard).
+        *   The `cache` is deployed, and the connection between `backend` and `cache` is established.
+    *   **Deploy to Confidential Environment:**
+        *   `rad deploy ./app.bicep --environment confi-env`
+        *   Radius uses the `confi-container-recipe` registered in `confi-env`.
+        *   The `frontend` container is deployed as a standard container (as its definition doesn't request confidential compute).
+        *   The `backend` container's `extensions.confidentialCompute` property is interpreted by the `confi-container-recipe`, and it is deployed as a confidential container (e.g., an ACI confidential container).
+        *   The `cache` is deployed, and the connection between `backend` (now confidential) and `cache` is established.
+
+This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (standard vs. confidential) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
+
 #### Creating and registering custom Recipes for core types:
 1.  **Create and Register Recipes for Core Types**:
     *   Create custom Bicep/Terraform recipes for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` to target a specific platform or customize existing behavior.
@@ -319,7 +442,7 @@ Step 2
 
 ### Feature 1: UDT Implementation of Core Application Model Types
 <!-- One or two sentence summary -->
-Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secretStores`) as User-Defined Types (UDTs) with new, versioned resource type names (e.g., `Applications.Core/containers@2025-05-01-preview`). These UDTs will form the basis of the extensible application model.
+Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secretStores`) as User-Defined Types (UDTs) with new, versioned resource type names (e.g., `Applications.Core/containers@2025-05-01-preview`). These UDTs will form the basis of the extensible application model. These new core types must allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves and they must support Connections.
 
 ### Feature 2: Extensible Environment Configuration
 <!-- One or two sentence summary -->
