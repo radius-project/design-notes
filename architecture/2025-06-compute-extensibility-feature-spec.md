@@ -223,7 +223,7 @@ This scenario demonstrates how a single application definition, containing both 
         *   A data store, like a Redis cache.
         *   A connection from the confidential backend container to the Redis cache.
     *   Example `app.bicep`:
-        ```bicep
+        ```diff
         import radius as radius
 
         @description('The Radius Application ID')
@@ -260,18 +260,37 @@ This scenario demonstrates how a single application definition, containing both 
                 REDIS_CONNECTION: cache.properties.connectionStrings.default
               }
             }
-            // This container requests confidential compute
-            extensions: [
-              {
-                kind: 'confidentialCompute' // Example extension kind
-                // Additional properties for confidential compute if needed by the recipe
-              }
-            ]
             connections: {
               cache: {
                 source: cache.id
               }
             }
+            extensions: [
+                // Dapr sidecar definition stays the same for now
+                {
+                    kind: 'daprSidecar'
+                    appId: 'frontend'
+                }
+                // This should be moved to a top-level property in the container definition:
+-               {
+-                   kind:  'manualScaling'
+-                   replicas: 5
+-               }
+                // This should go into the runtimes.kubernetes property
+-               {
+-                   kind: 'kubernetesMetadata'
+-                   labels: {
+-                   'team.contact.name': 'frontend'
+-                   }
+-               }
+            ]
+            // This container requests confidential compute
++           runtimes: {
++               aci: {
++                   // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
++                   sku: 'Confidential' // 'Standard', 'Dedicated', etc.
++               }
++           }
           }
         }
 

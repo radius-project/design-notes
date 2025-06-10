@@ -943,3 +943,9 @@ defaultMemoryInGB
 defaultSku
 gz
 URI
+compute's
+nginx
+confidentialCompute
+connectionStrings
+mycorp
+mycache
