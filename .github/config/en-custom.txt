@@ -949,3 +949,5 @@ confidentialCompute
 connectionStrings
 mycorp
 mycache
+osType
+sku
