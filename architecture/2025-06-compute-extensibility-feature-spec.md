@@ -272,25 +272,25 @@ This scenario demonstrates how a single application definition, containing both 
                     appId: 'frontend'
                 }
                 // This should be moved to a top-level property in the container definition:
--               {
--                   kind:  'manualScaling'
--                   replicas: 5
--               }
-                // This should go into the runtimes.kubernetes property
--               {
--                   kind: 'kubernetesMetadata'
--                   labels: {
--                   'team.contact.name': 'frontend'
--                   }
--               }
+        -       {
+        -           kind:  'manualScaling'
+        -           replicas: 5
+        -       }
+               // This should go into the runtimes.kubernetes property
+        -       {
+        -           kind: 'kubernetesMetadata'
+        -           labels: {
+        -           'team.contact.name': 'frontend'
+        -           }
+        -       }
             ]
             // This container requests confidential compute
-+           runtimes: {
-+               aci: {
-+                   // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
-+                   sku: 'Confidential' // 'Standard', 'Dedicated', etc.
-+               }
-+           }
+        +   runtimes: {
+        +       aci: {
+        +           // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
+        +           sku: 'Confidential' // 'Standard', 'Dedicated', etc.
+        +       }
+        +   }
           }
         }
 
