@@ -8,9 +8,9 @@
 
 ### Overview
 
-Project Radius currently defines and manages application graphs, representing resources and their relationships within cloud-native applications. Currently Radius relies on Kubernetes to install etcd, the default datastore, where these graph structures are stored as key value pairs. As we are adding support for nested connections the imperative Go code is becoming complex and brittle because it needs to implement basic graph traversal logic not present in etcd. Additionally we are already hitting performance limits in test environments which inspired the work @superbeeny has done to swap the key value operations out to use postgres.
+Project Radius currently defines and manages application graphs, representing resources and their relationships within cloud-native applications. Currently Radius relies on Kubernetes to install etcd, the default datastore, where these graph structures are stored as key value pairs. As we are adding support for nested connections the imperative Go code is becoming complex and brittle because it needs to implement basic graph traversal logic not present in etcd. Additionally we are already hitting performance limits in test environments (N+ resources take X time) which inspired the work @superbeeny has done to swap the key value operations out to use postgres. Radius users could not use Drasi today to act on changes to their environments as there's no current support for key value stores and if that was added the client side filtering requirements might be a challenge in Drasi. 
 
-This proposal outlines a plan to modify Project Radius to utilize Kùzu, an embedded, high-performance graph database, as the primary store for its application graph. This change aims to decouple the core graph logic and operations from the underlying Kubernetes infrastructure, enabling more powerful graph queries, potentially improving performance for complex relationship traversals, and offering a more specialized and efficient graph persistence layer. One of the benefits to recipe authors is this will allow them to define nested connections of types to both return complex relationships and properties to a recipe as well as see these relationships in the graph/dashboard. This will also pave the way for Radius to operate more seamlessly in environments beyond Kubernetes or where direct Kubernetes API access for graph storage is not ideal.
+This proposal outlines a plan to modify Project Radius to utilize Kùzu, an embedded, high-performance graph database, as the primary store for its application graph. This change aims to decouple the core graph logic and operations from the underlying Kubernetes infrastructure, enabling more powerful graph queries, potentially improving performance for complex relationship traversals, and offering a more specialized and efficient graph persistence layer. One of the benefits to recipe authors is this will allow them to define nested connections of types to both return complex relationships and properties to a recipe as well as see these relationships in the graph/dashboard. Kùzu is intended for developer and POC/test environments, for production environments the DB connection object would simply be replaced with a cypher compliant DB client to something such as Postgres with the Apache AGE plugin.
 
 Delivering this will allow us to shift to a far better user experience where connections become a rich re-usable concept that shares data and exposes deep relationships currently obfuscated by monolithic types with embedded objects (database has a credentials object with username and password properties).
 
@@ -47,6 +47,7 @@ Delivering this will allow us to shift to a far better user experience where con
 * Migrate existing graph data representation (currently in etcd/postgres) to the Kùzu data model.
 * Implement a data access layer (DAL, name TBD) service that abstracts Kùzu operations (CRUD, queries) for other Radius components.
 * Update Radius RPs and controllers to use the new Kùzu-backed DAL for all graph-related operations.
+* Provide migration tool for moving to graph db.
 * Provide mechanisms for backup and potential restore of the Kùzu database as part of Radius install/upgrade/rollback operations.
 * Develop a comprehensive test suite covering graph operations with Kùzu.
 * Build this in a way that Kùzu could be swapped out for a network accessible graph database such as Neo4J or Postgres with Apache AGE extension.
@@ -116,7 +117,7 @@ Delivering this will allow us to shift to a far better user experience where con
 1.  **Introduce Kùzu:** Kùzu will be integrated as an embedded library within the primary Radius component(s) responsible for managing the application graph (e.g., the Radius Core RP or a dedicated graph service).
 2.  **Graph Abstraction Layer:** A new internal service or Data Access Layer (DAL) will be created. This layer will provide an API for all graph operations (e.g., `listDeployments`, `listResources`, and allow new operations like `showDependencies(resource)`). Internally, this DAL will translate these requests into Kùzu operations (Cypher queries, API calls to Kùzu's Go driver).
 3.  **Schema Definition:** A formal schema for Radius entities (Applications, Environments, Resources, etc. as nodes) and their relationships (as edges with types and properties) will be defined and enforced in Kùzu.
-4.  **Data Synchronization/Migration:** No migration is planned.
+4.  **Data Synchronization/Migration:** We will need to provide a simple migration tool that copies existing Radius environments/app graph to the newly installed graph db.
 5.  **Component Updates:** All Radius components that currently interact with etcd or postgrest for graph information will be updated to use the new Graph Abstraction Layer.
 
 #### Architecture Diagram
@@ -191,7 +192,7 @@ graph TD
 
 4.  **Data Persistence and State:**
     * Kùzu runs embedded, so the Radius process managing it is authoritative.
-    * If a single DAL node in the cluster is unable to scale to the traffic of the cluster we would have to separate out write traffic to a single instance and reads could scale reasonably.
+    * If a single DAL node in the cluster is unable to scale to the traffic of the cluster we would have to separate out write traffic to a single instance and reads could scale reasonably, but moving to a network cypher client would be expected.
     * For this proposal, we assume a single active Radius DAL node is managing the Kùzu DB file for writes, with potential for read-only file replication for other instances if feasible and performant.
 
 5.  **Transaction Management:**
@@ -207,6 +208,7 @@ graph TD
 * **Not strongly tied to Kùzu** The DAL will allow for Radius users to use any Cypher compatible graph database such as Neo4J or CosmosDB with Gremlin.
 * **Transactional Guarantees:** Kùzu provides ACID transactions for graph operations.
 * **Schema Enforcement:** Better ability to define and enforce a graph schema within Kùzu.
+* **Support for streaming monitoring of graph changes:** A project like Drasi cannot consume a change feed of the Radius app graph because it can't replicate the client side filtering necessary for identifying the changes desired.
 
 ---
 
@@ -311,7 +313,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
 ### Compatibility (optional)
 
 * **Backward Compatibility:**
-    * For existing Radius deployments using etcd as the graph store, a migration path will be necessary. This could involve a period where Radius supports both backends with concurrent writes, or a one-time migration tool. Currently we don't promise backward compatibility so no migration tool is planned.
+    * For existing Radius deployments using etcd as the graph store, a migration path will be necessary. 
     * The public Radius API and CLI should remain backward compatible.
 * **Data Format:** The structure of the application graph (apps, resources, properties) should remain conceptually the same, even though the storage backend changes.
 
@@ -333,7 +335,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
     * Create the DAL.
     * Implement CRUD endpoints representing Radius abstraction level graph operations.
     * Develop initial unit & integration tests for the DAL.
-    * Ensure via debug logging that no components are communicating with etcd other than the DAL.
+    * Ensure via debug logging that no components are communicating directly with etcd other than the DAL.
 1.  **Phase 1: Core Integration (Milestone 1)**
     * Research Kùzu Go driver capabilities and limitations in detail.
     * Set up Kùzu as an embedded dependency - but as a pluggable architecture where the embedded calls could be swapped for network calls to any Cypher compatible graph database.
@@ -353,7 +355,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
 1.  **Kùzu Performance under Concurrent Go Routines:** How well does Kùzu's Go driver and embedded database handle high concurrency from multiple goroutines within a single Radius process? Are there internal locking mechanisms in Kùzu to be aware of?
 2.  **Schema Evolution:** How will schema changes in Kùzu (e.g., adding new node/edge types, new properties) be managed over time with Radius updates? With the introduction of Radius Types this should remain fairly stable as aside from Environment and Application all nodes would be resources with a type property based on the backing type.
 3.  **Kùzu Resource Footprint:** What is the typical CPU, memory, and disk I/O footprint of an embedded Kùzu instance for representative Radius graph sizes?
-4.  **Dashboard:** The changes proposed here such as nested types and expanded use of connections will make the app graph both richer and larger, the existing dashboard will probably need some UX design and work in order to leverage that effectively and intuitively (I would want to click a gateway to see the types it depends on and their sources in an environment).
+4.  **Dashboard:** The changes proposed here such as nested types and expanded use of connections will make the app graph both richer and larger, the existing dashboard will probably need some UX design and work in order to leverage that effectively and intuitively (I would want to click a gateway to see the types it depends on and their sources in an environment)
 
 ### Alternatives considered
 
