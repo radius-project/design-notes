@@ -216,7 +216,7 @@ graph TD
 
 2.  **Dev/Test/POC Backend - Kùzu Integration:**
     * The Kùzu Go driver (`github.com/kuzudb/go-kuzu`) will be used.
-    * Kùzu database will be initialized during `rad init`. The database file (`radius_app_graph.kuzu`) will be stored on persistent storage accessible to the Radius control plane.
+    * Kùzu database will be initialized during `rad install`. The database file (`radius_app_graph.kuzu`) will be stored on persistent storage accessible to the Radius control plane.
     * **Performance Advantage:** As an embedded graph database, Kùzu eliminates network connection overhead between the GAL and the graph database, providing significantly faster performance for development and test scenarios compared to networked database solutions. This enables rapid iteration during development and faster test suite execution.
     * The GAL will populate the graph database by analyzing existing resource relationships stored via `database.Client`.
     * All application graph queries will use the GAL, while individual resource operations continue through `database.Client`.
@@ -486,6 +486,9 @@ No changes to the public Radius REST API are anticipated initially, other than p
 3.  **Hosted/Server-based Graph Databases (e.g., Neo4j, Dgraph as a service, NebulaGraph):**
     * **Advantages:** Mature, feature-rich, often provide built-in clustering and HA.
     * **Disadvantages:** Adds significant operational complexity (managing a separate database cluster), network latency between Radius and the DB, cost, and deviates from the goal of a more self-contained/embeddable solution for core graph logic. This proposal prioritizes decoupling and enhancing capabilities with a pluggable solution first.
+4.  **Cayley Graph Database:**
+    * **Advantages:** Open-source graph database with support for multiple query languages and storage backends.
+    * **Disadvantages:** Not designed as an embedded-first solution, requiring additional configuration and operational overhead compared to Kùzu. Would require setting up and managing a separate service instance, network connections, and handling deployment complexity that diverges from our goal of a streamlined, embeddable solution for development and testing environments.
 
 ### Full Storage Migration Effort Evaluation
 
@@ -538,7 +541,8 @@ For automated deployments and GitOps scenarios, users can specify graph database
 ```bash
 rad install kubernetes --set global.graphDatabase.type=kuzu \
   --set global.graphDatabase.kuzu.persistentVolume.enabled=true \
-  --set global.graphDatabase.kuzu.persistentVolume.size=10Gi
+  --set global.graphDatabase.kuzu.persistentVolume.size=10Gi \
+  --set global.graphDatabase.kuzu.persistentVolume.storageClass=fast-ssd
 ```
 
 **PostgreSQL with Apache AGE Configuration:**
@@ -568,14 +572,23 @@ The GAL will support the following configuration structure in Helm values:
 global:
   graphDatabase:
     type: kuzu  # kuzu | postgresql-age | custom
-    
-    # Kùzu-specific configuration
+      # Kùzu-specific configuration
     kuzu:
       persistentVolume:
         enabled: true
         size: 10Gi
         storageClass: ""
+        accessModes: ["ReadWriteOnce"]
+        annotations: {}
+        labels: {}
       dataDirectory: "/data/kuzu"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
     
     # PostgreSQL with Apache AGE configuration
     postgresql:
