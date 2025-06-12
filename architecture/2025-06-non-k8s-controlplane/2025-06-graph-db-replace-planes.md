@@ -192,21 +192,19 @@ graph TD
     C["database.Client <br/>(Resource Storage)"]
     D["Graph Access Layer <br/>(Application Graph)"]
     E1["etcd (Current) | Postgres <br/>(Production)"]
-    F1["Kùzu Embedded DB <br/>(Dev/Test/POC)"]
-    F2["Postgres + Apache AGE <br/>(Production)"]
+    F["Cypher-compliant Graph DB <br/>(Kùzu, Postgres+AGE, Neo4j, etc.)"]
 
     A <--> B
     B <-->|"resource CRUD"| C
     B <-->|"graph queries"| D
     C --> E1
-    D -- "dev/test/POC" --> F1
-    D -- "production" --> F2
+    D --> F
 ```
 
 * **Current (Simplified):** Radius Core Components <-> database.Client <-> etcd/Postgres
 * **Proposed:** 
   * Resource Storage: Radius Core Components <-> database.Client <-> etcd/Postgres (unchanged)
-  * Application Graph: Radius Core Components <-> Graph Access Layer <-> Graph Database (Kùzu or Postgres+AGE)
+  * Application Graph: Radius Core Components <-> Graph Access Layer <-> Cypher-compliant Graph Database
 
 #### Detailed Design
 
@@ -219,6 +217,7 @@ graph TD
 2.  **Dev/Test/POC Backend - Kùzu Integration:**
     * The Kùzu Go driver (`github.com/kuzudb/go-kuzu`) will be used.
     * Kùzu database will be initialized during `rad init`. The database file (`radius_app_graph.kuzu`) will be stored on persistent storage accessible to the Radius control plane.
+    * **Performance Advantage:** As an embedded graph database, Kùzu eliminates network connection overhead between the GAL and the graph database, providing significantly faster performance for development and test scenarios compared to networked database solutions. This enables rapid iteration during development and faster test suite execution.
     * The GAL will populate the graph database by analyzing existing resource relationships stored via `database.Client`.
     * All application graph queries will use the GAL, while individual resource operations continue through `database.Client`.
 
@@ -487,3 +486,140 @@ During the design phase, we evaluated the effort required to move ALL Radius sto
 3. **Performance Trade-offs**: Most Radius operations are simple CRUD operations on individual resources, where traditional databases excel. Graph databases optimize for relationship traversals but may perform worse for Radius's retrieval workload patterns.
 
 **Conclusion**: The scoped approach (application graph only) provides the core benefits of graph database technology (enhanced relationship querying, better performance for graph traversals, support for complex connections) while maintaining the proven, optimized storage patterns for individual resource operations. This delivers significant value with much lower risk and development investment. Once Radius Extensibility has shipped many of the existing RPs will be deprecated in favor of Core Types in DynamicRP, making the work to transition to a single data store viable if we decide to do it to simplify the architecture.
+
+### Graph Database Selection Methodology
+
+**Based on established Radius configuration patterns, the following two-tier approach provides consistent user experience for selecting which graph database to use for a Radius installation:**
+
+#### Tier 1: Interactive Installation Configuration
+
+**Command:** `rad init --full`
+
+Users are presented with an interactive menu during the full initialization process to select their preferred graph database backend:
+
+```
+? Select graph database for application graph operations:
+  > Kùzu (Embedded - recommended for development/testing)
+    PostgreSQL with Apache AGE (Network-based - recommended for production)
+    Custom Cypher-compatible database (advanced configuration)
+```
+
+**Implementation Details:**
+- Follows established pattern from `rad init --full` for AWS IRSA vs access keys, Azure Service Principal vs Workload Identity
+- Default selection: Kùzu for simplicity and zero external dependencies
+- Stores selection in Radius configuration for subsequent `rad install` operations
+- Advanced option allows users to specify custom connection strings for other Cypher-compatible databases
+
+#### Tier 2: Non-Interactive Installation Parameters
+
+**Command:** `rad install kubernetes --set global.graphDatabase.*`
+
+For automated deployments and GitOps scenarios, users can specify graph database configuration via Helm chart parameters:
+
+**Kùzu Configuration (Default):**
+```bash
+rad install kubernetes --set global.graphDatabase.type=kuzu \
+  --set global.graphDatabase.kuzu.persistentVolume.enabled=true \
+  --set global.graphDatabase.kuzu.persistentVolume.size=10Gi
+```
+
+**PostgreSQL with Apache AGE Configuration:**
+```bash
+rad install kubernetes --set global.graphDatabase.type=postgresql-age \
+  --set global.graphDatabase.postgresql.host=postgres.example.com \
+  --set global.graphDatabase.postgresql.port=5432 \
+  --set global.graphDatabase.postgresql.database=radius_graph \
+  --set global.graphDatabase.postgresql.username=radius_user \
+  --set global.graphDatabase.postgresql.passwordSecretName=postgres-credentials \
+  --set global.graphDatabase.postgresql.sslMode=require
+```
+
+**Custom Cypher Database Configuration:**
+```bash
+rad install kubernetes --set global.graphDatabase.type=custom \
+  --set global.graphDatabase.custom.connectionString="bolt://neo4j.example.com:7687" \
+  --set global.graphDatabase.custom.credentialsSecretName=neo4j-credentials \
+  --set global.graphDatabase.custom.dialect=neo4j
+```
+
+#### Configuration Schema
+
+The GAL will support the following configuration structure in Helm values:
+
+```yaml
+global:
+  graphDatabase:
+    type: kuzu  # kuzu | postgresql-age | custom
+    
+    # Kùzu-specific configuration
+    kuzu:
+      persistentVolume:
+        enabled: true
+        size: 10Gi
+        storageClass: ""
+      dataDirectory: "/data/kuzu"
+    
+    # PostgreSQL with Apache AGE configuration
+    postgresql:
+      host: "localhost"
+      port: 5432
+      database: "radius_graph"
+      username: "radius_user"
+      passwordSecretName: "postgres-credentials"
+      sslMode: "prefer"  # disable | prefer | require
+      connectionPoolSize: 10
+    
+    # Custom Cypher database configuration
+    custom:
+      connectionString: ""
+      credentialsSecretName: ""
+      dialect: "neo4j"  # neo4j | amazon-neptune | others
+      additionalParams: {}
+```
+
+#### Environment Variable Mapping
+
+The GAL will read configuration from these environment variables (set by Helm chart):
+
+```bash
+# Graph database type selection
+RADIUS_GRAPH_DATABASE_TYPE=kuzu
+
+# Kùzu configuration
+RADIUS_GRAPH_KUZU_DATA_DIR=/data/kuzu
+
+# PostgreSQL configuration  
+RADIUS_GRAPH_POSTGRESQL_HOST=postgres.example.com
+RADIUS_GRAPH_POSTGRESQL_PORT=5432
+RADIUS_GRAPH_POSTGRESQL_DATABASE=radius_graph
+RADIUS_GRAPH_POSTGRESQL_USERNAME=radius_user
+RADIUS_GRAPH_POSTGRESQL_PASSWORD_FILE=/etc/secrets/postgres/password
+RADIUS_GRAPH_POSTGRESQL_SSL_MODE=require
+
+# Custom configuration
+RADIUS_GRAPH_CUSTOM_CONNECTION_STRING=bolt://neo4j.example.com:7687
+RADIUS_GRAPH_CUSTOM_CREDENTIALS_FILE=/etc/secrets/custom/credentials
+RADIUS_GRAPH_CUSTOM_DIALECT=neo4j
+```
+
+#### Design Rationale
+
+This approach follows **established Radius patterns**:
+
+1. **Interactive Configuration Pattern**: Mirrors `rad init --full` interactive flows for cloud provider credential configuration
+2. **Installation-time Parameters**: Consistent with `rad install kubernetes --set` usage for Helm chart customization
+3. **Credential Management**: Follows existing patterns for handling sensitive configuration via Kubernetes secrets
+4. **Default Behavior**: Provides sensible defaults (Kùzu) while allowing production-ready alternatives (PostgreSQL+AGE)
+5. **Extensibility**: Supports future Cypher-compatible databases through custom configuration
+
+**Benefits:**
+- **Consistency**: Aligns with existing Radius user experience patterns
+- **Flexibility**: Supports both development (embedded Kùzu) and production (networked PostgreSQL) scenarios
+- **Automation-Friendly**: Non-interactive configuration supports GitOps and CI/CD workflows
+- **Progressive Disclosure**: Simple defaults with advanced options for power users
+
+**Implementation Notes:**
+- GAL initialization logic will read configuration from environment variables
+- Database connections will be established during GAL startup with appropriate error handling
+- Connection pooling and retry logic will be implemented for networked database options
+- Schema initialization will be database-specific but abstracted through the GAL interface
