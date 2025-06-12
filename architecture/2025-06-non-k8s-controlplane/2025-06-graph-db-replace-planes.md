@@ -24,8 +24,8 @@ Delivering this will allow us to shift to a far better user experience where con
 * **Application Graph:** A representation of an application's components (resources, services, environments, etc.) as nodes and their interconnections as edges, including metadata on both.
 * **Kubernetes (K8s):** An open-source system for automating deployment, scaling, and management of containerized applications.
 * **Graph Access Layer (GAL):** The internal abstraction layer that mediates all graph operations between Radius components and the underlying graph database.
-* **Kùzu:** An embeddable, transactional, high-performance graph database management system (GDBMS) supporting the Cypher query language and property graphs. Provided for dev/test/POC.
-* **Postgres with Apache AGE:** A production-ready, scalable graph database solution supporting Cypher queries, built on PostgreSQL.
+* **Kùzu:** An embeddable, transactional, high-performance graph database management system (GDBMS) supporting the Cypher query language and property graphs. Provided for dev/test/POC. [GitHub](https://github.com/kuzudb/kuzu)
+* **Postgres with Apache AGE:** A production-ready, scalable graph database solution supporting Cypher queries, built on PostgreSQL. [Website](https://age.apache.org/) | [GitHub](https://github.com/apache/age)
 * **Node:** An entity in a graph (e.g., a Radius resource, an environment).
 * **Edge:** A relationship between two nodes in a graph (e.g., "connectsTo", "runsIn"). All edges in Radius will be of type "CONNECTION".
 * **Property:** Key-value pairs associated with nodes or edges, storing metadata.
@@ -272,7 +272,25 @@ graph TD
     * **Kùzu (Dev/Test/POC):** Kùzu runs embedded, so the Radius process managing it is authoritative. The database file (`radius_app_graph.kuzu`) is stored on persistent storage accessible to the Radius control plane.
     * **Postgres+AGE (Production):** Network-based connection with standard PostgreSQL high availability, clustering, and backup mechanisms.
 
-5.  **Transaction Management:**
+5.  **Graph Database Recovery and Regeneration:**
+    * **Resilient Design:** Since the graph database stores only application relationship data (not the authoritative resource records), it can be safely rebuilt at any time from the canonical resource data stored via `database.Client`.
+    * **Migration Tool as Recovery Tool:** The same migration tool used for initial etcd-to-graph migration can be executed at any time to regenerate the complete application graph from existing resource relationships stored in etcd/Postgres.
+    * **Zero Data Loss Scenario:** If the graph database is lost or corrupted:
+        1. Radius continues operating for individual resource operations via `database.Client` 
+        2. Application graph queries will fail gracefully with appropriate error messages
+        3. The migration/rebuild tool can be executed to recreate the graph database from scratch
+        4. All historical relationship data is preserved because resources maintain connection metadata in their stored definitions
+    * **Operational Benefits:** This design eliminates the need for complex graph database backup strategies since the authoritative data remains in the proven `database.Client` storage layer. Graph database backups become a performance optimization rather than a data protection requirement.
+    * **Recovery Commands:**
+        ```bash
+        # Detect and rebuild corrupted/missing graph database
+        rad admin graph rebuild --from-resources
+        
+        # Verify graph database integrity against resource storage
+        rad admin graph verify --repair-if-needed
+        ```
+
+6.  **Transaction Management:**
     * All compound operations (e.g., creating a resource node and its relationship edge) must be performed within a database transaction to ensure atomicity. The GAL will manage this.
     * Radius upgrades and rollbacks would need to coordinate with the GAL.
 
