@@ -196,10 +196,10 @@ This scenario demonstrates how a single application definition, containing both 
         *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). These recipes might ignore or log a warning for confidential container requests if they don't support them.
         *   Example recipe registration (conceptual):
             ```bash
-            rad recipe register std-container-recipe --environment std-env \
+            rad recipe register default --environment std-env \
               --resource-type Applications.Core/containers@2025-05-01-preview \
               --template-path oci://ghcr.io/radius-project/recipes/core/aci-standard-container:1.0.0
-            rad recipe register std-redis-recipe --environment std-env \
+            rad recipe register default --environment std-env \
               --resource-type Applications.Datastores/redisCaches \
               --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0
             ```
@@ -207,10 +207,10 @@ This scenario demonstrates how a single application definition, containing both 
         *   The platform engineer configures `confi-env` with specialized recipes for `Applications.Core/containers@2025-05-01-preview` that support deploying confidential containers (e.g., ACI Confidential Containers). These recipes will interpret a specific property on the container resource to provision confidential compute.
         *   Example recipe registration (conceptual):
             ```bash
-            rad recipe register confi-container-recipe --environment confi-env \
+            rad recipe register default --environment confi-env \
               --resource-type Applications.Core/containers@2025-05-01-preview \
               --template-path oci://ghcr.io/radius-project/recipes/core/aci-confidential-container:1.0.0
-            rad recipe register confi-redis-recipe --environment confi-env \
+            rad recipe register default --environment confi-env \
               --resource-type Applications.Datastores/redisCaches \
               --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0 
             ```
