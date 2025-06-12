@@ -32,6 +32,7 @@ This document describes the high-level overview for deploying Radius-managed app
 1. The ability to run the Radius control plane separately from the compute cluster to which it is deploying applications. This is a separate project tracked in the roadmap: https://github.com/radius-project/roadmap/issues/42. However, given that the initial requirement is for a Kubernetes-hosted Radius control plane to deploy applications to a serverless compute platform, we might need to partially implement or at least take into consideration the separation of the Radius control plane cluster from the target deployment cluster as a part of serverless implementation.
 1. Radius support for more opinionated or event-driven serverless platforms (e.g. Azure Functions, AWS Lambda, Knative, etc.).
 1. Features that are supported in Kubernetes but not in the serverless compute platform (e.g. GitOps, Helm, Dapr) are not in scope for this project. The goal is to provide a consistent experience for developers regardless of which container platform the platform engineer has chosen, but we will not be adding support for features that are not supported in serverless compute platforms. However, in cases where something is not supported on the platform (e.g. the underlying platform lacks native Dapr support), there must be "failing gracefully" mechanisms in place to ensure that users are not left in the dark. For example, if a user tries to deploy a Dapr-enabled application to a serverless compute platform that does not support Dapr, Radius should provide a clear error message indicating that Dapr is not supported on that platform and suggest alternatives.
+1. Building out a full compute extensibility model - this specification is focused on adding support for additional container platforms on top of Kubernetes following the existing imperative implementation in the core Radius codebase.
 
 ## User profile and challenges
 <!-- Define the primary user and the key problem / pain point we intend to address for that user. If there are multiple users or primary and secondary users, call them out.   -->
@@ -87,9 +88,9 @@ Enable deployment and management of serverless compute resources via the existin
 <!-- One or two sentence summary -->
 Enable the ability to define and run Dapr resources in a Radius application definition file (e.g. `app.bicep`) if there is native support for Dapr built into the serverless compute platform. A user would declare a Dapr sidecar in the serverless container definition and connect it to a Dapr resource, much like how it can be done today in [Kubernetes containers](https://docs.radapp.io/guides/author-apps/dapr/how-to-dapr-building-block/).
 
-### Scenario 6: Define and create Extender and Custom Resource Types for use in applications with serverless containers
+### Scenario 6: Define and create Custom Resource Types for use in applications with serverless containers
 <!-- One or two sentence summary -->
-Enable the ability to define and create Extender and Custom Resource Types for use in conjunction with serverless containers. Radius would be able to reference properties and values from the Extender or Custom Resource Type to connect the resource to the serverless container.
+Enable the ability to define and create Custom Resource Types for use in conjunction with serverless containers. Radius would be able to reference properties and values from the Custom Resource Type to connect the resource to the serverless container.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -384,20 +385,18 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
 
 > Note: "By default, Radius leverages the hosting platform's secrets management solution to create and store the secret. For example, if you are deploying to Kubernetes, the secret store will be created as a Kubernetes Secret." (source: [How To: Create new Secret Store](https://docs.radapp.io/guides/author-apps/secrets/howto-new-secretstore/))
 
-### Step 7: Define a Radius Extender (or UDT) resource for the serverless container
-The user defines a `Applications.Core/extenders` resource in the application definition file (e.g. `app.bicep`) and, if the deployment target is a serverless environment, Radius will enable me to reference properties and values from the Extender to connect to my serverless container. The same would apply to a UDT resource, once that feature is implemented.
+### Step 7: Define a custom Radius resource for the serverless container
+The user defines a custom Radius resource in the application definition file (e.g. `app.bicep`) and, if the deployment target is a serverless environment, Radius will enable me to reference properties and values from the custom resource to connect to my serverless container.
 
 ```diff
-resource twilio 'Applications.Core/extenders@2023-10-01-preview' = {
-+ name: 'twilio'
-  properties: {
-    application: application
-    environment: environment
-    recipe: {
-+     name: 'twilio'
+resource postgresql 'Radius.Resources/postgreSQL@2023-10-01-preview' = {
+    name: 'postgresql'
+    properties: {
+      environment: environment
+      application: application
+      size: 'S'
     }
   }
-}
 
 resource demo 'Applications.Core/containers@2023-10-01-preview' = {
   name: 'demo'
@@ -410,11 +409,12 @@ resource demo 'Applications.Core/containers@2023-10-01-preview' = {
           containerPort: 3000
         }
       }
-+     env:{
-+       TWILIO_ACCOUNT: {
-+         value: twilio.listSecrets().authToken
-+       }
-+     }
++      env: {
++        CONNECTION_POSTGRES_USERNAME: {
++          value: postgresql.properties.username
++        }
++        // Other environment variables can be defined here
++      }
     }
     runtimes: {
 +     aci: {
