@@ -245,42 +245,42 @@ graph TD
 
 5.  **Graph Access Layer (GAL) API:**
     * Example Go interface:
-    
-    ```go
-    type GraphStore interface {
-        // Node operations
-        CreateNode(ctx context.Context, node Node) error
-        GetNode(ctx context.Context, nodeID string) (Node, error)
-        UpdateNodeProperties(ctx context.Context, nodeID string, properties map[string]interface{}) error
-        DeleteNode(ctx context.Context, nodeID string) error // Handle cascading deletes for owned relationships
 
-        // Edge operations (connections)
-        CreateEdge(ctx context.Context, edge Edge) error
-        GetEdge(ctx context.Context, fromNodeID, toNodeID string, edgeType string) (Edge, error) // Or a unique edge ID
-        UpdateEdgeProperties(ctx context.Context, edgeID string, properties map[string]interface{}) error
-        DeleteEdge(ctx context.Context, edgeID string) error
+```go
+type GraphStore interface {
+    // Node operations
+    CreateNode(ctx context.Context, node Node) error
+    GetNode(ctx context.Context, nodeID string) (Node, error)
+    UpdateNodeProperties(ctx context.Context, nodeID string, properties map[string]interface{}) error
+    DeleteNode(ctx context.Context, nodeID string) error // Handle cascading deletes for owned relationships
 
-        // Query operations
-        GetOutgoingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
-        GetIncomingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
-        FindPaths(ctx context.Context, startNodeID, endNodeID string, maxHops int) ([][]Node, error) // More complex queries
-        ExecuteCypherQuery(ctx context.Context, query string, params map[string]interface{}) ([]map[string]interface{}, error) // For advanced internal use
-    }
-    
-    type Node struct {
-        ID         string
-        Type       string // e.g., "Applications.Core/application"
-        Properties map[string]interface{} // Minimal properties for query filtering only
-    }
+    // Edge operations (connections)
+    CreateEdge(ctx context.Context, edge Edge) error
+    GetEdge(ctx context.Context, fromNodeID, toNodeID string, edgeType string) (Edge, error) // Or a unique edge ID
+    UpdateEdgeProperties(ctx context.Context, edgeID string, properties map[string]interface{}) error
+    DeleteEdge(ctx context.Context, edgeID string) error
 
-    type Edge struct {
-        ID         string // Optional, could be derived from both nodes
-        FromNodeID string
-        ToNodeID   string
-        Type       string // e.g., "Connection"
-        Properties map[string]interface{}
-    }
-    ```
+    // Query operations
+    GetOutgoingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
+    GetIncomingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
+    FindPaths(ctx context.Context, startNodeID, endNodeID string, maxHops int) ([][]Node, error) // More complex queries
+    ExecuteCypherQuery(ctx context.Context, query string, params map[string]interface{}) ([]map[string]interface{}, error) // For advanced internal use
+}
+
+type Node struct {
+    ID         string
+    Type       string // e.g., "Applications.Core/application"
+    Properties map[string]interface{} // Minimal properties for query filtering only
+}
+
+type Edge struct {
+    ID         string // Optional, could be derived from both nodes
+    FromNodeID string
+    ToNodeID   string
+    Type       string // e.g., "Connection"
+    Properties map[string]interface{}
+}
+```
 
 4.  **Data Persistence and State:**
     * **PostgreSQL + Apache AGE Container:** Network-based connection with standard PostgreSQL high availability, clustering, and backup mechanisms.
@@ -292,20 +292,22 @@ graph TD
     * **Backup and Restore Responsibility:** DBAs are responsible for PostgreSQL backup and restore operations using standard tooling (pg_dump, continuous archiving, etc.). Radius coordinates with these procedures during upgrades and rollbacks.
     * **Radius Upgrade Integration:** Radius upgrade processes (currently under development) will be enhanced to trigger backup checkpoints and rollback during failure scenarios.
     * **Migration Tool as Recovery Tool:** Migration tools can be executed to regenerate or verify graph data consistency.
-    * **Operational Benefits:** Leverages existing PostgreSQL operational expertise and tooling rather than introducing novel backup strategies.    * **Recovery Commands:**
-        ```bash
-        # DBA-managed PostgreSQL backup/restore (standard operations)
-        # DBAs use standard PostgreSQL tooling: pg_dump, pg_restore, continuous archiving
-        
-        # Radius upgrade/rollback coordination
-        # Integration with upgrade commands currently under development to:
-        # - Trigger backup checkpoints before upgrades
-        # - Trigger restore procedures during rollbacks
-        
-        # Graph-specific verification and rebuild (Radius-managed)
-        rad admin graph verify --repair-if-needed
-        rad admin graph rebuild --from-etcd
-        ```
+    * **Operational Benefits:** Leverages existing PostgreSQL operational expertise and tooling rather than introducing novel backup strategies.
+    * **Recovery Commands:**
+
+```bash
+# DBA-managed PostgreSQL backup/restore (standard operations)
+# DBAs use standard PostgreSQL tooling: pg_dump, pg_restore, continuous archiving
+
+# Radius upgrade/rollback coordination
+# Integration with upgrade commands currently under development to:
+# - Trigger backup checkpoints before upgrades
+# - Trigger restore procedures during rollbacks
+
+# Graph-specific verification and rebuild (Radius-managed)
+rad admin graph verify --repair-if-needed
+rad admin graph rebuild --from-etcd
+```
 
 6.  **Transaction Management:**
     * All compound operations (e.g., creating a resource node and its relationship edge) must be performed within a database transaction to ensure atomicity. The GAL will manage this.
