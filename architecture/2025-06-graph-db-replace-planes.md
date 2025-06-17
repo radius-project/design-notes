@@ -484,7 +484,7 @@ No changes to the public Radius REST API are anticipated initially, other than p
     * Develop documentation for operators and developers.
     * Create operational runbooks for common scenarios.
 4.  **Phase 4: Query Enhancement (Milestone 4 - optional)**
-    * Enhance GAL with more advanced query capabilities (pathfinding, complex traversals, to support new User Stories defined by product).
+    * Enhance GAL with more advanced query capabilities (path finding, complex traversals, to support new User Stories defined by product).
     * Evaluate opportunities for migrating additional Radius storage needs to PostgreSQL.
 5.  **Phase 5: Full Storage Migration (Future - out of scope)**
     * Migrate existing key-value operations from etcd to PostgreSQL.
