@@ -1,7 +1,7 @@
-## Proposal: Integrating a Graph Database for Radius Application Graph
+## Proposal: Integrating PostgreSQL with Apache AGE for Radius Application Graph
 
-**Version:** 1.2
-**Date:** June 11, 2025
+**Version:** 2.0
+**Date:** June 16, 2025
 **Author:** Sylvain Niles
 
 ---
@@ -10,11 +10,11 @@
 
 Project Radius currently defines and manages application graphs, representing resources and their relationships within cloud-native applications. Currently Radius relies on Kubernetes to install etcd, the default datastore, where these graph structures are stored as key value pairs. As we are adding support for nested connections the imperative Go code is becoming complex and brittle because it needs to implement basic graph traversal logic not present in etcd. Additionally we are already hitting performance limits in test environments (under a hundred resources were reported to slow things to a crawl) which inspired the work @superbeeny has done to swap the key value operations out to use postgres. Radius users could not use Drasi today to act on changes to their environments as there's no current support for key value stores and if that was added the client side filtering requirements would be a challenge in Drasi, requiring extensive middleware to parse the custom Radius data structures. 
 
-This proposal outlines a plan to modify Project Radius to utilize a **graph database** as the primary store for its **application graph data specifically**, accessed via a new **Graph Access Layer (GAL)**. This change aims to decouple the core graph logic and operations from etcd, enabling more powerful graph queries, improving performance for complex relationship traversals, and offering a more specialized and efficient graph persistence layer. **This proposal is scoped specifically to application graph operations - individual resource metadata and configuration will continue to use the existing `database.Client` interface with the current storage backends (etcd via Kubernetes APIServer, or Postgres for production deployments).** One of the benefits to recipe authors is this will allow them to define nested connections of types to both return complex relationships and properties to a recipe as well as see these relationships in the graph/dashboard.
+This proposal outlines a plan to modify Project Radius to utilize **PostgreSQL with Apache AGE** as the primary store for its **application graph data specifically**, accessed via a new **Graph Access Layer (GAL)**. This change aims to decouple the core graph logic and operations from etcd, enabling more powerful graph queries, improving performance for complex relationship traversals, and offering a more specialized and efficient graph persistence layer. PostgreSQL with AGE will be deployed as a separate container in the Radius control plane, providing both traditional relational database capabilities and graph database functionality through Cypher queries. One of the benefits to recipe authors is this will allow them to define nested connections of types to both return complex relationships and properties to a recipe as well as see these relationships in the graph/dashboard.
 
-The **Graph Access Layer (GAL)** will be designed with a pluggable backend architecture that supports any Cypher-compliant graph database, enabling flexible deployment scenarios and allowing users to choose the graph database that best fits their operational requirements and constraints. This approach provides the freedom to leverage different graph database technologies while maintaining a consistent abstraction layer for Radius components.
+The **Graph Access Layer (GAL)** will provide a consistent abstraction layer for Radius components to interact with the PostgreSQL + AGE backend, handling both application graph operations and potentially serving as a replacement for etcd-based storage in future iterations.
 
-**Storage Strategy Rationale:** This proposal focuses specifically on application graph data because: (1) Graph databases excel at relationship queries but may be overkill for simple key-value resource storage; (2) The existing `database.Client` interface and Postgres backend already provide excellent performance for individual resource operations; (3) This allows incremental adoption with lower risk; (4) Different data types (graph relationships vs. resource metadata) have different access patterns and requirements; (5) Production deployments can continue using battle-tested Postgres for resource storage while gaining graph capabilities for application relationship queries.
+**Storage Strategy Rationale:** This proposal focuses on PostgreSQL with Apache AGE as a unified solution that can handle both application graph operations and serve as a potential replacement for etcd-based storage. PostgreSQL provides: (1) Proven production reliability and operational tooling; (2) Native support for both relational and graph data through Apache AGE; (3) Simplified deployment architecture with a single database technology; (4) Established backup, monitoring, and scaling patterns; (5) The flexibility to migrate away from etcd entirely in future phases while maintaining data consistency and operational simplicity.
 
 Delivering this will allow us to shift to a far better user experience where connections become a rich re-usable concept that shares data and exposes deep relationships currently obfuscated by monolithic types with embedded objects (ex: database has a credentials object with username and password properties).
 
@@ -23,9 +23,8 @@ Delivering this will allow us to shift to a far better user experience where con
 * **Radius:** An open-source, cloud-native application platform that helps developers build, deploy, and manage applications across various environments.
 * **Application Graph:** A representation of an application's components (resources, services, environments, etc.) as nodes and their interconnections as edges, including metadata on both.
 * **Kubernetes (K8s):** An open-source system for automating deployment, scaling, and management of containerized applications.
-* **Graph Access Layer (GAL):** The internal abstraction layer that mediates all graph operations between Radius components and the underlying graph database.
-* **Kùzu:** An embeddable, transactional, high-performance graph database management system (GDBMS) supporting the Cypher query language and property graphs. Provided for dev/test/POC. [GitHub](https://github.com/kuzudb/kuzu)
-* **Postgres with Apache AGE:** A production-ready, scalable graph database solution supporting Cypher queries, built on PostgreSQL. [Website](https://age.apache.org/) | [GitHub](https://github.com/apache/age)
+* **Graph Access Layer (GAL):** The internal abstraction layer that mediates all graph operations between Radius components and the underlying PostgreSQL + Apache AGE database.
+* **PostgreSQL with Apache AGE:** A production-ready, scalable graph database solution supporting Cypher queries, built on PostgreSQL. This will be deployed as a separate container in the Radius control plane. [Website](https://age.apache.org/) | [GitHub](https://github.com/apache/age)
 * **Node:** An entity in a graph (e.g., a Radius resource, an environment).
 * **Edge:** A relationship between two nodes in a graph (e.g., "connectsTo", "runsIn"). All edges in Radius will be of type "CONNECTION".
 * **Property:** Key-value pairs associated with nodes or edges, storing metadata.
@@ -34,10 +33,11 @@ Delivering this will allow us to shift to a far better user experience where con
 
 ### Objectives
 
-1.  **Decouple Graph Storage:** Abstract the application graph storage from etcd, allowing Radius to use a dedicated graph database via the Graph Access Layer while maintaining existing resource storage through the current `database.Client` interface.
+1.  **Decouple Graph Storage:** Abstract the application graph storage from etcd, allowing Radius to use PostgreSQL with Apache AGE as a dedicated graph database via the Graph Access Layer.
 2.  **Enhance Query Capabilities:** Leverage Cypher query language for more complex and efficient graph traversals and relationship analysis than what is easily achievable with etcd retrieval and client side filtering.
-3.  **Improve Performance:** Improve the performance of graph read and write operations, especially for large or complex application graphs, while maintaining current performance for individual resource operations.
-4.  **Maintain Existing Functionality:** Ensure that all existing Radius features that rely on the application graph continue to function correctly with the new backend, and that all resource management operations continue unchanged.
+3.  **Improve Performance:** Improve the performance of graph read and write operations, especially for large or complex application graphs, using PostgreSQL's proven performance characteristics.
+4.  **Maintain Existing Functionality:** Ensure that all existing Radius features that rely on the application graph continue to function correctly with the new PostgreSQL + AGE backend.
+5.  **Enable Future etcd Migration:** Establish PostgreSQL + AGE as a foundation for potentially migrating away from etcd entirely in future development phases.
 
 ### Issue Reference:
 
@@ -45,26 +45,24 @@ Delivering this will allow us to shift to a far better user experience where con
 
 ### Goals
 
-* Implement a Graph Access Layer (GAL) that abstracts application graph operations with pluggable backend support, working alongside the existing `database.Client` interface for resource storage.
-* Integrate Kùzu as an embedded graph database for development, testing, and proof-of-concept environments.
-* Develop Postgres with Apache AGE plugin support for production environments.
-* Define a clear schema for the Radius application graph within both backends.
-* Migrate existing application graph data representation (currently derived from resource relationships in etcd/postgres) to the dedicated graph database data model.
-* Update Radius components to use the new GAL for all application graph operations while continuing to use `database.Client` for individual resource storage.
-* Provide migration tools for moving application graph data to the graph database.
-* Provide mechanisms for backup and restore of the graph database as part of Radius install/upgrade/rollback operations.
-* Develop a comprehensive test suite covering graph operations with both backends.
-* Add configuration options to select between graph database providers.
+* Implement a Graph Access Layer (GAL) that abstracts application graph operations with PostgreSQL + Apache AGE backend support.
+* Deploy PostgreSQL with Apache AGE as a separate container in the Radius control plane architecture.
+* Define a clear schema for the Radius application graph within PostgreSQL + AGE.
+* Migrate existing application graph data representation (currently derived from resource relationships in etcd) to the PostgreSQL + AGE data model.
+* Update Radius components to use the new GAL for all application graph operations.
+* Provide migration tools for moving application graph data from etcd to PostgreSQL + AGE.
+* Provide mechanisms for backup and restore of the PostgreSQL + AGE database as part of Radius install/upgrade/rollback operations.
+* Develop a comprehensive test suite covering graph operations.
 * Ensure the GAL can reconstruct application graphs from existing resource data during migration.
 
 
 ### Non-goals
 
-* Providing a distributed Kùzu cluster as part of this initial integration (Kùzu is primarily embedded; clustering would be a separate, future consideration if needed).
+* Providing a distributed PostgreSQL cluster as part of this initial integration (PostgreSQL clustering and high availability would be a separate, future consideration if needed).
 * Exposing direct Cypher query capabilities to end-users of Radius (interaction should remain through Radius APIs and abstractions).
-* Supporting zero-downtime migration from etcd to graph database (migration will require a maintenance window).
-* Replacing the existing `database.Client` interface or resource storage mechanisms - individual resource metadata will continue to use the current storage backends (etcd via Kubernetes APIServer or Postgres).
-* Migrating non-graph data (individual resource configurations, secrets, etc.) to the graph database - this proposal is specifically scoped to application graph relationships and traversal operations.
+* Supporting zero-downtime migration from etcd to PostgreSQL + AGE (migration will require a maintenance window).
+* Migrating all Radius storage to PostgreSQL + AGE in the initial phase - this proposal focuses specifically on application graph relationships and traversal operations.
+* Moving existing key-value operations (individual resource CRUD) to the GAL - this proposal is scoped specifically to graph operations. In a future phase, we would migrate key-value operations to PostgreSQL and rename the GAL to DAL (Data Access Layer) to reflect its broader responsibility for all Radius data operations.
 
 ### User Scenarios (optional)
 
@@ -141,7 +139,7 @@ Delivering this will allow us to shift to a far better user experience where con
     ]
     ```
 
-* **CoreRP then retrieves full secret data via database.Client and returns to user:**
+* **CoreRP then retrieves full secret data and returns to user:**
     ```json
     {
       "gateway": "api-gateway",
@@ -173,15 +171,13 @@ Delivering this will allow us to shift to a far better user experience where con
 
 #### High-Level Design
 
-1.  **Introduce Graph Access Layer (GAL):** The GAL will be integrated as an internal service within Radius components responsible for managing the application graph, working alongside the existing `database.Client` interface for resource storage.
-2.  **Dual Storage Architecture:** Resources will continue to be stored using the current `database.Client` interface (etcd via Kubernetes APIServer, or Postgres), while application graph relationships will be managed by the GAL with graph database backends.
-3.  **Pluggable Backend Support:** The GAL will support both Kùzu (for dev/test/POC) and Postgres with Apache AGE (for production), with configuration to select the backend.
-4.  **Schema Definition:** A formal schema for application graph entities (Applications, Environments, Resources as nodes) and their relationships (as edges with types and properties) will be defined and enforced in both graph backends.
-5.  **Minimal Graph Data Storage:** The GAL will store only essential resource metadata in the graph database (resource ID, type, connections, and optional properties needed for query filtering), with full resource data retrieval continuing through the existing `database.Client` interface based on graph query results.
-6.  **Data Synchronization:** The GAL will maintain synchronization between resource changes (via `database.Client`) and their corresponding minimal graph representations, ensuring the application graph accurately reflects the current state of resource relationships and queryable properties.
-7.  **Component Updates:** Radius components that currently perform application graph operations (traversals, relationship queries) will be updated to use the GAL for graph queries, then retrieve full resource data via `database.Client` based on the graph results, while continuing to use `database.Client` directly for individual resource CRUD operations.
+1.  **Introduce Graph Access Layer (GAL):** The GAL will be integrated as an internal service within Radius components responsible for managing the application graph, initially working alongside existing storage mechanisms with a path toward full database consolidation.
+2.  **PostgreSQL + AGE Container:** PostgreSQL with Apache AGE will be deployed as a separate container in the Radius control plane, providing both traditional database capabilities and graph functionality through Cypher queries.
+3.  **Unified Database Architecture:** This approach establishes PostgreSQL as the foundation for both graph operations and potential future migration of all Radius data storage, simplifying the overall architecture.
+4.  **Schema Definition:** A formal schema for application graph entities (Applications, Environments, Resources as nodes) and their relationships (as edges with types and properties) will be defined and enforced in PostgreSQL + AGE.
+5.  **Component Updates:** Radius components that currently perform application graph operations (traversals, relationship queries) will be updated to use the GAL for graph queries while maintaining existing functionality through current storage mechanisms during the transition period.
 
-**Storage Strategy Rationale:** We chose to maintain the existing `database.Client` interface for resource storage because: (1) The current Postgres and etcd backends already provide excellent performance for individual resource operations; (2) Graph databases are optimized for relationship queries, not necessarily single-record lookups; (3) This approach allows incremental migration with lower risk; (4) Different data types (individual resources vs. relationships) have different access patterns and requirements; (5) Production deployments can continue using battle-tested storage patterns while gaining graph capabilities for application relationship queries. **The GAL will store only minimal resource metadata (ID, type, connections, and optional query-filtering properties) in the graph database, with complete resource data retrieval continuing through the existing `database.Client` based on graph query results.**
+**Architecture Rationale:** PostgreSQL with Apache AGE provides a strategic foundation that can serve both immediate graph database needs and future storage consolidation. Unlike embedded solutions, a containerized PostgreSQL deployment offers: (1) Production-ready operational patterns familiar to most teams; (2) Native support for both relational and graph data models; (3) Established ecosystem of monitoring, backup, and scaling tools; (4) The flexibility to migrate additional Radius storage needs to the same technology stack over time, reducing operational complexity. **Note: This proposal is scoped specifically to graph operations via the GAL. Future work would involve migrating key-value operations from etcd to PostgreSQL and renaming the GAL to DAL (Data Access Layer) to reflect its expanded role as the unified data access interface for all Radius storage operations.**
 
 #### Architecture Diagram
 
@@ -189,48 +185,63 @@ Delivering this will allow us to shift to a far better user experience where con
 graph TD
     A["Radius CLI/API <br/>(User Interactions)"]
     B["Radius CoreRP<br/>"]
-    C["database.Client <br/>(Resource Storage)"]
-    D["Graph Access Layer <br/>(Application Graph)"]
-    E1["etcd (Current) | Postgres <br/>(Production)"]
-    F["Cypher-compliant Graph DB <br/>(Kùzu, Postgres+AGE, Neo4j, etc.)"]
+    C["DatastoresRP"]
+    D["DaprRP"]
+    E["MessagingRP"]
+    F["DynamicRP"]
+    G["Graph Access Layer <br/>(Application Graph)"]
+    H["PostgreSQL + Apache AGE <br/>(Container)"]
+    I["etcd (Current) <br/>(All Resource Operations)"]
 
     A <--> B
-    B <-->|"resource CRUD"| C
-    B <-->|"graph queries"| D
-    C --> E1
-    D --> F
+    A <--> C
+    A <--> D
+    A <--> E
+    A <--> F
+    
+    B <-->|"graph queries"| G
+    B <-->|"resource operations"| I
+    C <-->|"resource operations"| I
+    D <-->|"resource operations"| I
+    E <-->|"resource operations"| I
+    F <-->|"resource operations"| I
+    
+    G --> H
 ```
 
-* **Current (Simplified):** Radius Core Components <-> database.Client <-> etcd/Postgres
+* **Current (Simplified):** All Radius RPs independently connect to etcd directly.
 * **Proposed:** 
-  * Resource Storage: Radius Core Components <-> database.Client <-> etcd/Postgres (unchanged)
-  * Application Graph: Radius Core Components <-> Graph Access Layer <-> Cypher-compliant Graph Database
+  * Graph Operations: CoreRP <-> Graph Access Layer <-> PostgreSQL + Apache AGE Container directly.
+  * Resource Operations: All RPs (CoreRP, DatastoresRP, DaprRP, MessagingRP, DynamicRP) <-> etcd independently
+  * **Key Insight:** Only CoreRP performs graph operations; other RPs continue using etcd for their resource management
 
 #### Detailed Design
 
 1.  **Graph Access Layer (GAL) Implementation:**
-    * The GAL will be implemented as a Go service that abstracts all application graph operations, working alongside the existing `database.Client` interface.
-    * It will provide a pluggable interface allowing different graph database backends.
-    * Configuration will determine which backend to use (Kùzu for dev/test, Postgres+AGE for production).
-    * The GAL will be responsible for maintaining synchronization between resource changes and their graph representations.
+    * The GAL will be implemented as a Go service that abstracts all application graph operations, initially working alongside existing storage mechanisms.
+    * It will provide a consistent interface for PostgreSQL + Apache AGE backend operations.
+    * The GAL will handle all database connections, schema management, and query optimization for the PostgreSQL + AGE backend.
 
-2.  **Dev/Test/POC Backend - Kùzu Integration:**
-    * The Kùzu Go driver (`github.com/kuzudb/go-kuzu`) will be used.
-    * Kùzu database will be initialized during `rad install`. The database file (`radius_app_graph.kuzu`) will be stored on persistent storage accessible to the Radius control plane.
-    * **Performance Advantage:** As an embedded graph database, Kùzu eliminates network connection overhead between the GAL and the graph database, providing significantly faster performance for development and test scenarios compared to networked database solutions. This enables rapid iteration during development and faster test suite execution.
-    * The GAL will populate the graph database by analyzing existing resource relationships stored via `database.Client`.
-    * All application graph queries will use the GAL, while individual resource operations continue through `database.Client`.
+2.  **PostgreSQL + Apache AGE Container Integration:**
+    * PostgreSQL with Apache AGE will be deployed as a separate container in the Radius control plane.
+    * **AGE Installation Options:**
+        * **Init Container Approach (Recommended)**: Use an init container to compile and install Apache AGE during pod startup, ensuring version compatibility and reducing image maintenance overhead.
+        * **Custom Image Approach**: Maintain a Radius-specific PostgreSQL+AGE Docker image with pre-installed AGE extension, providing faster startup but requiring image maintenance.
+        * **Runtime Installation**: Install AGE via package manager (apt/apk) after container starts, offering flexibility but with startup time overhead.
+    * Standard PostgreSQL connection patterns will be used with AGE-specific Cypher query capabilities.
+    * Container configuration will include persistent volume mounting for data durability.
+    * The GAL will establish connection pools and handle database lifecycle management.
 
-3.  **Production Backend - Postgres with Apache AGE:**
-    * Postgres with Apache AGE plugin will be supported for production deployments.
+3.  **Production Deployment Architecture:**
     * Network-based connection using standard PostgreSQL drivers with AGE extensions.
-    * Support for connection pooling, high availability, and scaling. (Can be a later phase)
+    * Support for connection pooling, high availability, and scaling patterns.
+    * Integration with existing Kubernetes deployment patterns and service discovery.
+    * Backup and restore capabilities through standard PostgreSQL tooling.
 
 4.  **Schema Management:**
     * A Go module will define constants for node labels (e.g., `NodeTypeApplication`, `NodeTypeResource`) and edge labels (all edges will be type `CONNECTION`).
-    * On startup, the GAL will ensure the schema (node tables, relationship tables, property definitions) exists in the backend, creating or migrating it if necessary.
-    * **Minimal Data Storage:** Graph nodes will contain only essential resource metadata (ID, type, and optional properties needed for query filtering), with complete resource data remaining in the existing `database.Client` storage. API responses will use graph queries to identify relevant resources, then retrieve full resource data via `database.Client`.
-    * The GAL will handle synchronization between resource updates (via `database.Client`) and their corresponding minimal graph representations.
+    * On startup, the GAL will ensure the schema (node tables, relationship tables, property definitions) exists in PostgreSQL + AGE, creating or migrating it if necessary.
+    * The GAL will handle data synchronization between any remaining etcd operations and the PostgreSQL + AGE database during the transition period.
 
 5.  **Graph Access Layer (GAL) API:**
     * Example Go interface:
@@ -269,42 +280,46 @@ graph TD
         ```
 
 4.  **Data Persistence and State:**
-    * **Kùzu (Dev/Test/POC):** Kùzu runs embedded, so the Radius process managing it is authoritative. The database file (`radius_app_graph.kuzu`) is stored on persistent storage accessible to the Radius control plane.
-    * **Postgres+AGE (Production):** Network-based connection with standard PostgreSQL high availability, clustering, and backup mechanisms.
+    * **PostgreSQL + Apache AGE Container:** Network-based connection with standard PostgreSQL high availability, clustering, and backup mechanisms.
+    * Container deployment includes persistent volume configuration for data durability.
+    * Standard Kubernetes patterns for service discovery, health checks, and restart policies.
 
 5.  **Graph Database Recovery and Regeneration:**
-    * **Resilient Design:** Since the graph database stores only application relationship data (not the authoritative resource records), it can be safely rebuilt at any time from the canonical resource data stored via `database.Client`.
-    * **Migration Tool as Recovery Tool:** The same migration tool used for initial etcd-to-graph migration can be executed at any time to regenerate the complete application graph from existing resource relationships stored in etcd/Postgres.
-    * **Zero Data Loss Scenario:** If the graph database is lost or corrupted:
-        1. Radius continues operating for individual resource operations via `database.Client` 
-        2. Application graph queries will fail gracefully with appropriate error messages
-        3. The migration/rebuild tool can be executed to recreate the graph database from scratch
-        4. All historical relationship data is preserved because resources maintain connection metadata in their stored definitions
-    * **Operational Benefits:** This design eliminates the need for complex graph database backup strategies since the authoritative data remains in the proven `database.Client` storage layer. Graph database backups become a performance optimization rather than a data protection requirement.
-    * **Recovery Commands:**
+    * **Resilient Design:** The PostgreSQL + AGE container provides proven database reliability and recovery mechanisms through standard PostgreSQL tooling.
+    * **Backup and Restore Responsibility:** DBAs are responsible for PostgreSQL backup and restore operations using standard tooling (pg_dump, continuous archiving, etc.). Radius coordinates with these procedures during upgrades and rollbacks.
+    * **Radius Upgrade Integration:** Radius upgrade processes (currently under development) will be enhanced to trigger backup checkpoints and rollback during failure scenarios.
+    * **Migration Tool as Recovery Tool:** Migration tools can be executed to regenerate or verify graph data consistency.
+    * **Operational Benefits:** Leverages existing PostgreSQL operational expertise and tooling rather than introducing novel backup strategies.    * **Recovery Commands:**
         ```bash
-        # Detect and rebuild corrupted/missing graph database
-        rad admin graph rebuild --from-resources
+        # DBA-managed PostgreSQL backup/restore (standard operations)
+        # DBAs use standard PostgreSQL tooling: pg_dump, pg_restore, continuous archiving
         
-        # Verify graph database integrity against resource storage
+        # Radius upgrade/rollback coordination
+        # Integration with upgrade commands currently under development to:
+        # - Trigger backup checkpoints before upgrades
+        # - Trigger restore procedures during rollbacks
+        
+        # Graph-specific verification and rebuild (Radius-managed)
         rad admin graph verify --repair-if-needed
+        rad admin graph rebuild --from-etcd
         ```
 
 6.  **Transaction Management:**
     * All compound operations (e.g., creating a resource node and its relationship edge) must be performed within a database transaction to ensure atomicity. The GAL will manage this.
     * Radius upgrades and rollbacks would need to coordinate with the GAL.
 
-#### Advantages (of Graph Database via GAL for application graph operations)
+#### Advantages (of PostgreSQL + AGE for application graph operations)
 
 * **Rich Querying:** Cypher provides significantly more powerful and expressive graph query capabilities than filtering etcd values client side for application graph traversals.
-* **Performance:** For complex graph traversals (multi-hop queries, pathfinding), a graph database is likely to be much faster as it's optimized for such operations. For Radius this would be during most recipe execution as the entire graph is rendered.
-* **Specialized Data Store:** Graph databases are purpose-built for graph data, leading to efficient storage and indexing for application graph structures while allowing the existing `database.Client` to continue handling individual resource storage efficiently.
-* **Pluggable Backend:** The GAL will allow for Radius users to use any Cypher compatible graph database such as Neo4J or CosmosDB with Gremlin for application graph operations.
-* **Transactional Guarantees:** Both Kùzu and Postgres with Apache AGE provide ACID transactions for graph operations, ensuring application graph consistency during complex deployments.
-* **Schema Enforcement:** Better ability to define and enforce an application graph schema separate from individual resource schemas.
-* **Support for streaming monitoring of graph changes:** A project like Drasi can consume a change feed of the Radius application graph because graph databases can provide relationship-aware change streams, eliminating the need for extensive middleware to parse custom Radius data structures.
+* **Performance:** For complex graph traversals (multi-hop queries, pathfinding), PostgreSQL + AGE is optimized for such operations and likely to be much faster than current etcd-based approaches.
+* **Production Ready:** PostgreSQL is a mature, battle-tested database with extensive operational tooling, monitoring, and expertise available.
+* **Unified Technology Stack:** Using PostgreSQL + AGE establishes a foundation for potentially consolidating all Radius storage needs, reducing operational complexity over time.
+* **Container Architecture:** Deploying as a separate container provides clear separation of concerns while enabling standard Kubernetes deployment patterns.
+* **Transactional Guarantees:** PostgreSQL provides ACID transactions for both relational and graph operations, ensuring data consistency during complex deployments.
+* **Schema Enforcement:** Better ability to define and enforce an application graph schema with PostgreSQL's robust schema management capabilities.
+* **Operational Familiarity:** Most operations teams already have PostgreSQL expertise, reducing the learning curve compared to specialized graph databases.
 * **Simplified Go Code:** Eliminates the complex imperative Go code currently required for creating and traversing application graph relationships, replacing it with declarative Cypher queries that are more maintainable and less error-prone.
-* **Separation of Concerns:** Application graph operations and individual resource storage can be optimized independently, with each using the most appropriate storage technology.
+* **Future Migration Path:** Establishes PostgreSQL as a foundation for potentially migrating away from etcd entirely, simplifying the overall Radius architecture.
 
 ---
 
@@ -339,19 +354,19 @@ In this model:
 This structure enables richer queries and recipe author use cases like `context.connected_resources.database.credentials.username` instead of only being able to access the embedded `credentials` object and requiring the recipe author to parse.
 Additionally it provides a better separation of concerns, and a more flexible, maintainable application graph.
 
-#### Disadvantages (of Graph Database integration)
+#### Disadvantages (of PostgreSQL + AGE integration)
 
-* **New Dependency:** Introduces a graph database as a new core dependency for Radius, including its Go driver(s).
+* **Enhanced Container Dependency:** Builds upon the existing optional PostgreSQL container by adding the Apache AGE plugin, requiring AGE plugin maintenance, version compatibility testing, and inclusion in our CI/CD pipeline to ensure plugin currency and compatibility with PostgreSQL updates.
 * **Operational Overhead:**
-    * Managing the graph database file or instance (backups, storage).
-    * Monitoring performance and health.
-    * Requires persistent volume or managed database for production usage.
-* **Complexity:** Adds a new layer (GAL, graph database integration) to the Radius architecture.
-* **Learning Curve:** Radius developers might need to learn Cypher and the specifics of the chosen graph database(s).
+    * AGE plugin-specific monitoring and health checks (PostgreSQL operations are already supported).
+    * Learning Cypher query language and AGE-specific graph operations.
+    * Plugin version management and compatibility testing with PostgreSQL updates.
+* **Complexity:** Adds a new layer (GAL, Apache AGE plugin functionality) to the existing PostgreSQL architecture.
+* **Learning Curve:** Radius developers will need to learn Cypher and Apache AGE specifics, though the underlying PostgreSQL knowledge and operational patterns are already established.
 
 #### Proposed Option
 
-Integrate a **Graph Database** behind a **Graph Access Layer (GAL)** with pluggable backend support. Initially provide **Kùzu as an embedded graph database** for dev/test/POC environments and **Postgres with Apache AGE** for production environments. This approach balances the benefits of dedicated graph DB capabilities with flexibility in deployment scenarios.
+Integrate **PostgreSQL with Apache AGE** as a containerized graph database behind a **Graph Access Layer (GAL)**. This approach provides production-ready graph database capabilities while establishing a foundation for potential future consolidation of all Radius storage needs, reducing long-term architectural complexity.
 
 ### API design
 
@@ -368,10 +383,9 @@ No changes to the public Radius REST API are anticipated initially, other than p
 
 #### Core RP (Resource Provider)
 
-* Core RP will continue to use the existing `database.Client` interface for all individual resource storage, retrieval, and full CRUD operations.
-* Core RP will use the GAL to perform application graph queries (finding connected resources, traversing relationships), then retrieve complete resource data via `database.Client` based on the resource IDs returned from graph queries.
-* The GAL will be responsible for maintaining synchronization between resource changes (via `database.Client`) and their corresponding minimal representations in the application graph (ID, type, connections, and essential query properties only).
-* **API Response Pattern:** Graph queries identify relevant resources → Full resource data retrieved via `database.Client` → Complete API responses assembled from full resource data.
+* Core RP will use the GAL for all application graph operations and queries.
+* The GAL will serve as the primary interface for both graph operations and transitional resource storage during migration periods.
+* **API Response Pattern:** Graph queries identify and retrieve relevant resources → Complete API responses assembled from PostgreSQL + AGE data.
 
 ### Error Handling
 
@@ -383,51 +397,50 @@ No changes to the public Radius REST API are anticipated initially, other than p
 ### Test plan
 
 1.  **Unit Tests:**
-    * Test individual functions within the Graph Access Layer (mocking graph database drivers).
-    * Test schema creation and migration logic for both backends.
+    * Test individual functions within the Graph Access Layer (mocking PostgreSQL + AGE database drivers).
+    * Test schema creation and migration logic for PostgreSQL + AGE backend.
 2.  **Integration Tests:**
-    * Test the GAL against actual backend instances (both Kùzu and Postgres with Apache AGE).
+    * Test the GAL against actual PostgreSQL + Apache AGE backend instances.
     * Verify CRUD operations for nodes and edges with various property types.
-    * Test transactional behavior for both backends.    * Test Core RP interacting with the GAL-backed graph stores.
-    * Verify that graph queries return correct resource IDs and that subsequent `database.Client` retrievals return complete resource data.
+    * Test transactional behavior for PostgreSQL + AGE backend.
+    * Test Core RP interacting with the GAL-backed graph stores.
+    * Verify that graph queries return correct resource IDs and that subsequent data retrieval returns complete resource data.
 3.  **End-to-End (E2E) Tests:**
-    * Adapt existing Radius E2E tests to ensure all application deployment and management scenarios function correctly with both graph backends.
-    * Verify that resource operations via `database.Client` continue to work unchanged.
-    * Test that application graph operations via GAL work correctly alongside resource operations.
-    * Verify that API responses contain complete resource data assembled from graph queries + `database.Client` retrieval.
-    * Include tests for data synchronization between resource storage and minimal graph representation.
+    * Adapt existing Radius E2E tests to ensure all application deployment and management scenarios function correctly with PostgreSQL + AGE backend.
+    * Test that application graph operations via GAL work correctly with the containerized PostgreSQL + AGE deployment.
+    * Include tests for container lifecycle management, health checks, and recovery scenarios.
     * Include tests for data persistence across Radius restarts and upgrades/rollbacks.
 4.  **Performance Tests:**
-    * Benchmark graph read/write operations with both backends against the current key/value based implementation for representative workloads.
+    * Benchmark graph read/write operations with PostgreSQL + AGE against the current key/value based implementation for representative workloads.
     * Validate performance claims from the advantages section, specifically:
         * Complex graph traversal performance compared to etcd + client-side filtering
         * Recipe execution performance when rendering the entire graph
         * Query performance for large application graphs (100+ resources)
-    * Test concurrent access to the graph for both backends.
+    * Test concurrent access to the graph database.
     * Add checks to LRT Cluster for graph operations.
-5.  **Backup/Restore Tests:**
-    * Verify that database backups can be successfully created and restored for both backends.
-6.  **Backend Compatibility Tests:**
-    * Ensure identical behavior and results across Kùzu and Postgres with Apache AGE backends.
-    * Test configuration switching between backends.
+5.  **Container Integration Tests:**
+    * Verify PostgreSQL + AGE container deployment and configuration in Kubernetes environments.
+    * Test container networking, service discovery, and connection pooling.
+    * Validate persistent volume mounting and data durability.
 
 ### Security
 
 * **Data at Rest:** 
-  * **Kùzu:** The database file (`radius_app_graph.kuzu`) contains the application graph data. It should be protected by appropriate file system permissions on the persistent volume where it's stored. 
-  * **Postgres with Apache AGE:** Standard PostgreSQL security practices apply, including encryption at rest, access controls, and network security.
-  * Encryption at rest for storage should be considered, managed by the underlying infrastructure (e.g., Kubernetes PV encryption).
-* **Access Control:** Access to the graph database is through the GAL within the Radius process. Standard Radius authentication and authorization mechanisms (when implemented) will protect the Radius APIs that indirectly interact with the graph database. There is no direct network exposure of Kùzu in the embedded model. PostgreSQL with Apache AGE will use a standard networked database access model.
-* **Input Sanitization:** If any user-provided data is used to construct Cypher queries (even if parameterized), ensure proper parameterization is always used by the GAL to prevent injection vulnerabilities.
-* **Threat Model:** The Radius threat model must be updated to have a section for the GAL.
+  * **PostgreSQL with Apache AGE:** Standard PostgreSQL security practices apply, including encryption at rest, access controls, and network security.
+  * Container security follows standard Kubernetes patterns with appropriate security contexts and network policies.
+  * Encryption at rest for persistent volumes should be configured according to deployment requirements.
+* **Access Control:** Access to the PostgreSQL + AGE database is through the GAL within the Radius process and standard PostgreSQL network access controls. Standard Radius authentication and authorization mechanisms (when implemented) will protect the Radius APIs that interact with the graph database.
+* **Input Sanitization:** All user-provided data used to construct Cypher queries will use proper parameterization to prevent injection vulnerabilities.
+* **Network Security:** Container-to-container communication will use Kubernetes network policies and service mesh patterns as appropriate.
+* **Threat Model:** The Radius threat model must be updated to include the PostgreSQL + AGE container and GAL components.
 
-### Compatibility (optional)
+### Compatibility
 
 * **Backward Compatibility:**
-    * For existing Radius deployments using etcd as the graph store, a migration path will be necessary. 
+    * For existing Radius deployments using etcd, a migration path will be necessary to move application graph data to PostgreSQL + AGE.
     * The public Radius API and CLI should remain backward compatible.
 * **Data Format:** The structure of the application graph (apps, resources, properties) should remain conceptually the same, even though the storage backend changes.
-* **Backend Compatibility:** The GAL ensures that both Kùzu and Postgres with Apache AGE backends provide identical functionality and behavior to Radius components.
+* **Container Compatibility:** The PostgreSQL + AGE container deployment ensures consistent behavior across different Kubernetes environments and cloud providers.
 
 ### Monitoring and Logging
 
@@ -435,60 +448,68 @@ No changes to the public Radius REST API are anticipated initially, other than p
     * The Graph Access Layer should log all significant operations (e.g., graph queries, errors, transaction boundaries) at appropriate log levels.
 * **Metrics:**
     * Expose metrics from the GAL in Radius OpenTelemetry:
-        * Number of graph queries (per type: read/write, per backend).
-        * Latency of graph queries (per backend).
-        * Error rates for graph operations (per backend).
-        * Database size and health metrics.
-        * Transaction commit/rollback counts (per backend).
+        * Number of graph queries (per type: read/write).
+        * Latency of graph queries.
+        * Error rates for graph operations.
+        * PostgreSQL connection pool metrics.
+        * Container health and resource utilization metrics.
+        * Transaction commit/rollback counts.
 
 ### Development plan
 
-0.  **Phase 0: GAL (Milestone 0)**
-    * Create the GAL with pluggable backend interface.
+0.  **Phase 0: GAL Foundation (Milestone 0)**
+    * Create the GAL with PostgreSQL + Apache AGE backend interface.
     * Implement CRUD endpoints representing Radius abstraction level graph operations.
     * Develop initial unit & integration tests for the GAL.
-    * Ensure via debug logging that no components are communicating directly with etcd other than the GAL.
-1.  **Phase 1: Kùzu Integration (Milestone 1)**
-    * Phase 1 will be worked on with etcd code still in use, a configuration flag will be used to use the graph backend so we can ship smaller change sets and users can test if desired.
-    * Set up Kùzu as an embedded dependency with pluggable architecture.
-    * Define and implement Kùzu schema creation.
-    * Implement robust error handling and transaction management in the GAL for Kùzu backend.
-    * Add Kùzu specific tests (schema creation, backup/restore, etc).
-    * Modify Radius init and upgrade processes to trigger appropriate behavior in the GAL.
-    * Write idempotent migration tool for etcd => graph db.
-2.  **Phase 2: Postgres with Apache AGE Integration (Milestone 2)**
-    * Research Postgres with Apache AGE capabilities and integration requirements.
-    * Implement Postgres with Apache AGE backend for the GAL.
-    * Ensure feature parity between Kùzu and Postgres with Apache AGE backends.
-    * Add comprehensive tests for Postgres with Apache AGE backend.
-    * Implement configuration options for backend selection.
+    * Create PostgreSQL + AGE container configuration and deployment manifests.
+1.  **Phase 1: Container Integration (Milestone 1)**
+    * Set up PostgreSQL + Apache AGE as a containerized dependency.
+    * Define and implement schema creation and migration logic.
+    * Implement robust error handling and transaction management in the GAL.
+    * Add container-specific tests (deployment, networking, persistence, etc).
+    * Modify Radius init and upgrade processes to deploy and manage the PostgreSQL + AGE container.
+2.  **Phase 2: Migration Tooling (Milestone 2)**
+    * Write idempotent migration tool for etcd => PostgreSQL + AGE.
+    * Implement data validation and consistency checking tools.
+    * Integrate backup checkpoint coordination with upgrade commands currently under development (DBAs maintain responsibility for actual PostgreSQL backup/restore operations outside an upgrade).
+    * Develop rollback procedures for failed migrations.
 3.  **Phase 3: Testing & Documentation (Milestone 3)**
-    * Implement backup/restore CLI commands for both backends.
     * Conduct comprehensive E2E testing, performance testing, and security review.
+    * Implement container orchestration and operational procedures.
     * Develop documentation for operators and developers.
+    * Create operational runbooks for common scenarios.
 4.  **Phase 4: Query Enhancement (Milestone 4 - optional)**
     * Enhance GAL with more advanced query capabilities (pathfinding, complex traversals, to support new User Stories defined by product).
+    * Evaluate opportunities for migrating additional Radius storage needs to PostgreSQL.
+5.  **Phase 5: Full Storage Migration (Future - out of scope)**
+    * Migrate existing key-value operations from etcd to PostgreSQL.
+    * Rename GAL to DAL (Data Access Layer) to reflect unified data access responsibilities.
+    * Deprecate etcd dependency entirely.
+    * Implement unified backup, monitoring, and operational procedures for all Radius data.
 
 ### Open Questions
 
 1.  **Schema Evolution:** How will schema changes (e.g., adding new node/edge types, new properties) be managed over time with Radius upgrades? This will be critical for the GAL to handle gracefully.
-2.  **Resource Footprint:** What is the typical CPU, memory, and disk I/O footprint of each backend for representative Radius graph sizes?
+2.  **Resource Footprint:** What is the typical CPU, memory, and disk I/O footprint of the PostgreSQL + AGE container for representative Radius graph sizes?
 3.  **Dashboard:** The changes proposed here such as nested types and expanded use of connections will make the app graph both richer and larger, the existing dashboard will probably need some UX design and work in order to leverage that effectively and intuitively.
+4.  **etcd Deprecation Strategy:** What are the long-term benefits and challenges of completely deprecating etcd usage in Radius in favor of PostgreSQL + AGE? This could include:    * **Benefits:** Unified storage architecture, reduced operational complexity, single database technology to manage, consistent backup/restore procedures, simplified monitoring and alerting
+    * **Challenges:** Migration complexity for existing deployments, potential performance implications for key-value workloads, increased PostgreSQL container resource requirements, dependency on PostgreSQL expertise rather than Kubernetes-native etcd    * **Timeline:** Should etcd deprecation be a stated goal of this project, or evaluated as a separate future initiative based on the success of graph operations?
+    * **Migration Timing Advantage:** Implementing etcd deprecation now would require relatively few users to use the migration tool, as Radius is still in early adoption. Once Radius gains more production users, the operational burden of supporting migrations will magnify significantly, making early migration more strategically advantageous for both the project and users.
 
 ### Alternatives considered
 
 1.  **Continue using etcd:**
     * **Advantages:** Leverages existing Kubernetes provided etcd installation and expertise. No new database dependency.
     * **Disadvantages:** Limited query capabilities, known performance bottlenecks for sizeable application graphs, nested rendering logic very manual and complex, tightly coupled to key value stores.
-2.  **Other Embedded Graph Databases (e.g., a Go-native one if a mature one exists):**
-    * **Advantages:** Could offer tighter integration if fully Go-native.
-    * **Disadvantages:** Kùzu is chosen for dev/test for its performance, Cypher support, and active development. A pure Go alternative might lack some of these mature features or performance characteristics.
-3.  **Hosted/Server-based Graph Databases (e.g., Neo4j, Dgraph as a service, NebulaGraph):**
+2.  **Embedded Graph Databases (e.g., Kùzu, DuckDB with graph extensions):**
+    * **Advantages:** Could offer lower latency by eliminating network calls, simpler deployment with no separate container.
+    * **Disadvantages:** Limited operational tooling compared to PostgreSQL, less familiar to most operations teams, harder to scale or make highly available, complicates backup and monitoring procedures.
+3.  **Hosted/Server-based Graph Databases (e.g., Neo4j, Amazon Neptune):**
     * **Advantages:** Mature, feature-rich, often provide built-in clustering and HA.
-    * **Disadvantages:** Adds significant operational complexity (managing a separate database cluster), network latency between Radius and the DB, cost, and deviates from the goal of a more self-contained/embeddable solution for core graph logic. This proposal prioritizes decoupling and enhancing capabilities with a pluggable solution first.
-4.  **Cayley Graph Database:**
-    * **Advantages:** Open-source graph database with support for multiple query languages and storage backends.
-    * **Disadvantages:** Not designed as an embedded-first solution, requiring additional configuration and operational overhead compared to Kùzu. Would require setting up and managing a separate service instance, network connections, and handling deployment complexity that diverges from our goal of a streamlined, embeddable solution for development and testing environments.
+    * **Disadvantages:** Adds significant operational complexity (managing a separate database cluster), vendor lock-in for managed services, additional costs, and deviates from the goal of a self-contained solution.
+4.  **Other PostgreSQL Extensions (e.g., PostgREST with custom graph logic):**
+    * **Advantages:** Uses familiar PostgreSQL but with different graph capabilities.
+    * **Disadvantages:** Apache AGE provides native Cypher support and is specifically designed for graph workloads, offering better performance and more comprehensive graph features than custom solutions.
 
 ### Full Storage Migration Effort Evaluation
 
@@ -508,149 +529,86 @@ During the design phase, we evaluated the effort required to move ALL Radius sto
 
 **Conclusion**: The scoped approach (application graph only) provides the core benefits of graph database technology (enhanced relationship querying, better performance for graph traversals, support for complex connections) while maintaining the proven, optimized storage patterns for individual resource operations. This delivers significant value with much lower risk and development investment. Once Radius Extensibility has shipped many of the existing RPs will be deprecated in favor of Core Types in DynamicRP, making the work to transition to a single data store viable if we decide to do it to simplify the architecture.
 
-### Graph Database Selection Methodology
+### PostgreSQL + AGE Configuration
 
-**Based on established Radius configuration patterns, the following two-tier approach provides consistent user experience for selecting which graph database to use for a Radius installation:**
+**Container Deployment Configuration:**
 
-#### Tier 1: Interactive Installation Configuration
+The PostgreSQL + Apache AGE container will be deployed as part of the Radius control plane with the following configuration approach:
 
-**Command:** `rad init --full`
+#### Helm Chart Configuration
 
-Users are presented with an interactive menu during the full initialization process to select their preferred graph database backend:
-
-```
-? Select graph database for application graph operations:
-  > Kùzu (Embedded - recommended for development/testing)
-    PostgreSQL with Apache AGE (Network-based - recommended for production)
-    Custom Cypher-compatible database (advanced configuration)
-```
-
-**Implementation Details:**
-- Follows established pattern from `rad init --full` for AWS IRSA vs access keys, Azure Service Principal vs Workload Identity
-- Default selection: Kùzu for simplicity and zero external dependencies
-- Stores selection in Radius configuration for subsequent `rad install` operations
-- Advanced option allows users to specify custom connection strings for other Cypher-compatible databases
-
-#### Tier 2: Non-Interactive Installation Parameters
-
-**Command:** `rad install kubernetes --set global.graphDatabase.*`
-
-For automated deployments and GitOps scenarios, users can specify graph database configuration via Helm chart parameters:
-
-**Kùzu Configuration (Default):**
+**PostgreSQL + AGE Container Configuration:**
 ```bash
-rad install kubernetes --set global.graphDatabase.type=kuzu \
-  --set global.graphDatabase.kuzu.persistentVolume.enabled=true \
-  --set global.graphDatabase.kuzu.persistentVolume.size=10Gi \
-  --set global.graphDatabase.kuzu.persistentVolume.storageClass=fast-ssd
-```
-
-**PostgreSQL with Apache AGE Configuration:**
-```bash
-rad install kubernetes --set global.graphDatabase.type=postgresql-age \
-  --set global.graphDatabase.postgresql.host=postgres.example.com \
-  --set global.graphDatabase.postgresql.port=5432 \
-  --set global.graphDatabase.postgresql.database=radius_graph \
-  --set global.graphDatabase.postgresql.username=radius_user \
-  --set global.graphDatabase.postgresql.passwordSecretName=postgres-credentials \
-  --set global.graphDatabase.postgresql.sslMode=require
-```
-
-**Custom Cypher Database Configuration:**
-```bash
-rad install kubernetes --set global.graphDatabase.type=custom \
-  --set global.graphDatabase.custom.connectionString="bolt://neo4j.example.com:7687" \
-  --set global.graphDatabase.custom.credentialsSecretName=neo4j-credentials \
-  --set global.graphDatabase.custom.dialect=neo4j
+rad install kubernetes --set global.database.type=postgresql-age \
+  --set global.database.postgresql.persistence.enabled=true \
+  --set global.database.postgresql.persistence.size=20Gi \
+  --set global.database.postgresql.persistence.storageClass=fast-ssd \
+  --set global.database.postgresql.resources.requests.cpu=500m \
+  --set global.database.postgresql.resources.requests.memory=1Gi \
+  --set global.database.postgresql.resources.limits.cpu=2 \
+  --set global.database.postgresql.resources.limits.memory=4Gi
 ```
 
 #### Configuration Schema
 
-The GAL will support the following configuration structure in Helm values:
-
 ```yaml
 global:
-  graphDatabase:
-    type: kuzu  # kuzu | postgresql-age | custom
-      # Kùzu-specific configuration
-    kuzu:
-      persistentVolume:
+  database:
+    type: postgresql-age
+    postgresql:      # Container configuration
+      image:
+        repository: postgres
+        tag: "15-alpine"
+        pullPolicy: IfNotPresent
+      
+      # AGE extension configuration
+      age:
         enabled: true
-        size: 10Gi
+        version: "1.5.0"
+        installMethod: "init-container"  # Options: init-container, custom-image, runtime-install
+        # When installMethod is "init-container", AGE will be compiled and installed during container startup
+        # When installMethod is "custom-image", we maintain a Radius-specific PostgreSQL+AGE image
+        # When installMethod is "runtime-install", AGE is installed via apt/apk after container starts
+      
+      # Persistence configuration
+      persistence:
+        enabled: true
+        size: 20Gi
         storageClass: ""
         accessModes: ["ReadWriteOnce"]
         annotations: {}
         labels: {}
-      dataDirectory: "/data/kuzu"
+      
+      # Resource allocation
       resources:
         requests:
-          cpu: "100m"
-          memory: "256Mi"
-        limits:
           cpu: "500m"
           memory: "1Gi"
-    
-    # PostgreSQL with Apache AGE configuration
-    postgresql:
-      host: "localhost"
-      port: 5432
-      database: "radius_graph"
-      username: "radius_user"
-      passwordSecretName: "postgres-credentials"
-      sslMode: "prefer"  # disable | prefer | require
-      connectionPoolSize: 10
-    
-    # Custom Cypher database configuration
-    custom:
-      connectionString: ""
-      credentialsSecretName: ""
-      dialect: "neo4j"  # neo4j | amazon-neptune | others
-      additionalParams: {}
+        limits:
+          cpu: "2"
+          memory: "4Gi"
+      
+      # Database configuration
+      database: "radius"
+      username: "radius"
+      passwordSecretName: "postgresql-credentials"
+      
+      # Connection configuration
+      connectionPoolSize: 20
+      maxIdleConnections: 5
+      maxOpenConnections: 100
 ```
 
 #### Environment Variable Mapping
 
-The GAL will read configuration from these environment variables (set by Helm chart):
-
 ```bash
-# Graph database type selection
-RADIUS_GRAPH_DATABASE_TYPE=kuzu
-
-# Kùzu configuration
-RADIUS_GRAPH_KUZU_DATA_DIR=/data/kuzu
-
-# PostgreSQL configuration  
-RADIUS_GRAPH_POSTGRESQL_HOST=postgres.example.com
-RADIUS_GRAPH_POSTGRESQL_PORT=5432
-RADIUS_GRAPH_POSTGRESQL_DATABASE=radius_graph
-RADIUS_GRAPH_POSTGRESQL_USERNAME=radius_user
-RADIUS_GRAPH_POSTGRESQL_PASSWORD_FILE=/etc/secrets/postgres/password
-RADIUS_GRAPH_POSTGRESQL_SSL_MODE=require
-
-# Custom configuration
-RADIUS_GRAPH_CUSTOM_CONNECTION_STRING=bolt://neo4j.example.com:7687
-RADIUS_GRAPH_CUSTOM_CREDENTIALS_FILE=/etc/secrets/custom/credentials
-RADIUS_GRAPH_CUSTOM_DIALECT=neo4j
+# PostgreSQL container configuration
+RADIUS_DATABASE_TYPE=postgresql-age
+RADIUS_POSTGRESQL_HOST=radius-postgresql
+RADIUS_POSTGRESQL_PORT=5432
+RADIUS_POSTGRESQL_DATABASE=radius
+RADIUS_POSTGRESQL_USERNAME=radius
+RADIUS_POSTGRESQL_PASSWORD_FILE=/etc/secrets/postgresql/password
+RADIUS_POSTGRESQL_SSL_MODE=prefer
+RADIUS_POSTGRESQL_CONNECTION_POOL_SIZE=20
 ```
-
-#### Design Rationale
-
-This approach follows **established Radius patterns**:
-
-1. **Interactive Configuration Pattern**: Mirrors `rad init --full` interactive flows for cloud provider credential configuration
-2. **Installation-time Parameters**: Consistent with `rad install kubernetes --set` usage for Helm chart customization
-3. **Credential Management**: Follows existing patterns for handling sensitive configuration via Kubernetes secrets
-4. **Default Behavior**: Provides sensible defaults (Kùzu) while allowing production-ready alternatives (PostgreSQL+AGE)
-5. **Extensibility**: Supports future Cypher-compatible databases through custom configuration
-
-**Benefits:**
-- **Consistency**: Aligns with existing Radius user experience patterns
-- **Flexibility**: Supports both development (embedded Kùzu) and production (networked PostgreSQL) scenarios
-- **Automation-Friendly**: Non-interactive configuration supports GitOps and CI/CD workflows
-- **Progressive Disclosure**: Simple defaults with advanced options for power users
-
-**Implementation Notes:**
-- GAL initialization logic will read configuration from environment variables
-- Database connections will be established during GAL startup with appropriate error handling
-- Connection pooling and retry logic will be implemented for networked database options
-- Schema initialization will be database-specific but abstracted through the GAL interface
