@@ -316,7 +316,7 @@ rad admin graph rebuild --from-etcd
 #### Advantages (of PostgreSQL + AGE for application graph operations)
 
 * **Rich Querying:** Cypher provides significantly more powerful and expressive graph query capabilities than filtering etcd values client side for application graph traversals.
-* **Performance:** For complex graph traversals (multi-hop queries, pathfinding), PostgreSQL + AGE is optimized for such operations and likely to be much faster than current etcd-based approaches.
+* **Performance:** For complex graph traversals (multi-hop queries, path finding), PostgreSQL + AGE is optimized for such operations and likely to be much faster than current etcd-based approaches.
 * **Production Ready:** PostgreSQL is a mature, battle-tested database with extensive operational tooling, monitoring, and expertise available.
 * **Unified Technology Stack:** Using PostgreSQL + AGE establishes a foundation for potentially consolidating all Radius storage needs, reducing operational complexity over time.
 * **Container Architecture:** Deploying as a separate container provides clear separation of concerns while enabling standard Kubernetes deployment patterns.
@@ -354,7 +354,7 @@ graph TD
 
 In this model:
 - The `Database` node is connected to a `Credentials` node via a CONNECTION.
-- The `Credentials` node is connected to two `Secret` nodes (for username and password) via CONNECTIONs.
+- The `Credentials` node is connected to two `Secret` nodes (for username and password) via connections.
 
 This structure enables richer queries and recipe author use cases like `context.connected_resources.database.credentials.username` instead of only being able to access the embedded `credentials` object and requiring the recipe author to parse.
 Additionally it provides a better separation of concerns, and a more flexible, maintainable application graph.
@@ -512,9 +512,6 @@ No changes to the public Radius REST API are anticipated initially, other than p
 3.  **Hosted/Server-based Graph Databases (e.g., Neo4j, Amazon Neptune):**
     * **Advantages:** Mature, feature-rich, often provide built-in clustering and HA.
     * **Disadvantages:** Adds significant operational complexity (managing a separate database cluster), vendor lock-in for managed services, additional costs, and deviates from the goal of a self-contained solution.
-4.  **Other PostgreSQL Extensions (e.g., PostgREST with custom graph logic):**
-    * **Advantages:** Uses familiar PostgreSQL but with different graph capabilities.
-    * **Disadvantages:** Apache AGE provides native Cypher support and is specifically designed for graph workloads, offering better performance and more comprehensive graph features than custom solutions.
 
 ### Full Storage Migration Effort Evaluation
 

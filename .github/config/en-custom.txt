@@ -995,3 +995,13 @@ DeleteNode
 GetNode
 UpdateNodeProperties
 nodeID
+atomicity
+reusability
+queryable
+OpenTelemetry
+LRT
+Sanitization
+parameterization
+runbooks
+sizeable
+DuckDB
