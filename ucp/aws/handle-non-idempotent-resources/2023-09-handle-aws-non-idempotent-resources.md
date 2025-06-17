@@ -1,6 +1,6 @@
 # Handling Non-Idempotent AWS Resources in UCP
 
-**Note: This design doc has been ported over from an old design doc and might not match the template completely**
+**Note: This design doc has been ported over from an old design doc and might not match Note that here we are using the Radius resource group to construct the key of the tracking entry instead of the AWS `resourceID`. The deployment engine provides the resource group information from the deployment's resource group during the POST call that it makes to UCP to create/update the resource. This will associate the AWS resource with the Radius resource group, and thus allow the user to list AWS resources deployed within a Radius resource group.he template completely**
 
 * **Author**: Vinaya Damle (vinayada)
 
@@ -120,7 +120,7 @@ Note that for now, we will add the “alias” property only for AWS resources a
 
 #### UCP/DE Changes 
 
-We will make changes to UCP to handle AWS resources similarly to Radius resources. UCP will store the AWS resource metadata in the same way that Radius resources are stored today (that is, the key will be the resourceID). We will store three pieces of metadata for each of these tracked AWS resources: 
+We will make changes to UCP to handle AWS resources similarly to Radius resources. UCP will store the AWS resource metadata in the same way that Radius resources are stored today (that is, the key will be the `resourceID`). We will store three pieces of metadata for each of these tracked AWS resources: 
 
 - Scope: Describes the AWS resource scope, including the account ID and the region ID for the resource deployment 
 - PrimaryIdentifier: Lists the AWS primary identifier, which is required to uniquely identify the resource 

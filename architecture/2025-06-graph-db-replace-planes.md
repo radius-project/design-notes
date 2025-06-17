@@ -245,39 +245,42 @@ graph TD
 
 5.  **Graph Access Layer (GAL) API:**
     * Example Go interface:
-        ```go
-        type GraphStore interface {
-            // Node operations
-            CreateNode(ctx context.Context, node Node) error
-            GetNode(ctx context.Context, nodeID string) (Node, error)
-            UpdateNodeProperties(ctx context.Context, nodeID string, properties map[string]interface{}) error
-            DeleteNode(ctx context.Context, nodeID string) error // Handle cascading deletes for owned relationships
+    
+    ```go
+    type GraphStore interface {
+        // Node operations
+        CreateNode(ctx context.Context, node Node) error
+        GetNode(ctx context.Context, nodeID string) (Node, error)
+        UpdateNodeProperties(ctx context.Context, nodeID string, properties map[string]interface{}) error
+        DeleteNode(ctx context.Context, nodeID string) error // Handle cascading deletes for owned relationships
 
-            // Edge operations (connections)
-            CreateEdge(ctx context.Context, edge Edge) error
-            GetEdge(ctx context.Context, fromNodeID, toNodeID string, edgeType string) (Edge, error) // Or a unique edge ID
-            UpdateEdgeProperties(ctx context.Context, edgeID string, properties map[string]interface{}) error
-            DeleteEdge(ctx context.Context, edgeID string) error
+        // Edge operations (connections)
+        CreateEdge(ctx context.Context, edge Edge) error
+        GetEdge(ctx context.Context, fromNodeID, toNodeID string, edgeType string) (Edge, error) // Or a unique edge ID
+        UpdateEdgeProperties(ctx context.Context, edgeID string, properties map[string]interface{}) error
+        DeleteEdge(ctx context.Context, edgeID string) error
 
-            // Query operations
-            GetOutgoingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
-            GetIncomingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
-            FindPaths(ctx context.Context, startNodeID, endNodeID string, maxHops int) ([][]Node, error) // More complex queries
-            ExecuteCypherQuery(ctx context.Context, query string, params map[string]interface{}) ([]map[string]interface{}, error) // For advanced internal use
-        }        type Node struct {
-            ID         string
-            Type       string // e.g., "Applications.Core/application"
-            Properties map[string]interface{} // Minimal properties for query filtering only
-        }
+        // Query operations
+        GetOutgoingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
+        GetIncomingNeighbors(ctx context.Context, nodeID string, edgeTypePattern string) ([]Node, error)
+        FindPaths(ctx context.Context, startNodeID, endNodeID string, maxHops int) ([][]Node, error) // More complex queries
+        ExecuteCypherQuery(ctx context.Context, query string, params map[string]interface{}) ([]map[string]interface{}, error) // For advanced internal use
+    }
+    
+    type Node struct {
+        ID         string
+        Type       string // e.g., "Applications.Core/application"
+        Properties map[string]interface{} // Minimal properties for query filtering only
+    }
 
-        type Edge struct {
-            ID         string // Optional, could be derived from both nodes
-            FromNodeID string
-            ToNodeID   string
-            Type       string // e.g., "Connection"
-            Properties map[string]interface{}
-        }
-        ```
+    type Edge struct {
+        ID         string // Optional, could be derived from both nodes
+        FromNodeID string
+        ToNodeID   string
+        Type       string // e.g., "Connection"
+        Properties map[string]interface{}
+    }
+    ```
 
 4.  **Data Persistence and State:**
     * **PostgreSQL + Apache AGE Container:** Network-based connection with standard PostgreSQL high availability, clustering, and backup mechanisms.
