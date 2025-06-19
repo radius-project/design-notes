@@ -575,7 +575,7 @@ Establish a clear process and guidelines for community members to contribute new
 
 ## Notes from design discussions
 
-### How to expose platform specific capabilities
+### Platform specific capabilities
 
 There is a design decision to be made regarding how advanced capabilities specific to the underlying compute platform (e.g. ACI confidential containers) should be exposed to platform engineers and developers. There are two options to be considered:
 
