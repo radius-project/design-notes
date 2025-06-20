@@ -522,7 +522,7 @@ This approach allows teams to manage and version their RRTs and recipes in Git, 
     *   Work with the maintainers to address any concerns until the PR is approved.
     *   Once approved, your contribution will be merged into the Radius repository where your contributed Recipes and/or Recipe Packs will be published to the Radius GHCR registry, making your Recipes/Recipe Pack available to the community.
 
-> The proposal is add core RRTs and Recipes to a new repo called `radius-project/types-contrib` where both core (built-in) and extended (optional) types and Recipes will be stored in a structure like: <img src="2025-06-compute-extensibility-feature-spec/types-contrib-repo-structure.png" alt="diagram showing types-contrib repo structure that includes root directories for core and extended types" width="500"/>
+> The proposal is add core RRTs and Recipes to a new repo called `radius-project/types-contrib` where both core (built-in) and extended (optional) types and Recipes will be stored in a structure like: <img src="2025-06-compute-extensibility-feature-spec/types-contrib-repo-structure.png" alt="diagram showing types-contrib repo structure that includes root directories for core and extended types" width="700"/>
 
 #### Migrating existing Radius applications to use the new RRT-based core types and recipes:
 
