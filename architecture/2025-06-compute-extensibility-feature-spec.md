@@ -585,30 +585,29 @@ There is a design decision to be made regarding how advanced capabilities specif
 
 > Note that both options advocate for the implementation of the capabilities via Recipes.
 
-#### Option 1: Built into the standard container properties
-This is the [current proposal](#deploying-an-application-with-mixed-standard-and-confidential-containers) where the platform-specific configurations are exposed in the standard container properties provided by Radius out of the box, in a freeform format that is up to the Recipe for the underlying platform to implement (e.g. an optional PodSpec or ContainerGroupProfile object encapsulated in the `runtimes` property that gets passed through for the underlying Recipe to act on).
+#### Option 1: Open by default in the standard container properties
+This is the [current proposal](#deploying-an-application-with-mixed-standard-and-confidential-containers) where the platform-specific configurations are exposed in the standard container properties provided by Radius out of the box, in a freeform format that is up to the Recipe for the underlying platform to implement (e.g. an optional [PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec), [ECS task definition template](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-definition-template.html) or [ACI ContainerGroupProfile](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-reference-yaml#schema) object encapsulated in the `runtimes` property that gets passed through for the underlying Recipe to implement as it sees fit).
 
 **Pros:**
-- Platform specific capabilities can be leveraged using built-in properties of the standard container resource type, without requiring platform engineers to modify the container resource.
+- Platform specific capabilities can be leveraged using built-in properties of the standard container resource type, without requiring platform engineers to modify the container resource or Recipe.
 - Provides an avenue for developers to "punch-through" the Radius abstraction, which may be especially necessary for onboarding existing (brownfield) applications on to Radius.
-- Default Recipes can be leveraged for the standard container resource type for platforms that don't require platform-specific configurations. For example, the default Kubernetes Recipe can be used for the standard container resource type without any modifications, while the ACI Recipe can be modified to leverage the platform-specific capabilities.
 
 **Cons:**
 - Exposing the entire set of container configurations in order to allow for platform specific capabilities may be too broad of an abstraction punch-through, resulting in container infrastructure configurations being split or duplicated across two places (i.e. in the container resource definition itself and in the Recipe).
-- May lead to a proliferation of properties in the standard container resource type by developers, making it harder to manage and control for the platform engineering team.
+- May lead to a proliferation of properties in the standard container resource type by developers, making it harder to manage and control for the platform engineering team. Such a punch-through exposed to developers can lead to misuse and complications as the container contract becomes ambiguous (i.e. platform engineers have to manage a separate contract with their developers on what is and isn't allowed in the punch-through).
 
-#### Option 2: Not built into the standard container properties
+#### Option 2: Closed by default, requiring platform engineers to extend the container resource
 This option is where the advanced capabilities are not exposed in the standard container properties provided by Radius out of the box, but rather require platform engineers to modify the container resource definitions to enable these capabilities. This could be done by creating a custom Radius Resource Type (RRT) that extends the standard container RRT to include platform-specific properties or configurations.
 
+> If we go with Option 2: Closed by default, we will need to bring into scope the expansion of standard container properties to include additional common properties, such as `tags`/`labels` and `restartPolicy`, so that the majority of developer use cases are covered by the standard container resource type. Thus, platform engineers only need to extend the container resource type for advanced capabilities, rather than for common properties.
+
 **Pros:**
-- Keeps the standard container resource type clean and focused on core properties, avoiding clutter from platform-specific configurations or misuse of advanced container configurations by developers.
-- Allows platform engineers to define and enforce specific configurations for advanced capabilities, ensuring consistency across applications deployed on that platform.
-- The Radius maintainers retain the option to add advanced capabilities to the standard container resource type in the future, if needed, without breaking existing applications. For example, if confidential containers become an standard offering across all platforms, the Radius maintainers can add a `confidentialCompute` property to the standard container resource type and provide default Recipes that implement it.
+- Keeps the standard container resource type clean and focused on core properties, avoiding clutter from platform-specific configurations or misuse of advanced container configurations, thus maintaining the separation of concern between platform engineers and developers.
+- The Radius maintainers retain the option to add advanced capabilities to the standard container resource type in the future as needed. For example, if confidential containers become a standard offering across all platforms, the maintainers can add a `confidentialCompute` property to the standard container resource type and provide default Recipes that implement it. Properties that are common across multiple platforms (e.g. `tags`, `labels`, `restartPolicy`) can be added to the standard container resource type to cover the majority of developer use cases.
 
 **Cons:**
-- Platform engineers must modify the container resource definitions to enable advanced capabilities, which may require additional effort and coordination.
+- Platform engineers must modify the container resource definitions and Recipes to enable advanced capabilities, which may require additional effort and coordination, increasing the maintenance overhead.
 - Limits the ability of developers to leverage advanced container features without involving platform engineers, potentially slowing down the development process.
-- Default Recipes may not be registered for the custom container RRT that is created to leverage platform-specific capabilities, requiring platform engineers to create and register custom Recipes for each platform they want to deploy to.
 
 ### Recipe Packs
 <!-- What role does Recipe packs play in this feature? What are solutions for bundling together multiple packs of Recipes? -->
