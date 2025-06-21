@@ -588,6 +588,27 @@ There is a design decision to be made regarding how advanced capabilities specif
 #### Option 1: Open by default in the standard container properties
 Platform-specific configurations are exposed in the standard container properties provided by Radius out of the box, in a freeform format that is up to the Recipe for the underlying platform to implement (e.g. an optional [PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec), [ECS task definition template](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-definition-template.html) or [ACI ContainerGroupProfile](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-reference-yaml#schema) object encapsulated in a `runtimes` property on the standard Container resource that gets passed through for the underlying Recipe to implement as it sees fit). The default Recipe will pass along the platform-specific properties to the underlying platform API, allowing developers to leverage advanced capabilities without requiring platform engineers to modify the container resource or Recipe.
 
+```diff
+resource backend 'Applications.Core/containers@2025-05-01-preview' = {
+  name: 'backend'
+  properties: {
+    application: application
+    container: {
+      image: 'mycorp/sensitive-processor:v1.2'
+      ports: {
+        api: {
+          containerPort: 5000
+        }
+      }
+    }
++   runtimes: {
++        // Platform-specific properties are included here, following the respective platform's API schema
++        //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
++   }
+  }
+}
+```
+
 **Pros:**
 - Platform specific capabilities can be leveraged using built-in properties of the standard container resource type, without requiring platform engineers to modify the container resource or Recipe.
 - Provides an avenue for developers to "punch-through" the Radius abstraction, which may be especially necessary for onboarding existing (brownfield) applications on to Radius.
@@ -598,6 +619,29 @@ Platform-specific configurations are exposed in the standard container propertie
 
 #### Option 2: Closed by default, requiring platform engineers to extend the container resource
 This option is where the advanced capabilities are not exposed in the standard container properties provided by Radius out of the box, but rather require platform engineers to modify the container resource definitions to enable these capabilities. This could be done by creating a custom Radius Resource Type (RRT) that extends the standard container RRT to include platform-specific properties or configurations.
+
+```diff
+resource backend 'Applications.Core/containers@2025-05-01-preview' = {
+  name: 'backend'
+  properties: {
+    application: application
+    container: {
+      image: 'mycorp/sensitive-processor:v1.2'
+      ports: {
+        api: {
+          containerPort: 5000
+        }
+      }
++     // Platofrm engineers modify the resource definition to enable the advanced capabilities they need:
++     sku: 'confidential' // platform engineers add this property to enable confidential compute
+    }
+-   runtimes: {
+-        // Remove the platform-specific properties from the core container resource type, 
+-        //     instead requiring platform engineers to extend the resource type as needed.
+-   }
+  }
+}
+```
 
 > If we go with Option 2: Closed by default, we will need to bring into scope the expansion of standard container properties to include additional common properties, such as `tags`/`labels` and `restartPolicy`, so that the majority of developer use cases are covered by the standard container resource type. Thus, platform engineers only need to extend the container resource type for advanced capabilities, rather than for common properties.
 
