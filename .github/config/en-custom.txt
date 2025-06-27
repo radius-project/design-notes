@@ -932,6 +932,7 @@ debuggable
 DSL
 Helly
 GitRepository
+upgradeable
 pyspelling
 Pyspelling
 CNCF
