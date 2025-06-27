@@ -653,6 +653,54 @@ resource backend 'Applications.Core/containers@2025-05-01-preview' = {
 - Platform engineers must modify the container resource definitions and Recipes to enable advanced capabilities, which may require additional effort and coordination, increasing the maintenance overhead.
 - Limits the ability of developers to leverage advanced container features without involving platform engineers, potentially slowing down the development process.
 
+#### Option 3: Open but disabled by default, requiring platform engineers to enable the punch-through via Environment configuration
+This option is a hybrid approach where the advanced capabilities are exposed in the standard container properties, but their enablement is controlled by a configuration in the Radius Environment definition. Platform engineers can enable or disable the punch-through for developers on a per-Environment basis. In this implementation, the configuration would be a boolean property (e.g. `allowAdvancedContainerCapabilities`) in the Environment definition that gets passed to the Recipe when it is registered. The Recipe can then use this configuration to determine whether to apply the advanced capabilities or not. The default Environments provided by Radius would have this configuration set to `true`, allowing developers to leverage advanced capabilities out of the box. The rationale is that default Radius Environments will primarily be used for testing and experimenting with Radius features, and thus enabling the punch-through by default is preferable. We expect platform engineers to create custom Environments for production or even development use cases, where they may choose to disable the punch-through for developers.
+
+
+```diff
+resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+  name: 'myenv'
+  properties: {
++       allowAdvancedContainerCapabilities: true // Platform engineers can enable or disable the punch-through for developers
+    recipes: {
++       // Recipes registered here must implement the allowAdvancedContainerCapabilities property
+    }
+    providers: {
+      azure: {
+        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+      }
+    }
+  }
+}
+
+resource backend 'Applications.Core/containers@2025-05-01-preview' = {
+  name: 'backend'
+  properties: {
+    application: application
+    container: {
+      image: 'mycorp/sensitive-processor:v1.2'
+      ports: {
+        api: {
+          containerPort: 5000
+        }
+      }
+    }
++   runtimes: {
++        // Platform-specific properties are included here, following the respective platform's API schema
++        //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
++   }
+  }
+}
+```
+
+**Pros:**
+- Platform specific capabilities can be leveraged using built-in properties of the standard container resource type, without requiring platform engineers to modify the container resource or Recipe.
+- Platform engineers retain control of the enablement of advanced capabilities on a per-Environment basis, elminating the need for modifying the core resource type.
+
+**Cons:**
+- Adds cognitive load for developers to understand when the punch-through is enabled or not, requiring them to understand how the Environment to which they are deploying their application is configured.
+- Platform engineers will have an additional configuration to manage in the Environment definition.
+
 ### Recipe Packs
 <!-- What role does Recipe packs play in this feature? What are solutions for bundling together multiple packs of Recipes? -->
 This specification proposes the introduction of "Recipe Packs" to group related Recipes together for easier management and deployment. The convenience of Recipe packs will be needed so that platform engineers don't have to piece together individual Recipes for each environment from scratch, as a single Recipe Pack may be re-used for many Environments. Putting everything together manually each time also opens up the door for error (e.g. forgetting to include gateway Recipes).
