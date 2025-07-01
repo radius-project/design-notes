@@ -192,19 +192,22 @@ Initiating automatic rollback to v0.43.0...
   ✓ ...
 
 Rollback complete. System has been restored to v0.43.0.
+Data snapshot 'snapshot-v0.43.0-20250305-093221' is available if data recovery is needed.
 Review Kubernetes events and logs for more details on the failure.
 ```
 
 **Result:**
 
-1. System detects failure during the upgrade process
-2. Helm-based rollback is initiated to revert Kubernetes resources
-3. Control plane components are reverted to their previous version
-4. User is informed of the failure and suggested next steps
+1. System creates a data snapshot before starting the upgrade
+2. System detects failure during the upgrade process
+3. Helm-based rollback is initiated to revert Kubernetes resources
+4. Control plane components are reverted to their previous version
+5. User is informed about the available data snapshot for deeper recovery if needed
 
 **Exceptions:**
 
-1. If Helm rollback fails (would require manual intervention)
+1. If Helm rollback fails, manual intervention using the data snapshot may be required
+2. If snapshot creation fails, the upgrade will not proceed
 
 #### Scenario 4: Upgrading across multiple versions
 
@@ -555,10 +558,11 @@ The implementation will primarily focus on the following components:
 1. **Upgrade Command**: The `rad upgrade kubernetes` command implementation in the CLI codebase
 2. **Version Validation**: Logic to verify compatibility between versions
 3. **Lock Mechanism**: Data-store-level distributed locking system
-4. **Preflight Checks**: Validation system to ensure prerequisites are met before upgrade
-5. **[Future Version] Backup/Restore**: User data protection system using ConfigMaps/PVs
+4. **Data Snapshot**: Lightweight snapshot mechanism for etcd/PostgreSQL before upgrades (in one of the upcoming versions of `rad upgrade kubernetes`)
+5. **Preflight Checks**: Validation system to ensure prerequisites are met before upgrade
 6. **Helm Integration**: Enhanced wrapper around Helm's upgrade capabilities
 7. **Health Verification**: Component readiness and health check mechanisms
+8. **[Future Version] Backup/Restore**: User data protection system using ConfigMaps/PVs
 
 All components will follow Radius coding standards and include comprehensive unit tests.
 
@@ -568,9 +572,20 @@ The upgrade process will implement the following error handling strategies:
 
 1. **Pre-flight Validation**: Catch incompatibility issues before starting the upgrade.
 2. **Graceful Timeouts**: All operations will respect user-defined or default timeouts.
-3. **Helm-based Rollback**: For version 1, failed upgrades will leverage Helm's built-in rollback capability to revert Kubernetes resources to their previous state. Note that this does not include restoration of any user data that might have been modified during the failed upgrade attempt. Full user data backup and restore capabilities will be added in a future version.
+3. **Two-tier Rollback Strategy**:
+   1. **Helm-based Rollback**: For version 1, failed upgrades will leverage Helm's built-in rollback capability to revert Kubernetes resources to their previous state.
+   2. **Data Snapshot Rollback**: In one of the upcoming versions, before starting the upgrade, the system will take a snapshot of the data store and label it with the current version. If critical issues are discovered after the upgrade, administrators can restore from this snapshot.
+      - **etcd**: Will use etcd's built-in snapshot functionality (<https://etcd.io/docs/v3.5/op-guide/recovery/>)
+      - **PostgreSQL**: Will use `pg_dump` or equivalent backup mechanisms
+      - **Important**: After restoring from a snapshot, the application graph will reflect the state at the time of the snapshot. Users must run a deployment after rollback to ensure their applications match the current desired state.
 4. **Detailed Error Reporting**: Clear error messages with troubleshooting guidance.
 5. **Idempotent Operations**: Commands can be safely retried after addressing issues.
+
+**Important Note**: Data snapshot rollback is distinctly different from migration rollback:
+
+- **Migration rollback**: Reverses schema changes by running down migrations, preserving recent data while changing structure
+- **Data snapshot rollback**: Restores the entire datastore to a previous point in time, losing any changes made after the snapshot
+- **Post-rollback requirement**: Since snapshots capture the state at a specific time, any deployments or changes made after the snapshot will be lost. Users must redeploy their applications after a snapshot rollback to ensure consistency.
 
 ## Test Plan
 
@@ -655,6 +670,19 @@ The following outlines the key implementation steps required to deliver the Radi
    - This task depends on all previous tasks (1-5) and should be implemented last.
 
 ### Future Versions
+
+#### Data Snapshot Support
+
+1. **Snapshot Implementation**
+
+   - For etcd: Implement snapshot using etcd's recovery API (<https://etcd.io/docs/v3.5/op-guide/recovery/>)
+   - For PostgreSQL: Implement using `pg_dump` or similar
+   - Label snapshots with the current version before upgrade
+
+2. **Restore Documentation**
+   - Document manual restore procedures for emergency recovery
+   - Include warning that snapshots reflect the application graph at the time of backup
+   - Clearly state that users must redeploy applications after snapshot restore to ensure consistency
 
 #### Data Store Migrations and Rollbacks
 
