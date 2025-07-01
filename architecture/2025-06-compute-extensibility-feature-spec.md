@@ -201,8 +201,26 @@ This scenario demonstrates how a single application definition, containing both 
 
 1.  **Platform Engineer: Configure Environments with Appropriate Recipes**
     *   **Standard Environment (`std-env`):**
-        *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). These recipes might ignore or log a warning for confidential container requests if they don't support them.
+        *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). A `` These recipes might ignore or log a warning for confidential container requests if they don't support them.
         *   Example recipe registration (conceptual):
+            ```diff
+            resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+            name: 'myenv'
+                properties: {
+            +       // Platform engineers can enable or disable the punch-through for developers:
+            +       allowAdvancedContainerCapabilities: false
+                    recipes: {
+            +           // Recipes registered here will ignore the confidential container configurations
+            +           //  since allowAdvancedContainerCapabilities=false
+                    }
+                    providers: {
+                    azure: {
+                        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+                    }
+                    }
+                }
+            }
+            ```
             ```bash
             rad recipe register default --environment std-env \
               --resource-type Applications.Core/containers@2025-05-01-preview \
@@ -214,6 +232,24 @@ This scenario demonstrates how a single application definition, containing both 
     *   **Confidential Environment (`confi-env`):**
         *   The platform engineer configures `confi-env` with specialized recipes for `Applications.Core/containers@2025-05-01-preview` that support deploying confidential containers (e.g., ACI Confidential Containers). These recipes will interpret a specific property on the container resource to provision confidential compute.
         *   Example recipe registration (conceptual):
+            ```diff
+            resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+            name: 'myenv'
+                properties: {
+            +       // Platform engineers can enable or disable the punch-through for developers:
+            +       allowAdvancedContainerCapabilities: true
+                    recipes: {
+            +           // Recipes registered here will implement the confidential container configurations
+            +           //  since allowAdvancedContainerCapabilities=true
+                    }
+                    providers: {
+                    azure: {
+                        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+                    }
+                    }
+                }
+            }
+            ```
             ```bash
             rad recipe register default --environment confi-env \
               --resource-type Applications.Core/containers@2025-05-01-preview \
@@ -293,20 +329,17 @@ This scenario demonstrates how a single application definition, containing both 
         -       }
             ]
             // This container requests confidential compute
-        +   runtimes: {
-        +       aci: {
-        +           // Add ACI-specific properties here to punch-through the Radius abstraction, e.g. sku, osType, etc.
-        +           sku: 'Confidential' // 'Standard', 'Dedicated', etc.
-        +       }
+        +   runtimes: { // Consider renaming this to `options` or `platform`, etc. for clarity
+        +       // Platform-specific properties are included here, following the respective platform's API schema
+        +       //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
         +   }
           }
         }
 
-        resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = { // Assuming existing Redis type
+        resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
           name: 'mycache'
           properties: {
             application: application
-            // Redis specific properties
           }
         }
         ```
@@ -316,16 +349,16 @@ This scenario demonstrates how a single application definition, containing both 
         *   `rad deploy ./app.bicep --environment std-env`
         *   Radius uses the `std-container-recipe` registered in `std-env`.
         *   The `frontend` container is deployed as a standard container.
-        *   The `backend` container, despite its `extensions.confidentialCompute` property, is deployed as a standard container because the `std-container-recipe` does not support confidential compute (or is configured to treat it as standard).
+        *   The `backend` container, despite its platform-specific confidential container property, is deployed as a standard container because the `std-container-recipe` in `std-env` does not support confidential compute (or is configured to treat it as standard).
         *   The `cache` is deployed, and the connection between `backend` and `cache` is established.
     *   **Deploy to Confidential Environment:**
         *   `rad deploy ./app.bicep --environment confi-env`
         *   Radius uses the `confi-container-recipe` registered in `confi-env`.
         *   The `frontend` container is deployed as a standard container (as its definition doesn't request confidential compute).
-        *   The `backend` container's `extensions.confidentialCompute` property is interpreted by the `confi-container-recipe`, and it is deployed as a confidential container (e.g., an ACI confidential container).
+        *   The `backend` container's platform-specific confidential container property is interpreted by the `confi-container-recipe` in `confi-env`, and it is deployed as a confidential container (e.g., an ACI confidential container).
         *   The `cache` is deployed, and the connection between `backend` (now confidential) and `cache` is established.
 
-This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (standard vs. confidential) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
+> This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (standard vs. confidential) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
 
 #### Creating and registering custom Recipes for core types:
 1.  **Create and Register Recipes for Core Types**:
@@ -581,9 +614,9 @@ Establish a clear process and guidelines for community members to contribute new
 
 ### Platform specific capabilities
 
-There is a design decision to be made regarding how advanced capabilities specific to the underlying compute platform (e.g. ACI confidential containers) should be exposed to platform engineers and developers. There are two options to be considered:
+There is a design decision to be made regarding how advanced capabilities specific to the underlying compute platform (e.g. ACI confidential containers) should be exposed to platform engineers and developers. There were three options considered, with Option 3 being the preferred after seeking feedback from the community and users:
 
-> Note that both options advocate for the implementation of the capabilities via Recipes.
+> Note that all options advocate for the implementation of the capabilities via Recipes.
 
 #### Option 1: Open by default in the standard container properties
 Platform-specific configurations are exposed in the standard container properties provided by Radius out of the box, in a freeform format that is up to the Recipe for the underlying platform to implement (e.g. an optional [PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec), [ECS task definition template](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-definition-template.html) or [ACI ContainerGroupProfile](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-reference-yaml#schema) object encapsulated in a `runtimes` property on the standard Container resource that gets passed through for the underlying Recipe to implement as it sees fit). The default Recipe will pass along the platform-specific properties to the underlying platform API, allowing developers to leverage advanced capabilities without requiring platform engineers to modify the container resource or Recipe. If platform engineers do not want to allow certain punch-throughs, they need to modify the RRT and/or Recipes. Alternatively, we can add a configuration to the Environment definition that platform engineers can set to enable or disable punch-throughs for developers per Environment.
@@ -653,7 +686,7 @@ resource backend 'Applications.Core/containers@2025-05-01-preview' = {
 - Platform engineers must modify the container resource definitions and Recipes to enable advanced capabilities, which may require additional effort and coordination, increasing the maintenance overhead.
 - Limits the ability of developers to leverage advanced container features without involving platform engineers, potentially slowing down the development process.
 
-#### Option 3: Open but disabled by default, requiring platform engineers to enable the punch-through via Environment configuration
+#### Option 3 (PREFERRED): Open but disabled by default, requiring platform engineers to enable the punch-through via Environment configuration
 This option is a hybrid approach where the advanced capabilities are exposed in the standard container properties, but their enablement is controlled by a configuration in the Radius Environment definition. Platform engineers can enable or disable the punch-through for developers on a per-Environment basis. In this implementation, the configuration would be a boolean property (e.g. `allowAdvancedContainerCapabilities`) in the Environment definition that gets passed to the Recipe when it is registered. The Recipe can then use this configuration to determine whether to apply the advanced capabilities or not. The default Environments provided by Radius would have this configuration set to `true`, allowing developers to leverage advanced capabilities out of the box. The rationale is that default Radius Environments will primarily be used for testing and experimenting with Radius features, and thus enabling the punch-through by default is preferable. We expect platform engineers to create custom Environments for production or even development use cases, where they may choose to disable the punch-through for developers.
 
 
