@@ -201,8 +201,8 @@ This scenario demonstrates how a single application definition, containing both 
 
 1.  **Platform Engineer: Configure Environments with Appropriate Recipes**
     *   **Standard Environment (`std-env`):**
-        *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). A `` These recipes might ignore or log a warning for confidential container requests if they don't support them.
-        *   Example recipe registration (conceptual):
+        *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). These recipes will ignore the platform-specific properties on the container resource since `allowAdvancedContainerCapabilities=false`, and log a warning.
+        *   Example Environment definition (conceptual):
             ```diff
             resource environment 'Applications.Core/environments@2023-10-01-preview' = {
             name: 'myenv'
@@ -221,6 +221,7 @@ This scenario demonstrates how a single application definition, containing both 
                 }
             }
             ```
+        *   Example Recipe registration (conceptual):
             ```bash
             rad recipe register default --environment std-env \
               --resource-type Applications.Core/containers@2025-05-01-preview \
@@ -230,8 +231,8 @@ This scenario demonstrates how a single application definition, containing both 
               --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0
             ```
     *   **Confidential Environment (`confi-env`):**
-        *   The platform engineer configures `confi-env` with specialized recipes for `Applications.Core/containers@2025-05-01-preview` that support deploying confidential containers (e.g., ACI Confidential Containers). These recipes will interpret a specific property on the container resource to provision confidential compute.
-        *   Example recipe registration (conceptual):
+        *   The platform engineer configures `confi-env` with specialized recipes for `Applications.Core/containers@2025-05-01-preview` that support deploying confidential containers (e.g., ACI Confidential Containers). These recipes will interpret the platform-specific properties on the container resource to provision confidential compute. These recipes will ignore and log a warning for confidential container requests if the platform-specific properties are not applicable to the target environment (e.g. ACI containerGroupProfile configurations would be ignored if the deployment target environment is Kubernetes).
+        *   Example Environment definition (conceptual):
             ```diff
             resource environment 'Applications.Core/environments@2023-10-01-preview' = {
             name: 'myenv'
@@ -250,6 +251,7 @@ This scenario demonstrates how a single application definition, containing both 
                 }
             }
             ```
+        *   Example recipe registration (conceptual):
             ```bash
             rad recipe register default --environment confi-env \
               --resource-type Applications.Core/containers@2025-05-01-preview \
@@ -266,6 +268,7 @@ This scenario demonstrates how a single application definition, containing both 
         *   A confidential container (e.g., a backend service processing sensitive data), marked with a property like `confidential: true` (the exact property name and structure to be defined by the RRT schema).
         *   A data store, like a Redis cache.
         *   A connection from the confidential backend container to the Redis cache.
+        *   The recipes will ignore and log a warning for confidential container requests if the platform-specific properties are not applicable to the target environment (e.g. ACI containerGroupProfile configurations would be ignored if the deployment target environment is Kubernetes).
     *   Example `app.bicep`:
         ```diff
         import radius as radius
