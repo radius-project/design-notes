@@ -363,6 +363,78 @@ This scenario demonstrates how a single application definition, containing both 
 
 > This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (standard vs. confidential) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
 
+#### Mounting a RRT-based Volume to a RRT-based Container
+
+**1. Register Volume Recipe to the Environment**:
+*   Use `rad recipe register default --environment <env-name> --resource-type Applications.Core/volumes@2025-05-01-preview --template-path <path-to-recipe-or-oci-uri> [--parameters <key=value> ...]` to associate a recipe with the new RRT version of the volume type in a specific environment.
+*   Alternatively, add the recipe to the environment definition file and use `rad deploy env.bicep`:
+``` diff
+resource env 'Applications.Core/environments@2025-05-01-preview' = {
+    name: 'my-aci-env'
+    properties: {
+        recipes: {
++           'Applications.Core/volumes': {
++               default: {
++                   templateKind: 'bicep'
++                   plainHttp: true
++                   templatePath: 'ghcr.io/radius-project/recipes/azure/keyvault-volume:latest'
++                   parameters: {
++                       sku: {
++                           family: 'A'
++                           name: 'standard'
++                           }
++                   }
++               }
++           }
+        }
+    }
+}
+```
+
+**2. Define and deploy an application container and volume**
+* Add a volume resource to the `app.bicep` and mount it to the container:
+```diff
++// New RRT volume type that is implemented via Recipes
++resource volume 'Applications.Core/volumes@2025-05-01-preview' = {
+  name: 'myvolume'
+  properties: {
+    application: app.id
+-   // These properties are removed from the volume resource
+-   //  and are instead defined in the recipe
+-   kind: 'azure.com.keyvault'
+-   resource: keyvault.id
+-   secrets: {
+-     mysecret: {
+-       name: 'mysecret'
+-     }
+-   }
+  }
+}
+
++// New RRT Container type with above volume mounted to it, both implemented via Recipes
++resource container 'Applications.Core/containers@2025-05-01-preview' = {
+  name: 'mycontainer'
+  properties: {
+    application: app.id
+    container: {
+      image: 'debian'
+      command: ['/bin/sh']
+      args: ['-c', 'while true; do echo secret context : `cat /var/secrets/mysecret`; sleep 10; done']
+      volumes: {
+        volkv: {
+          kind: 'persistent'
+          source: volume.id
+          mountPath: '/var/secrets'
+        }
+      }
+    }
+  }
+}
+```
+
+**3. Deploy the Application**:
+* Deploying the application using `rad deploy ./app.bicep --environment my-aci-env` will trigger Radius to use the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the volume in the target environment (e.g., Azure Key Vault) and mount it to the container.
+
 #### Creating and registering custom Recipes for core types:
 1.  **Create and Register Recipes for Core Types**:
     *   Create custom Bicep/Terraform recipes for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`, and `Applications.Core/volumes@2025-05-01-preview` to target a specific platform or customize existing behavior.
@@ -373,68 +445,6 @@ This scenario demonstrates how a single application definition, containing both 
 1.  **Manage and Update Recipes**:
     *   Platform engineers can update recipe definitions (e.g., to a new version from OCI or a modified local file) and re-register them using `rad recipe register` (which would effectively update the association).
     *   They can list registered recipes and their associations.
-
-#### Experience for local development and testing of Recipes and RRTs:
-This scenario outlines how a platform engineer can develop, test, and iterate on Recipes (and associated Radius Resource Types, if custom) using local files before publishing them.
-
-**Local Iterative Development of a Custom Recipe for a built-in or custom RRT**
-
-A platform engineer wants to customize the behavior of `Applications.Core/containers@2025-05-01-preview` for their specific Kubernetes setup by creating a new recipe or modifying an existing one. They want to test these changes locally before publishing the recipe to an OCI registry.
-
-1.  **Setup Local Development Environment**:
-    *   Ensure Radius CLI is installed and a local Radius control plane is running (e.g., via `rad install kubernetes` or a local kind cluster).
-    *   Create or select a local Radius environment for testing (e.g., `rad env create my-dev-env` or use an existing one).
-    *   The RRT for `Applications.Core/containers@2025-05-01-preview` is assumed to be already known by Radius (as it's a built-in resource type).
-
-2.  **Create and iterate on the Recipe Locally**:
-    *   Create a new or modify an existing Bicep or Terraform file for the recipe (e.g., `./my-custom-recipes/kubernetes-container/template.bicep`).
-    *   Modify the Bicep/Terraform template file (e.g., `template.bicep`) to implement the desired custom logic (e.g., add specific annotations, configure a default sidecar, change resource limits).
-
-4.  **Register the Local Recipe**:
-    *   Use `rad recipe register` with the `--template-path` pointing to the local recipe template file (or the directory containing the template and schema). This allows testing without publishing to an OCI registry.
-    *   `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path ./my-custom-recipes/kubernetes-container/template.bicep --parameters customParam=valueForDev`
-    *   Radius will validate the recipe against the RRT schema and its own parameter definitions.
-
-5.  **Define/Deploy an Application Using the Local Recipe**:
-    *   Create or use an existing application Bicep file (`app.bicep`) that defines an `Applications.Core/containers@2025-05-01-preview` resource.
-    *   Deploy the application to the local test environment: `rad deploy ./app.bicep --environment my-dev-env`
-    *   Radius will use the locally registered recipe to provision the container.
-
-6.  **Test and Debug**:
-    *   Verify the deployment in the target platform (e.g., check Kubernetes resources using `kubectl get pods,svc,deploy -n my-app-my-dev-env`).
-    *   Inspect Radius application graph: `rad app graph my-app -e my-dev-env`
-
-7.  **Publish the Recipe (Once Satisfied)**:
-    *   Once the recipe is finalized, publish it to an OCI registry (for Bicep) or a Terraform module repository.
-    *   Update any environment configurations or Recipe Packs to point to the published OCI URI instead of the local path for broader use.
-
-**Scenario: Using Recipes locally from a Cloned Git Repository**
-
-A platform engineer clones a Git repository (e.g., a company's internal IaC repo or a community repo) that contains a collection of RRT definitions (if custom) and their corresponding Recipes as local files.
-
-1.  **Clone the Repository**:
-    *   `git clone https://github.com/my-org/radius-custom-definitions.git`
-    *   `cd radius-custom-definitions`
-
-2.  **Inspect Repository Structure**:
-    *   Familiarize with how RRTs (e.g., in a `types/` directory) and recipes (e.g., in a `recipes/` directory, possibly organized by type) are laid out.
-
-3.  **Register RRTs from Local Files (if they are custom RRTs)**:
-    *   If the repository contains custom RRT definitions (e.g., `types/my-custom-widget.yaml`), register them to the desired Radius environment.
-    *   `rad resource-type create myCustomWidget -f ./types/my-custom-widget.yaml`
-    *   (If they want to use built-in types like `Applications.Core/containers@2025-05-01-preview`, this step can be skipped.)
-
-4.  **Register Recipes from Local Files**:
-    *   For each core type (or custom RRT) for which a recipe is provided in the cloned repository, register it using its local path.
-    *   Example for a custom container recipe:
-        `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path ./recipes/core/kubernetes-custom-container/template.bicep`
-    *   Example for a recipe for a custom RRT:
-        `rad recipe register default --environment my-dev-env --resource-type Radius.Resources/myWidget --template-kind bicep --template-path ./recipes/custom/my-widget-recipe/template.bicep`
-
-5.  **Deploy Applications**:
-    *   Developers can now define applications using these RRTs, and Radius will use the locally registered recipes from the cloned repository when deploying to `my-dev-env`.
-
-This approach allows teams to manage and version their RRTs and recipes in Git, and easily set up development or testing environments by registering these assets directly from their local checkout without needing an intermediate OCI publishing step for every iteration.
 
 #### Packaging and Adding a "Recipe Pack" to an Environment:
 
@@ -578,12 +588,93 @@ This approach allows teams to manage and version their RRTs and recipes in Git, 
 6.  **Update CI/CD Pipelines**:
     *   Modify CI/CD pipelines to use the updated application Bicep files and any new CLI commands or Radius versions required for the RRT model.
 
+#### Initialize Radius for specific platforms with default recipes:
+
+1.  **Kubernetes**:
+* `rad init kubernetes` initializes a Radius environment for Kubernetes with default recipes for core types.
+* Platform engineers initialize a new Radius environment for Kubernetes using the default recipes provided by Radius.
+* They register any additional or modified RRTs and their associated recipes in the environment.
+
+2.  **ACI**:
+* `rad init aci` initializes a Radius environment for Azure Container Instances (ACI) with default recipes for core types.
+* Platform engineers initialize a new Radius environment for ACI using the default recipes provided by Radius.
+* They register any additional or modified RRTs and their associated recipes in the environment.
+
+3.  **AWS ECS**:
+* `rad init ecs` initializes a Radius environment for AWS Elastic Container Service (ECS) with default recipes for core types.
+* Platform engineers initialize a new Radius environment for ECS using the default recipes provided by Radius.
+* They register any additional or modified RRTs and their associated recipes in the environment.
+
+4.  **etc. etc. for other platforms that can be added to `rad init`**
+
+#### Experience for local development and testing of Recipes and RRTs:
+This scenario outlines how a platform engineer can develop, test, and iterate on Recipes (and associated Radius Resource Types, if custom) using local files before publishing them.
+
+**Local Iterative Development of a Custom Recipe for a built-in or custom RRT**
+
+A platform engineer wants to customize the behavior of `Applications.Core/containers@2025-05-01-preview` for their specific Kubernetes setup by creating a new recipe or modifying an existing one. They want to test these changes locally before publishing the recipe to an OCI registry.
+
+1.  **Setup Local Development Environment**:
+    *   Ensure Radius CLI is installed and a local Radius control plane is running (e.g., via `rad install kubernetes` or a local kind cluster).
+    *   Create or select a local Radius environment for testing (e.g., `rad env create my-dev-env` or use an existing one).
+    *   The RRT for `Applications.Core/containers@2025-05-01-preview` is assumed to be already known by Radius (as it's a built-in resource type).
+
+2.  **Create and iterate on the Recipe Locally**:
+    *   Create a new or modify an existing Bicep or Terraform file for the recipe (e.g., `./my-custom-recipes/kubernetes-container/template.bicep`).
+    *   Modify the Bicep/Terraform template file (e.g., `template.bicep`) to implement the desired custom logic (e.g., add specific annotations, configure a default sidecar, change resource limits).
+
+4.  **Register the Local Recipe**:
+    *   Use `rad recipe register` with the `--template-path` pointing to the local recipe template file (or the directory containing the template and schema). This allows testing without publishing to an OCI registry.
+    *   `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path ./my-custom-recipes/kubernetes-container/template.bicep --parameters customParam=valueForDev`
+    *   Radius will validate the recipe against the RRT schema and its own parameter definitions.
+
+5.  **Define/Deploy an Application Using the Local Recipe**:
+    *   Create or use an existing application Bicep file (`app.bicep`) that defines an `Applications.Core/containers@2025-05-01-preview` resource.
+    *   Deploy the application to the local test environment: `rad deploy ./app.bicep --environment my-dev-env`
+    *   Radius will use the locally registered recipe to provision the container.
+
+6.  **Test and Debug**:
+    *   Verify the deployment in the target platform (e.g., check Kubernetes resources using `kubectl get pods,svc,deploy -n my-app-my-dev-env`).
+    *   Inspect Radius application graph: `rad app graph my-app -e my-dev-env`
+
+7.  **Publish the Recipe (Once Satisfied)**:
+    *   Once the recipe is finalized, publish it to an OCI registry (for Bicep) or a Terraform module repository.
+    *   Update any environment configurations or Recipe Packs to point to the published OCI URI instead of the local path for broader use.
+
+**Scenario: Using Recipes locally from a Cloned Git Repository**
+
+A platform engineer clones a Git repository (e.g., a company's internal IaC repo or a community repo) that contains a collection of RRT definitions (if custom) and their corresponding Recipes as local files.
+
+1.  **Clone the Repository**:
+    *   `git clone https://github.com/my-org/radius-custom-definitions.git`
+    *   `cd radius-custom-definitions`
+
+2.  **Inspect Repository Structure**:
+    *   Familiarize with how RRTs (e.g., in a `types/` directory) and recipes (e.g., in a `recipes/` directory, possibly organized by type) are laid out.
+
+3.  **Register RRTs from Local Files (if they are custom RRTs)**:
+    *   If the repository contains custom RRT definitions (e.g., `types/my-custom-widget.yaml`), register them to the desired Radius environment.
+    *   `rad resource-type create myCustomWidget -f ./types/my-custom-widget.yaml`
+    *   (If they want to use built-in types like `Applications.Core/containers@2025-05-01-preview`, this step can be skipped.)
+
+4.  **Register Recipes from Local Files**:
+    *   For each core type (or custom RRT) for which a recipe is provided in the cloned repository, register it using its local path.
+    *   Example for a custom container recipe:
+        `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path ./recipes/core/kubernetes-custom-container/template.bicep`
+    *   Example for a recipe for a custom RRT:
+        `rad recipe register default --environment my-dev-env --resource-type Radius.Resources/myWidget --template-kind bicep --template-path ./recipes/custom/my-widget-recipe/template.bicep`
+
+5.  **Deploy Applications**:
+    *   Developers can now define applications using these RRTs, and Radius will use the locally registered recipes from the cloned repository when deploying to `my-dev-env`.
+
+This approach allows teams to manage and version their RRTs and recipes in Git, and easily set up development or testing environments by registering these assets directly from their local checkout without needing an intermediate OCI publishing step for every iteration.
+
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
 
 ### Feature 1: RRT Implementation of Core Application Model Types
 <!-- One or two sentence summary -->
-Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secretStores`) as Radius Resource Types (RRT) with new, versioned resource type names (e.g., `Applications.Core/containers@2025-05-01-preview`). These RRTs will form the basis of the extensible application model. These new core types must support Connections and may be modified by platform engineers to allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves.
+Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secretStores`, `Applications.Core/volumes`) as Radius Resource Types (RRT) with new, versioned resource type names (e.g., `Applications.Core/containers@2025-05-01-preview`). These RRTs will form the basis of the extensible application model. These new core types must support Connections and may be modified by platform engineers to allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves.
 
 ### Feature 2: Extensible Environment Configuration
 <!-- One or two sentence summary -->
