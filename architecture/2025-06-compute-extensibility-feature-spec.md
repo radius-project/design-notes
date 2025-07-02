@@ -68,7 +68,7 @@ A platform engineer initializes a new Radius environment and registers recipes f
 A platform engineer customizes the default Kubernetes recipes for `Applications.Core/containers@2025-05-01-preview` (and similarly for `gateways` and `secretStores`) to align with company-specific infrastructure policies, such as adding mandatory security sidecars, custom labels for cost tracking, or integrating with internal monitoring systems, by modifying the recipe and re-registering it.
 
 ### Scenario 3: Extend Radius to a new, unsupported platform
-A platform engineer creates new Bicep or Terraform recipes to enable Radius to deploy `Applications.Core/containers@2025-05-01-preview` to AWS Fargate, `Applications.Core/gateways@2025-05-01-preview` to an AWS Application Load Balancer, and `Applications.Core/secretStores@2025-05-01-preview` to AWS Secrets Manager. They then register these recipes in their Radius environment.
+A platform engineer creates new Bicep or Terraform recipes to enable Radius to deploy `Applications.Core/containers@2025-05-01-preview` to AWS Elastic Container Service (ECS), `Applications.Core/gateways@2025-05-01-preview` to an AWS Application Load Balancer, and `Applications.Core/secretStores@2025-05-01-preview` to AWS Secrets Manager. They then register these recipes in their Radius environment.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
