@@ -692,17 +692,21 @@ Implement a system for packaging and versioning sets of related recipes (Recipe 
 <!-- One or two sentence summary -->
 Validate that `rad recipe` CLI capabilities for registering, managing, and validating recipes associated with core type RRTs are sufficient for compute extensibility scenarios. This includes robust validation of recipe parameters and outputs upon registration. Implement any necessary enhancements to the CLI to support this.
 
-### Feature 6: Local Development and Testing of Recipes
-<!-- One or two sentence summary -->
-Implement a workflow for platform engineers to develop, test, and iterate on recipes locally before publishing them. This includes the ability to register local recipe files directly in a Radius environment without needing to upload them to an OCI registry, allowing for rapid development and testing cycles. This feature should also support the registration of custom RRTs if applicable.
-
-### Feature 7: Migration Path and Documentation
+### Feature 6: Migration Path and Documentation
 <!-- One or two sentence summary -->
 Develop comprehensive documentation, examples, and potentially tooling to guide existing Radius users in migrating their applications and environments from the old hard-coded core types to the new RRT-based, recipe-driven model.
 
-### Feature 8: Community Contribution Process
+### Feature 7: Community Contribution Process
 <!-- One or two sentence summary -->
 Establish a clear process and guidelines for community members to contribute new recipes and Recipe Packs for core types, including documentation standards, testing requirements, and PR submission processes. This will encourage community engagement and extension of Radius capabilities.
+
+### Feature 8: Initialize Radius for Specific Platforms with Default Recipes
+<!-- One or two sentence summary -->
+Implement a `rad init <platform>` command that initializes a Radius environment for specific platforms (e.g., Kubernetes, ACI, ECS) with default recipes for core types. This will streamline the setup process for platform engineers and developers, ensuring they have a consistent starting point for their Radius environments.
+
+### Feature 9: Local Development and Testing of Recipes
+<!-- One or two sentence summary -->
+Implement a workflow for platform engineers to develop, test, and iterate on recipes locally before publishing them. This includes the ability to register local recipe files directly in a Radius environment without needing to upload them to an OCI registry, allowing for rapid development and testing cycles. This feature should also support the registration of custom RRTs if applicable.
 
 ## Notes from design discussions
 
