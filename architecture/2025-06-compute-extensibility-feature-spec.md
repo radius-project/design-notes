@@ -432,6 +432,8 @@ resource env 'Applications.Core/environments@2025-05-01-preview' = {
 }
 ```
 
+> Note that this would replace the Azure KeyVault specific implementation of volume that is in place today: https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/
+
 **3. Deploy the Application**:
 * Deploying the application using `rad deploy ./app.bicep --environment my-aci-env` will trigger Radius to use the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the volume in the target environment (e.g., Azure Key Vault) and mount it to the container.
 
