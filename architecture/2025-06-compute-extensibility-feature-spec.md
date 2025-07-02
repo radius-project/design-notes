@@ -96,7 +96,7 @@ A platform engineer creates new Bicep or Terraform recipes to enable Radius to d
 <!-- What big questions must we answer in order to clarify our plan for this scenario.  When and how do you plan to answer those questions (prototype feature x, user research, competitive research, etc.) -->
 - **Assumption**: All essential provisioning logic currently in Radius's Go code for Kubernetes (for containers, gateways, secret stores) can be effectively replicated using Bicep or Terraform recipes.
     - Validation: POC implementation of Kubernetes recipes for core functionalities.
-- **Assumption**: Recipes can reliably output the necessary information for Radius to construct and maintain the application graph, including resource connections.
+- **Assumption**: AppCore can reliably construct the application graph and provide recipes with all information needed to execute via their connections to other resources.
     - Validation: Test recipe deployments and inspect the resulting Radius graph.
 - **Question**: What is the most effective way for recipes to declare their input parameters and output properties to ensure consistency and enable validation?
     - Exploration: Define a clear contract for recipes, potentially using a schema or metadata definition that can be validated.
