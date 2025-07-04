@@ -143,7 +143,7 @@ Step 2
                         default: {
                         templateKind: 'bicep'
                         plainHttp: true
-                        templatePath: 'ghcr.io/radius-project/recipes/azure/aci-container:latest'
+                        templatePath: 'ghcr.io/radius-project/recipes/azure/aci-container:0.48'
                         parameters: {
                             defaultCpu: 1
                             defaultMemoryInGB: 2
@@ -165,7 +165,7 @@ Step 2
                         default: {
                             templateKind: 'bicep'
                             plainHttp: true
-                            templatePath: 'ghcr.io/radius-project/recipes/azure/aci-keyvault:latest'
+                            templatePath: 'ghcr.io/radius-project/recipes/azure/azure-key-vault:latest'
                             parameters: {
                                 defaultSku: 'standard'
                             }
