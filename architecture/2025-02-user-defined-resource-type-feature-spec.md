@@ -760,7 +760,7 @@ As a developer, I need to read properties from a connected resource using enviro
 
 **Summary**
 
-All resource in Radius will support connections to other resources, no matter the type. When a connection exists from a connecting resource (destination) to another connected resource (source), the source resource's properties will be available within the destination resource. In the case of `Applications.Core/containers` these properties are manifested as environment variables.
+All resources in Radius will support connections to other resources, no matter the type. When a connection exists from a connecting resource (destination) to another connected resource (source), the source resource's properties will be available within the destination resource. In the case of `Applications.Core/containers` these properties are manifested as environment variables.
 
 **User Experience**
 
