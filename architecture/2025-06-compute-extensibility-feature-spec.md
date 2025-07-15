@@ -122,13 +122,78 @@ After this feature is implemented, I can confidently use Radius as our central a
 <!-- Step 1
 Step 2
 … -->
-#### Setting up and deploying an application to a Radius environment using existing Recipes for core types:
 
-1.  **Discover existing Recipes**:
-    *   Find community-provided recipes for desired platforms (e.g., ACI, AWS Fargate) from an OCI registry or Terraform module repo, or something like [Artifact Hub](https://artifacthub.io/).
-1.  **Initialize Workspace & Environment (as Platform Engineer)**:
-    *   Use `rad workspace`, `group`, and `environment` commands to create a Radius Environment and/or Workspace. 
-    *   Define an environment in a Bicep file and then deploy it using `rad deploy env.bicep`. The new environment version (e.g., `Applications.Core/environments@2025-05-01-preview`) will not have a hard-coded `compute` kind. For example, an ACI environment might look like:
+#### User Story 1: As a Platform Engineer, I want to create a Recipe Pack that bundles multiple recipes for core resource types, so that I can easily register and manage them in a Radius environment:
+
+1.  **Define a Recipe Pack**:
+    *   A platform engineer creates a manifest file (e.g. `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`) and associate it with a specific Recipe (OCI URI or local path) and its default parameters.
+    *   Example `recipe-pack.yaml`:
+        ```yaml
+        name: aci-production-pack
+        version: 1.0.0
+        description: "Recipe Pack for deploying to ACI in production."
+        recipes:
+            - resourceType: "Applications.Core/containers@2025-05-01-preview"   
+            name: "aci-prod-container" # Optional: a friendly name for this recipe registration
+            recipeKind: "bicep"
+            recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
+            parameters:
+                cpu: "1.0"
+                memoryInGB: "2.0"
+                environmentVariables:
+                LOG_LEVEL: "Information"
+                # Optional: allow platform-specific options like containerGroupProfile for ACI
+                allowPlatformOptions: true
+            - resourceType: "Applications.Core/gateways@2025-05-01-preview"
+            name: "aci-prod-gateway"
+            recipeKind: "bicep"
+            recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
+            parameters:
+                sku: "Standard_v2"
+            - resourceType: "Applications.Core/secretStores@2025-05-01-preview"
+            name: "aci-prod-keyvault"
+            recipeKind: "bicep"
+            recipeLocation: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
+            parameters:
+                skuName: "premium"
+        ```
+        > Note: `templateKind` is changed to `recipeKind` and `templatePath` is changed to `recipeLocation`
+
+1.  **Add the Recipe Pack to an Environment**:
+    *   The platform engineer uses a new CLI command to add the entire pack to a Radius environment.
+    *   Example: `rad environment update my-env --recipe-pack ./aci-production-pack.yaml`
+    *   Or, if stored in a repo: `rad environment update my-env     --recipe-packs aci-production-pack='git::https://github.com/my-org/recipe-packs.git//aci-production-pack.yaml?ref=1.0.0`
+    *   This command would iterate through the recipes defined in the manifest and register each one to the specified environment, similar to individual `rad recipe register` calls.
+    *   Alternatively, the Recipe Pack could be added to the Environment definition file (e.g., `env.bicep`) in a `recipe-packs` property like below and then deployed using `rad deploy env.bicep`.
+        ```bicep
+        resource env 'Applications.Core/environments@2025-05-01-preview' = {
+            name: 'my-env'
+            properties: {
+                recipePacks: [
+                    {
+                        name: 'local-k8s-pack'
+                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/local-k8s-pack.yaml?ref=1.0.0'
+                    }
+                ]
+            }
+        }
+        ```
+    > Note: If the RRT for which a Recipe in the pack is being registered does not exist, the Recipe Pack addition process should fail gracefully, indicating which RRTs are missing in the error message.
+
+1.  **Environment Utilizes Recipes from the Pack**:
+    *   Once the Recipe Pack is registered, the environment is configured with all the specified recipes for the core RRTs.
+    *   When applications are deployed to this environment, Radius automatically uses the corresponding recipes from the pack to provision `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` resources.
+
+1.  **Manage and Update Recipe Packs**:
+    *   Platform engineers can update the Recipe Pack manifest (e.g., point to new recipe versions, change default parameters) and re-add it. The CLI could offer options to overwrite existing registrations or manage versions of the pack within the environment.
+    *   Commands like `rad environment show my-env` or `rad recipe show --pack <pack-name>` would allow inspection of recipe packs.
+
+#### User Story 2: As a platform engineer, I want to create a Radius Environment that leverages default recipe packs provided by Radius for core types, so that I can quickly set up a new environment without needing to write custom recipes:
+
+1.  **Initialize Workspace & Environment using an `env.bicep` file**:
+    * Use `rad workspace`, `group`, and `environment` commands to create a Radius Environment and/or Workspace. 
+    * Define an environment in a Bicep file and then deploy it using `rad deploy env.bicep`. The new environment version (e.g., `Applications.Core/environments@2025-05-01-preview`) will not have a hard-coded `compute` kind.
+    * For example, an ACI environment might look like:
         ```diff
         extension radius
 
@@ -138,47 +203,12 @@ Step 2
         -       compute: {
         -           // compute kind is no longer hard-coded here
         -       }
-                recipes: {
-                    'Applications.Core/containers': {
-                        default: {
-                        templateKind: 'bicep'
-                        plainHttp: true
-                        templatePath: 'ghcr.io/radius-project/recipes/azure/aci-container:0.48'
-                        parameters: {
-                            defaultCpu: 1
-                            defaultMemoryInGB: 2
-                        }
-                        }
+                recipePacks: [
+                    {
+                        name: 'azure-aci-pack'
+                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack?ref=1.0.0'
                     }
-                    'Applications.Core/gateways': {
-                        default: {
-                            templateKind: 'bicep'
-                            plainHttp: true
-                            templatePath: 'ghcr.io/radius-project/recipes/azure/aci-gateway:latest'
-                            parameters: {
-                                defaultCpu: 1
-                                defaultMemoryInGB: 2
-                            }
-                        }
-                    }
-                    'Applications.Core/secretStores': {
-                        default: {
-                            templateKind: 'bicep'
-                            plainHttp: true
-                            templatePath: 'ghcr.io/radius-project/recipes/azure/azure-key-vault:latest'
-                            parameters: {
-                                defaultSku: 'standard'
-                            }
-                        }
-                    }
-                    'Applications.Datastores/redisCaches': {
-                        default: {
-                            templateKind: 'bicep'
-                            plainHttp: true
-                            templatePath: 'ghcr.io/radius-project/recipes/azure/rediscaches:latest'
-                        }
-                    }
-                }
+                ]
                 // providers property remains scoped to the environment
                 providers: {
                     azure: {
@@ -188,348 +218,343 @@ Step 2
             }
         }
         ```
-        > Note: the `compute` property is removed in favor of Recipe configurations.
-    *   By default, `rad init` might still register recipes for Kubernetes provisioning for core types like `Applications.Core/containers@2025-05-01-preview` to provide a local kubernetes experience out of the box.
+    * Similarly, a Kubernetes environment might look like:
+        ```diff
+        extension radius
+
+        resource env 'Applications.Core/environments@2025-05-01-preview' = {
+            name: 'my-k8s-env'
+            properties: {
+        -       compute: {
+        -           // compute kind is no longer hard-coded here
+        -       }
+        +       recipePacks: [
+        +           {
+        +               name: 'local-k8s-pack'
+        +               uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/local-k8s-pack.yaml?ref=1.0.0'
+        +           }
+        +       ]
+                // providers property remains scoped to the environment
+                providers: {
+        +           // The Kubernetes namespace is moved here from properties.compute
+        +           kubernetes: {
+        +               namespace: 'default'
+        +           }
+               }
+            }
+        }
+        ```
+        > Note: the `compute` property is removed in favor of Recipe configurations, with the Kubernetes namespace moved to the providers section.
+
+    * The default Recipe packs will have the `allowPlatformOptions` parameter set to `true` for core types like `Applications.Core/containers@2025-05-01-preview`, which allows platform engineers to punch through the Radius abstraction and use platform-specific options (e.g., `containerGroupProfile` for ACI) in their application definitions.
+
+    * By default, `rad init` will register recipes for Kubernetes provisioning for core types like `Applications.Core/containers@2025-05-01-preview` so that Radius may continue providing a local kubernetes experience out of the box.
+
+1. **Alternatively, create an environment using the `rad` CLI**:
+    ```bash
+    rad environment create my-aci-env \
+    --recipe-packs azure-aci-pack='git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack?ref=1.0.0'
+    ```
+
+> There needs to be a set of default Recipes and Recipe Packs for core types built into Radius for Kubernetes, ACI, and AWS ECS, so that Platform Engineers can quickly set up environments without needing to create custom recipes from scratch. The default Recipes need to be in both Bicep and Terraform formats, so that platform engineers can choose the IAC they prefer as they may need to adapt the recipes to their specific use cases.
+
+#### User Story 3: As an application developer, I want to define my application using the new RRT versions of core types, so that I can deploy my `app.bicep` across different environments without needing to understand the underlying provisioning details:
+
 1.  **Developers Define Applications**:
     *   Application developers define their applications using the new RRT versions of core types (e.g., `resource myapp 'Applications.Core/containers@2025-05-01-preview' = { ... }`). They do not need to be aware of the underlying recipe details if default parameters are suitable.
 1.  **Deploy Applications**:
     *   Developers (or CI/CD) run `rad deploy <bicep-file>`. Radius uses the registered recipes for the RRTs in the target environment to provision the resources.
 
-#### Deploying an application with mixed standard and confidential containers
+#### User Story 4: As a platform engineer and/or application developer, I would like to leverage platform-specific capabilities
 
-This scenario demonstrates how a single application definition, containing both standard and confidential compute requirements, can be deployed to different environments, with Radius leveraging environment-specific recipes to fulfill those requirements.
+##### User Story 4a: As a platform engineer, I want to configure three environments with different recipes for the same core resource type, so that I can deploy applications with standard, confidential, and Kubernetes compute requirements:
 
-1.  **Platform Engineer: Configure Environments with Appropriate Recipes**
-    *   **Standard Environment (`std-env`):**
-        *   The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard compute (e.g., regular ACI or Kubernetes pods). These recipes will ignore the platform-specific properties on the container resource since `allowAdvancedContainerCapabilities=false`, and log a warning.
-        *   Example Environment definition (conceptual):
-            ```diff
-            resource environment 'Applications.Core/environments@2023-10-01-preview' = {
-            name: 'myenv'
-                properties: {
-            +       // Platform engineers can enable or disable the punch-through for developers:
-            +       allowAdvancedContainerCapabilities: false
-                    recipes: {
-            +           // Recipes registered here will ignore the confidential container configurations
-            +           //  since allowAdvancedContainerCapabilities=false
-                    }
-                    providers: {
-                    azure: {
-                        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
-                    }
-                    }
-                }
-            }
-            ```
-        *   Example Recipe registration (conceptual):
-            ```bash
-            rad recipe register default --environment std-env \
-              --resource-type Applications.Core/containers@2025-05-01-preview \
-              --template-path oci://ghcr.io/radius-project/recipes/core/aci-standard-container:1.0.0
-            rad recipe register default --environment std-env \
-              --resource-type Applications.Datastores/redisCaches \
-              --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0
-            ```
-    *   **Confidential Environment (`confi-env`):**
-        *   The platform engineer configures `confi-env` with specialized recipes for `Applications.Core/containers@2025-05-01-preview` that support deploying confidential containers (e.g., ACI Confidential Containers). These recipes will interpret the platform-specific properties on the container resource to provision confidential compute. These recipes will ignore and log a warning for confidential container requests if the platform-specific properties are not applicable to the target environment (e.g. ACI containerGroupProfile configurations would be ignored if the deployment target environment is Kubernetes).
-        *   Example Environment definition (conceptual):
-            ```diff
-            resource environment 'Applications.Core/environments@2023-10-01-preview' = {
-            name: 'myenv'
-                properties: {
-            +       // Platform engineers can enable or disable the punch-through for developers:
-            +       allowAdvancedContainerCapabilities: true
-                    recipes: {
-            +           // Recipes registered here will implement the confidential container configurations
-            +           //  since allowAdvancedContainerCapabilities=true
-                    }
-                    providers: {
-                    azure: {
-                        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
-                    }
-                    }
-                }
-            }
-            ```
-        *   Example recipe registration (conceptual):
-            ```bash
-            rad recipe register default --environment confi-env \
-              --resource-type Applications.Core/containers@2025-05-01-preview \
-              --template-path oci://ghcr.io/radius-project/recipes/core/aci-confidential-container:1.0.0
-            rad recipe register default --environment confi-env \
-              --resource-type Applications.Datastores/redisCaches \
-              --template-path oci://ghcr.io/radius-project/recipes/azure/redis:1.0.0 
-            ```
-            (Note: The Redis recipe might be the same if its deployment doesn't change based on the compute's confidentiality.)
-
-2.  **Developer: Define Application with Mixed Container Types and Connections**
-    *   The developer defines an application in a Bicep file (`app.bicep`). This definition includes:
-        *   A standard container (e.g., a frontend web server).
-        *   A confidential container (e.g., a backend service processing sensitive data), marked with a property like `confidential: true` (the exact property name and structure to be defined by the RRT schema).
-        *   A data store, like a Redis cache.
-        *   A connection from the confidential backend container to the Redis cache.
-        *   The recipes will ignore and log a warning for confidential container requests if the platform-specific properties are not applicable to the target environment (e.g. ACI containerGroupProfile configurations would be ignored if the deployment target environment is Kubernetes).
-    *   Example `app.bicep`:
+1. Configure a Radius Environment with Recipes for Standard ACI containers:
+    * The platform engineer configures `std-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to standard ACI compute. These recipes will ignore the platform-specific properties on the container resource since the recipe parameter `allowPlatformOptions=false`, and log a warning.
+    * Example Environment definition using Recipe packs (conceptual):
         ```diff
-        import radius as radius
-
-        @description('The Radius Application ID')
-        param application string
-
-        resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
-          name: 'frontend'
-          properties: {
-            application: application
-            container: {
-              image: 'nginx:latest'
-              ports: {
-                web: {
-                  containerPort: 80
-                }
-              }
-            }
-            // This container is standard by default
-          }
-        }
-
-        resource backend 'Applications.Core/containers@2025-05-01-preview' = {
-          name: 'backend'
-          properties: {
-            application: application
-            container: {
-              image: 'mycorp/sensitive-processor:v1.2'
-              ports: {
-                api: {
-                  containerPort: 5000
-                }
-              }
-              env: {
-                REDIS_CONNECTION: cache.properties.connectionStrings.default
-              }
-            }
-            connections: {
-              cache: {
-                source: cache.id
-              }
-            }
-            extensions: [
-                // Dapr sidecar definition stays the same for now
-                {
-                    kind: 'daprSidecar'
-                    appId: 'frontend'
-                }
-                // This should be moved to a top-level property in the container definition:
-        -       {
-        -           kind:  'manualScaling'
-        -           replicas: 5
-        -       }
-               // This should go into the runtimes.kubernetes property
-        -       {
-        -           kind: 'kubernetesMetadata'
-        -           labels: {
-        -           'team.contact.name': 'frontend'
-        -           }
-        -       }
-            ]
-            // This container requests confidential compute
-        +   runtimes: { // Consider renaming this to `options` or `platform`, etc. for clarity
-        +       // Platform-specific properties are included here, following the respective platform's API schema
-        +       //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
-        +   }
-          }
-        }
-
-        resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
-          name: 'mycache'
-          properties: {
-            application: application
-          }
-        }
-        ```
-
-3.  **Developer/CI/CD: Deploy the Same Application Definition to Both Environments**
-    *   **Deploy to Standard Environment:**
-        *   `rad deploy ./app.bicep --environment std-env`
-        *   Radius uses the `std-container-recipe` registered in `std-env`.
-        *   The `frontend` container is deployed as a standard container.
-        *   The `backend` container, despite its platform-specific confidential container property, is deployed as a standard container because the `std-container-recipe` in `std-env` does not support confidential compute (or is configured to treat it as standard).
-        *   The `cache` is deployed, and the connection between `backend` and `cache` is established.
-    *   **Deploy to Confidential Environment:**
-        *   `rad deploy ./app.bicep --environment confi-env`
-        *   Radius uses the `confi-container-recipe` registered in `confi-env`.
-        *   The `frontend` container is deployed as a standard container (as its definition doesn't request confidential compute).
-        *   The `backend` container's platform-specific confidential container property is interpreted by the `confi-container-recipe` in `confi-env`, and it is deployed as a confidential container (e.g., an ACI confidential container).
-        *   The `cache` is deployed, and the connection between `backend` (now confidential) and `cache` is established.
-
-> This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (standard vs. confidential) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
-
-#### Mounting a RRT-based Volume to a RRT-based Container
-
-**1. Register Volume Recipe to the Environment**:
-*   Use `rad recipe register default --environment <env-name> --resource-type Applications.Core/volumes@2025-05-01-preview --template-path <path-to-recipe-or-oci-uri> [--parameters <key=value> ...]` to associate a recipe with the new RRT version of the volume type in a specific environment.
-*   Alternatively, add the recipe to the environment definition file and use `rad deploy env.bicep`:
-``` diff
-resource env 'Applications.Core/environments@2025-05-01-preview' = {
-    name: 'my-aci-env'
-    properties: {
-        recipes: {
-+           'Applications.Core/volumes': {
-+               default: {
-+                   templateKind: 'bicep'
-+                   plainHttp: true
-+                   templatePath: 'ghcr.io/radius-project/recipes/azure/keyvault-volume:latest'
-+                   parameters: {
-+                       sku: {
-+                           family: 'A'
-+                           name: 'standard'
-+                           }
-+                   }
-+               }
-+           }
-        }
-    }
-}
-```
-
-**2. Define and deploy an application container and volume**
-* Add a volume resource to the `app.bicep` and mount it to the container:
-```diff
-+// New RRT volume type that is implemented via Recipes
-+resource volume 'Applications.Core/volumes@2025-05-01-preview' = {
-  name: 'myvolume'
-  properties: {
-    application: app.id
--   // These properties are removed from the volume resource
--   //  and are instead defined in the recipe
--   kind: 'azure.com.keyvault'
--   resource: keyvault.id
--   secrets: {
--     mysecret: {
--       name: 'mysecret'
--     }
--   }
-  }
-}
-
-+// New RRT Container type with above volume mounted to it, both implemented via Recipes
-+resource container 'Applications.Core/containers@2025-05-01-preview' = {
-  name: 'mycontainer'
-  properties: {
-    application: app.id
-    container: {
-      image: 'debian'
-      command: ['/bin/sh']
-      args: ['-c', 'while true; do echo secret context : `cat /var/secrets/mysecret`; sleep 10; done']
-      volumes: {
-        volkv: {
-          kind: 'persistent'
-          source: volume.id
-          mountPath: '/var/secrets'
-        }
-      }
-    }
-  }
-}
-```
-
-> Note that this would replace the Azure KeyVault specific implementation of volume that is in place today: https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/
-
-**3. Deploy the Application**:
-* Deploying the application using `rad deploy ./app.bicep --environment my-aci-env` will trigger Radius to use the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the volume in the target environment (e.g., Azure Key Vault) and mount it to the container.
-
-#### Creating and registering custom Recipes for core types:
-1.  **Create and Register Recipes for Core Types**:
-    *   Create custom Bicep/Terraform recipes for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`, and `Applications.Core/volumes@2025-05-01-preview` to target a specific platform or customize existing behavior.
-    * Publish these recipes to an OCI registry for Bicep or a Terraform module repository.
-    *   Use `rad recipe register default --environment <env-name> --resource-type Applications.Core/containers@2025-05-01-preview --template-path <path-to-recipe-or-oci-uri> [--parameters <key=value> ...]` to associate a recipe with the new RRT version of the container type in a specific environment.
-    *   Repeat for `gateways`, `secretStores`, `volumes` RRTs.
-    *   Example: `rad recipe register default --environment my-aci-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path oci://ghcr.io/radius-project/recipes/core/aci-container:1.0.0 --parameters defaultCpu=1 defaultMemoryInGB=2`
-1.  **Manage and Update Recipes**:
-    *   Platform engineers can update recipe definitions (e.g., to a new version from OCI or a modified local file) and re-register them using `rad recipe register` (which would effectively update the association).
-    *   They can list registered recipes and their associations.
-
-#### Packaging and Adding a "Recipe Pack" to an Environment:
-
-1.  **Define a Recipe Pack**:
-    *   A platform engineer creates a manifest file (e.g., `recipe-pack.json` or `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`) and associate it with a specific Recipe (OCI URI or local path) and its default parameters.
-    *   Example `recipe-pack.yaml`:
-        ```yaml
-        name: aci-production-pack
-        version: 1.0.0
-        description: "Recipe Pack for deploying to ACI in production."
-        recipes:
-            - resourceType: "Applications.Core/containers@2025-05-01-preview"   
-            name: "aci-prod-container" # Optional: a friendly name for this recipe registration
-            templateKind: "bicep"
-            templatePath: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
-            parameters:
-                cpu: "1.0"
-                memoryInGB: "2.0"
-                environmentVariables:
-                LOG_LEVEL: "Information"
-            - resourceType: "Applications.Core/gateways@2025-05-01-preview"
-            name: "aci-prod-gateway"
-            templateKind: "bicep"
-            templatePath: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
-            parameters:
-                sku: "Standard_v2"
-            - resourceType: "Applications.Core/secretStores@2025-05-01-preview"
-            name: "aci-prod-keyvault"
-            templateKind: "bicep"
-            templatePath: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
-            parameters:
-                skuName: "premium"
-        ```
-1.  **Package the Recipe Pack (Optional but Recommended)**:
-    *   The manifest file and any local recipe files (if not using OCI URIs exclusively) could be bundled into an OCI artifact or a simple archive (e.g., .zip, .tar.gz) for easier distribution and versioning.
-1.  **Add the Recipe Pack to an Environment**:
-    *   The platform engineer uses a new CLI command to add the entire pack to a Radius environment.
-    *   Example: `rad environment update my-env --recipe-pack ./recipe-pack.yaml`
-    *   Or, if packaged as an OCI artifact: `rad environment update my-env --recipe-pack oci://ghcr.io/my-org/recipe-packs/aci-production-pack:1.0.0`
-    *   This command would iterate through the recipes defined in the manifest and register each one to the specified environment, similar to individual `rad recipe register` calls.
-    *   Alternatively, the Recipe Pack could be added to the Environment definition file (e.g., `env.bicep`) in a `recipe-packs` property like below and then deployed using `rad deploy env.bicep`.
-        ```bicep
-        resource env 'Applications.Core/environments@2025-05-01-preview' = {
-            name: 'my-env'
+        resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+        name: 'std-env'
             properties: {
                 recipePacks: [
                     {
-                        name: 'aci-production-pack'
-                        version: '1.0.0'
-                        uri: 'oci://ghcr.io/my-org/recipe-packs/aci-production-pack:1.0.0'
+                        name: 'azure-aci-pack'
+                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack.yaml?ref=1.0.0'
+        +          // Platform engineers can disable the punch-through parameter for developers:
+        +               parameters: {
+        +                   Applications.Core/containers@2025-05-01-preview: {
+        +                       // This will ignore platform specific options (e.g. containerGroupProfile for ACI)
+        +                       //   specified in the container definition, such as confidential container configs
+        +                       allowPlatformOptions: false
+        +                   }
+        +               }
                     }
                 ]
+                providers: {
+                azure: {
+                    scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+                }
+                }
             }
         }
         ```
-    > Note: If the RRT for which a Recipe in the pack is being registered does not exist, the Recipe Pack addition process should fail gracefully, indicating which RRTs are missing in the error message.
-1.  **Environment Utilizes Recipes from the Pack**:
-    *   Once the Recipe Pack is registered, the environment is configured with all the specified recipes for the core RRTs.
-    *   When applications are deployed to this environment, Radius automatically uses the corresponding recipes from the pack to provision `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` resources.
-1.  **Manage and Update Recipe Packs**:
-    *   Platform engineers can update the Recipe Pack manifest (e.g., point to new recipe versions, change default parameters) and re-add it. The CLI could offer options to overwrite existing registrations or manage versions of the pack within the environment.
-    *   Commands like `rad environment show my-env` or `rad recipe show --pack <pack-name>` would allow inspection of recipe packs.
 
-#### Registering default recipes for core types in a Radius Environment:
+1. Configure a Radius Environment with Recipes for Confidential ACI containers:
+    * The platform engineer configures `confi-env` with the `allowPlatformOptions: true` parameter for the `Applications.Core/containers@2025-05-01-preview` Recipe. These recipes will interpret the platform-specific properties on the container resource to provision confidential ACI compute. These recipes will ignore and log a warning for confidential container requests if the platform-specific properties are not applicable to the target environment (e.g. ACI containerGroupProfile configurations would be ignored if the deployment target environment is Kubernetes).
+    * Example Environment definition (conceptual):
+        ```diff
+        resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+        name: 'confi-env'
+            properties: {
+                recipePacks: [
+                    {
+                        name: 'azure-aci-pack'
+                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack.yaml?ref=1.0.0'
+        +          // Platform engineers can enable the punch-through parameter for developers:
+        +               parameters: {
+        +                   Applications.Core/containers@2025-05-01-preview: {
+        +                       // This will apply the platform specific options (e.g. containerGroupProfile for ACI)
+        +                       //   specified in the container definition, such as confidential container configs.
+        +                       // This parameter is true in the default recipe pack, so technically
+        +                       //   platform engineers don't need to specify this
+        +                       allowPlatformOptions: true
+        +                   }
+        +               }
+                    }
+                ]
+                providers: {
+                azure: {
+                    scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+                }
+                }
+            }
+        }
+        ```
 
-1.  **Identify the Default Recipe Pack**:
-    *   The platform engineer consults Radius documentation to find the OCI URI for the default Recipe Pack corresponding to their target platform (e.g., Kubernetes, ACI). Radius will publish these official packs to a well-known OCI registry (e.g., `ghcr.io/radius-project/radius-recipe-packs/kubernetes-default:latest`).
-2.  **Initialize or Select Radius Environment**:
-    *   Ensure a Radius environment (e.g., `my-k8s-env`) is created and configured. This environment should be based on the new extensible environment model (e.g., `Applications.Core/environments@2025-05-01-preview`).
-    *   If using `rad init --full` for a new setup, this command could potentially automatically register a default Recipe Pack (e.g., for Kubernetes) as part of its scaffolding.
-3.  **Register the Default Recipe Pack**:
-    *   The platform engineer uses the `rad environment update my-env --recipe-pack ...` command to apply the chosen default Recipe Pack from Radius's OCI registry to their environment.
-    *   Example for Kubernetes: `rad environment update my-k8s-env --recipe-pack oci://ghcr.io/radius-project/radius-recipe-packs/kubernetes-default:1.0.0`
-    *   Example for ACI: `rad environment update my-aci-env --recipe-pack oci://ghcr.io/radius-project/radius-recipe-packs/aci-default:1.0.0`
-    *   This command fetches the Recipe Pack manifest and registers each recipe defined within it (for `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`, `Applications.Core/volumes@2025-05-01-preview`, etc.) to the specified environment with their default parameters.
-4.  **Verify Recipe Registration (Optional)**:
-    *   The platform engineer can verify that the recipes from the pack have been correctly registered to the environment.
-    *   Example: `rad recipe list --environment my-k8s-env`
-    *   This should show the default recipes for core RRTs associated with the environment.
-5.  **Environment Ready**:
-    *   The Radius environment is now configured with the default, Radius-provided recipes for core functionalities. Developers can deploy applications using the RRT versions of core types (e.g., `Applications.Core/containers@2025-05-01-preview`), and Radius will use these registered recipes for provisioning.
+1. Configure a Radius Environment with Recipes for Kubernetes containers:
+    * The platform engineer configures `k8s-env` with recipes for `Applications.Core/containers@2025-05-01-preview` that deploy to Kubernetes. These recipes will interpret the platform-specific properties on the container resource, such as tolerations, and ignore ACI-specific properties.
+    * The platform engineer can also configure Kubernetes metadata, such as labels, into the parameters of the Recipe Pack, which will be applied to all containers deployed to this environment.
+    * Example Environment definition (conceptual):
+        ```diff
+        resource environment 'Applications.Core/environments@2023-10-01-preview' = {
+        name: 'k8s-env'
+            properties: {
+                recipePacks: [
+                    {
+                        name: 'local-k8s-pack'
+                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/local-k8s-pack.yaml?ref=1.0.0'
+                        parameters: {
+                            Applications.Core/containers@2025-05-01-preview: {
+                                allowPlatformOptions: true
+        +                       // The Kubernetes metadata.labels at the environment level can be specified here, 
+        +                       //   this will apply to all containers deployed to this environment.
+        +                       // Developers can override in container definitions via platformOptions.
+        +                       metadata: {
+        +                           labels: {
+        +                               'team.contact.name': 'frontend'
+        +                           }
+        +                       }
+                            }
+                        }
+                    }
+                ]
+                // providers property remains scoped to the environment
+                providers: {
+                    // The Kubernetes namespace is moved here from properties.compute
+                    kubernetes: {
+                        namespace: 'default'
+                    }
+               }
+            }
+        }
+        ```
 
-#### Contributing new Recipes and Recipe Packs for core types to the Radius repo:
+##### User Story 4b: As a developer, I want to define an application that can be deployed to standard ACI, confidential ACI, and Kubernetes compute environments, without changing the core application logic, so that I can maintain a consistent application definition across different deployment targets:
+
+This scenario demonstrates how a single application definition, containing both standard and confidential compute requirements, can be deployed to different environments, with Radius leveraging environment-specific recipes to fulfill those requirements.
+
+1.  The developer defines an application in a Bicep file (`app.bicep`). This definition includes:
+    *   A standard container (e.g., a frontend web server).
+    *   A confidential container (e.g., a backend service processing sensitive data), defined through a `platformOptions.aci` property that encapsulates an ACI containerGroupProfile object which will include the confidential container configuration.
+    *   A data store, like a Redis cache.
+    *   A connection from the confidential backend container to the Redis cache.
+    *   The recipes will ignore and log a warning for confidential container requests if the platform-specific properties are not applicable to the target environment (e.g. ACI containerGroupProfile configurations would be ignored if the deployment target environment is Kubernetes).
+*   Example `app.bicep`:
+    ```diff
+    import radius as radius
+
+    @description('The Radius Application ID')
+    param application string
+
+    resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
+        name: 'frontend'
+        properties: {
+        application: application
+        container: {
+            image: 'nginx:latest'
+            ports: {
+            web: {
+                containerPort: 80
+            }
+            }
+        }
+        // This container is standard by default
+        }
+    }
+
+    resource backend 'Applications.Core/containers@2025-05-01-preview' = {
+        name: 'backend'
+        properties: {
+        application: application
+        container: {
+            image: 'mycorp/sensitive-processor:v1.2'
+            ports: {
+            api: {
+                containerPort: 5000
+            }
+            }
+            env: {
+            REDIS_CONNECTION: cache.properties.connectionStrings.default
+            }
+        }
+        connections: {
+            cache: {
+            source: cache.id
+            }
+        }
+        extensions: [
+            // Dapr sidecar definition stays the same for now
+            {
+                kind: 'daprSidecar'
+                appId: 'frontend'
+            }
+            // This should be moved to a top-level property in the container definition:
+    -       {
+    -           kind:  'manualScaling'
+    -           replicas: 5
+    -       }
+            // This should go into the platformOptions.kubernetes property
+    -       {
+    -           kind: 'kubernetesMetadata'
+    -           labels: {
+    -           'team.contact.name': 'frontend'
+    -           }
+    -       }
+        ]
+        // This container requests confidential compute
+        +   platformOptions: {
+        +       // Platform-specific properties are included here, following the respective platform's API schema
+        +       //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
+        +       aci: {
+        +           sku: 'confidential'
+                    // and any other ACI-specific properties available via the containerGroupProfile spec
+        +       }
+        +       kubernetes: {
+        +           apiVersion: 'v1'
+        +           kind: Pod
+        +           // The Kubernetes metadata.labels at the container level can be specified here:
+        +           metadata: {
+        +               labels: {
+        +                   'team.contact.name': 'frontend'
+        +               }
+        +           }
+        +           spec: {
+        +               // Kubernetes-specific PodSpec properties, such as tolerations, specified here:
+        +               tolerations: [
+        +                   {
+        +                       key: 'example-key'
+        +                       operator: 'Exists'
+        +                       effect: 'NoSchedule'
+        +                   }
+        +               ]
+        +           }
+        +       }
+        +   }
+        }
+    }
+
+    resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
+        name: 'mycache'
+        properties: {
+        application: application
+        }
+    }
+    ```
+
+1. The developer deploys the same application definition to each Environment:
+    *   **Deploy to Standard Environment:**
+        *   `rad deploy ./app.bicep --environment std-env`
+        *   The `frontend` container is deployed as a standard container.
+        *   The `backend` container, despite its platform-specific confidential container property, is deployed as a standard container because the `allowPlatformOptions` parameter is set to `false` in the `std-env` environment's recipe pack for `Applications.Core/containers@2025-05-01-preview`. Kubernetes-specific properties like tolerations and labels are ignored in this case, as they are not applicable to ACI.
+        *   The `cache` is deployed, and the connection between `backend` and `cache` is established.
+    *   **Deploy to Confidential Environment:**
+        *   `rad deploy ./app.bicep --environment confi-env`
+        *   The `frontend` container is deployed as a standard container (as its definition doesn't request confidential compute).
+        *   The `backend` container's platform-specific confidential container property is interpreted by the recipes in `confi-env` because the `allowPlatformOptions` parameter is set to `true`, and it is deployed as a confidential container (e.g., an ACI confidential container). Kubernetes-specific properties like tolerations and labels are ignored in this case, as they are not applicable to ACI.
+        *   The `cache` is deployed, and the connection between `backend` (now confidential) and `cache` is established.
+
+1. The developer can also deploy the same application to a Kubernetes environment:
+    *   Given: platform engineers have configured a Radius Environment with a Recipe Pack that supports Kubernetes deployments and has `allowPlatformOptions` set to `true`.
+    *   **Deploy to Kubernetes Environment:**
+        *   `rad deploy ./app.bicep --environment my-k8s-env`
+        *   The `frontend` container is deployed as a standard Kubernetes Pod.
+        *   The `backend` container is deployed as a Kubernetes Pod with the specified tolerations and labels because the `allowPlatformOptions` parameter was set to `true` in the Kubernetes recipe pack by the platform engineer. ACI-specific properties are ignored in this case, as they are not applicable to Kubernetes.
+        *   The `cache` is deployed, and the connection between `backend` and `cache` is established.
+
+> This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (ACI standard vs. ACI confidential vs. Kubernetes) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
+
+> Note that Radius will have to merge the configurations from the environment and container definitions with the configurations provided within the `platformOptions` property. For example, if the `platformOptions.kubernetes.metadata.labels` is specified in the container definition, it will override the labels defined at the environment level.
+
+
+#### User Story 5: As a platform engineer, I want to create or update my Radius Environments using the `rad environment` and `rad recipe` commands so that I can change the resource provisioning behavior without needing to modify and redeploy the environment definition:
+
+Given that I have created and published custom Bicep or Terraform recipes for core resource types, I want to register these recipes in a Radius environment so that they can be used by application developers to provision resources according to our organizational standards and practices.
+
+1. **Register Recipes to an environment for a core resource type**:
+    * Use `rad recipe register` to register a specific recipe for a core resource type in a specific environment.
+    * Example command to register a recipe for ACI containers with platform-specific options disabled:
+    ```bash
+    rad recipe register default --environment my-aci-env \
+    --resource-type Applications.Core/containers@2025-05-01-preview \
+    --recipe-kind bicep \
+    --recipe-location ghcr.io/radius-project/resource-types-contrib/core/containers/recipes/aci-container:0.48 \
+    --parameters {"allowPlatformOptions": false}
+    ```
+    * Example command to register a recipe for Kubernetes containers with metadata labels applied and platform-specific options disabled:
+    ```bash
+    rad recipe register default --environment my-k8s-env \
+    --resource-type Applications.Core/containers@2025-05-01-preview \
+    --recipe-kind bicep \
+    --recipe-location ghcr.io/radius-project/resource-types-contrib/core/containers/recipes/k8s-container:0.48 \
+    --parameters metadata.labels={"team.contact.name": "frontend"}, allowPlatformOptions=false
+    ```
+    > Note: If there are existing recipes registered for the same resource type in the environment, this command will overwrite them with the new recipe.
+
+1. **Register Recipe Packs to an environment**:
+    * Use `rad recipe pack register` to register a recipe for a core resource type in a specific environment.
+    * Example command to register a recipe pack for ACI compute with platform-specific options disabled:
+    ```bash
+    rad recipe pack register default --environment my-aci-env \
+    --recipe-pack-location git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack.yaml?ref=1.0.0
+    --parameters {"enablePlatformOptions": false}
+    ```
+    > Note: if there are existing recipes registered for the same resource type in the environment, this command will overwrite them with the recipes defined in the pack.
+
+1. **List the Registered Recipes**:
+    * Use `rad recipe list --environment <env-name>` to see all registered recipes for core resource types in the specified environment.
+    * This command will show the resource type, recipe kind (Bicep/Terraform), and the location of the recipe (existing experience today).
+
+**Update the Kubernetes namespace in the Environment**:
+* Use `rad environment update` to change the Kubernetes namespace for an existing environment.
+* Example command to update the Kubernetes namespace:
+```bash
+rad environment update my-k8s-env --kubernetes-namespace new-namespace
+```
+* This command will update the `providers.kubernetes.namespace` property in the environment definition, which will be used by Radius when deploying applications to this environment.
+* The `--kubernetes-namespace` flag is also available in the `rad environment create` command to set the initial namespace when creating a new environment.
+
+
+#### User Story 6: As a platform engineer, I want to contribute new Recipes and Recipe Packs for core types to the Radius repository, so that I can extend the capabilities of Radius and share my work with the community:
 
 1.  **Understand Contribution Guidelines**:
     *   Familiarize yourself with the Radius project's general contribution guidelines (often found in `CONTRIBUTING.md`).
@@ -553,9 +578,10 @@ resource env 'Applications.Core/environments@2025-05-01-preview' = {
     *   Locally test the recipes and/or Recipe Pack in a Radius environment to ensure they deploy correctly and integrate as expected.
     *   Verify that applications deployed using these recipes function correctly.
 6.  **Prepare Your Contribution**:
-    *   Fork the [radius-project/recipes](https://github.com/radius-project/recipes) repository.
-    *   Create a new branch for your contribution.
-    *   Organize your recipe files, documentation, and Recipe Pack manifest (if applicable) in a clear and logical directory structure, likely within a designated `recipes` or `contributions` area of the repository.
+    *   Fork the `/resource-types-contrib` repository on GitHub.
+    *   Clone your fork to your local machine.
+    *   Create a new branch for your changes (e.g., `feature/my-recipes`).
+    *   Add your recipe files and/or Recipe Pack manifest to the appropriate directory structure in your fork.
 7.  **Submit a Pull Request (PR)**:
     *   Push your changes to your fork and open a Pull Request against the main Radius repository.
     *   In the PR description, clearly explain:
@@ -572,7 +598,7 @@ resource env 'Applications.Core/environments@2025-05-01-preview' = {
 
 > The proposal is add core RRTs and Recipes to a new repo called `radius-project/resource-types-contrib` where both core (built-in) and extended (optional) types and Recipes will be stored in a structure like: <img src="2025-06-compute-extensibility-feature-spec/types-contrib-repo-structure.png" alt="diagram showing types-contrib repo structure that includes root directories for core and extended types" width="700"/>
 
-#### Migrating existing Radius applications to use the new RRT-based core types and recipes:
+#### User Story 7: As a platform engineer or app developer, I want to migrate existing Radius applications to use the new RRT-based core types and recipes, so that I can take advantage of the new extensibility features without breaking existing applications:
 
 1.  **Understand the New Model**:
     *   Platform engineers and developers review documentation on the RRT-based core types (`Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, `Applications.Core/secretStores@2025-05-01-preview`, `Applications.Core/volumes@2025-05-01-preview`) and the recipe-driven approach.
@@ -590,7 +616,65 @@ resource env 'Applications.Core/environments@2025-05-01-preview' = {
 6.  **Update CI/CD Pipelines**:
     *   Modify CI/CD pipelines to use the updated application Bicep files and any new CLI commands or Radius versions required for the RRT model.
 
-#### Initialize Radius for specific platforms with default recipes:
+#### User Story 8: As an application developer, I want to mount a secret store to my container as a volume so that my application container can access secrets securely:
+
+Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/secretStores@2025-05-01-preview` resources. The secret store recipe is configured to provision a Key Vault or similar secret management service with the secret values provided by the developer.
+
+1. **Define a Secret Store**:
+    * The developer defines a secret store in their application Bicep file, that will leverage the default recipe to provision.
+    ```bicep
+    resource mySecretStore 'Applications.Core/secretStores@2025-05-01-preview' = {
+        name: 'mySecretStore'
+        properties: {
+            environment: env.id
+            application: app.id
+            type: 'certificate'
+            data: {
+                'tls.key': {
+                    value: tlskey
+                }
+                'tls.crt': {
+                    value: tlscrt
+                }
+            }
+        }
+    }
+    ```
+
+1. **Mount the Secret Store to a Container**:
+    * The developer updates their container definition to include a volume that mounts the secret store.
+    ```diff
+    resource myContainer 'Applications.Core/containers@2025-05-01-preview' = {
+        name: 'myContainer'
+        properties: {
+            environment: env.id
+            application: app.id
+            container: {
+                image: 'myContainerImage'
+                volumes: {
+                    secrets: {
+                        kind: 'persistent'
+    +                   source: mySecretStore.id
+                        mountPath: '/var/secrets'
+                    }
+                }
+            }
+    }
+    ```
+
+1. **Deploy the Application**:
+* The developer deploys the application using `rad deploy app.bicep --environment my-env`.
+* Radius uses the registered recipe for `Applications.Core/secretStores@2025-05-01-preview` to provision the secret store (e.g., Azure Key Vault) and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the secret store mounted as a volume in the container.
+
+> Note: this replaces the current implementation that requires users to associate a KeyVault to a volume resource before mounting the volume to the container, i.e. https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/
+
+#### User Story 9: Custom gateways
+TODO
+
+#### User Story 10: Custom volumes
+TODO
+
+#### User Story 11: As a platform engineer, I want platform-specific `rad init` experiences to quickly set up Radius environments with default recipes for core types based on the platform I'm targeting:
 
 1.  **Kubernetes**:
 * `rad init kubernetes` initializes a Radius environment for Kubernetes with default recipes for core types.
@@ -609,7 +693,7 @@ resource env 'Applications.Core/environments@2025-05-01-preview' = {
 
 4.  **etc. etc. for other platforms that can be added to `rad init`**
 
-#### Experience for local development and testing of Recipes and RRTs:
+#### User Story 12: As a platform engineer, I want a local development experience for Recipes and RRTs, so that I can iterate on custom Recipes without needing to publish them to an OCI registry:
 This scenario outlines how a platform engineer can develop, test, and iterate on Recipes (and associated Radius Resource Types, if custom) using local files before publishing them.
 
 **Local Iterative Development of a Custom Recipe for a built-in or custom RRT**
@@ -626,8 +710,8 @@ A platform engineer wants to customize the behavior of `Applications.Core/contai
     *   Modify the Bicep/Terraform template file (e.g., `template.bicep`) to implement the desired custom logic (e.g., add specific annotations, configure a default sidecar, change resource limits).
 
 4.  **Register the Local Recipe**:
-    *   Use `rad recipe register` with the `--template-path` pointing to the local recipe template file (or the directory containing the template and schema). This allows testing without publishing to an OCI registry.
-    *   `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path ./my-custom-recipes/kubernetes-container/template.bicep --parameters customParam=valueForDev`
+    *   Use `rad recipe register` with the `--recipe-location` pointing to the local recipe template file (or the directory containing the template and schema). This allows testing without publishing to an OCI registry.
+    *   `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --recipe-location ./my-custom-recipes/kubernetes-container/template.bicep --parameters customParam=valueForDev`
     *   Radius will validate the recipe against the RRT schema and its own parameter definitions.
 
 5.  **Define/Deploy an Application Using the Local Recipe**:
@@ -662,9 +746,9 @@ A platform engineer clones a Git repository (e.g., a company's internal IaC repo
 4.  **Register Recipes from Local Files**:
     *   For each core type (or custom RRT) for which a recipe is provided in the cloned repository, register it using its local path.
     *   Example for a custom container recipe:
-        `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --template-path ./recipes/core/kubernetes-custom-container/template.bicep`
+        `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --recipe-location ./recipes/core/kubernetes-custom-container/template.bicep`
     *   Example for a recipe for a custom RRT:
-        `rad recipe register default --environment my-dev-env --resource-type Radius.Resources/myWidget --template-kind bicep --template-path ./recipes/custom/my-widget-recipe/template.bicep`
+        `rad recipe register default --environment my-dev-env --resource-type Radius.Resources/myWidget --template-kind bicep --recipe-location ./recipes/custom/my-widget-recipe/template.bicep`
 
 5.  **Deploy Applications**:
     *   Developers can now define applications using these RRTs, and Radius will use the locally registered recipes from the cloned repository when deploying to `my-dev-env`.
