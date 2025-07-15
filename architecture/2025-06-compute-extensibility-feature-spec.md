@@ -748,7 +748,7 @@ A platform engineer clones a Git repository (e.g., a company's internal IaC repo
     *   Example for a custom container recipe:
         `rad recipe register default --environment my-dev-env --resource-type Applications.Core/containers@2025-05-01-preview --recipe-location ./recipes/core/kubernetes-custom-container/template.bicep`
     *   Example for a recipe for a custom RRT:
-        `rad recipe register default --environment my-dev-env --resource-type Radius.Resources/myWidget --template-kind bicep --recipe-location ./recipes/custom/my-widget-recipe/template.bicep`
+        `rad recipe register default --environment my-dev-env --resource-type Radius.Resources/myWidget --recipe-kind bicep --recipe-location ./recipes/custom/my-widget-recipe/template.bicep`
 
 5.  **Deploy Applications**:
     *   Developers can now define applications using these RRTs, and Radius will use the locally registered recipes from the cloned repository when deploying to `my-dev-env`.
