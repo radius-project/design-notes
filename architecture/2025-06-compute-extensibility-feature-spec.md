@@ -265,6 +265,8 @@ Step 2
 1.  **Deploy Applications**:
     *   Developers (or CI/CD) run `rad deploy <bicep-file>`. Radius uses the registered recipes for the RRTs in the target environment to provision the resources.
 
+> Note: Recipes should use Radius resource types to deploy containers and secrets. For example, environment variable values are stored as Kubernetes secrets today. The new recipe-based container needs to use the Application.Core/secrets resource type instead of storing secrets directly in Kubernetes secrets. 
+
 #### User Story 4: As a platform engineer and/or application developer, I would like to leverage platform-specific capabilities
 
 ##### User Story 4a: As a platform engineer, I want to configure three environments with different recipes for the same core resource type, so that I can deploy applications with standard, confidential, and Kubernetes compute requirements:
@@ -670,8 +672,70 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 > This approach will require deprecation of the current [Azure KeyVault Radius Volumes resource type](https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/) where the Azure KeyVault will just be a Secret Store resource type provisioned using a recipe for Azure KeyVault that can be mounted to a Radius Container resource as a volume.
 
-#### User Story 9: Custom gateways
-TODO
+#### User Story 9: As an application developer, I want to create custom gateway resources and configure them to route traffic to my application containers, so that I can manage ingress traffic using my organization's preferred gateway solution:
+
+Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/gateways@2025-05-01-preview` resources. The gateway recipe is configured to provision custom gateways based on the specifications determined by my organization.
+
+1. **Define a container for the service that needs to be exposed to the internet**:
+* The developer defines a container in their application Bicep file that will be provisioned by the default recipe.
+    ```bicep
+    resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
+        name: 'frontend'
+        properties: {
+            environment: env.id
+            application: app.id
+            container: {
+                image: 'myfrontendimage'
+                ports: {
+                    web: {
+                        containerPort: 3000
+                    }
+                }
+            }
+        }
+    }
+    ```
+
+1. **Define a Custom Gateway Resource**:
+* The developer defines a custom gateway resource in their application Bicep file that will be provisioned by the default recipe.
+    ```bicep
+    resource myCustomGateway 'Applications.Core/gateways@2025-05-01-preview' = {
+        name: 'myCustomGateway'
+        properties: {
+            environment: env.id
+            application: app.id
+            routes: [
+                {
+                    path: '/'
+                    destination: 'http://${frontend.name}:3000'
+                }
+            ]
+        }
+    }
+    ```
+
+1. **Deploy the Application**:
+* The developer deploys the application using `rad deploy app.bicep --environment my-env`.
+* Radius uses the registered recipe for `Applications.Core/gateways@2025-05-01-preview` to provision the custom gateway and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the custom gateway configured to route traffic to the container.
+    ```bash
+    Building app.bicep...
+    Deploying template './app.bicep' for application 'myapp' and environment 'my-env' from workspace 'default'...
+
+    Deployment In Progress...
+
+    Completed            myCustomGateway         Applications.Core/gateways
+    Completed            frontend        Applications.Core/containers
+
+    Deployment Complete
+
+    Resources:
+        myCustomGateway         Applications.Core/gateways
+        frontend        Applications.Core/containers
+
+        Public endpoint http://1.1.1.1.nip.io/
+    ```
+
+> Note: Contour is currently installed as a [hard dependency for Radius](https://github.com/radius-project/radius/blob/main/pkg/kubernetes/object.go#L27) to provide http routing for Kubernetes deployments. This change allows users to disable the Contour installation in their Radius environments if they want to use a different gateway solution, such as NGINX Ingress Controller or Traefik, by registering a custom recipe for `Applications.Core/gateways@2025-05-01-preview` that provisions the desired gateway solution.
 
 #### User Story 10: As an application developer, I want to create custom volume resources and mount them to my containers, so that I can use custom storage solutions or configurations:
 
