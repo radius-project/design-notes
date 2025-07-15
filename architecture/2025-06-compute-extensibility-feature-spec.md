@@ -668,11 +668,51 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 > Note: this replaces the current implementation that requires users to associate a KeyVault to a volume resource before mounting the volume to the container, i.e. https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/
 
+> This approach will require deprecation of the current [Azure KeyVault Radius Volumes resource type](https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/) where the Azure KeyVault will just be a Secret Store resource type provisioned using a recipe for Azure KeyVault that can be mounted to a Radius Container resource as a volume.
+
 #### User Story 9: Custom gateways
 TODO
 
-#### User Story 10: Custom volumes
-TODO
+#### User Story 10: As an application developer, I want to create custom volume resources and mount them to my containers, so that I can use custom storage solutions or configurations:
+
+Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/volumes@2025-05-01-preview` resources. The volume recipe is configured to provision custom volumes based on the specifications determined by my organization.
+
+1. **Define a Custom Volume Resource**:
+    * The developer defines a custom volume resource in their application Bicep file that will be provisioned by the default recipe.
+    ```bicep
+    resource myCustomVolume 'Applications.Core/volumes@2025-05-01-preview' = {
+        name: 'myCustomVolume'
+        properties: {
+            environment: env.id
+            application: app.id
+        }
+    }
+    ```
+    > Note that the configurations for this volume resource will be implemented in the recipe and not specified by the developer.
+
+1. **Mount the Custom Volume to a Container**:
+    * The developer updates their container definition to include a volume that mounts the custom volume.
+    ```diff
+    resource myContainer 'Applications.Core/containers@2025-05-01-preview' = {
+        name: 'myContainer'
+        properties: {
+            environment: env.id
+            application: app.id
+            container: {
+                image: 'myContainerImage'
+                volumes: {
+        +           persistentVolume: {
+        +               kind: 'persistent'
+        +               source: myCustomVolume.id
+        +           }
+                }
+            }
+    }
+    ```
+
+1. **Deploy the Application**:
+* The developer deploys the application using `rad deploy app.bicep --environment my-env`.
+* Radius uses the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the custom volume and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the custom volume mounted as a volume in the container.
 
 #### User Story 11: As a platform engineer, I want platform-specific `rad init` experiences to quickly set up Radius environments with default recipes for core types based on the platform I'm targeting:
 
@@ -912,7 +952,7 @@ resource backend 'Applications.Core/containers@2025-05-01-preview' = {
 
 **Pros:**
 - Platform specific capabilities can be leveraged using built-in properties of the standard container resource type, without requiring platform engineers to modify the container resource or Recipe.
-- Platform engineers retain control of the enablement of advanced capabilities on a per-Environment basis, elminating the need for modifying the core resource type.
+- Platform engineers retain control of the enablement of advanced capabilities on a per-Environment basis, eliminating the need for modifying the core resource type.
 
 **Cons:**
 - Adds cognitive load for developers to understand when the punch-through is enabled or not, requiring them to understand how the Environment to which they are deploying their application is configured.
