@@ -1059,3 +1059,5 @@ myContainerImage
 mySecretStore
 throughs
 enablement
+persistentVolume
+myCustomVolume
