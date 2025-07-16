@@ -859,6 +859,21 @@ A platform engineer clones a Git repository (e.g., a company's internal IaC repo
 
 This approach allows teams to manage and version their RRTs and recipes in Git, and easily set up development or testing environments by registering these assets directly from their local checkout without needing an intermediate OCI publishing step for every iteration.
 
+### Summary of key changes:
+* The `compute` property in the `Applications.Core/environments` resource type is removed, allowing for extensibility through Recipes.
+* The `compute.namespace` property is moved to `providers.kubernetes.namespace` in the `Applications.Core/environments` resource type.
+* The following [Recipe properties](https://docs.radapp.io/reference/resource-schema/core-schema/environment-schema/#recipe-properties) are renamed for better clarity going forward:
+    * `templateKind` -> `recipeKind`
+    * `templatePath` -> `recipeLocation`
+* Recipes accept a new `allowPlatformOptions` parameter that determines whether platform-specific configurations via their own schemas (e.g., ACI containerGroupProfile, Kubernetes podSpec) are allowed in the resource type definition.
+* Ability to package and register sets of related recipes as "Recipe Packs" to simplify distribution and management. Environment definitions can reference these packs, which will include the necessary recipes for core types.
+* Core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secretStores`, `Applications.Core/volumes`) are re-implemented as Radius Resource Types (RRT) with new, versioned resource type names (e.g., `Applications.Core/containers@2025-05-01-preview`).
+* New `radius-project/resource-types-contrib` repository is created to host both core (built-in) and extended (optional) types and Recipes, allowing for community contributions and extensions.
+* The `runtimes` property in the `Applications.Core/containers` resource type is replaced with a `platformOptions` property that allows for platform-specific configurations (e.g., ACI confidential containers, Kubernetes tolerations). This property will be a key-value object, with the key corresponding to the platform and the value is an object that matches the platform's API schema, e.g. `'kubernetes':{<podspec>}` or `'aci':{<containerGroupProfile>}`.
+* The `{kind:  'manualScaling', replicas: 5}` extension in the `Applications.Core/containers` resource type is moved to a top-level property in the container definition, as this is a container property common to all platforms.
+* The `{kind: 'kubernetesMetadata', labels: {key: value}}` extension in the `Applications.Core/containers` resource type is moved to the `platformOptions.kubernetes` property, as it is a Kubernetes-specific configuration.
+* Gateway resources customization is enabled through the `Applications.Core/gateways@2025-05-01-preview` resource type, where platform engineers can implement custom gateway solutions using Recipes. Contour installation is no longer a hard dependency for Radius, allowing users to use alternative gateway solutions like NGINX Ingress Controller or Traefik.
+
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
 
