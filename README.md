@@ -79,11 +79,12 @@ The repository is organized into several sections, each corresponding to a speci
 | [architecture](./architecture/) | Contains the overall system architecture designs for Radius services. |
 | [bicep](./bicep/) | Contains the designs related to deployment-engine, Bicep compiler, and Bicep types. |
 | [cli](./cli/) | Contains the designs for Radius CLI. |
-| [ucp](./ucp/) | Contains the designs for the Universal Control Plane (UCP). |
-| [resources](./resources/) | Contains the designs for Radius resource types in `Application.*` namespace. | 
+| [features](./features/) | Contains feature specifications. |
 | [recipe](./recipe/) | Contains the designs related to Radius recipes. |
+| [resources](./resources/) | Contains the designs for Radius resource types in `Application.*` namespace. | 
 | [tools](./tools/) | Contains the designs for engineering tools, such as GitHub Action Workflow and test-infra. |
 | [template](./template/) | Contains the template for design documents.|
+| [ucp](./ucp/) | Contains the designs for the Universal Control Plane (UCP). |
 
 ## Code of Conduct
 
