@@ -778,26 +778,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
 * Radius uses the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the custom volume and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the custom volume mounted as a volume in the container.
 
-#### User Story 11: As a platform engineer, I want platform-specific `rad init` experiences to quickly set up Radius environments with default recipes for core types based on the platform I'm targeting:
-
-1.  **Kubernetes**:
-* `rad init kubernetes` initializes a Radius environment for Kubernetes with default recipes for core types.
-* Platform engineers initialize a new Radius environment for Kubernetes using the default recipes provided by Radius.
-* They register any additional or modified RRTs and their associated recipes in the environment.
-
-2.  **ACI**:
-* `rad init aci` initializes a Radius environment for Azure Container Instances (ACI) with default recipes for core types.
-* Platform engineers initialize a new Radius environment for ACI using the default recipes provided by Radius.
-* They register any additional or modified RRTs and their associated recipes in the environment.
-
-3.  **AWS ECS**:
-* `rad init ecs` initializes a Radius environment for AWS Elastic Container Service (ECS) with default recipes for core types.
-* Platform engineers initialize a new Radius environment for ECS using the default recipes provided by Radius.
-* They register any additional or modified RRTs and their associated recipes in the environment.
-
-4.  **etc. etc. for other platforms that can be added to `rad init`**
-
-#### User Story 12: As a platform engineer, I want a local development experience for Recipes and RRTs, so that I can iterate on custom Recipes without needing to publish them to an OCI registry:
+#### User Story 11: As a platform engineer, I want a local development experience for Recipes and RRTs, so that I can iterate on custom Recipes without needing to publish them to an OCI registry:
 This scenario outlines how a platform engineer can develop, test, and iterate on Recipes (and associated Radius Resource Types, if custom) using local files before publishing them.
 
 **Local Iterative Development of a Custom Recipe for a built-in or custom RRT**
@@ -858,6 +839,25 @@ A platform engineer clones a Git repository (e.g., a company's internal IaC repo
     *   Developers can now define applications using these RRTs, and Radius will use the locally registered recipes from the cloned repository when deploying to `my-dev-env`.
 
 This approach allows teams to manage and version their RRTs and recipes in Git, and easily set up development or testing environments by registering these assets directly from their local checkout without needing an intermediate OCI publishing step for every iteration.
+
+<!-- #### User Story 12: As a platform engineer, I want platform-specific `rad init` experiences to quickly set up Radius environments with default recipes for core types based on the platform I'm targeting:
+
+1.  **Kubernetes**:
+* `rad init kubernetes` initializes a Radius environment for Kubernetes with default recipes for core types.
+* Platform engineers initialize a new Radius environment for Kubernetes using the default recipes provided by Radius.
+* They register any additional or modified RRTs and their associated recipes in the environment.
+
+2.  **ACI**:
+* `rad init aci` initializes a Radius environment for Azure Container Instances (ACI) with default recipes for core types.
+* Platform engineers initialize a new Radius environment for ACI using the default recipes provided by Radius.
+* They register any additional or modified RRTs and their associated recipes in the environment.
+
+3.  **AWS ECS**:
+* `rad init ecs` initializes a Radius environment for AWS Elastic Container Service (ECS) with default recipes for core types.
+* Platform engineers initialize a new Radius environment for ECS using the default recipes provided by Radius.
+* They register any additional or modified RRTs and their associated recipes in the environment.
+
+4.  **etc. etc. for other platforms that can be added to `rad init`** -->
 
 ### Summary of key changes:
 * The `compute` property in the `Applications.Core/environments` resource type is removed, allowing for extensibility through Recipes.
