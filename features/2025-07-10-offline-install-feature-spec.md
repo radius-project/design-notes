@@ -105,10 +105,10 @@ The `rad-bicep` binary will be listed on the release notes:
 | Binary                    | URL                                                          | Digest      |
 | ------------------------- | ------------------------------------------------------------ | ----------- |
 | `rad-bicep_darwin_amd64`  | https://github.com/radius-project/radius/releases/download/<release>/rad-bicep_darwin_amd64 | `sha256...` |
-| `rad-bicep_darwin_arm64`  | https://github.com/radius-project/radius/releases/download/<release>/rad-bicepdarwin_amd64 | `sha256...` |
-| `rad-bicep_linux_amd64`   | https://github.com/radius-project/radius/releases/download/<release>/rad-biceplinux_amd64 | `sha256...` |
+| `rad-bicep_darwin_arm64`  | https://github.com/radius-project/radius/releases/download/<release>/rad-bicep_darwin_amd64 | `sha256...` |
+| `rad-bicep_linux_amd64`   | https://github.com/radius-project/radius/releases/download/<release>/rad-bicep_linux_amd64 | `sha256...` |
 | `rad-bicep_linux_arm64`   | https://github.com/radius-project/radius/releases/download/<release>/rad-bicep_linux_amd64 | `sha256...` |
-| `rad-bicep_linux_arm`     | https://github.com/radius-project/radius/releases/download/<release>/rad-biceplinux_amd64 | `sha256...` |
+| `rad-bicep_linux_arm`     | https://github.com/radius-project/radius/releases/download/<release>/rad-bicep_linux_amd64 | `sha256...` |
 | `rad-bicep_windows_arm64` | https://github.com/radius-project/radius/releases/download/<release>/rad-bicep_cli_windows_amd64 | `sha256...` |
 
 **Helm chart**
