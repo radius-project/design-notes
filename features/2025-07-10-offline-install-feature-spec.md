@@ -31,7 +31,7 @@ Radius makes the assumption that the installation environment has full access to
 
 
 2. **The Radius Helm chart.** This chart will be downloaded using `helm pull` and stored either in a Helm repository mirror or on the file system.
-   * https://github.com/sylvainsf/radius/tree/main/deploy/Chart
+   * https://github.com/project-radius/radius/tree/main/deploy/Chart
 
 
 3. **Container images distributed via GHCR**. These images will be imported into the user's private OCI registry.
