@@ -384,17 +384,3 @@ rad upgrade kubernetes \
 
 The platform engineer upgrades Radius using the same `helm upgrade` command as user story 4.
 
-## Summary of changes
-
-| Priority | Size | Description                                                  |
-| -------- | ---- | ------------------------------------------------------------ |
-| p0       | S    | Specifying the `image.repository` in the Radius Helm chart   |
-| p0       | S    | Specifying `--skip-contour-install`                          |
-| p0       | L    | Downloading the Terraform binary, validating the checksum, and installing Terraform via a new Terraform resource type |
-| p0       | M    | Setting the Terraform CLI configuration based on the new Terraform resource |
-| p1       | S    | Release notes now includes: (1) list of container images URLs with their tags, (2) install.sh, (3) `rad-bicep` |
-| p1       | M    | Upgrade the Terraform binary when the Terraform resource is modified |
-| p1       | S    | New `rad resource show --output bicep` output option         |
-| p2       | M    | Uninstall Terraform when the Terraform resource is deleted   |
-| p2       | S    | Radius CLI releases are named `rad_cli_<KERNEL>_<ARCH>` rather than just `rad_<KERNEL>_<ARCH>` |
-
