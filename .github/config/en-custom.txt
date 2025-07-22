@@ -1030,3 +1030,4 @@ darwin
 Homebrew
 Winget
 howto
+AzureDevOps
