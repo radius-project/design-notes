@@ -25,8 +25,9 @@ Radius makes the assumption that the installation environment has full access to
 
 | #    | Component                                                    | As-Is Distribution                                           | To-Be Online Distribution                                    | To-Be Offline Distribution                             |
 | ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------ |
-| 1a   | `rad` CLI binary                                             | [install.sh](https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh) script | No change                                                    | Manually installed                                     |
-| 1b   | `rad-bicep` binary                                           | [install.sh](https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh) script | No change                                                    | Manually installed                                     |
+| 1a   | `rad` CLI binary                                             | [install.sh](https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh) script | No change                                                    | Enhanced `install.sh`                                  |
+| 1b   | `rad-bicep` binary                                           | `rad bicep download`                                         | Added to `install.sh`                                        | Added to `install.sh`                                  |
+| 1c   | `bicepconfig.json`                                           | `rad init`                                                   | Added to `install.sh`                                        | Added to `install.sh`                                  |
 | 2    | [Radius Helm chart](https://github.com/project-radius/radius/tree/main/deploy/Chart) | `rad init`, `rad install` or `helm repo add radius`          | No change                                                    | Chart manually pulled                                  |
 | 3    | Radius container images (  `ucpd`, `controller`, `applications-rp`, `dynamic-rp`, `bicep`, `dashboard`) | Downloaded via the Radius Helm chart from GHCR               | No change                                                    | Manually imported into the user's private OCI registry |
 | 4    | Contour container images (`contour`, `envoy`)                | Downloaded via the Radius Helm chart from Docker Hub         | Short-term: No change; Long-term: Removal of Contour from Radius install | Radius will have an option to not install Contour      |
@@ -56,6 +57,10 @@ The platform engineer consults the release notes for the location of binaries. T
 The platform engineer consults the Radius release notes for the list of assets. They see a list of CLI binaries clearly named CLI to distinguish from the container images. The [release notes](https://github.com/radius-project/radius/releases/tag/v0.49.0) today only includes the `rad` CLI. The notes will be improved to list `install.sh` and the `rad-bicep` binary as well.
 
 The platform engineer or security engineer imports `install.sh`, `rad`, and `rad-bicep` into their software mirror (for example, Sonatype Nexus Repository mirror) or other file storage location.
+
+> [!NOTE]
+>
+> The `rad-bicep` is a legacy of the Bicep fork and is no longer required. However, the `bicep` binary must still be installed. Work is needed to move to `bicep` and deprecate the `rad-bicep` binary. However, this is out of scope for this document.
 
 **Helm chart**
 
@@ -384,3 +389,19 @@ rad upgrade kubernetes \
 
 The platform engineer upgrades Radius using the same `helm upgrade` command as user story 4.
 
+## Summary of changes
+| Priority | Size | Description                                                  |
+| -------- | ---- | ------------------------------------------------------------ |
+| p0       | S    | Specifying the `image.repository` in the Radius Helm chart   |
+| p0       | S    | Specifying `--skip-contour-install`                          |
+| p1       | S    | Documentation updates for installing the Radius CLI manually |
+| p1       | L    | Downloading the Terraform binary, validating the checksum, and installing Terraform via a new Terraform resource type |
+| p1       | M    | Setting the Terraform CLI configuration based on the new Terraform resource |
+| p1       | S    | New `rad resource show --output bicep` output option         |
+| p1       | M    | Upgrade the Terraform binary when the Terraform resource is modified |
+| p1       | M    | Uninstall Terraform when the Terraform resource is deleted   |
+| p1       | M    | `install.sh` supports offline installation                   |
+| p1       | M    | `install.sh` creates `bicepconfig.json`                      |
+| p1       | M    | `install.sh` installs `rad-bicep`                            |
+| p2       | M    | `rad bicep download` is removed                              |
+| p2       | S    | Release notes now includes (1) `install.sh`, (2) `rad-bicep`, (3) the Helm chart, (4) list of container image URLs with their tags, and  (5) Bicep extension image URLs and tags |
