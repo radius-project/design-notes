@@ -6,70 +6,33 @@
 
 Many large organizations have mature security practices where all software entering the organization's environment are controlled. Typically all software packages are scanned for security vulnerabilities prior to being stored internally. Access to non-authorized software packages are restricted. 
 
-Radius must support these organizations' requirements by making it easy to install, configure, and upgrade Radius while offline, or in an *air gapped* environment.
+Radius must support these organizations' requirements by making it easy to install, configure, and upgrade Radius while offline, or in *air gapped* environments.
 
-## Goals
+### Goals
 
 * Enable platform engineers to install and upgrade Radius while not connected to the internet
 * Enable platform engineers to control what versions of all require software components are installed
+* Specifically, improve the way Terraform is installed, configured, and upgraded
 * Increase the transparency of what software is required to run Radius
 
-## Non-Goals (out of scope)
+### Non-Goals (out of scope)
 
-* Enhancing the installation experience in any other way
+* Enhancing the installation experience in other ways
 
 ## Inventory of software components
 
 Radius makes the assumption that the installation environment has full access to the internet and installs many software components on behalf of the user. Below is an inventory:
 
-1. **Binaries distributed via GitHub.** These binaries will be downloaded and installed manually.
-
-   * `rad`
-
-
-   * `rad-bicep`
-
-
-2. **The Radius Helm chart.** This chart will be downloaded using `helm pull` and stored either in a Helm repository mirror or on the file system.
-   * https://github.com/project-radius/radius/tree/main/deploy/Chart
-
-
-3. **Container images distributed via GHCR**. These images will be imported into the user's private OCI registry.
-
-   * `ucpd`
-
-   * `controller`
-
-   * `applications-rp`
-
-   * `dynamic-rp`
-
-   * `bicep`
-
-   * `dashboard`
-
-
-4. **Container images distributed via Docker Hub**. Radius will have an option to not install Contour.
-
-   * `contour`
-
-   * `envoy`
-
-
-5. **Bicep extensions distributed via ACR**. These images will be imported into the user's private OCI registry.
-
-   * `biceptypes.azurecr.io/radius`
-
-   * `biceptypes.azurecr.io/aws`
-
-
-6. **NPM packages distributed via npmjs.com**. This package will be eliminated and implemented in the Go program.
-   * https://www.npmjs.com/package/@radius-project/manifest-to-bicep-extension
-
-
-7. **Third-party binaries**. Radius will offer an installation option to install the Terraform binary from the user's location.
-   * Terraform via https://releases.hashicorp.com/
-
+| #    | Component                                                    | As-Is Distribution                                           | To-Be Online Distribution                                    | To-Be Offline Distribution                             |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------ |
+| 1a   | `rad` CLI binary                                             | [install.sh](https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh) script | No change                                                    | Manually installed                                     |
+| 1b   | `rad-bicep` binary                                           | [install.sh](https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh) script | No change                                                    | Manually installed                                     |
+| 2    | [Radius Helm chart](https://github.com/project-radius/radius/tree/main/deploy/Chart) | `rad init`, `rad install` or `helm repo add radius`          | No change                                                    | Chart manually pulled                                  |
+| 3    | Radius container images (  `ucpd`, `controller`, `applications-rp`, `dynamic-rp`, `bicep`, `dashboard`) | Downloaded via the Radius Helm chart from GHCR               | No change                                                    | Manually imported into the user's private OCI registry |
+| 4    | Contour container images (`contour`, `envoy`)                | Downloaded via the Radius Helm chart from Docker Hub         | Short-term: No change; Long-term: Removal of Contour from Radius install | Radius will have an option to not install Contour      |
+| 5    | `radius` and `aws` Bicep extensions                          | Downloaded bi `rad-bicep` dynamically from ACR               | No change                                                    | Manually imported into the user's private OCI registry |
+| 6    | `manifest-to-bice-extension` NPM package                     | Remote code execution from [npmjs.com](https://www.npmjs.com/package/@radius-project/manifest-to-bicep-extension) | This package will be eliminated and implemented in the Go program | Same                                                   |
+| 7    | Terraform binaries                                           | Dynamically installed by Applications RP from [hashicorp.com](https://releases.hashicorp.com/) | Explicitly installed into the Radius control plane by the platform engineer | Same                                                   |
 
 ## Scenario 1 – Installing Radius
 
@@ -79,34 +42,35 @@ Radius makes the assumption that the installation environment has full access to
 
 The platform engineer consults the release notes for the location of binaries. They will need to download:
 
-* Radius CLI binaries (`rad` and `rad-bicep`)
+* Radius CLI binaries (`install.sh`, `rad`, and `rad-bicep`)
 * Radius Helm chart
-* Radius Container images
+* Radius container images
 * Radius and AWS Bicep extensions
+
+> [!NOTE]
+>
+> The Contour container images can optionally be included in the Radius container images. For this feature specification, it is assumed that Contour will not be installed. 
 
 **Radius CLI binaries**
 
-The platform engineer consults the Radius release notes for the list of assets. They see a list of CLI binaries clearly named CLI to distinguish from the container images. This includes:
+The platform engineer consults the Radius release notes for the list of assets. They see a list of CLI binaries clearly named CLI to distinguish from the container images. The [release notes](https://github.com/radius-project/radius/releases/tag/v0.49.0) today only includes the `rad` CLI. The notes will be improved to list `install.sh` and the `rad-bicep` binary as well.
 
-* The `rad` binary which will be renamed from  `rad_<KERNEL>_<ARCH>` to  `rad_cli_<KERNEL>_<ARCH>`
-* The `rad-bicep` binary will now be listed on the release notes
-
-The platform engineer or security engineer imports the Radius CLI into their software mirror (for example, Sonatype Nexus Repository mirror). 
+The platform engineer or security engineer imports `install.sh`, `rad`, and `rad-bicep` into their software mirror (for example, Sonatype Nexus Repository mirror) or other file storage location.
 
 **Helm chart**
 
 If the organization has a Helm chart repository mirror such as Sonatype Nexus, the platform engineer or security engineer can load the Radius chart into the mirror using something similar to:
 
 ```bash
-helm pull https://github.com/radius-project/radius/tree/main/deploy/Chart
-helm repo add nexus http://<NEXUS_HOSTNAME>/repository/<NEXUS_REPOSITORY_NAME>/ 
-helm cm-push radius nexus
+$ helm pull https://github.com/radius-project/radius/tree/main/deploy/Chart
+$ helm repo add nexus http://<NEXUS_HOSTNAME>/repository/<NEXUS_REPOSITORY_NAME>/ 
+$ helm cm-push radius nexus
 ```
 
 If the organization does not have a Helm chart repository mirror, the platform engineer or security engineer can download the Radius chart.
 
 ```bash
-helm pull https://github.com/radius-project/radius/tree/main/deploy/Chart
+$ helm pull https://github.com/radius-project/radius/tree/main/deploy/Chart
 ```
 
 **Container images**
@@ -115,34 +79,34 @@ The platform engineer or security engineer imports the Radius container images i
 
 ```bash
 # Import UCP container image
-az acr import \
+$ az acr import \
   --name <ACR_REGISTRY_NAME> 
   --source ghcr.io/radius-project/ucpd:0.48
   --image ucpd:0.48
 # Import Controller container image
-az acr import ...
+$ az acr import ...
 # Import Applications RP container image
-az acr import ...
+$ az acr import ...
 # Import Dynamic RP container image
-az acr import ...
+$ az acr import ...
 # Import Bicep container image
-az acr import ...
+$ az acr import ...
 # Import Dashboard container image
-az acr import ...
+$ az acr import ...
 ```
 
-**Bicep extensions**
+**Radius and AWS Bicep extensions**
 
 The platform engineer or security engineer imports the Radius Bicep extensions into their OCI registry. 
 
 ```bash
 # Import Radius Bicep extension
-az acr import \
+$ az acr import \
   --name <ACR_REGISTRY_NAME> 
   --source biceptypes.azurecr.io/radius:0.48
   --image radius:0.48
 # Import AWS Bicep extension (optionally)
-az acr import \
+$ az acr import \
   --name <ACR_REGISTRY_NAME>
   --source biceptypes.azurecr.io/aws:0.48
   --image aws:0.48
@@ -150,44 +114,37 @@ az acr import \
 
 ### User Story 2 – Install CLI
 
-***As a platform engineer, I need to install the Radius CLI***
+***As a platform engineer or developer, I need to install the Radius CLI***
 
-Rather than running the `install.sh` script, the platform engineer installs the CLI manually. The platform engineer downloads `rad` and `rad-bicep` and stores in `/usr/local/bin/rad` and confirms that directory is in their $PATH.
+The platform engineer or developer runs the installation script with additional parameters.
 
-The platform engineer creates a `bicepconfig.json` file with these contents:
-
-```json
-{
-	"experimentalFeaturesEnabled": {
-		"extensibility": true
-	},
-	"extensions": {
-		"radius": "br:<OCI_REGISTRY_URL>/<REPOSITORY>/radius:0.48",
-		"aws": "br:<OCI_REGISTRY_URL>/<REPOSITORY>/aws:0.48",
-    "radiusResources": "radiusResources.tgz"
-	}
-}
+```bash
+$ install.sh \
+  --version <RADIUS_VERSION>
+  --binary-install-source <PATH_TO_RAD_AND_RAD_BICEP_CLI> \
+  --bicep-extension-oci-registry <OCI_REGISTRY_URL>/<REPOSITORY>
+  --custom-resource-type-extension-location <PATH_TO_RADIUS_RESOURCES_TGZ>
 ```
 
-> [!NOTE]
->
-> The installation instructions for installing the Radius CLI are incomplete and duplicated multiple times:
->
-> * https://docs.radapp.io/guides/tooling/rad-cli/howto-rad-cli/ 
->   * Binaries should be renamed Offline or Manual
->   * Needs actual instructions for installing `rad`
->   * Need instructions for installing `rad-bicep`
->   * Need instructions for creating the `bicepconfig.json` 
-> * https://docs.radapp.io/getting-started/#2-install-radius-cli (duplicate)
-> * https://docs.radapp.io/installation/#step-1-install-the-rad-cli (duplicate)
-> * https://docs.radapp.io/guides/tooling/rad-cli/overview/
->   * "If you would like to install the rad CLI to a different path, you can specify the path with the `RADIUS_INSTALL_DIR` environment variable" should be in the installation section
+This script performs the following:
+
+1. Gets the kernel type and system architecture (as-is)
+2. Downloads the `rad` binary from Github (as-is) or the binary install source (new)
+3. Gets the latest release information if the version is not specified (as-is)
+4. Installs the `rad` binary in `/usr/local/bin` or `%LOCALAPPDATA%\radius` (as-is)
+5. Installs the `rad-bicep` binary in `/usr/local/bin` or `%LOCALAPPDATA%\radius` (change from as-is)
+6. Creates the `bicepconfig.json` in the user's home directory (new) using the `bicep-extension-oci-registry` and `custom-resource-type-extension-location`, if specified (new)
+
+The key changes from today's `install.sh` include:
+
+* Today, `rad-bicep` is installed via the `rad bicep download` command. This approach is problematic in that is is not obvious that Radius is downloading a new binary. The command also installs the `rad-bicep` binary in a different directory (`~/.rad/bin`) which is not ideal. The `install.sh` script is enhanced to install the `rad-bicep` binary side-by-side `rad` and the `rad bicep download` command is removed.
+* Today, the `bicepconfig.json` file is created by `rad init`. This is problematic since offline installs will not use `rad init`. Also, the contents of `bicepconfig.json` file created by `rad init` is hard-coded. With this change, the `install.sh` script will create the `bicepconfig.json` file based on user input (`--bicep-extension-oci-registry`, and `--custom-resource-type-extension-location`)
 
 ### User Story 3 – Install Radius via CLI
 
 ***As a platform engineer, I need to install Radius offline using the Radius CLI***
 
-The platform engineer installs Radius using the CLI with override for the various settings.
+The platform engineer installs Radius using the CLI specifying the private OCI registry and to skip installing Contour.
 
 ```bash
 rad install kubernetes \
@@ -199,7 +156,7 @@ rad install kubernetes \
 >
 >  `rad init` will not support offline installations.
 
-The `image.repository` is the location of the Radius container images mirror.
+The `image.repository` is the private OCI registry where the Radius container images were stored in the previous step.
 
 The `--skip-contour-install` does not install Contour. Therefore the Gateway resource types will not function until extensibility is implemented.
 
@@ -228,7 +185,7 @@ helm upgrade radius radius/radius \
   --namespace radius-system \
   --version 0.48.0 \
   --wait --timeout 15m0s \
-  --set image.repository=<OCI_REGISTRY_URL>/<REPOSITORY> \
+  --set image.repository=<OCI_REGISTRY_URL>/<REPOSITORY>
 ```
 
 ## Scenario 2 – Managing Terraform
@@ -244,7 +201,7 @@ The platform engineer deploys a Terraform resource. The Terraform resource repla
 ```yaml
 param token string
 
-resource tf 'System.Resources/terrform@2025-08-01-preview' = {
+resource tf 'System.Resources/terraform@2025-08-01-preview' = {
   name: 'tf'
   terraformCLI: {
     url: 'https://<TF_MIRROR_URL>/terraform_1.5.7_linux_amd64.zip'
@@ -316,11 +273,15 @@ The Environment resource no longer has a recipeConfig. This includes:
 | As-Is Resource | As-Is Property                          | To-Be Resource | To-Be Property            |
 | -------------- | --------------------------------------- | -------------- | ------------------------- |
 | Environment    | `recipeConfig.terraform.authentication` | Terraform      | `terraformrc.credentials` |
-| Environment    | `recipeConfig.terraform.providers`      | Terraform      | ??                        |
+| Environment    | `recipeConfig.terraform.providers`      | Terraform      | TODO                      |
+
+> [!CAUTION]
+>
+> **TODO**: Add details on how to handle `recipeConfig.terraform.providers`. This property is used to pass credentials to other providers such as AzureDevOps. Radius only passes credentials to Azure, AWS, and Kubernetes Terraform providers.
 
 #### Alternatives Considered
 
-We considered extending the recipeConfig property of the Environment resource to include the provider mirror. The challenge with this approach is that the `recipeConfig` is on the Environment. As with Recipe Packs, the Environment resource needs to be as slim as possible because there will be hundreds of environments but only one configuration for Terraform.
+We considered extending the `recipeConfig` property of the Environment resource to include the provider mirror. The challenge with this approach is that the `recipeConfig` is on the Environment. As with Recipe Packs, the Environment resource needs to be as slim as possible because there will be hundreds of environments but only one configuration for Terraform.
 
 We also considered installing Terraform during Radius installation. The benefit of the proposed approach here are:
 
@@ -431,9 +392,7 @@ The platform engineer upgrades Radius using the same `helm upgrade` command as u
 | p0       | S    | Specifying `--skip-contour-install`                          |
 | p0       | L    | Downloading the Terraform binary, validating the checksum, and installing Terraform via a new Terraform resource type |
 | p0       | M    | Setting the Terraform CLI configuration based on the new Terraform resource |
-| p1       | S    | Release notes now include a list of container images URLs with their tags and the URL for the CLI needed for the release |
-| p1       | S    | Release notes now includes the `rad-bicep` binary under assets |
-| p1       | S    | Documentation updates for installing the Radius CLI manually |
+| p1       | S    | Release notes now includes: (1) list of container images URLs with their tags, (2) install.sh, (3) `rad-bicep` |
 | p1       | M    | Upgrade the Terraform binary when the Terraform resource is modified |
 | p1       | S    | New `rad resource show --output bicep` output option         |
 | p2       | M    | Uninstall Terraform when the Terraform resource is deleted   |
