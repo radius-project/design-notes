@@ -1022,3 +1022,12 @@ pdf
 pdfs
 Knative
 genericized
+gapped
+npmjs
+Sonatype
+amd
+darwin
+Homebrew
+Winget
+howto
+AzureDevOps
