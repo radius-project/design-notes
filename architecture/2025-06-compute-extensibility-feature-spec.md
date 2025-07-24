@@ -181,8 +181,7 @@ Step 2
     > Note: If the RRT for which a Recipe in the pack is being registered does not exist, the Recipe Pack addition process should fail gracefully, indicating which RRTs are missing in the error message.
 
 1.  **Environment Utilizes Recipes from the Pack**:
-    *   Once the Recipe Pack is registered, the environment is configured with all the specified recipes for the core RRTs.
-    *   When applications are deployed to this environment, Radius automatically uses the corresponding recipes from the pack to provision `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` resources.
+    *   Once the Recipe Pack is created and added to the Environment, Radius will use the recipes specified in the Recipe Pack.
 
 1.  **Manage and Update Recipe Packs**:
     *   Platform engineers can update the Recipe Pack manifest (e.g., point to new recipe versions, change default parameters) and re-add it. The CLI could offer options to overwrite existing registrations or manage versions of the pack within the environment.
