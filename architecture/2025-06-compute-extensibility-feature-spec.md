@@ -178,8 +178,7 @@ Step 2
     > Note: If the RRT for which a Recipe in the pack is being registered does not exist, the Recipe Pack addition process should fail gracefully, indicating which RRTs are missing in the error message.
 
 1.  **Environment Utilizes Recipes from the Pack**:
-    *   Once the Recipe Pack is registered, the environment is configured with all the specified recipes for the core RRTs.
-    *   When applications are deployed to this environment, Radius automatically uses the corresponding recipes from the pack to provision `Applications.Core/containers@2025-05-01-preview`, `Applications.Core/gateways@2025-05-01-preview`, and `Applications.Core/secretStores@2025-05-01-preview` resources.
+    *   Once the Recipe Pack is created and added to the Environment, Radius will use the recipes specified in the Recipe Pack.
 
 1.  **Manage and Update Recipe Packs**:
     *   Platform engineers can update the Recipe Pack manifest (e.g., point to new recipe versions, change default parameters) and re-add it to the environment.
@@ -269,7 +268,7 @@ Step 2
                 // providers property remains scoped to the environment
                 providers: {
                     azure: {
-                        scope: '/subscriptions/<>/resourceGroups/<>'
+                        scope: '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>'
                     }
                 }
             }
@@ -456,8 +455,12 @@ This scenario demonstrates how a single application definition, containing both 
     ```diff
     import radius as radius
 
-    @description('The Radius Application ID')
-    param application string
+resource sensitiveApp 'Applications.Core/applications@2023-10-01-preview' = {
+  name: 'sensitiveApp'
+  properties: {
+    environment: environment
+  }
+}
 
     resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
         name: 'frontend'
@@ -549,7 +552,7 @@ This scenario demonstrates how a single application definition, containing both 
     resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
         name: 'mycache'
         properties: {
-        application: application
+            application: application
         }
     }
     ```
@@ -609,7 +612,7 @@ Given that I have created and published custom Bicep or Terraform recipes for co
     ```bash
     rad recipe pack register default --environment my-aci-env \
     --recipe-pack-location git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack.yaml?ref=1.0.0
-    --parameters {"enablePlatformOptions": false}
+    --parameters {"allowPlatformOptions": false}
     ```
     > Note: if there are existing recipes registered for the same resource type in the environment, this command will overwrite them with the recipes defined in the pack.
 
