@@ -177,20 +177,20 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
               - environment
   ```
 
-**Resource Type Schema Enforcement**
+  **Resource Type Schema Enforcement**
 
-Radius enforces ARM naming conventions for resource type schemas. The following guidelines should be followed:
+  Radius enforces ARM naming conventions for resource type schemas. The following guidelines should be followed:
 
-- The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius resource types. The core resource type will also need to follow the Radius.Core so that it is consistent with the other resource types.
+  - The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius resource types. The core resource type will also need to follow the Radius.Core so that it is consistent with the other resource types.
 
-- The resource type name follows the camelCase convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
+  - The resource type name follows the camelCase convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
 
-- Version should be the latest date and follow the format `YYYY-MM-DD-preview`. This is the date on which the contribution is made or when the resource type is tested and validated. For e.g. `2025-07-20-preview`. This is an ARM naming convention that Radius follows.
+  - Version should be the latest date and follow the format `YYYY-MM-DD-preview`. This is the date on which the contribution is made or when the resource type is tested and validated. For e.g. `2025-07-20-preview`. This is an ARM naming convention that Radius follows.
 
-- Properties should follow the camelCase convention and include a description for each property. 
-    - `readOnly:true` set for property automatically populated by Radius Recipes.
-    - `type` could be `integer`, `string` or `object`; Support for `array` and `enum` in progress
-    - `required` for required properties. `environment` should always be a required property.
+  - Properties should follow the camel Case convention and include a description for each property. 
+      - `readOnly:true` set for property automatically populated by Radius Recipes.
+      - `type` could be `integer`, `string` or `object`; Support for `array` and `enum` in progress
+      - `required` for required properties. `environment` should always be a required property.
 
 1. Create Recipes for your resource type in the `recipes` directory. Each Recipe should be organized by cloud provider or technology stack, such as `aws-memorydb`, `azure-redis`, or `kubernetes`.
 
@@ -202,19 +202,19 @@ Radius enforces ARM naming conventions for resource type schemas. The following 
 
 1. Submit a pull request (PR) to the `resource-types-contrib` repository with the changes and the documentation. Make sure to follow the detailed checklist
 
-Before submitting your contribution. Make sure to check the following:
+  Before submitting your contribution. Make sure to check the following:
 
-- [ ] Resource type schema follows naming conventions
-- [ ] All properties have clear descriptions
-- [ ] Required properties are properly marked
-- [ ] Read-only properties are marked as `readOnly: true`
-- [ ] Recipes are provided for at least one platform
-- [ ] Recipes handle secrets securely
-- [ ] Recipes include necessary parameters and outputs
-- [ ] Recipes are idempotent and can be run multiple times without issues
-- [ ] Recipes output necessary connection information
-- [ ] Test your resource type and recipes locally
-- [ ] Documentation is complete and clear
+  - Resource type schema follows naming conventions
+  - All properties have clear descriptions
+  - Required properties are properly marked
+  - Read-only properties are marked as `readOnly: true`
+  - Recipes are provided for at least one platform
+  - Recipes handle secrets securely
+  - Recipes include necessary parameters and outputs
+  - Recipes are idempotent and can be run multiple times without issues
+  - Recipes output necessary connection information
+  - Test your resource type and recipes locally
+  - Documentation is complete and clear
 
 1. The PR will be reviewed by the Radius maintainers, who will provide feedback and request changes if necessary. 
 
@@ -224,8 +224,6 @@ Before submitting your contribution. Make sure to check the following:
  - Once the PR is approved, it will be merged into the `main` branch of the `resource-types-contrib` repository.
 
 The end-end contribution guidelines are documented in the [here](https://github.com/Reshrahim/resource-types-contrib/)
-
-
 
 
 ## Key Investments
