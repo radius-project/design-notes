@@ -419,7 +419,6 @@ resource sensitiveApp 'Applications.Core/applications@2023-10-01-preview' = {
             }
             }
             env: {
-            REDIS_CONNECTION: cache.properties.connectionStrings.default
             }
         }
         connections: {
