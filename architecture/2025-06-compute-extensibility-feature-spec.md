@@ -455,17 +455,17 @@ This scenario demonstrates how a single application definition, containing both 
     ```diff
     import radius as radius
 
-resource sensitiveApp 'Applications.Core/applications@2023-10-01-preview' = {
-  name: 'sensitiveApp'
-  properties: {
-    environment: environment
-  }
-}
+    resource sensitiveApp 'Applications.Core/applications@2023-10-01-preview' = {
+        name: 'sensitiveApp'
+        properties: {
+            environment: environment
+        }
+    }
 
     resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
         name: 'frontend'
         properties: {
-            application: application
+            application: sensitiveApp.id
             container: {
                 image: 'nginx:latest'
                 ports: {
@@ -481,7 +481,7 @@ resource sensitiveApp 'Applications.Core/applications@2023-10-01-preview' = {
     resource backend 'Applications.Core/containers@2025-05-01-preview' = {
         name: 'backend'
         properties: {
-            application: application
+            application: sensitiveApp.id
             container: {
                 image: 'mycorp/sensitive-processor:v1.2'
                 ports: {
