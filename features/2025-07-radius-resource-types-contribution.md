@@ -103,20 +103,19 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
     >
     >    | Namespace | Resource Type | Description |
     >    |---|---|---|
-    >    | Applications.Datastores | sqlDatabases | Relational database support |
-    >    | Applications.Datastores | redisCaches | In-memory data store and cache |
-    >    | Applications.Datastores | mongoDatabases | NoSQL document database |
-    >    | Applications.Messaging | rabbitMQQueues | Message queue system for asynchronous communication |
-    >    | Applications.Dapr | stateStores | Distributed state management via Dapr |
-    >    | Applications.Dapr | pubSubBrokers | Message publishing and subscription via Dapr |
-    >    | Applications.Dapr | secretStores | Secret management via Dapr components |
-    >    | Applications.Dapr | configurationStores | Configuration management via Dapr |`
+    >    | Radius.Datastores | sqlDatabases | Relational database support |
+    >    | Radius.Datastores | redisCaches | In-memory data store and cache |
+    >    | Radius.Datastores | mongoDatabases | NoSQL document database |
+    >    | Radius.Messaging | rabbitMQQueues | Message queue system for asynchronous communication |
+    >    | Radius.Dapr | stateStores | Distributed state management via Dapr |
+    >    | Radius.Dapr | pubSubBrokers | Message publishing and subscription via Dapr |
+    >    | Radius.Dapr | secretStores | Secret management via Dapr components |
+    >    | Radius.Dapr | configurationStores | Configuration management via Dapr |
 
 1. Create a new directory for your resource type under the `resource-types-contrib` repository, following the established directory structure.
 
     For e.g. If you are contributing to a `redis` resource type, the directory structure would look like this:
     
-    ```
         resource-types-contrib/
         ├── README.md
         ├── datastores
@@ -138,52 +137,51 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
         │   │   │       │       └── terraform/
         │   │   │       │               ├── main.tf
         │   │   │       │               └── var.tf
-        │   │   │       └── kubernetes-rediscache/ 
-```
+        │   │   │       └── kubernetes-rediscache/
 
 1. Define the `redis.yaml` schema file for your resource type. Follow the contribution guidelines for the resource type schema.
 
-```yaml
-name: Radius.Datastores
-types:
-  redisCaches:
-    apiVersions:
-      '2025-07-20-preview':
-        schema: 
-          type: object
-          properties:
-            environment:
-              type: string
-            application:
-              type: string
-            capacity:
-              type: string
-              description: The capacity of the Redis Cache instance.
-            host:
-              type: string
-              description: The Redis host name.
-              readOnly: true
-            port:
-              type: string
-              description: The port number of the Redis instance.
-              readOnly: true
-            username:
-              type: string
-              description: The username for the Redis instance.
-              readOnly: true
-            password:
-              type: string
-              description: The password for the Redis instance.
-              readOnly: true
-        required:
-            - environment
-```
+  ```yaml
+  name: Radius.Datastores
+  types:
+    redisCaches:
+      apiVersions:
+        '2025-07-20-preview':
+          schema: 
+            type: object
+            properties:
+              environment:
+                type: string
+              application:
+                type: string
+              capacity:
+                type: string
+                description: The capacity of the Redis Cache instance.
+              host:
+                type: string
+                description: The Redis host name.
+                readOnly: true
+              port:
+                type: string
+                description: The port number of the Redis instance.
+                readOnly: true
+              username:
+                type: string
+                description: The username for the Redis instance.
+                readOnly: true
+              password:
+                type: string
+                description: The password for the Redis instance.
+                readOnly: true
+          required:
+              - environment
+  ```
 
 **Resource Type Schema Enforcement**
 
 Radius enforces ARM naming conventions for resource type schemas. The following guidelines should be followed:
 
-- The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius resource types. The core resource type will need to follow the Radius.Core so that it is consistent with the other resource types.
+- The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius resource types. The core resource type will also need to follow the Radius.Core so that it is consistent with the other resource types.
 
 - The resource type name follows the camelCase convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
 
@@ -228,12 +226,39 @@ Before submitting your contribution. Make sure to check the following:
 The end-end contribution guidelines are documented in the [here](https://github.com/Reshrahim/resource-types-contrib/)
 
 
+
+
 ## Key Investments
 
 ## Contribution guidelines
 
-## Migration to using the `resource-types-contrib` repository
+- Clear guidelines for contributing resource types and Recipes
+- Support for multiple contribution pathways (e.g., resource types, Recipes, etc.)
+- Templates and examples for resource type schemas and Recipes
+- Detailed documentation on testing and validation procedures
+- Contributor checklist to ensure quality and completeness of contributions
 
-## Recipe repository sunset
+## Contributor Recognition
 
+- Swags for contributors who submit meaningful contributions
+- Contributor showcase on the Radius website or documentation
+
+## Migration from Current State
+
+  ### Phase 1: Parallel Operation
+  - Keep existing recipes repository active
+  - Start populating resource-types-contrib
+  - Redirect contributions to new `resource-types-contrib` repository
+
+  ### Phase 2: Migration
+  - Migrate existing Recipes from the `recipes` repository to the `resource-types-contrib` repository
+  - Update Radius codebase to use `resource-types-contrib` repository for resource types and Recipes
+     - Changes to `local-dev` Recipes to be installed from the `resource-types-contrib` Recipe path
+     - Remove `portable` resource types implementation from Radius repository and update to use `resource-types-contrib` repository
+  - Update all references in Radius documentation to point to the new `resource-types-contrib` repository
+
+  ### Phase 3: Sunset
+  - Archive existing Recipes repository
+  - Notify community about the migration and deprecation of old Recipes
+  - Remove Recipes from Radius repository
 
