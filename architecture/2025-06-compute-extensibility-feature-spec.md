@@ -158,7 +158,7 @@ Step 2
 
 1.  **Add the Recipe Pack to an Environment**:
     *   The platform engineer uses a new CLI command to add the entire pack to a Radius environment.
-    *   Example: `rad environment update my-env --recipe-pack ./aci-production-pack.yaml`
+    *   Example: `rad environment update my-env --recipe-packs aci-production-pack='./aci-production-pack.yaml'`
     *   Or, if stored in a repo: `rad environment update my-env --recipe-packs aci-production-pack='git::https://github.com/my-org/recipe-packs.git//aci-production-pack.yaml?ref=1.0.0'`
     *   This command would iterate through the recipes defined in the manifest and register each one to the specified environment, similar to individual `rad recipe register` calls.
     *   Alternatively, the Recipe Pack could be added to the Environment definition file (e.g., `env.bicep`) in a `recipe-packs` property like below and then deployed using `rad deploy env.bicep`.
@@ -187,11 +187,11 @@ Step 2
         * `rad recipe list` experience remains the same - it would list out all the Recipes that were added to the Environment, including those from Recipe Packs:
             ```bash
             $ rad recipe list
-            RECIPE    TYPE                                    TEMPLATE KIND  TEMPLATE VERSION  TEMPLATE
-            default   Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
-            default   Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
-            default   Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
-            default   Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
+            RECIPE    RECIPE PACK        ALLOW PLATFORM OPTIONS  TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
+            default                                              Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
+            default   azure-aci-pack     true                    Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
+            default   azure-aci-pack                             Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
+            default   azure-aci-pack                             Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
             ```
         * `rad environment show -o json` would show the Recipe Packs registered to the Environment:
             ```bash
@@ -211,6 +211,11 @@ Step 2
                         {
                             name: 'azure-aci-pack'
                             uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack?ref=1.0.0'
+                            parameters: {
+                                Applications.Core/containers@2025-05-01-preview: {
+                                    allowPlatformOptions: true
+                                }
+                            }
                         }
                     ]
                 "systemData": {
@@ -238,10 +243,10 @@ Step 2
             NAME                VERSION  DESCRIPTION
             azure-aci-pack      1.0.0    Recipe Pack for deploying to ACI in production.
 
-            RECIPE    TYPE                                    TEMPLATE KIND  TEMPLATE VERSION  TEMPLATE
-            default   Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
-            default   Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
-            default   Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
+            RECIPE    TYPE                                    ALLOW PLATFORM OPTIONS  RECIPE KIND    RECIPE VERSION    RECIPE LOCATION
+            default   Applications.Core/containers            true                     bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
+            default   Applications.Core/gateways                                       bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
+            default   Applications.Core/secretStores                                   bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
             ```
 
 #### User Story 2: As a platform engineer, I want to create a Radius Environment that leverages default recipe packs provided by Radius for core types, so that I can quickly set up a new environment without needing to write custom recipes:
@@ -317,7 +322,7 @@ Step 2
     ```bash
     rad environment create my-aci-env \
     --provider azure.scope='/subscriptions/mySubscriptionId/resourceGroups/my-resource-group' \
-    --recipe-packs azure-aci-pack='git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack?ref=1.0.0'
+    --recipe-pack azure-aci-pack='git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack?ref=1.0.0'
     ```
 
     ```bash
@@ -489,9 +494,6 @@ This scenario demonstrates how a single application definition, containing both 
                         containerPort: 5000
                     }
                 }
-                env: {
-                    REDIS_CONNECTION: cache.properties.connectionStrings.default
-                }
             }
             connections: {
                 cache: {
@@ -606,19 +608,29 @@ Given that I have created and published custom Bicep or Terraform recipes for co
     ```
     > Note: If there are existing recipes registered for the same resource type in the environment, this command will overwrite them with the new recipe.
 
-1. **Register Recipe Packs to an environment**:
-    * Use `rad recipe pack register` to register a recipe for a core resource type in a specific environment.
-    * Example command to register a recipe pack for ACI compute with platform-specific options disabled:
+1. **Add Recipe Packs to an environment**:
+    * Use `rad environment update` to add a recipe pack to a specific environment.
+    * Example command to add a recipe pack for ACI compute with platform-specific options disabled:
     ```bash
-    rad recipe pack register default --environment my-aci-env \
-    --recipe-pack-location git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack.yaml?ref=1.0.0
+    rad environment update my-aci-env \
+    --recipe-packs azure-aci-pack='git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack.yaml?ref=1.0.0' \
     --parameters {"allowPlatformOptions": false}
     ```
     > Note: if there are existing recipes registered for the same resource type in the environment, this command will overwrite them with the recipes defined in the pack.
 
 1. **List the Registered Recipes**:
-    * Use `rad recipe list --environment <env-name>` to see all registered recipes for core resource types in the specified environment.
-    * This command will show the resource type, recipe kind (Bicep/Terraform), and the location of the recipe (existing experience today).
+     * Use `rad recipe list --environment <env-name>` to see all registered recipes for core resource types in the specified environment.
+        * This command will show the resource type, recipe kind (Bicep/Terraform), the location of the recipe (existing experience today) as well as the Recipe Pack each Recipe is associated with (new experience).
+        ```bash
+        $ rad recipe list
+        RECIPE    RECIPE PACK        ALLOW PLATFORM OPTIONS  TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
+        default                                              Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
+        default   azure-aci-pack     true                    Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
+        default   azure-aci-pack                             Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
+        default   azure-aci-pack                             Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
+        ```
+
+**
 
 **Update the Kubernetes namespace in the Environment**:
 * Use `rad environment update` to change the Kubernetes namespace for an existing environment.
