@@ -384,8 +384,12 @@ This scenario demonstrates how a single application definition, containing both 
     ```diff
     import radius as radius
 
-    @description('The Radius Application ID')
-    param application string
+resource sensitiveApp 'Applications.Core/applications@2023-10-01-preview' = {
+  name: 'sensitiveApp'
+  properties: {
+    environment: environment
+  }
+}
 
     resource frontend 'Applications.Core/containers@2025-05-01-preview' = {
         name: 'frontend'
