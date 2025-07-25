@@ -141,41 +141,41 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 1. Define the `redis.yaml` schema file for your resource type. Follow the contribution guidelines for the resource type schema.
 
-  ```yaml
-  name: Radius.Datastores
-  types:
-    redisCaches:
-      apiVersions:
-        '2025-07-20-preview':
-          schema: 
-            type: object
-            properties:
-              environment:
-                type: string
-              application:
-                type: string
-              capacity:
-                type: string
-                description: The capacity of the Redis Cache instance.
-              host:
-                type: string
-                description: The Redis host name.
-                readOnly: true
-              port:
-                type: string
-                description: The port number of the Redis instance.
-                readOnly: true
-              username:
-                type: string
-                description: The username for the Redis instance.
-                readOnly: true
-              password:
-                type: string
-                description: The password for the Redis instance.
-                readOnly: true
-          required:
-              - environment
-  ```
+    ```yaml
+    name: Radius.Datastores
+    types:
+      redisCaches:
+        apiVersions:
+          '2025-07-20-preview':
+            schema: 
+              type: object
+              properties:
+                environment:
+                  type: string
+                application:
+                  type: string
+                capacity:
+                  type: string
+                  description: The capacity of the Redis Cache instance.
+                host:
+                  type: string
+                  description: The Redis host name.
+                  readOnly: true
+                port:
+                  type: string
+                  description: The port number of the Redis instance.
+                  readOnly: true
+                username:
+                  type: string
+                  description: The username for the Redis instance.
+                  readOnly: true
+                password:
+                  type: string
+                  description: The password for the Redis instance.
+                  readOnly: true
+            required:
+                - environment
+    ```
 
   **Resource Type Schema Enforcement**
 
@@ -202,26 +202,26 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 1. Submit a pull request (PR) to the `resource-types-contrib` repository with the changes and the documentation. Make sure to follow the detailed checklist
 
-  Before submitting your contribution. Make sure to check the following:
+    Before submitting your contribution. Make sure to check the following:
 
-  - Resource type schema follows naming conventions
-  - All properties have clear descriptions
-  - Required properties are properly marked
-  - Read-only properties are marked as `readOnly: true`
-  - Recipes are provided for at least one platform
-  - Recipes handle secrets securely
-  - Recipes include necessary parameters and outputs
-  - Recipes are idempotent and can be run multiple times without issues
-  - Recipes output necessary connection information
-  - Test your resource type and recipes locally
-  - Documentation is complete and clear
+    - Resource type schema follows naming conventions
+    - All properties have clear descriptions
+    - Required properties are properly marked
+    - Read-only properties are marked as `readOnly: true`
+    - Recipes are provided for at least one platform
+    - Recipes handle secrets securely
+    - Recipes include necessary parameters and outputs
+    - Recipes are idempotent and can be run multiple times without issues
+    - Recipes output necessary connection information
+    - Test your resource type and recipes locally
+    - Documentation is complete and clear
 
 1. The PR will be reviewed by the Radius maintainers, who will provide feedback and request changes if necessary. 
 
- - The Radius Maintainer/ Approver will do a quick check on the authenticity of PR and the contributor and kick off the functional tests for the resource type and Recipe.
-    - The functional tests will validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
- - The contributor should address the feedback and make the necessary changes to the PR.
- - Once the PR is approved, it will be merged into the `main` branch of the `resource-types-contrib` repository.
+  - The Radius Maintainer/ Approver will do a quick check on the authenticity of PR and the contributor and kick off the functional tests for the resource type and Recipe.
+      - The functional tests will validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+  - The contributor should address the feedback and make the necessary changes to the PR.
+  - Once the PR is approved, it will be merged into the `main` branch of the `resource-types-contrib` repository.
 
 The end-end contribution guidelines are documented in the [here](https://github.com/Reshrahim/resource-types-contrib/)
 
