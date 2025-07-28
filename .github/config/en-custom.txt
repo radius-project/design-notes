@@ -1022,3 +1022,6 @@ pdf
 pdfs
 Knative
 genericized
+ns
+deletable
+cardinality

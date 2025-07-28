@@ -122,7 +122,7 @@ AWS offers both imperative and declarative methods for creating IAM roles, howev
 
 #### Imperative methods:
 
-```console
+```bash
 $ cat s3-read-policy.json
 {
   "Version": "2012-10-17",
@@ -146,7 +146,7 @@ $ aws iam put-role-policy --role-name MyEC2Role --policy-name MyEC2S3ReadPolicy 
 
 #### Declarative methods:
 
-```console
+```bash
 $ cat s3-iam-reader.yaml
 # This CloudFormation template defines an IAM Role with an embedded inline policy.
 Resources:
@@ -180,7 +180,7 @@ $ aws cloudformation deploy --stack-name MyDeclarativeRoleStack --template-file 
 * Via the Azure portal where the user gets presented with a GUI specific to creating a role definition
 * Via PowerShell or the CLI:
 
-```console
+```bash
 $ az role definition create --role-definition ~/roles/vmoperator.json
 $ az role definition list --name "Virtual Machine Operator"
 $ az role definition update --role-definition ~/roles/vmoperator.json
@@ -191,7 +191,7 @@ $ az role definition delete --name "Virtual Machine Operator"
 
 * Via Bicep or ARM:
 
-```console
+```bash
 $ cat roleDefinition.bicep
 resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: roleDefName
@@ -224,7 +224,7 @@ Kubernetes also tackles the scoping differently and uses different resource type
 
 #### **Imperative method:**
 
-```console
+```bash
 $ kubectl create clusterrole pod-reader --verb=get --verb=list --verb=watch --resource=pods
 $ kubectl get clusterroles
 $ kubectl describe clusterrole pod-reader
@@ -236,7 +236,7 @@ Kubernetes has a nice feature which allows a configuration to be edited in place
 
 #### **Declarative method:**
 
-```console
+```bash
 $ cat pod-reader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
