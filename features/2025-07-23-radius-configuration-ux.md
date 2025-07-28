@@ -88,12 +88,12 @@ Registering recipes is a valid use of the register verb. However, registering cr
 
 | Configuration | Imperative Command                                           | Declarative Command                                          |
 | ------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Credential    | ✅ `rad credential [register|show|unregister]`                | ❌ Not possible today                                         |
-| Environment   | ✅ `rad environment [create|delete|list|show|update]`         | ✅ `rad deploy` with `Applications.Core/environments` resource ❌ No `rad delete` |
-| Group         | ✅ `rad group [create|delete|list|show]` (There is no update command since there are not properties.) | ❌ Not possible today                                         |
-| recipe        | ❌ `rad recipe [list|register|show|unregister]` (This is a deviation from the Radius design principle since recipe is a property of the Environment.) | ✅ See Environment                                            |
-| Resource type | ✅ `rad resource-type [create|delete|list|show]`              | ✅ N/A                                                        |
-| workspace     | ✅ `rad workspace [create|delete|list|show]` (This is an exception since workspace is not a Radius configuration, but rather the local CLI configuration.) | ✅ N/A                                                        |
+| Credential    | ✅ `rad credential [register\|show\|unregister]`              | ❌ Not possible today                                         |
+| Environment   | ✅ `rad environment [create\|delete\|list\|show\|update]`         | ✅ `rad deploy` with `Applications.Core/environments` resource ❌ No `rad delete` |
+| Group         | ✅ `rad group [create\|delete\|list\|show]` (There is no update command since there are not properties.) | ❌ Not possible today                                         |
+| recipe        | ❌ `rad recipe [list\|register\|show\|unregister]` (This is a deviation from the Radius design principle since recipe is a property of the Environment.) | ✅ See Environment                                            |
+| Resource type | ✅ `rad resource-type [create\|delete\|list\|show]`              | ✅ N/A                                                        |
+| workspace     | ✅ `rad workspace [create\|delete\|list\|show]` (This is an exception since workspace is not a Radius configuration, but rather the local CLI configuration.) | ✅ N/A                                                        |
 
 ## Upcoming Radius Configurations
 
@@ -109,10 +109,10 @@ The table below summarizes the imperative and declarative commands for these new
 
 | Configuration | Imperative Command | Declarative Command |
 | ------------- | ------------------ | ------------------- |
-| Terraform | `rad terraform [create|update|list|show|delete]` | `rad deploy` and `rad delete` with `Radius.System/terraform` resource |
-| Recipe Pack | `rad recipe-pack [create|update|list|show|delete]` | `rad deploy` and `rad delete` with  `Radius.System/recipePacks` resource |
-| Role Definition | `rad role-definition [create|update|list|show|delete]` | `rad deploy` and `rad delete` with  `Radius.System/roleDefinition` resource |
-| Role Assignment | `rad role-assignment [create|update|list|show|delete]` | `rad deploy` and `rad delete` with  `Radius.System/roleAssignment` resource |
+| Terraform | `rad terraform [create\|update\|list\|show\|delete]` | `rad deploy` and `rad delete` with `Radius.System/terraform` resource |
+| Recipe Pack | `rad recipe-pack [create\|update\|list\|show\|delete]` | `rad deploy` and `rad delete` with  `Radius.System/recipePacks` resource |
+| Role Definition | `rad role-definition [create\|update\|list\|show\|delete]` | `rad deploy` and `rad delete` with  `Radius.System/roleDefinition` resource |
+| Role Assignment | `rad role-assignment [create\|update\|list\|show\|delete]` | `rad deploy` and `rad delete` with  `Radius.System/roleAssignment` resource |
 
 ## Appendix – Comparisons
 
