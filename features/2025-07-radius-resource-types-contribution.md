@@ -1,17 +1,16 @@
 # Contributing Radius Resource Types 
 
-* **Author**: Reshma Abdul Rahim (@reshrahim)
+* **Author**: [Reshma Abdul Rahim](https://github.com/reshrahim)
 
 ## Topic Summary
 
-This feature specification defines the comprehensive experience for community members to contribute new resource types to the Radius ecosystem. Building on the foundation of Radius resource types, this feature specification provides detailed guidance for contributing to all categories of Radius resource types including core types, database resources, cache resources, messaging resources, Dapr resources etc. The specification establishes clear pathways for community members to contribute resource types and Recipes, enabling a vibrant ecosystem of shared resources that accelerates Radius adoption.
+This feature specification defines the experience for community members to contribute new resource types to the Radius ecosystem. Building on the foundation of Radius resource types, this feature specification provides detailed guidance for contributing to all categories of Radius resource types including core types, database resources, cache resources, messaging resources, Dapr resources, etc. The specification establishes clear pathways for community members to contribute resource types and Recipes, enabling a vibrant ecosystem of shared resources that accelerates Radius adoption.
 
 ### Top level goals
 
 - **Democratize resource type contribution**: Enable community members to easily contribute new resource types without requiring deep knowledge of Radius internals or Go programming
 - **Establish clear contribution pathways**: Define distinct workflows for different types of resource contributions 
 - **Enable ecosystem growth**: Foster a vibrant community marketplace of resource types that accelerates Radius adoption
-- **Support future marketplace integration**: Design contribution workflows that seamlessly integrate with future Radius marketplace initiatives
 
 ### Non-goals (out of scope)
 
@@ -41,8 +40,8 @@ This feature specification defines the comprehensive experience for community me
 - Clear, step-by-step guidance for contributing resource types to Radius
 - Testing and validation guidance that build confidence in contributions
 - Recognition and visibility for contributions through community showcases
-- Access to a rich ecosystem of Resource types and Recipes that cover diverse use cases and technologies
-- Clear discoverability and documentation for all available Resource types and Recipes
+- Access to a rich ecosystem of Radius resource types and Recipes that cover diverse use cases and technologies
+- Clear discoverability and documentation for all available resource types and Recipes
 
 ## Key dependencies and risks
 
@@ -62,9 +61,24 @@ This feature specification defines the comprehensive experience for community me
 - The Radius Resource types repository provides sufficient flexibility for most contribution scenarios
 
 **Questions to Answer**
+- How can we ensure quality of the community contributions?
+   Radius maintainers review the contribution meet the bar of quality and security as detailed in the contribution guidelines. They ensure the contributions are validated and tested before being merged into the `resource-types-contrib` repository. Each newly contributed resource type and Recipe should have a functional test that validates the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+
 - How can we ensure maintenance of community-contributed resource types?
+  Radius maintainers triage bugs and issues reported in the `resource-types-contrib` repository.
+  - For bugs on existing resource types, 
+      - If the resource type is one of the core resource types (containers, gateway, secrets) and/or if it is a resource type used by the Radius samples, tutorials and documentation, the Radius maintainers will prioritize fixing these bugs and ensuring the resource types remain functional and up-to-date.
+      - If the resource type is not part of the Radius samples, tutorials and documentation, the Radius maintainers will triage the bug and assign it to the contributor who contributed the resource type. The contributor will be responsible for fixing the bug and ensuring the resource type remains functional and up-to-date.
+
 - What level of technical support should be provided to contributors?
+   -  Detailed guidelines and templates for contributing resource types and Recipes
+   -  Clear documentation on testing and validation procedures
+   -  Radius Discord server contribution channel for community support and discussion
+
 - How can we incentivize contributions?
+  - Recognition through contributor showcases on the Radius website or documentation
+  - Swags for contributors who submit meaningful contributions
+  - Opportunities for contributors to become maintainers of the `resource-types-contrib` repository
 
 ## Current state
 
@@ -80,7 +94,7 @@ I lack clear guidance on how to structure my contribution. There's no template o
 
 I don't know how to test my resource type before submitting a PR.
 
-Also, how do I discover all the contributed Resource types and Recipes?
+Also, how do I discover all the contributed resource types and Recipes?
 
 ## Desired user experience outcome
 
@@ -96,7 +110,7 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 1. The contributor understands the contribution guidelines at the `resource-types-contrib` repository and familiarizes themselves with the [contribution process](https://github.com/reshrahim/resource-types-contrib/blob/main/CONTRIBUTING.md).
 
-1. They will pick the Resource type that they want to contribute either from the list of open issues in the `resource-types-contrib` repository, or they can contribute their own resource type if it does not already exist.
+1. They will pick the resource type that they want to contribute either from the list of open issues in the `resource-types-contrib` repository, or they can contribute their own resource type if it does not already exist.
 
     > [!NOTE]
     > We create a list of open issues in the `resource-types-contrib` repository that needs contribution starting with the portable Resource types and then move open requests for new resource types from `radius` repository to the `resource-types-contrib` repository.
@@ -179,13 +193,13 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
   **Resource Type Schema Enforcement**
 
-  Radius enforces ARM naming conventions for resource type schemas. The following guidelines should be followed:
+  Radius enforces ARM naming conventions for resource type schemas. The following guidelines need to be followed:
 
-  - The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius resource types. The core resource type will also need to follow the Radius.Core so that it is consistent with the other resource types.
+  - The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius Resource types. The core resource type will also need to follow the `Radius.Core` format so that it is consistent across the resource types.
 
-  - The resource type name follows the camelCase convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
+  - The resource type name follows the camel Case convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
 
-  - Version should be the latest date and follow the format `YYYY-MM-DD-preview`. This is the date on which the contribution is made or when the resource type is tested and validated. For e.g. `2025-07-20-preview`. This is an ARM naming convention that Radius follows.
+  - Version should be the latest date and follow the format `YYYY-MM-DD-preview`. This is the date on which the contribution is made or when the resource type is tested and validated. For e.g. `2025-07-20-preview`.
 
   - Properties should follow the camel Case convention and include a description for each property. 
       - `readOnly:true` set for property automatically populated by Radius Recipes.
@@ -198,7 +212,9 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
     - The Recipes could be a Bicep or Terraform template organized in the respective directories, such as `bicep` or `terraform`.
     - Contributors are required to add at least one Recipe that works with the resource-type but also encouraged to provide multiple Recipes for different cloud providers or technologies, such as AWS MemoryDB, Azure Redis Cache, or Kubernetes Redis Cache.
 
-1. Manually test the Resource type and Recipe locally. Detailed instructions for testing the resource type and Recipe are written here
+1. Manually test the resource type and Recipe locally. Detailed instructions for testing the resource type and Recipe are written [here](https://github.com/Reshrahim/resource-types-contrib/blob/main/contributing-docs/testing-resource-types-recipes.md)
+
+1. Add a functional test for the resource type and Recipe in the `radius` repository to validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
 
 1. Submit a pull request (PR) to the `resource-types-contrib` repository with the changes and the documentation. Make sure to follow the detailed checklist
 
@@ -225,7 +241,6 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 The end-end contribution guidelines are documented in the [here](https://github.com/Reshrahim/resource-types-contrib/)
 
-
 ## Key Investments
 
 ## Contribution guidelines
@@ -240,6 +255,7 @@ The end-end contribution guidelines are documented in the [here](https://github.
 
 - Swags for contributors who submit meaningful contributions
 - Contributor showcase on the Radius website or documentation
+- Opportunities for contributors to become maintainers of the `resource-types-contrib` repository
 
 ## Migration from Current State
 
@@ -251,7 +267,7 @@ The end-end contribution guidelines are documented in the [here](https://github.
   ### Phase 2: Migration
   - Migrate existing Recipes from the `recipes` repository to the `resource-types-contrib` repository
   - Update Radius codebase to use `resource-types-contrib` repository for resource types and Recipes
-     - Changes to `local-dev` Recipes to be installed from the `resource-types-contrib` Recipe path
+     - Changes to `local-dev` Recipes to be registered from the `resource-types-contrib` Recipe path
      - Remove `portable` resource types implementation from Radius repository and update to use `resource-types-contrib` repository
   - Update all references in Radius documentation to point to the new `resource-types-contrib` repository
 
@@ -260,3 +276,6 @@ The end-end contribution guidelines are documented in the [here](https://github.
   - Notify community about the migration and deprecation of old Recipes
   - Remove Recipes from Radius repository
 
+## Future Considerations
+
+- **Marketplace Integration**: Integration with Artifact Hub or other marketplace solutions to enable easy discovery and installation of Radius Resource types and Recipes
