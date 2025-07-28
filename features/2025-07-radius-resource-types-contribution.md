@@ -70,6 +70,7 @@ This feature specification defines the experience for community members to contr
   - For bugs on existing resource types, 
       - If the resource type is one of the core resource types (containers, gateway, secrets) and/or if it is a resource type used by the Radius samples, tutorials and documentation, the Radius maintainers will prioritize fixing these bugs and ensuring the resource types remain functional and up-to-date.
       - If the resource type is not part of the Radius samples, tutorials and documentation, the Radius maintainers will triage the bug and assign it to the contributor who contributed the resource type. The contributor will be responsible for fixing the bug and ensuring the resource type remains functional and up-to-date.
+  - For proposals on new resource types, we triage the proposal and assign it to the contributor who proposed the resource type if interested to contribute or leave it open for other contributors to pick up. 
 
 - What level of technical support should be provided to contributors?
    -  Detailed guidelines and templates for contributing resource types and Recipes
@@ -207,11 +208,12 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
         - `type` could be `integer`, `string` or `object`; Support for `array` and `enum` in progress
         - `required` for required properties. `environment` should always be a required property.
 
-1. Create Recipes for your resource type in the `recipes` directory. Each Recipe should be organized by cloud provider or technology stack, such as `aws-memorydb`, `azure-redis`, or `kubernetes`.
+1. Create Recipes for your resource type in the `recipes` directory. Each Recipe should be organized by cloud provider or technology stack, such as `aws-memorydb`, `azure-redis`, or `kubernetes`. 
 
     - Each Recipe should include a README.md file that describes how to use the Recipe, including prerequisites, parameters required, and examples.
     - The Recipes could be a Bicep or Terraform template organized in the respective directories, such as `bicep` or `terraform`.
     - Contributors are required to add at least one Recipe that works with the resource-type but also encouraged to provide multiple Recipes for different cloud providers or technologies, such as AWS MemoryDB, Azure Redis Cache, or Kubernetes Redis Cache.
+    - Guidelines documentation for Recipes is available [here](https://github.com/Reshrahim/resource-types-contrib/blob/main/contributing-docs/contributing-resource-types-recipes.md#recipes-for-the-resource-type)
 
 1. Manually test the resource type and Recipe locally. Detailed instructions for testing the resource type and Recipe are written [here](https://github.com/Reshrahim/resource-types-contrib/blob/main/contributing-docs/testing-resource-types-recipes.md)
 
