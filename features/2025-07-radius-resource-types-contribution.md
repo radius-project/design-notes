@@ -62,7 +62,8 @@ This feature specification defines the experience for community members to contr
 
 **Questions to Answer**
 - How can we ensure quality of the community contributions?
-   Radius maintainers review the contribution meet the bar of quality and security as detailed in the contribution guidelines. They ensure the contributions are validated and tested before being merged into the `resource-types-contrib` repository. Each newly contributed resource type and Recipe should have a functional test that validates the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+
+  Radius maintainers review the contribution meet the bar of quality and security as detailed in the contribution guidelines. They ensure the contributions are validated and tested before being merged into the `resource-types-contrib` repository. Each newly contributed resource type and Recipe should have a functional test that validates the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
 
 - How can we ensure maintenance of community-contributed resource types?
   Radius maintainers triage bugs and issues reported in the `resource-types-contrib` repository.
@@ -215,6 +216,14 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 1. Manually test the resource type and Recipe locally. Detailed instructions for testing the resource type and Recipe are written [here](https://github.com/Reshrahim/resource-types-contrib/blob/main/contributing-docs/testing-resource-types-recipes.md)
 
 1. Add a functional test for the resource type and Recipe in the `radius` repository to validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+
+1. Document the resource type and Recipe in the `README.md` file of the resource type directory. The documentation should include:
+
+    - Overview of the resource type and its purpose
+    - Schema definition and properties
+    - Recipes available for the resource type
+    - How to use the resource type and Recipes
+    - Examples of usage
 
 1. Submit a pull request (PR) to the `resource-types-contrib` repository with the changes and the documentation. Make sure to follow the detailed checklist
 
