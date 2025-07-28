@@ -192,20 +192,20 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
                 - environment
     ```
 
-  **Resource Type Schema Enforcement**
+    **Resource Type Schema Enforcement**
 
-  Radius enforces ARM naming conventions for resource type schemas. The following guidelines need to be followed:
+    Radius enforces ARM naming conventions for resource type schemas. The following guidelines need to be followed:
 
-  - The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius Resource types. The core resource type will also need to follow the `Radius.Core` format so that it is consistent across the resource types.
+    - The `name` field follows the format `Radius.<Category>`, where `<Category>` is a high-level grouping (e.g., Datastores, Messaging, Dapr) For e.g. Radius.Datastores. This is a change from the previous format of `Applications.Datastores` to help users distinguish their own resource types from the Radius Resource types. The core resource type will also need to follow the `Radius.Core` format so that it is consistent across the resource types.
 
-  - The resource type name follows the camel Case convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
+    - The resource type name follows the camel Case convention and is in plural form, such as `redisCaches`, `sqlDatabases`, or `rabbitMQQueues`.
 
-  - Version should be the latest date and follow the format `YYYY-MM-DD-preview`. This is the date on which the contribution is made or when the resource type is tested and validated. For e.g. `2025-07-20-preview`.
+    - Version should be the latest date and follow the format `YYYY-MM-DD-preview`. This is the date on which the contribution is made or when the resource type is tested and validated. For e.g. `2025-07-20-preview`.
 
-  - Properties should follow the camel Case convention and include a description for each property. 
-      - `readOnly:true` set for property automatically populated by Radius Recipes.
-      - `type` could be `integer`, `string` or `object`; Support for `array` and `enum` in progress
-      - `required` for required properties. `environment` should always be a required property.
+    - Properties should follow the camel Case convention and include a description for each property. 
+        - `readOnly:true` set for property automatically populated by Radius Recipes.
+        - `type` could be `integer`, `string` or `object`; Support for `array` and `enum` in progress
+        - `required` for required properties. `environment` should always be a required property.
 
 1. Create Recipes for your resource type in the `recipes` directory. Each Recipe should be organized by cloud provider or technology stack, such as `aws-memorydb`, `azure-redis`, or `kubernetes`.
 
@@ -243,10 +243,10 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 1. The PR will be reviewed by the Radius maintainers, who will provide feedback and request changes if necessary. 
 
-  - The Radius Maintainer/ Approver will do a quick check on the authenticity of PR and the contributor and kick off the functional tests for the resource type and Recipe.
-      - The functional tests will validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
-  - The contributor should address the feedback and make the necessary changes to the PR.
-  - Once the PR is approved, it will be merged into the `main` branch of the `resource-types-contrib` repository.
+    - The Radius Maintainer/ Approver will do a quick check on the authenticity of PR and the contributor and kick off the functional tests for the resource type and Recipe.
+        - The functional tests will validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+    - The contributor should address the feedback and make the necessary changes to the PR.
+    - Once the PR is approved, it will be merged into the `main` branch of the `resource-types-contrib` repository.
 
 The end-end contribution guidelines are documented in the [here](https://github.com/Reshrahim/resource-types-contrib/)
 
