@@ -285,8 +285,8 @@ The end-end contribution guidelines are documented in the [here](https://github.
 ## Migration from Current State
 
   ### Phase 1: Parallel Operation
-  - Keep existing recipes repository active
-  - Start populating resource-types-contrib
+  - Keep existing `recipes` repository active
+  - Start populating `resource-types-contrib` repository with new resource types and Recipes
   - Redirect contributions to new `resource-types-contrib` repository
 
   ### Phase 2: Migration
@@ -297,7 +297,7 @@ The end-end contribution guidelines are documented in the [here](https://github.
   - Update all references in Radius documentation to point to the new `resource-types-contrib` repository
 
   ### Phase 3: Sunset
-  - Archive existing Recipes repository
+  - Archive existing `recipes` repository
   - Notify community about the migration and deprecation of old Recipes
   - Remove Recipes from Radius repository
 
