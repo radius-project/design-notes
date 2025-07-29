@@ -130,13 +130,13 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
     >
     >    | Namespace | Resource Type | Description |
     >    |---|---|---|
-    >    | Radius.Datastores | sqlDatabases | Relational database support |
-    >    | Radius.Datastores | redisCaches | In-memory data store and cache |
-    >    | Radius.Datastores | mongoDatabases | NoSQL document database |
-    >    | Radius.Messaging | rabbitMQQueues | Message queue system for asynchronous communication |
+    >    | Radius.Data | sqlDatabases | Relational database support |
+    >    | Radius.Data | redisCaches | In-memory data store and cache |
+    >    | Radius.Data | mongoDatabases | NoSQL document database |
+    >    | Radius.Data | rabbitMQQueues | Message queue system for asynchronous communication |
     >    | Radius.Dapr | stateStores | Distributed state management via Dapr |
     >    | Radius.Dapr | pubSubBrokers | Message publishing and subscription via Dapr |
-    >    | Radius.Dapr | secretStores | Secret management via Dapr components |
+    >    | Radius.Dapr | secrets | Secret management via Dapr components |
     >    | Radius.Dapr | configurationStores | Configuration management via Dapr |
 
 1. Create a new directory for your resource type under the `resource-types-contrib` repository, following the established directory structure.
@@ -153,14 +153,14 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
         │   │   │       ├── aws-memorydb/
         │   │   │       │       ├── bicep/
         │   │   │       │       │       ├── aws-memorydb.bicep
-        │   │   │       │       │       └── .bicepparams
+        │   │   │       │       │       └── aws-memorydb.bicepparams
         │   │   │       │       └── terraform/
         │   │   │       │               ├── main.tf
         │   │   │       │               └── var.tf
         │   │   │       ├── azure-rediscache/
         │   │   │       │       ├── bicep/
         │   │   │       │       │       ├── azure-redis.bicep
-        │   │   │       │       │       └──
+        │   │   │       │       │       └── azure-redis.bicepparams
         │   │   │       │       └── terraform/
         │   │   │       │               ├── main.tf
         │   │   │       │               └── var.tf
