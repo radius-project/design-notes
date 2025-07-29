@@ -187,11 +187,11 @@ Step 2
         * `rad recipe list` experience remains the same - it would list out all the Recipes that were added to the Environment, including those from Recipe Packs:
             ```bash
             $ rad recipe list
-            RECIPE    RECIPE PACK        ALLOW PLATFORM OPTIONS  TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
-            default                                              Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
-            default   azure-aci-pack     true                    Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
-            default   azure-aci-pack                             Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
-            default   azure-aci-pack                             Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
+            RECIPE    RECIPE PACK        TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
+            default                      Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
+            default   azure-aci-pack     Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
+            default   azure-aci-pack     Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
+            default   azure-aci-pack     Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
             ```
         * `rad environment show -o json` would show the Recipe Packs registered to the Environment:
             ```bash
@@ -274,6 +274,11 @@ Step 2
                 providers: {
                     azure: {
                         scope: '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>'
+        +               // Identity property previously captured in 'compute' is moved here
+        +               identity: {
+        +                   kind:'userAssigned'
+        +                   managedIdentity: ['/subscriptions/<>/resourceGroups/<>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<>']
+        +               }
                     }
                 }
             }
@@ -368,9 +373,13 @@ Step 2
                     }
                 ]
                 providers: {
-                azure: {
-                    scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
-                }
+                    azure: {
+                        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+                        identity: {
+                            kind:'userAssigned'
+                            managedIdentity: ['/subscriptions/<>/resourceGroups/<>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<>']
+                        }
+                    }
                 }
             }
         }
@@ -400,9 +409,13 @@ Step 2
                     }
                 ]
                 providers: {
-                azure: {
-                    scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
-                }
+                    azure: {
+                        scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
+                        identity: {
+                            kind:'userAssigned'
+                            managedIdentity: ['/subscriptions/<>/resourceGroups/<>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<>']
+                        }
+                    }
                 }
             }
         }
@@ -623,14 +636,12 @@ Given that I have created and published custom Bicep or Terraform recipes for co
         * This command will show the resource type, recipe kind (Bicep/Terraform), the location of the recipe (existing experience today) as well as the Recipe Pack each Recipe is associated with (new experience).
         ```bash
         $ rad recipe list
-        RECIPE    RECIPE PACK        ALLOW PLATFORM OPTIONS  TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
-        default                                              Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
-        default   azure-aci-pack     true                    Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
-        default   azure-aci-pack                             Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
-        default   azure-aci-pack                             Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
+        RECIPE    RECIPE PACK        TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
+        default                      Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
+        default   azure-aci-pack     Applications.Core/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
+        default   azure-aci-pack     Applications.Core/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
+        default   azure-aci-pack     Applications.Core/secretStores          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
         ```
-
-**
 
 **Update the Kubernetes namespace in the Environment**:
 * Use `rad environment update` to change the Kubernetes namespace for an existing environment.
@@ -758,9 +769,9 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 > This approach will require deprecation of the current [Azure KeyVault Radius Volumes resource type](https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/) where the Azure KeyVault will just be a Secret Store resource type provisioned using a recipe for Azure KeyVault that can be mounted to a Radius Container resource as a volume.
 
-#### User Story 9: As an application developer, I want to create custom gateway resources and configure them to route traffic to my application containers, so that I can manage ingress traffic using my organization's preferred gateway solution:
+#### User Story 9: As an application developer, I want to add a gateway resource to my application that provivisions an ingress controller that I can use to route traffic to my application containers, so that I can manage ingress traffic using my organization's preferred ingress solution:
 
-Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/gateways@2025-05-01-preview` resources. The gateway recipe is configured to provision custom gateways based on the specifications determined by my organization.
+Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/gateways@2025-05-01-preview` resources. The default recipe backing the gateway resource is configured to provision an ingress controller that complies with the specifications determined by my organization.
 
 1. **Define a container for the service that needs to be exposed to the internet**:
 * The developer defines a container in their application Bicep file that will be provisioned by the default recipe.
@@ -782,8 +793,8 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     }
     ```
 
-1. **Define a Custom Gateway Resource**:
-* The developer defines a custom gateway resource in their application Bicep file that will be provisioned by the default recipe.
+1. **Define a  Gateway Resource**:
+* The developer defines a gateway resource in their application Bicep file and the default recipe provisions an ingress controller (e.g. Contour, NGINX, Traefik, etc.) to handle the traffic routing.
     ```bicep
     resource myCustomGateway 'Applications.Core/gateways@2025-05-01-preview' = {
         name: 'myCustomGateway'
@@ -802,7 +813,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 1. **Deploy the Application**:
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
-* Radius uses the registered recipe for `Applications.Core/gateways@2025-05-01-preview` to provision the custom gateway and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the custom gateway configured to route traffic to the container.
+* Radius uses the registered recipe for `Applications.Core/gateways@2025-05-01-preview` to provision the ingress controller and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the ingress controller configured to route traffic to the container.
     ```bash
     Building app.bicep...
     Deploying template './app.bicep' for application 'myapp' and environment 'my-env' from workspace 'default'...
@@ -821,26 +832,26 @@ Given: my platform engineer has set up a Radius environment with recipes registe
         Public endpoint http://1.1.1.1.nip.io/
     ```
 
-> Note: Contour is currently installed as a [hard dependency for Radius](https://github.com/radius-project/radius/blob/main/pkg/kubernetes/object.go#L27) to provide http routing for Kubernetes deployments. This change allows users to disable the Contour installation in their Radius environments if they want to use a different gateway solution, such as NGINX Ingress Controller or Traefik, by registering a custom recipe for `Applications.Core/gateways@2025-05-01-preview` that provisions the desired gateway solution.
+> Note: Contour is currently installed as a [hard dependency for Radius](https://github.com/radius-project/radius/blob/main/pkg/kubernetes/object.go#L27) to provide http routing for Kubernetes deployments. This change allows users to disable the Contour installation in their Radius environments if they want to use a different ingress solution, such as NGINX Ingress Controller or Traefik, by registering a custom recipe for `Applications.Core/gateways@2025-05-01-preview` that provisions the desired ingress controller.
 
 #### User Story 10: As an application developer, I want to create custom volume resources and mount them to my containers, so that I can use custom storage solutions or configurations:
 
-Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/volumes@2025-05-01-preview` resources. The volume recipe is configured to provision custom volumes based on the specifications determined by my organization.
+Given: my platform engineer has set up a Radius environment with recipes registered for `Applications.Core/Containers@2025-05-01-preview` and `Applications.Core/volumes@2025-05-01-preview` resources. The volume recipe is configured to provision storage (e.g. Azure Disks, AWS EBS) based on the specifications determined by my organization that can then be mounted to my containers.
 
-1. **Define a Custom Volume Resource**:
-    * The developer defines a custom volume resource in their application Bicep file that will be provisioned by the default recipe.
+1. **Define a Volume Resource**:
+    * The developer defines a volume resource in their application Bicep file that will be provisioned by the default recipe.
     ```bicep
-    resource myCustomVolume 'Applications.Core/volumes@2025-05-01-preview' = {
-        name: 'myCustomVolume'
+    resource myStorageVolume 'Applications.Core/volumes@2025-05-01-preview' = {
+        name: 'myStorageVolume'
         properties: {
             environment: env.id
             application: app.id
         }
     }
     ```
-    > Note that the configurations for this volume resource will be implemented in the recipe and not specified by the developer.
+    > Note that the configurations for this volume resource will be implemented in the recipe and not specified by the developer, e.g. in an Azure environment it might provision an Azure Disk while in an AWS environment it would provision an Elastic Block Store.
 
-1. **Mount the Custom Volume to a Container**:
+1. **Mount the Volume to a Container**:
     * The developer updates their container definition to include a volume that mounts the custom volume.
     ```diff
     resource myContainer 'Applications.Core/containers@2025-05-01-preview' = {
@@ -853,7 +864,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
                 volumes: {
         +           persistentVolume: {
         +               kind: 'persistent'
-        +               source: myCustomVolume.id
+        +               source: myStorageVolume.id
         +           }
                 }
             }
@@ -862,7 +873,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 1. **Deploy the Application**:
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
-* Radius uses the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the custom volume and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the custom volume mounted as a volume in the container.
+* Radius uses the registered recipe for `Applications.Core/volumes@2025-05-01-preview` to provision the storage volume and the recipe for `Applications.Core/containers@2025-05-01-preview` to deploy the container with the storage mounted as a volume in the container.
 
 #### User Story 11: As a platform engineer, I want a local development experience for Recipes and RRTs, so that I can iterate on custom Recipes without needing to publish them to an OCI registry:
 This scenario outlines how a platform engineer can develop, test, and iterate on Recipes (and associated Radius Resource Types, if custom) using local files before publishing them.
@@ -926,24 +937,33 @@ A platform engineer clones a Git repository (e.g., a company's internal IaC repo
 
 This approach allows teams to manage and version their RRTs and recipes in Git, and easily set up development or testing environments by registering these assets directly from their local checkout without needing an intermediate OCI publishing step for every iteration.
 
-#### User Story 12: As a platform engineer, I want an interactive guided experience for setting up Radius environments with default recipes for core types based on the platform I'm targeting, so that I can quickly get started with Radius without needing to manually configure everything:
+#### User Story 12: As a platform engineer, I want an interactive guided experience for setting up Radius environments with default recipes for core types based on the platform I'm targeting, so that I can quickly get started with Radius without needing to manually configure everything via disparate steps:
 
-1.  **Kubernetes**:
-* `rad init kubernetes` initializes a Radius environment for Kubernetes with default recipes for core types.
-* Platform engineers initialize a new Radius environment for Kubernetes using the default recipes provided by Radius.
-* They register any additional or modified RRTs and their associated recipes in the environment.
+1. **Local Kubernetes via `rad init`**:
+* The `rad init` experience today sets up a default environment with and Recipes that support prototyping, development and testing using local Kubernetes containers.
+* We will preserve this experience and set up the default environment with the local Kubernetes containers Recipe registered, as well as the default Recipes for the other resources that get added with `rad init` today, i.e.:
+    ```bash
+    NAME      TYPE                                        TEMPLATE KIND  TEMPLATE VERSION  TEMPLATE
+    default   Applications.Datastores/sqlDatabases        bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
+    default   Applications.Messaging/rabbitMQQueues       bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
+    default   Applications.Dapr/pubSubBrokers             bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
+    default   Applications.Dapr/secretStores              bicep                            ghcr.io/radius-project/recipes/local-dev/secretstores:latest
+    default   Applications.Dapr/stateStores               bicep                            ghcr.io/radius-project/recipes/local-dev/statestores:latest
+    default   Applications.Datastores/mongoDatabases      bicep                            ghcr.io/radius-project/recipes/local-dev/mongodatabases:latest
+    default   Applications.Datastores/redisCaches         bicep                            ghcr.io/radius-project/recipes/local-dev/rediscaches:latest
+    default   Applications.Datastores/configurationStores bicep                            ghcr.io/radius-project/recipes/local-dev/configurationStores:latest
+    ```
 
-2.  **ACI**:
-* `rad init aci` initializes a Radius environment for Azure Container Instances (ACI) with default recipes for core types.
-* Platform engineers initialize a new Radius environment for ACI using the default recipes provided by Radius.
-* They register any additional or modified RRTs and their associated recipes in the environment.
-
-3.  **AWS ECS**:
-* `rad init ecs` initializes a Radius environment for AWS Elastic Container Service (ECS) with default recipes for core types.
-* Platform engineers initialize a new Radius environment for ECS using the default recipes provided by Radius.
-* They register any additional or modified RRTs and their associated recipes in the environment.
-
-4.  **etc. etc. for other platforms that can be added to `rad init`**
+1. **Azure or AWS container environments:**
+* To set up an environment using ACI or ECS, the platform engineer needs to:
+    1. [Configure a cloud provider](https://docs.radapp.io/guides/operations/providers/overview/) to register cloud credentials with the Radius control planes
+    1. In the case of ACI, set up a managed identity that will be used to manage the ACI resources (potentially something similar with ECS)
+    1. Deploy an ACI environment that includes the managed identity, Azure resource group scope, and Recipe Packs needed for the target container platform
+* As a convenience feature, we will introduce a `rad environment create --platform aci` or `rad environment create --platform ecs` command (exact implementation or naming of the command may change during implementation) that interactively guides the platform engineer through the steps of setting up an ACI or ECS environment enumerated above, including:
+    * Selecting the target cloud provider (Azure or AWS)
+    * Configuring the necessary cloud credentials and managed identity
+    * Registering the default Recipe Packs for ACI or ECS that include the core resource types and their recipes
+    * Setting up the environment with the appropriate parameters for the target platform
 
 ### Summary of key changes:
 * The `compute` property in the `Applications.Core/environments` resource type is removed, allowing for extensibility through Recipes.
