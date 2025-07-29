@@ -520,47 +520,47 @@ This scenario demonstrates how a single application definition, containing both 
                     appId: 'frontend'
                 }
                 // This should be moved to a top-level property in the container definition:
-        -       {
-        -           kind:  'manualScaling'
-        -           replicas: 5
-        -       }
+    -          {
+    -              kind:  'manualScaling'
+    -              replicas: 5
+    -          }
                 // This should go into the platformOptions.kubernetes property
-        -       {
-        -           kind: 'kubernetesMetadata'
-        -           labels: {
-        -               'team.contact.name': 'frontend'
-        -           }
-        -       }
+    -          {
+    -              kind: 'kubernetesMetadata'
+    -              labels: {
+    -                  'team.contact.name': 'frontend'
+    -              }
+    -          }
             ]
         // This container requests confidential compute
-        +   platformOptions: {
-        +       // Platform-specific properties are included here, following the respective platform's API schema
-        +       //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
-        +       aci: {
-        +           sku: 'confidential'
+    +      platformOptions: {
+    +          // Platform-specific properties are included here, following the respective platform's API schema
+    +          //     e.g. podSpec for k8s, taskDefinition for ECS, containerGroupProfile for ACI
+    +          aci: {
+    +              sku: 'confidential'
                     // and any other ACI-specific properties available via the containerGroupProfile spec
-        +       }
-        +       kubernetes: {
-        +           apiVersion: 'v1'
-        +           kind: Pod
-        +           // The Kubernetes metadata.labels at the container level can be specified here:
-        +           metadata: {
-        +               labels: {
-        +                   'team.contact.name': 'frontend'
-        +               }
-        +           }
-        +           spec: {
-        +               // Kubernetes-specific PodSpec properties, such as tolerations, specified here:
-        +               tolerations: [
-        +                   {
-        +                       key: 'example-key'
-        +                       operator: 'Exists'
-        +                       effect: 'NoSchedule'
-        +                   }
-        +               ]
-        +           }
-        +       }
-        +   }
+    +          }
+    +          kubernetes: {
+    +              apiVersion: 'v1'
+    +              kind: Pod
+    +              // The Kubernetes metadata.labels at the container level can be specified here:
+    +              metadata: {
+    +                  labels: {
+    +                      'team.contact.name': 'frontend'
+    +                  }
+    +              }
+    +              spec: {
+    +                  // Kubernetes-specific PodSpec properties, such as tolerations, specified here:
+    +                  tolerations: [
+    +                      {
+    +                          key: 'example-key'
+    +                          operator: 'Exists'
+    +                          effect: 'NoSchedule'
+    +                      }
+    +                  ]
+    +              }
+    +          }
+    +      }
         }
     }
 
@@ -862,10 +862,10 @@ Given: my platform engineer has set up a Radius environment with recipes registe
             container: {
                 image: 'myContainerImage'
                 volumes: {
-        +           persistentVolume: {
-        +               kind: 'persistent'
-        +               source: myStorageVolume.id
-        +           }
+    +              persistentVolume: {
+    +                  kind: 'persistent'
+    +                  source: myStorageVolume.id
+    +              }
                 }
             }
     }
