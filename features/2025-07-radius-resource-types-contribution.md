@@ -67,7 +67,7 @@ This feature specification defines the experience for community members to contr
 
 - Should we ship all resource types in this repository as part of Radius ?
 
-  A Resource type cannot be useful without a Recipe. Every time a new resource type is added to the `resource-types-contrib` repository, it should be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause deployment errors when there is no default Recipe available for the resource type.
+  A Resource type cannot be useful without a Recipe. Every time a new resource type is added to the `resource-types-contrib` repository, it must be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause deployment errors when there is no default Recipe available for the resource type.
   
   Option 1 : All resource types in the `resource types-contrib` repository with a default Recipe can be shipped as part of Radius.
 
