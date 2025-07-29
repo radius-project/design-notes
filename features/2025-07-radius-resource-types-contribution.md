@@ -14,10 +14,10 @@ This feature specification defines the experience for community members to contr
 
 ### Non-goals (out of scope)
 
-- Implementation of automated testing frameworks for resource types and/or CI/CD pipelines.
 - Versioning and deprecation policies for community-contributed resource types.
 - Migration or deprecation of existing core or portable resource types in Radius.
 - Radius marketplace user interface or discovery features.
+- Automated testing framework is a dependency for this feature but not part of the scope of this feature specification covered in the [Test framework for `resource-types-contrib`](https://github.com/radius-project/design-notes/pull/103) design.
 
 ## User profile and challenges
 
@@ -65,12 +65,23 @@ This feature specification defines the experience for community members to contr
 
   Radius maintainers review the contribution meet the bar of quality and security as detailed in the contribution guidelines. They ensure the contributions are validated and tested before being merged into the `resource-types-contrib` repository. Each newly contributed resource type and Recipe should have a functional test that validates the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
 
+- Should we ship all resource types in this repository as part of Radius ?
+
+  A Resource type cannot be useful without a Recipe. Every time a new resource types is added to the `resource-types-contrib` repository, it should be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause errors when there is no default Recipe available for the resource type.
+  
+  Option 1 : All resource types in the `resource types-contrib` repository with a default Recipe can be shipped as part of Radius.
+
+  Option 2 : We ship only a subset of resource types that are core to Radius functionality and that are showcased in Radius samples and tutorials for users to understand the value of Radius.
+
 - How can we ensure maintenance of community-contributed resource types?
-  Radius maintainers triage bugs and issues reported in the `resource-types-contrib` repository.
-  - For bugs on existing resource types, 
-      - If the resource type is one of the core resource types (containers, gateway, secrets) and/or if it is a resource type used by the Radius samples, tutorials and documentation, the Radius maintainers will prioritize fixing these bugs and ensuring the resource types remain functional and up-to-date.
-      - If the resource type is not part of the Radius samples, tutorials and documentation, the Radius maintainers will triage the bug and assign it to the contributor who contributed the resource type. The contributor will be responsible for fixing the bug and ensuring the resource type remains functional and up-to-date.
-  - For proposals on new resource types, we triage the proposal and assign it to the contributor who proposed the resource type if interested to contribute or leave it open for other contributors to pick up. 
+
+  -  The guidelines should clearly state that contributors are responsible for maintaining their contributions. This includes fixing bugs, updating documentation, and ensuring the resource type remains functional and up-to-date. While Radius maintainers accept the contribution, they will ensure that new resource types and Recipes have a designated owner.
+
+  - Radius maintainers triage bugs and issues reported in the `resource-types-contrib` repository.
+     - For bugs on existing resource types, 
+        - If the resource type is one of the core resource types (containers, gateway, secrets) and/or if it is a resource type used by the Radius samples, tutorials and documentation, the Radius maintainers will prioritize fixing these bugs and ensuring the resource types remain functional and up-to-date.
+        - If the resource type is not part of the Radius samples, tutorials and documentation, the Radius maintainers will triage the bug and assign it to the contributor who contributed the resource type. The contributor will be responsible for fixing the bug and ensuring the resource type remains functional and up-to-date. On lack of response from the contributor, the Radius maintainers will disable the resource type from the Radius installation and notify the community about the issue.
+    - For proposals on new resource types, we triage the proposal and assign it to the contributor who proposed the resource type if interested to contribute or leave it open for other contributors to pick up. 
 
 - What level of technical support should be provided to contributors?
    -  Detailed guidelines and templates for contributing resource types and Recipes
@@ -252,6 +263,9 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 The end-end contribution guidelines are documented in the [here](https://github.com/Reshrahim/resource-types-contrib/)
 
+>[!NOTE]
+> The user story above covers the contribution of a new resource type with a Recipe to the `resource-types-contrib` repository. Users can also edit existing resource types and Recipes by following the same contribution process. The contributor should follow the same steps as above, but instead of creating a new directory, they should edit the existing resource type directory and update the schema, Recipes, and documentation as needed.
+
 ## Key Investments
 
 ## Contribution guidelines
@@ -289,4 +303,5 @@ The end-end contribution guidelines are documented in the [here](https://github.
 
 ## Future Considerations
 
+- **Scaffolding Tooling**: Building a CLI tool or scaffolding generator to help contributors quickly set up the directory structure, schema files, and Recipes for new resource types
 - **Marketplace Integration**: Integration with Artifact Hub or other marketplace solutions to enable easy discovery and installation of Radius Resource types and Recipes
