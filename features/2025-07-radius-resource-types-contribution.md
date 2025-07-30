@@ -9,7 +9,7 @@ This feature specification defines the experience for community members to contr
 ### Top level goals
 
 - **Democratize resource type contribution**: Enable community members to easily contribute new resource types without requiring deep knowledge of Radius internals or Go programming
-- **Establish clear contribution pathways**: Define distinct workflows for different types of resource contributions 
+- **Establish clear contribution progression**: Define explicit criteria and processes for resource types to advance through maturity levels
 - **Enable ecosystem growth**: Foster a vibrant community marketplace of resource types that accelerates Radius adoption
 
 ### Non-goals (out of scope)
@@ -63,25 +63,53 @@ This feature specification defines the experience for community members to contr
 **Questions to Answer**
 - How can we ensure quality of the community contributions?
 
-  Radius maintainers review the contribution meet the bar of quality and security as detailed in the contribution guidelines. They ensure the contributions are validated and tested before being merged into the `resource-types-contrib` repository. Each newly contributed resource type and Recipe should have a functional test that validates the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+  Resource types and Recipes are critical components of Radius applications, and their quality directly impacts the user experience. To ensure quality, we need to establish clear contribution guidelines, have a progression/ maturity model for the contribution and a review process that ensures contributions meet the bar. We need to ensure we are creating a low barrier for contributions while maintaining high standards for quality and security.
+
+    _Stage 1 : Community Enablement_(Alpha)
+
+      Purpose: Enable community members to contribute resource types and Recipes with minimal barriers
+      Audience: Developers exploring new technologies or learning Radiu
+      Requirements:
+       - Schema Validation: YAML schema passes automated validation
+       - Basic Documentation: README with usage examples and basic troubleshooting
+       - Single Recipe: At least one working recipe for any cloud provider or platform
+       - Manual Testing: Evidence of local testing by contributor
+
+    _Stage 2 : Contribution Maturity_(Beta)
+
+      Purpose: Ensure contributions meet production-ready standards with comprehensive testing and documentation
+      Audience: Contributors seeking to have their resource types included in official Radius releases
+      Requirements:
+       - Automated Testing: Functional tests that validate resource lifecycle operations
+       - Multi-Platform Support: Recipes for all three platforms ( AWS, Azure, Kubernetes)
+       - IAC Support: Recipes for both Bicep and Terraform
+       - Documentation: Detailed API documentation, troubleshooting guides, and best practices
+       - Ownership: Designated owner for each resource type and Recipe
+       - Maintainer Review: Formal review and approval by Radius maintainers
+
+    _Stage 3 : Production Ready_(Stable)
+
+      Purpose: Establish resource types as officially supported and maintained by the Radius project
+      Audience: Enterprise users and production deployments
+      Requirements:
+       - Integration Testing: Full integration with Radius CI/CD pipeline and release process
+       - Documentation: Complete user guides, API references, and migration documentation
+       - SLA Commitment: Defined support level and response time commitments
+       - Maintainer Review: Formal review and approval by Radius maintainers
+
+ Contributor has to follow the contribution guidelines and the checklist for each stage to ensure that their contribution meets the requirements. Radius maintainers review the contribution meet the bar of quality for each of these stages before merging the contribution into the `resource-types-contrib` repository.
 
 - Should we ship all resource types in this repository as part of Radius ?
 
-  A Resource type cannot be useful without a Recipe. Every time a new resource type is added to the `resource-types-contrib` repository, it should be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause deployment errors when there is no default Recipe available for the resource type.
-  
-  Option 1 : All resource types in the `resource types-contrib` repository with a default Recipe can be shipped as part of Radius.
-
-  Option 2 : We ship only a subset of resource types that are core to Radius functionality and that are showcased in Radius samples and tutorials for users to understand the value of Radius.
+  A Resource type cannot be useful without a Recipe. Every time a new resource type is added to the `resource-types-contrib` repository, it should be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause deployment errors when there is no default Recipe available for the resource type. Based on the stages defined, we ship only resource types that have reached the `stable` stage as part of Radius
 
 - How can we ensure maintenance of community-contributed resource types?
 
-  -  The guidelines should clearly state that contributors are responsible for maintaining their contributions. This includes fixing bugs, updating documentation, and ensuring the resource type remains functional and up-to-date. While Radius maintainers accept the contribution, they will ensure that new resource types and Recipes have a designated owner.
-
-  - Radius maintainers triage bugs and issues reported in the `resource-types-contrib` repository.
-     - For bugs on existing resource types, 
-        - If the resource type is one of the core resource types (containers, gateway, secrets) and/or if it is a resource type used by the Radius samples, tutorials and documentation, the Radius maintainers will prioritize fixing these bugs and ensuring the resource types remain functional and up-to-date.
-        - If the resource type is not part of the Radius samples, tutorials and documentation, the Radius maintainers will triage the bug and assign it to the contributor who contributed the resource type. The contributor will be responsible for fixing the bug and ensuring the resource type remains functional and up-to-date. On lack of response from the contributor, the Radius maintainers will disable the resource type from the Radius installation and notify the community about the issue.
-    - For proposals on new resource types, we triage the proposal and assign it to the contributor who proposed the resource type if interested to contribute or leave it open for other contributors to pick up. 
+  - Radius maintainers triage bugs and issues reported in the `resource-types-contrib` repository. Based on the stages defined above, the Radius maintainers will prioritize bugs and issues reported for resource types and Recipes
+     - For bugs on existing resource types and Recipes, we follow the below process:
+        - If the resource type is in stable stage, the Radius maintainers will prioritize fixing these bugs and ensuring the resource types remain functional and up-to-date.
+        - If the resource type is in beta/ alpha stage, the contributor will be responsible for fixing the bug and ensuring the resource type remains functional and up-to-date. 
+    - For proposals on new resource types, we triage the proposal and assign it to the contributor who proposed the resource type if interested to contribute or leave it open for other contributors to pick up.
 
 - What level of technical support should be provided to contributors?
    -  Detailed guidelines and templates for contributing resource types and Recipes
@@ -121,7 +149,7 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 #### User story 1: As a platform engineer or an open-source contributor, I want to contribute a Radius Resource type so that I can share my work with the community and help others benefit from it.
 
-1. The contributor understands the contribution guidelines at the `resource-types-contrib` repository and familiarizes themselves with the [contribution process](https://github.com/reshrahim/resource-types-contrib/blob/main/CONTRIBUTING.md).
+1. The contributor understands the contribution guidelines at the `resource-types-contrib` repository and familiarizes themselves with the [contribution process](https://github.com/reshrahim/resource-types-contrib/blob/main/CONTRIBUTING.md)
 
 1. They will pick the resource type that they want to contribute either from the list of open issues in the `resource-types-contrib` repository, or they can contribute their own resource type if it does not already exist.
 
@@ -228,7 +256,7 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 1. Manually test the resource type and Recipe locally. Detailed instructions for testing the resource type and Recipe are written [here](https://github.com/Reshrahim/resource-types-contrib/blob/main/contributing-docs/testing-resource-types-recipes.md)
 
-1. Add a functional test for the resource type and Recipe in the `radius` repository to validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
+1. For an alpha stage contribution, the contributor provides evidence of local testing but for other stages, the contributor must add a functional test for the resource type and Recipe in the `radius` repository to validate the resource type schema and the Recipes provided. The tests will ensure that the resource type can be created, updated, and deleted successfully, and that the Recipes can be deployed without errors.
 
 1. Document the resource type and Recipe in the `README.md` file of the resource type directory. The documentation should include:
 
@@ -274,7 +302,7 @@ The end-end contribution guidelines are documented in the [here](https://github.
 - Support for multiple contribution pathways (e.g., resource types, Recipes, etc.)
 - Templates and examples for resource type schemas and Recipes
 - Detailed documentation on testing and validation procedures
-- Contributor checklist to ensure quality and completeness of contributions
+- Contributor checklist for each stage of contribution (Alpha, Beta, Stable)
 
 ## Contributor Recognition
 
