@@ -85,7 +85,7 @@ This feature specification defines the experience for community members to contr
       Audience: Contributors seeking to have their resource types included in official Radius releases
       Requirements:
        - Multi-Platform Support: Recipes for all three platforms ( AWS, Azure, Kubernetes)
-       - IAC Support: Recipes for both Bicep and Terraform
+       - IaC Support: Recipes for both Bicep and Terraform
        - Automated Testing: Functional tests that validate resource type and Recipes
        - Documentation: Detailed README with Recipe coverage, troubleshooting guides, and best practices
        - Ownership: Designated owner for the resource type and Recipe
