@@ -31,9 +31,8 @@ This feature specification defines the experience for community members to contr
 
 ### Challenge(s) faced by the user
 
-- **High technical complexity**: Contributing resource types requires deep Go programming knowledge and understanding of Radius internals
-- **Limited documentation and unclear pathways**: Insufficient guidance on how to contribute different types of resource types and recipes
-- **Lack of discoverability**: No clear path for sharing and discovering community-contributed resource types and recipes
+- **Limited documentation and unclear pathways**: Insufficient guidance on how to contribute different types of resource types and Recipes
+- **Lack of discoverability**: No clear path for sharing and discovering community-contributed resource types and Recipes
 
 ### Positive user outcomes
 
@@ -68,11 +67,11 @@ This feature specification defines the experience for community members to contr
     _Stage 1 : Community Enablement_(Alpha)
 
       Purpose: Enable community members to contribute resource types and Recipes with minimal barriers
-      Audience: Developers exploring new technologies or learning Radiu
+      Audience: Developers exploring new technologies or learning Radius
       Requirements:
-       - Schema Validation: YAML schema passes automated validation
-       - Basic Documentation: README with usage examples and basic troubleshooting
+       - Resource type schema Validation: YAML schema passes validation
        - Single Recipe: At least one working recipe for any cloud provider or platform
+       - Basic Documentation: README with usage examples
        - Manual Testing: Evidence of local testing by contributor
 
     _Stage 2 : Contribution Maturity_(Beta)
@@ -80,24 +79,25 @@ This feature specification defines the experience for community members to contr
       Purpose: Ensure contributions meet production-ready standards with comprehensive testing and documentation
       Audience: Contributors seeking to have their resource types included in official Radius releases
       Requirements:
-       - Automated Testing: Functional tests that validate resource lifecycle operations
        - Multi-Platform Support: Recipes for all three platforms ( AWS, Azure, Kubernetes)
        - IAC Support: Recipes for both Bicep and Terraform
+       - Automated Testing: Functional tests that validate resource type and Recipes
        - Documentation: Detailed API documentation, troubleshooting guides, and best practices
        - Ownership: Designated owner for each resource type and Recipe
        - Maintainer Review: Formal review and approval by Radius maintainers
 
     _Stage 3 : Production Ready_(Stable)
 
-      Purpose: Establish resource types as officially supported and maintained by the Radius project
-      Audience: Enterprise users and production deployments
+      Purpose: Establish resource types and Recipes as officially supported and maintained by the Radius project
+      Audience: Enterprise users doing production deployments and seeking stable, well-tested resource types and Recipes
       Requirements:
+       - Functional tests have 100% coverage and results for resource type schema and Recipe
        - Integration Testing: Full integration with Radius CI/CD pipeline and release process
-       - Documentation: Complete user guides, API references, and migration documentation
+       - Documentation: Complete user guides, troubleshooting, and best practices
        - SLA Commitment: Defined support level and response time commitments
        - Maintainer Review: Formal review and approval by Radius maintainers
 
- Contributor has to follow the contribution guidelines and the checklist for each stage to ensure that their contribution meets the requirements. Radius maintainers review the contribution meet the bar of quality for each of these stages before merging the contribution into the `resource-types-contrib` repository.
+    Contributor has to follow the contribution guidelines and the checklist for each stage to ensure that their contribution meets the requirements. Radius maintainers review the contribution meet the bar of quality for each of these stages before merging the contribution into the `resource-types-contrib` repository.
 
 - Should we ship all resource types in this repository as part of Radius ?
 
@@ -149,7 +149,7 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
 #### User story 1: As a platform engineer or an open-source contributor, I want to contribute a Radius Resource type so that I can share my work with the community and help others benefit from it.
 
-1. The contributor understands the contribution guidelines at the `resource-types-contrib` repository and familiarizes themselves with the [contribution process](https://github.com/reshrahim/resource-types-contrib/blob/main/CONTRIBUTING.md)
+1. The contributor understands the contribution guidelines at the `resource-types-contrib` repository and familiarizes themselves with the [contribution process](https://github.com/reshrahim/resource-types-contrib/blob/main/CONTRIBUTING.MD)
 
 1. They will pick the resource type that they want to contribute either from the list of open issues in the `resource-types-contrib` repository, or they can contribute their own resource type if it does not already exist.
 
