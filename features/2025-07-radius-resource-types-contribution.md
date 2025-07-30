@@ -8,8 +8,8 @@ This feature specification defines the experience for community members to contr
 
 ### Top level goals
 
-- **Democratize resource type contribution**: Enable community members to easily contribute new resource types without requiring deep knowledge of Radius internals or Go programming
-- **Establish clear contribution progression**: Define explicit criteria and processes for resource types to advance through maturity levels
+- **Democratize resource type contribution**: Enable community members to easily contribute new resource types and associated Recipes without requiring deep knowledge of Radius internals or Go programming
+- **Establish clear contribution progression**: Define explicit criteria and processes for resource types to advance through maturity levels (Alpha, Beta, Stable) to ensure quality and reliability
 - **Enable ecosystem growth**: Foster a vibrant community marketplace of resource types that accelerates Radius adoption
 
 ### Non-goals (out of scope)
@@ -27,17 +27,19 @@ This feature specification defines the experience for community members to contr
 
 **Open Source Contributors** Developers and engineers who want to contribute to Radius as an open source project. May be new to Radius but have experience with Kubernetes, cloud platforms, or IaC. They would like to extend Radius capabilities for specific use cases or technologies.
 
-**Vendor/ISV Contributors** Independent software vendors or cloud service providers who want to provide native Radius integration for their products. They define the best practices needed to contribute resource types that integrate with their services, such as databases, messaging systems, or AI/ML services.
+**Vendor/ISV Contributors** Independent software vendors or cloud service providers who want to provide native Radius integration for their products. They define the best practices needed to create resource types that integrate with their services, such as databases, messaging systems, or AI/ML services.
 
 ### Challenge(s) faced by the user
 
 - **Limited documentation and unclear pathways**: Insufficient guidance on how to contribute different types of resource types and Recipes
+- **Lack of testing and validation guidance**: No clear process for testing and validating resource type contributions before submission
 - **Lack of discoverability**: No clear path for sharing and discovering community-contributed resource types and Recipes
 
 ### Positive user outcomes
 
 - Clear, step-by-step guidance for contributing resource types to Radius
 - Testing and validation guidance that build confidence in contributions
+- Provides a clear pathway for contributions to progress through maturity levels (Alpha, Beta, Stable)
 - Recognition and visibility for contributions through community showcases
 - Access to a rich ecosystem of Radius resource types and Recipes that cover diverse use cases and technologies
 - Clear discoverability and documentation for all available resource types and Recipes
@@ -64,17 +66,20 @@ This feature specification defines the experience for community members to contr
 
   Resource types and Recipes are critical components of Radius applications, and their quality directly impacts the user experience. To ensure quality, we need to establish clear contribution guidelines, have a progression/ maturity model for the contribution and a review process that ensures contributions meet the bar. We need to ensure we are creating a low barrier for contributions while maintaining high standards for quality and security.
 
-    _Stage 1 : Community Enablement_(Alpha)
+    >[!NOTE]
+    > The Radius maintainer team applies this staging model to all core resource types (containers, gateways, secrets) developed now as part of compute extensibility feature. This ensures the Radius team validates the contribution process through direct experience, identifies gaps early, and maintains consistent quality standards across both community and maintainers. No resource type should bypass these quality gates, regardless of its origin.
+
+    _Stage 1 : Experimental(Alpha)_
 
       Purpose: Enable community members to contribute resource types and Recipes with minimal barriers
-      Audience: Developers exploring new technologies or learning Radius
+      Audience: Developers/Contributors exploring new technologies or learning Radius
       Requirements:
        - Resource type schema Validation: YAML schema passes validation
        - Single Recipe: At least one working recipe for any cloud provider or platform
        - Basic Documentation: README with usage examples
        - Manual Testing: Evidence of local testing by contributor
 
-    _Stage 2 : Contribution Maturity_(Beta)
+    _Stage 2 : Verified(Beta)_
 
       Purpose: Ensure contributions meet production-ready standards with comprehensive testing and documentation
       Audience: Contributors seeking to have their resource types included in official Radius releases
@@ -86,7 +91,7 @@ This feature specification defines the experience for community members to contr
        - Ownership: Designated owner for each resource type and Recipe
        - Maintainer Review: Formal review and approval by Radius maintainers
 
-    _Stage 3 : Production Ready_(Stable)
+    _Stage 3 : Production Ready(Stable)_
 
       Purpose: Establish resource types and Recipes as officially supported and maintained by the Radius project
       Audience: Enterprise users doing production deployments and seeking stable, well-tested resource types and Recipes
@@ -96,7 +101,7 @@ This feature specification defines the experience for community members to contr
        - Documentation: Complete user guides, troubleshooting, and best practices
        - SLA Commitment: Defined support level and response time commitments
        - Maintainer Review: Formal review and approval by Radius maintainers
-
+    
     Contributor has to follow the contribution guidelines and the checklist for each stage to ensure that their contribution meets the requirements. Radius maintainers review the contribution meet the bar of quality for each of these stages before merging the contribution into the `resource-types-contrib` repository.
 
 - Should we ship all resource types in this repository as part of Radius ?
@@ -332,4 +337,6 @@ The end-end contribution guidelines are documented in the [here](https://github.
 ## Future Considerations
 
 - **Scaffolding Tooling**: Building a CLI tool or scaffolding generator to help contributors quickly set up the directory structure, schema files, and Recipes for new resource types
+- **Recipe generation with AI**: Using AI to convert one Recipe format to another (e.g., Bicep to Terraform) to reduce duplication of effort or to convert one platform Recipe to another (e.g., AWS MemoryDB to Azure Redis Cache)
 - **Marketplace Integration**: Integration with Artifact Hub or other marketplace solutions to enable easy discovery and installation of Radius Resource types and Recipes
+
