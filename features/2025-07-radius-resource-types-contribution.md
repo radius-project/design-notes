@@ -66,8 +66,8 @@ This feature specification defines the experience for community members to contr
 
   Resource types and Recipes are critical components of Radius applications, and their quality directly impacts the user experience. To ensure quality, we need to establish clear contribution guidelines, have a progression/ maturity model for the contribution and a review process that ensures contributions meet the bar. We follow a model that creates a low barrier for contributions while maintaining high standards for quality.
 
-    >[!NOTE]
-    > The Radius maintainer team applies this maturity model to all core resource types (containers, gateways, secrets) developed now as part of compute extensibility feature. This ensures the Radius team validates the contribution process through direct experience, identifies gaps early, and maintains consistent quality standards across both community and maintainers. No resource type should bypass these quality gates, regardless of its origin.
+  >[!IMPORTANT]
+  > The Radius maintainer team applies this maturity model to all core resource types (containers, gateways, secrets) developed now as part of compute extensibility feature. This ensures the Radius team validates the contribution process through direct experience, identifies gaps early, and maintains consistent quality standards across both community and maintainers. No resource type should bypass these quality gates, regardless of its origin.
 
     _Stage 1 : Experimental(Alpha)_
 
