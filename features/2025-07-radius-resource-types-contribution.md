@@ -8,7 +8,7 @@ This feature specification defines the experience for community members to contr
 
 ### Top level goals
 
-- **Democratize resource type contribution**: Enable community members to easily contribute new resource types and associated Recipes without requiring deep knowledge of Radius internals or Go programming
+- **Democratize resource type and Recipe contribution**: Enable community members to easily contribute new resource types and associated Recipes without requiring deep knowledge of Radius internals or Go programming
 - **Establish clear contribution progression**: Define explicit criteria and processes for resource types to advance through maturity levels (Alpha, Beta, Stable) to ensure quality and reliability
 - **Enable ecosystem growth**: Foster a vibrant community marketplace of resource types that accelerates Radius adoption
 
@@ -64,10 +64,10 @@ This feature specification defines the experience for community members to contr
 **Questions to Answer**
 - How can we ensure quality of the community contributions?
 
-  Resource types and Recipes are critical components of Radius applications, and their quality directly impacts the user experience. To ensure quality, we need to establish clear contribution guidelines, have a progression/ maturity model for the contribution and a review process that ensures contributions meet the bar. We need to ensure we are creating a low barrier for contributions while maintaining high standards for quality and security.
+  Resource types and Recipes are critical components of Radius applications, and their quality directly impacts the user experience. To ensure quality, we need to establish clear contribution guidelines, have a progression/ maturity model for the contribution and a review process that ensures contributions meet the bar. We follow a model that creates a low barrier for contributions while maintaining high standards for quality.
 
     >[!NOTE]
-    > The Radius maintainer team applies this staging model to all core resource types (containers, gateways, secrets) developed now as part of compute extensibility feature. This ensures the Radius team validates the contribution process through direct experience, identifies gaps early, and maintains consistent quality standards across both community and maintainers. No resource type should bypass these quality gates, regardless of its origin.
+    > The Radius maintainer team applies this maturity model to all core resource types (containers, gateways, secrets) developed now as part of compute extensibility feature. This ensures the Radius team validates the contribution process through direct experience, identifies gaps early, and maintains consistent quality standards across both community and maintainers. No resource type should bypass these quality gates, regardless of its origin.
 
     _Stage 1 : Experimental(Alpha)_
 
@@ -87,16 +87,16 @@ This feature specification defines the experience for community members to contr
        - Multi-Platform Support: Recipes for all three platforms ( AWS, Azure, Kubernetes)
        - IAC Support: Recipes for both Bicep and Terraform
        - Automated Testing: Functional tests that validate resource type and Recipes
-       - Documentation: Detailed API documentation, troubleshooting guides, and best practices
-       - Ownership: Designated owner for each resource type and Recipe
+       - Documentation: Detailed README with Recipe coverage, troubleshooting guides, and best practices
+       - Ownership: Designated owner for the resource type and Recipe
        - Maintainer Review: Formal review and approval by Radius maintainers
 
     _Stage 3 : Production Ready(Stable)_
 
-      Purpose: Establish resource types and Recipes as officially supported and maintained by the Radius project
-      Audience: Enterprise users doing production deployments and seeking stable, well-tested resource types and Recipes
+      Purpose: Establish Resource types and Recipes as officially supported and maintained by the Radius project
+      Audience: Enterprise users doing production deployments and seeking stable, well-tested Resource types and Recipes
       Requirements:
-       - Functional tests have 100% coverage and results for resource type schema and Recipe
+       - Functional tests have 100% coverage and results for Resource type schema and Recipe
        - Integration Testing: Full integration with Radius CI/CD pipeline and release process
        - Documentation: Complete user guides, troubleshooting, and best practices
        - SLA Commitment: Defined support level and response time commitments
@@ -106,7 +106,7 @@ This feature specification defines the experience for community members to contr
 
 - Should we ship all resource types in this repository as part of Radius ?
 
-  A Resource type cannot be useful without a Recipe. Every time a new resource type is added to the `resource-types-contrib` repository, it must be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause deployment errors when there is no default Recipe available for the resource type. Based on the stages defined, we ship only resource types that have reached the `stable` stage as part of Radius
+  A Resource type cannot be useful without a Recipe. Every time a new resource type is added to the `resource-types-contrib` repository, it must be accompanied by at least one default Recipe that works with the resource type. Shipping just the resource type will impact the developer experience as it will cause deployment errors when there is no default Recipe available for the resource type. Based on the stages defined, we ship only resource types that have reached the `stable` stage as part of Radius. Community is encouraged to use the alpha and beta resource types and Recipes from the `resource-types-contrib` repository.
 
 - How can we ensure maintenance of community-contributed resource types?
 
@@ -256,6 +256,7 @@ Once I contribute a resource type, it becomes discoverable in the repository, wh
 
     - Each Recipe should include a README.md file that describes how to use the Recipe, including prerequisites, parameters required, and examples.
     - The Recipes could be a Bicep or Terraform template organized in the respective directories, such as `bicep` or `terraform`.
+    - Each Recipe should handle secrets securely and can use the core Resource types like containers, gateways, and secrets when possible
     - Contributors are required to add at least one Recipe that works with the resource-type but also encouraged to provide multiple Recipes for different cloud providers or technologies, such as AWS MemoryDB, Azure Redis Cache, or Kubernetes Redis Cache.
     - Guidelines documentation for Recipes is available [here](https://github.com/Reshrahim/resource-types-contrib/blob/main/contributing-docs/contributing-resource-types-recipes.md#recipes-for-the-resource-type)
 
@@ -337,6 +338,6 @@ The end-end contribution guidelines are documented in the [here](https://github.
 ## Future Considerations
 
 - **Scaffolding Tooling**: Building a CLI tool or scaffolding generator to help contributors quickly set up the directory structure, schema files, and Recipes for new resource types
-- **Recipe generation with AI**: Using AI to convert one Recipe format to another (e.g., Bicep to Terraform) to reduce duplication of effort or to convert one platform Recipe to another (e.g., AWS MemoryDB to Azure Redis Cache)
+- **Recipe generation with AI**: Using AI to convert one Recipe format to another (e.g., Bicep to Terraform) or to convert one platform Recipe to another (e.g., AWS MemoryDB to Azure Redis Cache)
 - **Marketplace Integration**: Integration with Artifact Hub or other marketplace solutions to enable easy discovery and installation of Radius Resource types and Recipes
 
