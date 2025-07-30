@@ -16,21 +16,25 @@ Today, Radius has the following configurations:
 
 * **Credentials** – Credentials are created imperatively via `rad credentials register` and `rad credentials unregister` commands. Unlike other Radius configurations, the register verb is used. This difference is discussed in the recommendations section below.
 * **Environments** – Environments are created and deleted imperatively via `rad environment` commands or declaratively via `rad deploy env.bicep`. The declarative approach is required because the Environment resource is complex. It's simply not practical to include all the options in a single `rad environment create` command. The Environment has properties for:
-  * Recipes for each resource type
+  * Recipes for each Resource Type
   * Terraform configuration
   * Deployment locations including Kubernetes namespace, AWS account and region, and Azure subscription and resource group
   * Workload identity configuration
 * **Resource Groups** – Resource Groups are created or deleted imperatively via `rad group` commands. Since Resource Groups do not have properties, creating and deleted Resource Groups is very easy via `rad group` commands.
 * **Recipes** – Recipes are not a configuration in Radius. Rather, they are a property of the Environment. Environments are updated with recipes via the `rad recipe register` command rather than the `rad environment update` command. This is discussed further in the recommendations section below. Given recipes are a property of Environments, they are lower-cased in the remainder of this document, while proper configurations, such as Environments, are capitalized.
-* **Resource types** – Created and deleted imperatively via `rad resource-type` commands. The `rad resource-type create` command accepts a YAML file today and will support TypeSpec files in the future.
+* **Resource Types** – Created and deleted imperatively via `rad resource-type` commands. The `rad resource-type create` command accepts a YAML file today and will support TypeSpec files in the future.
 * **Workspaces** – Workspaces are created imperatively via `rad workspace` commands.
 
 In the future, we expect several additional configurations including:
 
 * Terraform 
 * Recipe Packs
-* Role definitions
-* Role assignments
+* Role Definitions
+* Role Assignments
+
+> [!IMPORTANT]
+>
+> This document makes broad assumptions about future configurations which are currently under design. Recipe Packs and Terraform may or may not be modeled as configurations. If they are, they will follow the proposals in this document.
 
 ## Comparisons
 
@@ -56,9 +60,9 @@ Radius will have both imperative and declarative commands for creating and updat
 
 ### Declarative configuration
 
-Radius will support declarative commands for all configurations except resource types which will use a hybrid imperative/declarative since it bootstraps the resource type system. This makes repeated configurations of Radius easy and enables GitOps-based configuration of Radius.
+Radius will support declarative commands for all configurations except Resource Types which will use a hybrid imperative/declarative since it bootstraps the Resource Type system. This makes repeated configurations of Radius easy and enables GitOps-based configuration of Radius.
 
-* Configurations will be created declaratively using the `rad deploy` command which takes a Bicep file as input. Configurations will be modeled as Radius resource types using the `Radius.System` namespace.
+* Configurations will be created declaratively using the `rad deploy` command which takes a Bicep file as input. Configurations will be modeled as Radius Resource Types using the `Radius.System` namespace.
 * Configurations will be deleted declaratively via a new `rad delete` command which takes a Bicep file as input. 
 * In order to support declarative creation and deletions of configurations, configurations must be stored in Radius as specified by the user. When a configuration is deployed using `rad deploy`, Radius must not perform post-deployment processing to transform the deployed configuration. For example, if a Recipe Pack configuration is deployed using `rad deploy`, it must be deletable via `rad delete`. Radius must not transform the Recipe Pack into multiple recipes after deployment.
 * Unlike Azure, configurations which are global are still deployed to a resource group. Radius does not have a default group today when installed via `rad install`, but it should in the future.
@@ -72,7 +76,7 @@ Configurations are modeled using typical data modeling techniques. A configurati
 
 ### Internal versus external configurations
 
-Radius will store all configurations within the Radius control plane. No configuration will be stored externally. For example, Radius role definitions will be stored as role definitions created with the `rad role-definition create` rather than as a YAML stored in a Git repository. The benefits of this is that Radius does not take a dependency on an external system. Should Radius lose access to the Git repository (possible after a credential expires), Radius will not function correctly. 
+Radius will store all configurations within the Radius control plane. No configuration will be stored externally. For example, Radius Role Definitions will be stored as Role Definitions created with the `rad role-definition create` rather than as a YAML stored in a Git repository. The benefits of this is that Radius does not take a dependency on an external system. Should Radius lose access to the Git repository (possible after a credential expires), Radius will not function correctly. 
 
 The downside of this approach is that it complicated GitOps approaches where configurations are stored in Git. However, that is the role of CD tools such as ArgoCD and Flux and also is why Radius must offer the ability to maintain configurations declaratively.
 
@@ -89,10 +93,10 @@ Registering recipes is a valid use of the register verb. However, registering cr
 | Configuration | Imperative Command                                           | Declarative Command                                          |
 | ------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Credential    | ✅ `rad credential [register\|show\|unregister]`              | ❌ Not possible today                                         |
-| Environment   | ✅ `rad environment [create\|delete\|list\|show\|update]`         | ✅ `rad deploy` with `Applications.Core/environments` resource ❌ No `rad delete` |
+| Environment   | ✅ `rad environment [create\|delete\|list\|show\|update]`     | ✅ `rad deploy` with `Applications.Core/environments` resource ❌ No `rad delete` |
 | Group         | ✅ `rad group [create\|delete\|list\|show]` (There is no update command since there are not properties.) | ❌ Not possible today                                         |
 | recipe        | ❌ `rad recipe [list\|register\|show\|unregister]` (This is a deviation from the Radius design principle since recipe is a property of the Environment.) | ✅ See Environment                                            |
-| Resource type | ✅ `rad resource-type [create\|delete\|list\|show]`              | ✅ N/A                                                        |
+| Resource Type | ✅ `rad resource-type [create\|delete\|list\|show]`           | ✅ N/A                                                        |
 | workspace     | ✅ `rad workspace [create\|delete\|list\|show]` (This is an exception since workspace is not a Radius configuration, but rather the local CLI configuration.) | ✅ N/A                                                        |
 
 ## Upcoming Radius Configurations
@@ -212,15 +216,14 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
 }
 # `sub` means deploy a resource at the subscription level
 $ az deployment sub create --location eastus --name customRole --template-file roleDefinition.bicep 
-$ az role definition list --name "Custom Role - RG Reader"
-$ az role definition delete --name "Custom Role - RG Reader"
+$ az deployment sub delete --name <deployment-name>
 ```
 
-A common challenge for declarative configurations is that some configurations apply at one level in the configuration hierarchy while others apply at another level. Radius, for example, has global configurations (resource types and credentials) and environment-level configurations (recipes). Azure tackles this challenge by using different scopes on the deployment command—the `az deployment sub` command to create configurations at the subscription level while `az deployment group` creates configurations at the resource group level.
+A common challenge for declarative configurations is that some configurations apply at one level in the configuration hierarchy while others apply at another level. Radius, for example, has global configurations (Resource Types and credentials) and environment-level configurations (recipes). Azure tackles this challenge by using different scopes on the deployment command—the `az deployment sub` command to create configurations at the subscription level while `az deployment group` creates configurations at the resource group level.
 
 ### Kubernetes
 
-Kubernetes also tackles the scoping differently and uses different resource types for different scopes. For example, a role  is scoped to the namespace while a cluster role is scoped to the cluster. However, a cluster role can be deployed/created in any namespace.
+Kubernetes also tackles the scoping differently and uses different Resource Types for different scopes. For example, a role  is scoped to the namespace while a cluster role is scoped to the cluster. However, a cluster role can be deployed/created in any namespace.
 
 #### **Imperative method:**
 
@@ -248,4 +251,6 @@ rules:
   resources: ["pods"]
   verbs: ["get", "watch", "list"]
 $ kubectl apply pod-reader.yaml
+$ kubectl delete -f pod-reader.yaml
 ```
+
