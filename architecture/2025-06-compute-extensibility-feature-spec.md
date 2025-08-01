@@ -314,9 +314,9 @@ Step 2
         
         > If the `providers` property is not specified, default to `providers.kubernetes.namespace='<environment name>'` and show a warning to the user: "Since no provider is specified for the environment, the default provider is set to 'kubernetes' with namespace '<environment name>'."
 
-        > If no Recipe Packs are provided, then the environment is created without any Recipes registered to it.
+        > If no Recipe Packs are provided, then the environment is created with the Recipe Pack which uses Bicep to deploy to Kubernetes. This Recipe Pack will include at least containers, gateways, and secrets.
 
-    * The default Recipe packs will have the `allowPlatformOptions` parameter set to `true` for core types like `Applications.Core/containers@2025-05-01-preview`, which allows platform engineers to punch through the Radius abstraction and use platform-specific options (e.g., `containerGroupProfile` for ACI) in their application definitions. If `allowPlatformOptions` is not specified in the Environment via the Recipe Pack parameters, it will default to whatever is set as default in the Recipe Pack itselt, which is `true` for the default Recipe Packs.
+    * The default Recipe packs will have the `allowPlatformOptions` parameter set to `true` for core types like `Applications.Core/containers@2025-05-01-preview`, which allows developers to punch through the Radius abstraction and use platform-specific options (e.g., `containerGroupProfile` for ACI) in their application definitions. If `allowPlatformOptions` is not specified in the Environment via the Recipe Pack parameters, it will default to whatever is set as default in the Recipe Pack itselt, which is `true` for the default Recipe Packs.
 
     * By default, `rad init` will register recipes for Kubernetes provisioning for core types like `Applications.Core/containers@2025-05-01-preview` so that Radius may continue providing a local kubernetes experience out of the box.
 
@@ -846,6 +846,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
         properties: {
             environment: env.id
             application: app.id
+            sizeGb: '10'
         }
     }
     ```
