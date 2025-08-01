@@ -129,48 +129,48 @@ Step 2
    * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list eachcore resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
    * e.g. `computeRecipePack.bicep`:
         ```bicep
-            resource computeRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
-                name: 'computeRecipePack'
-                description: "Recipe Pack for deploying to Kubernetes."
-                properties: {
-                    recipes: [
-                        Radius.Compute/container: {
-                            recipeKind: 'terraform'
-                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48'
-                            parameters: {
-                            allowPlatformOptions: true
-                            }
+        resource computeRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
+            name: 'computeRecipePack'
+            description: "Recipe Pack for deploying to Kubernetes."
+            properties: {
+                recipes: [
+                    Radius.Compute/container: {
+                        recipeKind: 'terraform'
+                        recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48'
+                        parameters: {
+                        allowPlatformOptions: true
                         }
-                        Radius.Compute/gateways: {
-                            recipeKind: 'terraform'
-                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways.kubernetes?ref=v0.48'
-                        }
-                        Radius.Security/secrets: {
-                            recipeKind: 'terraform'
-                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets/kubernetes?ref=v0.48'
-                        }
-                        Radius.Storage/volumes: {
-                            recipeKind: 'terraform'
-                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes/kubernetes?ref=v0.48'
-                        }
-                    ]
-                }
+                    }
+                    Radius.Compute/gateways: {
+                        recipeKind: 'terraform'
+                        recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways.kubernetes?ref=v0.48'
+                    }
+                    Radius.Security/secrets: {
+                        recipeKind: 'terraform'
+                        recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets/kubernetes?ref=v0.48'
+                    }
+                    Radius.Storage/volumes: {
+                        recipeKind: 'terraform'
+                        recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes/kubernetes?ref=v0.48'
+                    }
+                ]
             }
+        }
         ```
    * e.g. `dataRecipePack.bicep`:
         ```bicep
-            resource dataRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
-                name: 'dataRecipePack'
-                description: "Recipe Pack for deploying data-related services to Kubernetes."
-                properties: {
-                    recipes: [
-                        Radius.Data/redisCaches: {
-                            recipeKind: 'terraform'
-                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/data/redis-caches/kubernetes?ref=v0.48'
-                        }
-                    ]
-                }
+        resource dataRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
+            name: 'dataRecipePack'
+            description: "Recipe Pack for deploying data-related services to Kubernetes."
+            properties: {
+                recipes: [
+                    Radius.Data/redisCaches: {
+                        recipeKind: 'terraform'
+                        recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/data/redis-caches/kubernetes?ref=v0.48'
+                    }
+                ]
             }
+        }
         ```
    * Create (deploy) these Recipe Packs:
         ```bash
