@@ -125,129 +125,118 @@ Step 2
 
 #### User Story 1: As a Platform Engineer, I want to create a Recipe Pack that bundles multiple recipes for core resource types, so that I can easily register and manage them in a Radius environment:
 
-1.  **Define a Recipe Pack**:
-    *   A platform engineer creates a manifest file (e.g. `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (OCI URI or local path) and its default parameters.
-    *   Example `recipe-pack.yaml`:
-        ```yaml
-        name: aci-production-pack
-        version: 1.0.0
-        description: "Recipe Pack for deploying to ACI in production."
-        recipes:
-            - resourceType: "Radius.Compute/containers@2025-05-01-preview"   
-            recipeKind: "bicep"
-            recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
-            parameters:
-                cpu: "1.0"
-                memoryInGB: "2.0"
-                environmentVariables:
-                LOG_LEVEL: "Information"
-                # Optional: allow platform-specific options like containerGroupProfile for ACI
-                allowPlatformOptions: true
-            - resourceType: "Radius.Compute/gateways@2025-05-01-preview"
-            recipeKind: "bicep"
-            recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
-            parameters:
-                sku: "Standard_v2"
-            - resourceType: "Radius.Security/secrets@2025-05-01-preview"
-            recipeKind: "bicep"
-            recipeLocation: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
-            parameters:
-                skuName: "premium"
-        ```
-        > Note: `templateKind` is changed to `recipeKind` and `templatePath` is changed to `recipeLocation`
-
-1.  **Add the Recipe Pack to an Environment**:
-    *   The platform engineer uses a new CLI command to add the entire pack to a Radius environment.
-    *   Example: `rad environment update my-env --recipe-packs aci-production-pack='./aci-production-pack.yaml'`
-    *   Or, if stored in a repo: `rad environment update my-env --recipe-packs aci-production-pack='git::https://github.com/my-org/recipe-packs.git//aci-production-pack.yaml?ref=1.0.0'`
-    *   This command would iterate through the recipes defined in the manifest and register each one to the specified environment, similar to individual `rad recipe register` calls.
-    *   Alternatively, the Recipe Pack could be added to the Environment definition file (e.g., `env.bicep`) in a `recipe-packs` property like below and then deployed using `rad deploy env.bicep`.
+1. **Define a Recipe Pack**:
+   * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list eachcore resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
+   * e.g. `computeRecipePack.bicep`:
         ```bicep
+            resource computeRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
+                name: 'computeRecipePack'
+                description: "Recipe Pack for deploying to Kubernetes."
+                properties: {
+                    recipes: [
+                        Radius.Compute/container: {
+                            recipeKind: 'terraform'
+                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48'
+                            parameters: {
+                            allowPlatformOptions: true
+                            }
+                        }
+                        Radius.Compute/gateways: {
+                            recipeKind: 'terraform'
+                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways.kubernetes?ref=v0.48'
+                        }
+                        Radius.Security/secrets: {
+                            recipeKind: 'terraform'
+                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets/kubernetes?ref=v0.48'
+                        }
+                        Radius.Storage/volumes: {
+                            recipeKind: 'terraform'
+                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes/kubernetes?ref=v0.48'
+                        }
+                    ]
+                }
+            }
+        ```
+   * e.g. `dataRecipePack.bicep`:
+        ```bicep
+            resource dataRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
+                name: 'dataRecipePack'
+                description: "Recipe Pack for deploying data-related services to Kubernetes."
+                properties: {
+                    recipes: [
+                        Radius.Data/redisCaches: {
+                            recipeKind: 'terraform'
+                            recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/data/redis-caches/kubernetes?ref=v0.48'
+                        }
+                    ]
+                }
+            }
+        ```
+   * Create (deploy) these Recipe Packs:
+        ```bash
+        rad deploy computeRecipePack.bicep
+        rad deploy dataRecipePack.bicep
+        ```
+   > Note: If the RRT for which a Recipe in the pack is specified to be deploying does not exist, the Recipe Pack creation process should fail gracefully, indicating which RRTs are missing in the error message.
+
+1. **Environment Utilizes Recipes from the Pack**:
+    * Once the Recipe Pack is created and added to the Environment, Radius will use the recipes specified in the Recipe Pack.
+    * Using `rad deploy env.bicep` will deploy the environment with the specified recipe packs:
+        ```diff
         resource env 'Radius.Core/environments@2025-05-01-preview' = {
             name: 'my-env'
             properties: {
-                recipePacks: [
-                    {
-                        name: 'local-k8s-pack'
-                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/local-k8s-pack.yaml?ref=1.0.0'
-                    }
-                ]
+        +       // The recipePacks property is an array of Recipe Pack IDs
+        +       recipePacks: [computeRecipePack.id, dataRecipePack.id]
+        -       // The recipes property is removed as it is now managed through recipe packs,
+        -       //  as a recipe pack may contain singleton or multiple recipes
+        -       recipes: {}
             }
         }
         ```
-    > Note: If the RRT for which a Recipe in the pack is being registered does not exist, the Recipe Pack addition process should fail gracefully, indicating which RRTs are missing in the error message.
+    > Note: `environments.properties.recipes` is removed in favor of `environments.properties.recipePacks`, which means users will no longer be allowed to add individual recipes directly to the environment. Recipes must now be packed into Recipe Packs resources before they may be added to an environment, and a Recipe Pack can contain one or more recipes. This change simplifies environment management and promotes reuse of common configurations.
 
-1.  **Environment Utilizes Recipes from the Pack**:
-    *   Once the Recipe Pack is created and added to the Environment, Radius will use the recipes specified in the Recipe Pack.
 
-1.  **Manage and Update Recipe Packs**:
-    *   Platform engineers can update the Recipe Pack manifest (e.g., point to new recipe versions, change default parameters) and re-add it to the environment.
-    *   Commands like `rad environment show my-env` or `rad recipe show --pack <pack-name>` would allow inspection of recipe packs.
-    *   Here are the proposed CLI experiences with Recipe packs:
-        * `rad recipe list` experience remains the same - it would list out all the Recipes that were added to the Environment, including those from Recipe Packs:
-            ```bash
-            $ rad recipe list
-            RECIPE    RECIPE PACK        TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
-            default                      Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
-            default   azure-aci-pack     Radius.Compute/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
-            default   azure-aci-pack     Radius.Compute/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
-            default   azure-aci-pack     Radius.Security/secrets          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
-            ```
-        * `rad environment show -o json` would show the Recipe Packs registered to the Environment:
-            ```bash
-            $ rad environment show -o json
-            {
-                "id": "/planes/radius/local/resourcegroups/prod-azure/providers/Radius.Core/environments/prod-azure",
-                "location": "global",
-                "name": "prod-azure",
-                "properties": {
-                    "providers": {
-                    "azure": {
-                        "scope": "/subscriptions/.../resourceGroups/..."
-                    }
-                    },
-                    "provisioningState": "Succeeded",
-                    "recipePacks": [
-                        {
-                            name: 'azure-aci-pack'
-                            uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/azure-aci-pack?ref=1.0.0'
-                            parameters: {
-                                Radius.Compute/containers@2025-05-01-preview: {
-                                    allowPlatformOptions: true
-                                }
-                            }
-                        }
-                    ]
-                "systemData": {
-                    "createdAt": "0001-01-01T00:00:00Z",
-                    "createdBy": "",
-                    "createdByType": "",
-                    "lastModifiedAt": "0001-01-01T00:00:00Z",
-                    "lastModifiedBy": "",
-                    "lastModifiedByType": ""
-                },
-                "tags": {},
-                "type": "Radius.Core/environments"
-            }
-            ```
-        * `rad recipe pack list` would list all the Recipe Packs registered to the Environment:
-            ```bash
-            $ rad recipe pack list
-            NAME                VERSION  DESCRIPTION
-            azure-aci-pack      1.0.0    Recipe Pack for deploying to ACI in production.
-            azure-storage-pack  1.0.0    Recipe Pack for deploying Azure Storage resources.
-            ```
-        * `rad recipe pack show <pack-name>` would show the details of a specific Recipe Pack, along with the recipes contained within it:
-            ```bash
-            $ rad recipe pack show azure-aci-pack
-            NAME                VERSION  DESCRIPTION
-            azure-aci-pack      1.0.0    Recipe Pack for deploying to ACI in production.
+1. **Manage and Update Recipe Packs**:
+    * Platform engineers can update the Recipe Pack resource (e.g., point to new recipe versions, change default parameters, add other Recipes) and re-deploy the Recipe Pack resource. Since the Recipe Pack is modeled as a Radius resource, the Environment will automatically pick up the changes without needing to re-deploy the Environment.
+    * Commands like `rad recipe-pack show computeRecipePack`, `rad recipe list -environment my-env`, and `rad environment show my-env` would allow inspection of recipe packs and recipes.
+        ```bash
+        $ rad recipe-pack show computeRecipePack
 
-            RECIPE    TYPE                                    ALLOW PLATFORM OPTIONS  RECIPE KIND    RECIPE VERSION    RECIPE LOCATION
-            default   Radius.Compute/containers            true                     bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
-            default   Radius.Compute/gateways                                       bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
-            default   Radius.Security/secrets                                   bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
-            ```
+        RESOURCE                TYPE                            GROUP     STATE
+        computeRecipePack       Radius.Config/recipePacks       default   Succeeded
+
+        RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
+        Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        ```
+        
+        ```bash
+        $ rad recipe list -environment my-env
+        RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        computeRecipePack   Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        computeRecipePack   Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
+        computeRecipePack   Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        computeRecipePack   Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+        ```
+
+        ```bash
+        $ rad environment show my-env
+        RESOURCE            TYPE                            GROUP     STATE
+        my-env              Radius.Core/environments        default   Succeeded
+
+        RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        computeRecipePack   Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        computeRecipePack   Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
+        computeRecipePack   Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        computeRecipePack   Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+        ```
+
+        > Note: the `RECIPE VERSION` is equivalent to the `TEMPLATE VERSION` column that exists in the Radius CLI output today but remains blank until Recipes versioning is implemented. We're just preserving the existing output, but renaming it to `RECIPE VERSION`.
 
 #### User Story 2: As a platform engineer, I want to create a Radius Environment that leverages default recipe packs provided by Radius for core types, so that I can quickly set up a new environment without needing to write custom recipes:
 
@@ -559,7 +548,7 @@ This scenario demonstrates how a single application definition, containing both 
         }
     }
 
-    resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
+    resource cache 'Radius.Data/redisCaches@2023-10-01-preview' = {
         name: 'mycache'
         properties: {
             application: application
@@ -632,7 +621,7 @@ Given that I have created and published custom Bicep or Terraform recipes for co
         ```bash
         $ rad recipe list
         RECIPE    RECIPE PACK        TYPE                                    RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
-        default                      Applications.Datastores/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
+        default                      Radius.Data/redisCaches     bicep                            ghcr.io/my-org/recipes/azure/redis-azure:0.32
         default   azure-aci-pack     Radius.Compute/containers            bicep                            ghcr.io/my-org/recipes/core/aci-container:1.2.0
         default   azure-aci-pack     Radius.Compute/gateways              bicep                            ghcr.io/my-org/recipes/core/aci-gateway:1.1.0
         default   azure-aci-pack     Radius.Security/secrets          bicep                            ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0
@@ -940,14 +929,14 @@ This approach allows teams to manage and version their RRTs and recipes in Git, 
 * We will preserve this experience and set up the default environment with the local Kubernetes containers Recipe registered, as well as the default Recipes for the other resources that get added with `rad init` today, i.e.:
     ```bash
     NAME      TYPE                                        TEMPLATE KIND  TEMPLATE VERSION  TEMPLATE
-    default   Applications.Datastores/sqlDatabases        bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
-    default   Applications.Messaging/rabbitMQQueues       bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
-    default   Applications.Dapr/pubSubBrokers             bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
-    default   Applications.Dapr/secretStores              bicep                            ghcr.io/radius-project/recipes/local-dev/secretstores:latest
-    default   Applications.Dapr/stateStores               bicep                            ghcr.io/radius-project/recipes/local-dev/statestores:latest
-    default   Applications.Datastores/mongoDatabases      bicep                            ghcr.io/radius-project/recipes/local-dev/mongodatabases:latest
-    default   Applications.Datastores/redisCaches         bicep                            ghcr.io/radius-project/recipes/local-dev/rediscaches:latest
-    default   Applications.Datastores/configurationStores bicep                            ghcr.io/radius-project/recipes/local-dev/configurationStores:latest
+    default   Radius.Data/sqlDatabases        bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
+    default   Radius.Data/rabbitMQQueues       bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
+    default   Radius.Dapr/pubSubBrokers             bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
+    default   Radius.Dapr/secretStores              bicep                            ghcr.io/radius-project/recipes/local-dev/secretstores:latest
+    default   Radius.Dapr/stateStores               bicep                            ghcr.io/radius-project/recipes/local-dev/statestores:latest
+    default   Radius.Data/mongoDatabases      bicep                            ghcr.io/radius-project/recipes/local-dev/mongodatabases:latest
+    default   Radius.Data/redisCaches         bicep                            ghcr.io/radius-project/recipes/local-dev/rediscaches:latest
+    default   Radius.Data/configurationStores bicep                            ghcr.io/radius-project/recipes/local-dev/configurationStores:latest
     ```
 
 1. **Azure or AWS container environments:**
@@ -976,6 +965,23 @@ This approach allows teams to manage and version their RRTs and recipes in Git, 
 * The `{kind:  'manualScaling', replicas: 5}` extension in the `Radius.Compute/containers` resource type is moved to a top-level property in the container definition, as this is a container property common to all platforms.
 * The `{kind: 'kubernetesMetadata', labels: {key: value}}` extension in the `Radius.Compute/containers` resource type is moved to the `platformOptions.kubernetes` property, as it is a Kubernetes-specific configuration.
 * Ingress controller customization is enabled through the `Radius.Compute/gateways@2025-05-01-preview` resource type, where platform engineers can implement the ingress controller solutions of their choice using Recipes. Contour installation is no longer a hard dependency for Radius, allowing users to use alternative gateway solutions like NGINX Ingress Controller or Traefik.
+* Recipe Packs are introduced as a new concept to bundle and distribute related recipes together, making it easier to manage and share them across different environments. Recipe Packs are modeled as Radius resources, specifically `Radius.Core/recipePacks@2025-05-01-preview`, and can be referenced by environments.
+* Resource types are renamed to follow the new Radius naming convention:
+    ```
+    `Applications.Core/environments` --> `Radius.Core/environments`
+    `Applications.Core/applications` --> `Radius.Core/applications`
+    `Applications.Core/containers` --> `Radius.Compute/containers`
+    `Applications.Core/gateways` --> `Radius.Compute/gateways`
+    `Applications.Core/volumes` --> `Radius.Storage/volumes`
+    `Applications.Core/secretStores` --> `Radius.Security/secrets`
+    `Applications.Datastores/sqlDatabases` --> `Radius.Data/sqlDatabases`
+    `Applications.Datastores/mongoDatabases` --> `Radius.Data/mongoDatabases`
+    `Applications.Datastores/redisCaches` --> `Radius.Data/redisCaches`
+    `Applications.Messaging/rabbitmqQueues` --> `Radius.Data/rabbitMQQueues`
+    `Applications.Dapr/*` --> `Radius.Dapr/*`
+    `Radius.Config/*` --> `Radius.Config/*` (newly proposed parent namespace for `recipePacks` resource)
+    `Radius.Resources/*` --> `Radius.Resources/*` (user defined custom resource types)
+    ```
 
 ## Key investments
 <!-- List the features required to enable this scenario(s). -->
@@ -1146,8 +1152,65 @@ This specification proposes the introduction of "Recipe Packs" to group related 
 
 There were several questions about whether Environments, to which platform engineers may register multiple Recipes, essentially serve the same purpose and thus negates the need for Recipe Packs. While this is a valid point, it lacks the flexibility that a dedicated Recipe Pack feature provides where a Recipe Pack can have a lifecycle independent of the Environment and thus may be re-used for many Environments. The Environment definition remains a good place to group collections of Recipe packs - e.g. bundle ACI and OpenAI Recipe packs together in an Environment definition.
 
-### Recipe Packs: Tooling vs. Data Model Approach
+### Recipe Packs: Data Model vs. Tooling Approach
 
-Tooling approach: Recipe packs being defined in a yaml manifest that bundles individual Recipes can be considered a tooling-based implementation because then the Recipe packs are assets or objects that don't get saved in the Radius datastore. Much like Recipes today, so this approach would be maintaining that pattern for Recipe packs as well. The tooling aspect of this approach includes the ability to encapsulate Recipe pack objects into .bicepparam files so that sets of Recipe packs may be reused across environments without needing to modify each individual environment each time the Recipe pack changes.
+#### Data model approach (PREFERRED)
+Recipe packs are modeled as Radius resources, which means they are objects that get saved into the Radius datastore and thus would show up in the app graph data, etc. This approach establishes a new pattern that treats Recipe packs as core Radius resource objects while the Recipes encapsulated in the packs themselves are not. This also means that Recipe packs would be deployed at the Radius resource group level and referenced in each environment within the resource group vs. being deployed within each environment.
 
-Data model approach: Recipe packs are modeled as Radius resources and thus are objects that get saved into the Radius datastore and thus would show up in the app graph data, etc. This approach establishes a new pattern that treats Recipe packs as core Radius resource objects while the Recipes encapsulated in the packs themselves are not. This also means that Recipe packs would be applied at the Radius installation (or "tenant") level and referenced in each environment vs. being applied and referenced within the environment.
+#### Tooling approach
+Recipe packs being defined in a yaml manifest that bundles individual Recipes can be considered a tooling-based implementation because then the Recipe packs are assets or objects that don't get saved in the Radius datastore. Much like Recipes today, so this approach would be maintaining that pattern for Recipe packs as well. The tooling aspect of this approach includes the ability to encapsulate Recipe pack objects into .bicepparam files so that sets of Recipe packs may be reused across environments without needing to modify each individual environment each time the Recipe pack changes.
+
+<details><summary>Click to expand tooling approach implementation details</summary>
+
+1.  **Define a Recipe Pack**:
+    *   A platform engineer creates a manifest file (e.g. `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (OCI URI or local path) and its default parameters.
+    *   Example `recipe-pack.yaml`:
+        ```yaml
+        name: aci-production-pack
+        version: 1.0.0
+        description: "Recipe Pack for deploying to ACI in production."
+        recipes:
+            - resourceType: "Radius.Compute/containers@2025-05-01-preview"   
+            recipeKind: "bicep"
+            recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
+            parameters:
+                cpu: "1.0"
+                memoryInGB: "2.0"
+                environmentVariables:
+                LOG_LEVEL: "Information"
+                # Optional: allow platform-specific options like containerGroupProfile for ACI
+                allowPlatformOptions: true
+            - resourceType: "Radius.Compute/gateways@2025-05-01-preview"
+            recipeKind: "bicep"
+            recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
+            parameters:
+                sku: "Standard_v2"
+            - resourceType: "Radius.Security/secrets@2025-05-01-preview"
+            recipeKind: "bicep"
+            recipeLocation: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
+            parameters:
+                skuName: "premium"
+        ```
+        > Note: `templateKind` is changed to `recipeKind` and `templatePath` is changed to `recipeLocation`
+
+1.  **Add the Recipe Pack to an Environment**:
+    *   The platform engineer uses a new CLI command to add the entire pack to a Radius environment.
+    *   Example: `rad environment update my-env --recipe-packs aci-production-pack='./aci-production-pack.yaml'`
+    *   Or, if stored in a repo: `rad environment update my-env --recipe-packs aci-production-pack='git::https://github.com/my-org/recipe-packs.git//aci-production-pack.yaml?ref=1.0.0'`
+    *   This command would iterate through the recipes defined in the manifest and register each one to the specified environment, similar to individual `rad recipe register` calls.
+    *   Alternatively, the Recipe Pack could be added to the Environment definition file (e.g., `env.bicep`) in a `recipe-packs` property like below and then deployed using `rad deploy env.bicep`.
+        ```bicep
+        resource env 'Radius.Core/environments@2025-05-01-preview' = {
+            name: 'my-env'
+            properties: {
+                recipePacks: [
+                    {
+                        name: 'local-k8s-pack'
+                        uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/local-k8s-pack.yaml?ref=1.0.0'
+                    }
+                ]
+            }
+        }
+        ```
+    > Note: If the RRT for which a Recipe in the pack is being registered does not exist, the Recipe Pack addition process should fail gracefully, indicating which RRTs are missing in the error message.
+</details>
