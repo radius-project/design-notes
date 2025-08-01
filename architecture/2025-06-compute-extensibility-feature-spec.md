@@ -438,12 +438,7 @@ Step 2
                                 allowPlatformOptions: true
         +                       // The Kubernetes metadata.labels at the environment level can be specified here, 
         +                       //   this will apply to all containers deployed to this environment.
-        +                       // Developers can override in container definitions via platformOptions.
-        +                       metadata: {
-        +                           labels: {
-        +                               'team.contact.name': 'frontend'
-        +                           }
-        +                       }
+        +                       labels: "{ 'team.contact.name': 'frontend' }"
                             }
                         }
                     }
@@ -1015,9 +1010,9 @@ Establish a clear process and guidelines for community members to contribute new
 <!-- One or two sentence summary -->
 Implement a workflow for platform engineers to develop, test, and iterate on recipes locally before publishing them. This includes the ability to register local recipe files directly in a Radius environment without needing to upload them to an OCI registry, allowing for rapid development and testing cycles. This feature should also support the registration of custom RRTs if applicable.
 
-### Feature 9: Initialize Radius for Specific Platforms with Default Recipes
+### Feature 9: Guided setup experience for Specific Platforms with Default Recipes
 <!-- One or two sentence summary -->
-Implement a `rad init <platform>` command that initializes a Radius environment for specific platforms (e.g., Kubernetes, ACI, ECS) with default recipes for core types. This will streamline the setup process for platform engineers and developers, ensuring they have a consistent starting point for their Radius environments.
+Implement an interactive CLI experience that guides platform engineers through the steps of setting up Radius environments with default recipes for core types based on the target platform (e.g., Kubernetes, ACI, ECS). This feature will streamline the initial setup process and ensure that platform engineers can quickly get started with Radius without needing to manually configure everything.
 
 ## Notes from design discussions
 
@@ -1151,6 +1146,6 @@ There were several questions about whether Environments, to which platform engin
 
 ### Recipe Packs: Tooling vs. Data Model Approach
 
-Tooling approach: Recipe packs being defined in a yaml manifest that bundles individual Recipes can be considered a tooling-based implementation because then the Recipe packs are assets or objects that don't get stored in the Radius datastore. Much like Recipes today, so this approach would be maintaining that pattern for Recipe packs as well. The tooling aspect of this approach includes the ability to encapsulate Recipe pack objects into .bicepparam files so that sets of Recipe packs may be reused across environments without needing to modify each individual environment each time the Recipe pack changes.
+Tooling approach: Recipe packs being defined in a yaml manifest that bundles individual Recipes can be considered a tooling-based implementation because then the Recipe packs are assets or objects that don't get saved in the Radius datastore. Much like Recipes today, so this approach would be maintaining that pattern for Recipe packs as well. The tooling aspect of this approach includes the ability to encapsulate Recipe pack objects into .bicepparam files so that sets of Recipe packs may be reused across environments without needing to modify each individual environment each time the Recipe pack changes.
 
-Data model approach: Recipe packs are modeled as Radius resources and thus are objects that get stored into the Radius datastore and thus would show up in the app graph data, etc. This approach establishes a new pattern that treats Recipe packs as core Radius resource objects while the Recipes encapsulated in the packs themselves are not. This also means that Recipe packs would be applied at the Radius installation (or "tenant") level and referenced in each environment vs. being applied and referenced within the environment.
+Data model approach: Recipe packs are modeled as Radius resources and thus are objects that get saved into the Radius datastore and thus would show up in the app graph data, etc. This approach establishes a new pattern that treats Recipe packs as core Radius resource objects while the Recipes encapsulated in the packs themselves are not. This also means that Recipe packs would be applied at the Radius installation (or "tenant") level and referenced in each environment vs. being applied and referenced within the environment.
