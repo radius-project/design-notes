@@ -194,8 +194,10 @@ Step 2
             }
         }
         ```
-    > Note: `environments.properties.recipes` is removed in favor of `environments.properties.recipePacks`, which means users will no longer be allowed to add individual recipes directly to the environment. Recipes must now be packed into Recipe Packs resources before they may be added to an environment, and a Recipe Pack can contain one or more recipes. This change simplifies environment management and promotes reuse of common configurations.
+    
+    > The `environments.properties.recipes` is removed in favor of `environments.properties.recipePacks`, which means users will no longer be allowed to add individual recipes directly to the environment. Recipes must now be packed into Recipe Packs resources before they may be added to an environment, and a Recipe Pack can contain one or more recipes. This change simplifies environment management and promotes reuse of common configurations.
 
+    > If recipes are duplicated across the recipe packs, Radius will overwrite the previous recipe with the latest one applied. This means that the `recipePacks` property on the environment is effectively a prioritized ordered list, with the last recipe pack in the list having the highest priority in case of any recipe conflicts. In the example above, if both computeRecipePack and dataRecipePack contain a recipe for the same resource type, the one from dataRecipePack will take precedence. This behavior is intentional to ensure predictability and will be clearly documented for the user.
 
 1. **Manage and Update Recipe Packs**:
     * Platform engineers can update the Recipe Pack resource (e.g., point to new recipe versions, change default parameters, add other Recipes) and re-deploy the Recipe Pack resource. Since the Recipe Pack is modeled as a Radius resource, the Environment will automatically pick up the changes without needing to re-deploy the Environment.
