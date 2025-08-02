@@ -126,7 +126,7 @@ Step 2
 #### User Story 1: As a Platform Engineer, I want to create a Recipe Pack that bundles multiple recipes for core resource types, so that I can easily register and manage them in a Radius environment:
 
 1. **Define a Recipe Pack**:
-   * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list eachcore resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
+   * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
    * e.g. `computeRecipePack.bicep`:
         ```bicep
         resource computeRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
@@ -551,7 +551,7 @@ This scenario demonstrates how a single application definition, containing both 
 
 > This scenario highlights that the application definition remains consistent. The underlying infrastructure and specific compute capabilities (ACI standard vs. ACI confidential vs. Kubernetes) are determined by the recipes configured in the target Radius environment, allowing for flexible deployment to diverse compute platforms without altering the core application logic or Bicep code.
 
-> The default Recipe packs will have the `allowPlatformOptions` parameter set to `true` for core types like `Radius.Compute/containers@2025-05-01-preview`, which allows developers to punch through the Radius abstraction and use platform-specific options (e.g., `containerGroupProfile` for ACI) in their application definitions. If `allowPlatformOptions` is not specified in the Environment via the Recipe Pack parameters, it will default to whatever is set as default in the Recipe Pack itselt, which is `true` for the default Recipe Packs.
+> The default Recipe packs will have the `allowPlatformOptions` parameter set to `true` for core types like `Radius.Compute/containers@2025-05-01-preview`, which allows developers to punch through the Radius abstraction and use platform-specific options (e.g., `containerGroupProfile` for ACI) in their application definitions. If `allowPlatformOptions` is not specified in the Environment via the Recipe Pack parameters, it will default to whatever is set as default in the Recipe Pack itself, which is `true` for the default Recipe Packs.
 
 > Note that Radius will have to merge the configurations from the environment and container definitions with the configurations provided within the `platformOptions` property. For example, if the same `platformOptions.kubernetes.metadata.labels` value is specified in the container definition, it will override the same label value defined at the environment level.
 
@@ -703,7 +703,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 > This approach will require deprecation of the current [Azure KeyVault Radius Volumes resource type](https://docs.radapp.io/reference/resource-schema/core-schema/volumes/azure-keyvault/) where the Azure KeyVault will just be a Secret Store resource type provisioned using a recipe for Azure KeyVault that can be mounted to a Radius Container resource as a volume.
 
-#### User Story 9: As an application developer, I want to add a gateway resource to my application that provivisions an ingress controller that I can use to route traffic to my application containers, so that I can manage ingress traffic using my organization's preferred ingress solution:
+#### User Story 9: As an application developer, I want to add a gateway resource to my application that provisions an ingress controller that I can use to route traffic to my application containers, so that I can manage ingress traffic using my organization's preferred ingress solution:
 
 Given: my platform engineer has set up a Radius environment with recipes registered for `Radius.Compute/containers@2025-05-01-preview` and `Radius.Compute/gateways@2025-05-01-preview` resources. The default recipe backing the gateway resource is configured to provision an ingress controller that complies with the specifications determined by my organization.
 
@@ -1106,7 +1106,7 @@ Recipe packs are modeled as Radius resources, which means they are objects that 
 > Details of this approach are as described [User Story 1](#user-story-1-as-a-platform-engineer-i-want-to-create-a-recipe-pack-that-bundles-multiple-recipes-for-core-resource-types-so-that-i-can-easily-register-and-manage-them-in-a-radius-environment) above.
 
 #### Tooling approach
-Recipe packs being defined in a yaml manifest that bundles individual Recipes can be considered a tooling-based implementation because then the Recipe packs are assets or objects that don't get saved in the Radius datastore. Much like Recipes today, so this approach would be maintaining that pattern for Recipe packs as well. The tooling aspect of this approach includes the ability to encapsulate Recipe pack objects into .bicepparam files so that sets of Recipe packs may be reused across environments without needing to modify each individual environment each time the Recipe pack changes.
+Recipe packs being defined in a yaml manifest that bundles individual Recipes can be considered a tooling-based implementation because then the Recipe packs are assets or objects that don't get saved in the Radius datastore. Much like Recipes today, so this approach would be maintaining that pattern for Recipe packs as well. The tooling aspect of this approach includes the ability to encapsulate Recipe pack objects into `.bicepparam` files so that sets of Recipe packs may be reused across environments without needing to modify each individual environment each time the Recipe pack changes.
 
 <details><summary>Click to expand tooling approach implementation details</summary>
 
