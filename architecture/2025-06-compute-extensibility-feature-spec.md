@@ -141,10 +141,6 @@ Step 2
                         allowPlatformOptions: true
                         }
                     }
-                    Radius.Compute/gateways: {
-                        recipeKind: 'terraform'
-                        recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways.kubernetes?ref=v0.48'
-                    }
                     Radius.Security/secrets: {
                         recipeKind: 'terraform'
                         recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets/kubernetes?ref=v0.48'
@@ -216,12 +212,12 @@ Step 2
         
         ```bash
         $ rad recipe list -environment my-env
-        RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
-        computeRecipePack      Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-        computeRecipePack      Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-        computeRecipePack      Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
-        dataRecipePack         Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
-        networkingRecipePack   Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
+        RECIPE PACK             RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        computeRecipePack       Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        computeRecipePack       Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        computeRecipePack       Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        dataRecipePack          Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+        networkingRecipePack    Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
         ```
 
         ```bash
@@ -231,7 +227,6 @@ Step 2
 
         RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
         computeRecipePack   Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-        computeRecipePack   Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
         computeRecipePack   Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
         computeRecipePack   Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
         dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
@@ -845,14 +840,14 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 * We will preserve this experience and set up the default environment with the local Kubernetes containers Recipe registered, as well as the default Recipes for the other resources that get added with `rad init` today, i.e.:
     ```bash
     NAME      TYPE                                        TEMPLATE KIND  TEMPLATE VERSION  TEMPLATE
-    default   Radius.Data/sqlDatabases        bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
-    default   Radius.Data/rabbitMQQueues       bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
-    default   Radius.Dapr/pubSubBrokers             bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
-    default   Radius.Dapr/secretStores              bicep                            ghcr.io/radius-project/recipes/local-dev/secretstores:latest
-    default   Radius.Dapr/stateStores               bicep                            ghcr.io/radius-project/recipes/local-dev/statestores:latest
-    default   Radius.Data/mongoDatabases      bicep                            ghcr.io/radius-project/recipes/local-dev/mongodatabases:latest
-    default   Radius.Data/redisCaches         bicep                            ghcr.io/radius-project/recipes/local-dev/rediscaches:latest
-    default   Radius.Data/configurationStores bicep                            ghcr.io/radius-project/recipes/local-dev/configurationStores:latest
+    default   Radius.Data/sqlDatabases                    bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
+    default   Radius.Data/rabbitMQQueues                  bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
+    default   Radius.Dapr/pubSubBrokers                   bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
+    default   Radius.Dapr/secretStores                    bicep                            ghcr.io/radius-project/recipes/local-dev/secretstores:latest
+    default   Radius.Dapr/stateStores                     bicep                            ghcr.io/radius-project/recipes/local-dev/statestores:latest
+    default   Radius.Data/mongoDatabases                  bicep                            ghcr.io/radius-project/recipes/local-dev/mongodatabases:latest
+    default   Radius.Data/redisCaches                     bicep                            ghcr.io/radius-project/recipes/local-dev/rediscaches:latest
+    default   Radius.Data/configurationStores             bicep                            ghcr.io/radius-project/recipes/local-dev/configurationStores:latest
     ```
 
 1. **Azure or AWS container environments:**
