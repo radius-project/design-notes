@@ -1104,3 +1104,4 @@ skuName
 stdEnv
 userAssigned
 userAssignedIdentities
+subscriptionId
