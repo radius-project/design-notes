@@ -839,7 +839,10 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 * The `rad init` experience today sets up a default environment with and Recipes that support prototyping, development and testing using local Kubernetes containers.
 * We will preserve this experience and set up the default environment with the local Kubernetes containers Recipe registered, as well as the default Recipes for the other resources that get added with `rad init` today, i.e.:
     ```bash
-    NAME      TYPE                                        TEMPLATE KIND  TEMPLATE VERSION  TEMPLATE
+    NAME      RESOURCE TYPE                               RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
+    default   Radius.Compute/containers                   bicep                            ghcr.io/radius-project/recipes/local-dev/containers:latest
+    default   Radius.Security/secrets                     bicep                            ghcr.io/radius-project/recipes/local-dev/secrets:latest
+    default   Radius.Storage/volumes                      bicep                            ghcr.io/radius-project/recipes/local-dev/volumes:latest
     default   Radius.Data/sqlDatabases                    bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
     default   Radius.Data/rabbitMQQueues                  bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
     default   Radius.Dapr/pubSubBrokers                   bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
@@ -1124,6 +1127,7 @@ Recipe packs being defined in a yaml manifest that bundles individual Recipes ca
                         uri: 'git::https://github.com/project-radius/resource-types-contrib.git//recipe-packs/local-k8s-pack.yaml?ref=1.0.0'
                     }
                 ]
+                recipes: {...}
             }
         }
         ```
