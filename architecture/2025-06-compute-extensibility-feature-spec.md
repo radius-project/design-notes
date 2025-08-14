@@ -107,7 +107,7 @@ A platform engineer creates new Bicep or Terraform recipes to enable Radius to d
 
 ## Current state
 <!-- If we already have some ongoing investment in this area, summarize the current state and point to any relevant documents. -->
-Radius currently has built-in support for Kubernetes as its primary compute platform, as well as initial support for ACI. Core resource types like `Applications.Core/containers`, `Applications.Core/gateways`, and `Applications.Core/secrets` have hard-coded provisioning logic that targets Kubernetes or Azure for ACI. While Radius supports RRTs and recipes for custom resources, this mechanism is not used for the core functionalities mentioned. Extending Radius to other platforms or significantly customizing the provisioning of these core resources typically requires modifying the Radius codebase. The `environments` resource type has a hard-coded `compute` property primarily designed for Kubernetes and ACI.
+Radius currently has built-in support for Kubernetes as its primary compute platform, as well as initial support for ACI. Core resource types like `Applications.Core/containers`, `Applications.Core/gateways`, and `Applications.Core/secretStores` have hard-coded provisioning logic that targets Kubernetes or Azure for ACI. While Radius supports RRTs and recipes for custom resources, this mechanism is not used for the core functionalities mentioned. Extending Radius to other platforms or significantly customizing the provisioning of these core resources typically requires modifying the Radius codebase. The `environments` resource type has a hard-coded `compute` property primarily designed for Kubernetes and ACI.
 
 ## Details of user problem
 <!-- <Write this in first person. You basically want to summarize what “I” as a user am trying to accomplish, why the current experience is a problem and the impact it has on me, my team, my work and or biz, etc…. i.e. “When I try to do x aspect of cloud native app development, I have the following challenges / issues….<details>. Those issues result in <negative impact those challenges / issues have on my work and or business.> -->
@@ -173,7 +173,10 @@ Step 2
         rad deploy computeRecipePack.bicep
         rad deploy dataRecipePack.bicep
         ```
-   > Note: If the RRT for which a Recipe in the pack is specified to be deploying does not exist, the Recipe Pack creation process should fail gracefully, indicating which RRTs are missing in the error message.
+   
+   > If the RRT for which a Recipe in the pack is specified to be deploying does not exist, the Recipe Pack creation process should fail gracefully, indicating which RRTs are missing in the error message.
+
+   > Only one Recipe per Resource Type is allowed within a single Recipe Pack. If multiple Recipes for the same Resource Type are included, the creation process should fail with an appropriate error message.
 
 1. **Environment Utilizes Recipes from the Pack**:
     * Once the Recipe Pack is created and added to the Environment, Radius will use the recipes specified in the Recipe Pack.
@@ -191,9 +194,9 @@ Step 2
         }
         ```
     
-    > The `environments.properties.recipes` is removed in favor of `environments.properties.recipePacks`, which means users will no longer be allowed to add individual recipes directly to the environment. Recipes must now be packed into Recipe Packs resources before they may be added to an environment, and a Recipe Pack can contain one or more recipes. This change simplifies environment management and promotes reuse of common configurations.
+    > The `environments.properties.recipes` is removed in favor of `environments.properties.recipePacks`, which means users will no longer be allowed to add individual recipes directly to the environment. Recipes must now be packaged into Recipe Packs resources before they may be added to an environment, and a Recipe Pack can contain one or more recipes. This change simplifies environment management and promotes reuse of common configurations.
 
-    > If recipes are duplicated across the recipe packs, Radius will overwrite the previous recipe with the latest one applied. This means that the `recipePacks` array property on the environment is effectively a prioritized ordered list, with the last recipe pack in the list having the highest priority in case of any recipe conflicts. In the example above, if both computeRecipePack and dataRecipePack contain a recipe for the same resource type, the one from dataRecipePack will take precedence. This behavior is intentional to ensure predictability and will be clearly documented for the user.
+    > If Recipes are duplicated across the Recipe Packs added to an Environment, Radius will fail the environment deployment with a clear error message indicating the conflicting Recipes. This ensures that recipe conflicts are detected early and prevents unpredictable behavior. The duplication is detected at the Resource Type level, e.g. if both computeRecipePack and dataRecipePack contain a Recipe for the same Resource Type, the deployment will fail.
 
 1. **Manage and Update Recipe Packs**:
     * Platform engineers can update the Recipe Pack resource (e.g., point to new recipe versions, change default parameters, add other Recipes) and re-deploy the Recipe Pack resource. Since the Recipe Pack is modeled as a Radius resource, the Environment will automatically pick up the changes without needing to re-deploy the Environment.
@@ -237,13 +240,13 @@ Step 2
 #### User Story 2: As a platform engineer, I want to create a Radius Environment that leverages default recipe packs provided by Radius for core types, so that I can quickly set up a new environment without needing to write custom recipes:
 
 There will be default Recipe Packs built into Radius for platform engineers to use "off the shelf" for each supported compute platform (i.e. Kubernetes and ACI today, ECS and other future). Each Recipe Pack will include a set of pre-defined Recipes that are optimized for the specific platform and be invoked to provision the following resources:
-- `Radius.Compute/containers`: including any resources required to run containers (e.g. Kubernetes Deployments, ACI containerGroupProfile, ECS Task Definitions), provide L4 ingress (e.g. Kubernetes LoadBalancer, Azure Load Balancer, AWS Network Load Balancer), and leverages the `secrets` Recipes to store any secrets data declared in the container resource (e.g. environment variables).
-- `Radius.Security/secrets`: these default Recipes provision the most common secret store for the underlying platform (e.g. Kubernetes Secrets, Azure Key Vault, AWS Secrets Manager).
+- `Radius.Compute/containers`: including any resources required to run containers (e.g. Kubernetes Deployments, ACI containerGroupProfile, ECS Task Definitions) and provide L4 ingress (e.g. Kubernetes Service/LoadBalancer, Azure Load Balancer, AWS Network Load Balancer). [Connections](https://github.com/radius-project/radius/blob/main/pkg/corerp/renderers/container/render.go#L706-L709) will leverage the `secrets` Recipes to store any secrets data. Environment variables in `Radius.Compute/containers` will also be able to reference values from `Radius.Security/secrets` (parity with existing functionality).
+- `Radius.Security/secrets`: these default Recipes provision the most common secret store for the underlying platform (e.g. Kubernetes Secrets, Azure Key Vault, AWS Secrets Manager). The `secrets` Recipes will also be leveraged to store any secrets data resulting from Connections (e.g. the secret values that are stored as secrets [today](https://github.com/radius-project/radius/blob/main/pkg/corerp/renderers/container/render.go#L706-L709)).
 - `Radius.Storage/volumes`: these default Recipes provision the most common storage solutions for the underlying platform (e.g. Kubernetes Persistent Volumes, Azure Files, Amazon Elastic File System).
 
 > `Radius.Compute/gateways` for L7 ingress will not be included in the default Recipe Packs since it doesn't make sense to force a default given the wide range of preferences for ingress controllers (e.g. Contour, NGINX, Cilium, etc.) by users. Instead, L7 ingress will be implemented separately in the gateways Recipes, and these will not be included as a part of default Recipe packs for each compute platform. If a user wants L7 ingress, they will need to separately bring in their own Recipes for gateways that will implement an ingress controller of their choice (Contour, NGINX, Cilium, Azure Application Gateway, AWS Application Load Balancer, etc.).
 
-> Contour is no longer installed and the `--skip-contout-install` option on `rad install` is removed
+> Contour is no longer installed and the `--skip-contour-install` option on `rad install` is removed
 
 1.  **Initialize Workspace & Environment using an `env.bicep` file**:
     * Use `rad workspace` and `group` commands to create a Radius Group and/or Workspace. 
@@ -305,7 +308,7 @@ There will be default Recipe Packs built into Radius for platform engineers to u
 
         > If no Recipe Packs are provided, then the environment is created with the Recipe Pack which uses Bicep to deploy to Kubernetes. This Recipe Pack will include at least containers, gateways, and secrets. This preserves the existing behavior where an Environment without recipes registered can still deploy to Kubernetes given the implementation of containers, etc. in the imperative Go code.
 
-    * By default, `rad init` will register default recipes for Kubernetes provisioning for `containers`, `gateways`, `volumes`, and `secrets` types so that Radius may continue providing a local kubernetes experience out of the box.
+    * By default, `rad init` will register default recipes for Kubernetes provisioning for `containers`, `volumes`, and `secrets` types so that Radius may continue providing a local kubernetes experience out of the box.
 
 1. **Alternatively, create an environment using the `rad` CLI**:
 
@@ -332,7 +335,7 @@ There will be default Recipe Packs built into Radius for platform engineers to u
 1.  **Deploy Applications**:
     *   Developers (or CI/CD) run `rad deploy <bicep-file>`. Radius uses the registered recipes for the RRTs in the target environment to provision the resources.
 
-> Note: Recipes should use Radius resource types to deploy containers and secrets. For example, environment variable values are stored as Kubernetes secrets today. The new recipe-based container needs to use the Radius.Security/secrets resource type instead of storing secrets directly in Kubernetes secrets. 
+> Note: Recipes should use Radius resource types to deploy containers and secrets. For example, any environment variables created from Connections have their values stored as Kubernetes secrets [today](https://github.com/radius-project/radius/blob/main/pkg/corerp/renderers/container/render.go#L706-L709). The new recipe-based container needs to use the `Radius.Security/secrets` resource type and its backing recipe to provision secrets instead of storing secrets directly in Kubernetes secrets.
 
 #### User Story 4: As a platform engineer and/or application developer, I would like to leverage platform-specific capabilities
 
