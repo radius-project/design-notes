@@ -127,6 +127,7 @@ Step 2
 
 1. **Define a Recipe Pack**:
    * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
+    > Note that Recipe Packs are modeled as a new resource type called `Config`, which was introduced in [this feature spec](https://github.com/radius-project/design-notes/blob/main/features/2025-07-23-radius-configuration-ux.md)
    * e.g. `computeRecipePack.bicep`:
         ```bicep
         resource computeRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
