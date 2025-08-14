@@ -1022,6 +1022,9 @@ pdf
 pdfs
 Knative
 genericized
+ns
+deletable
+cardinality
 Istio
 Flux
 reinstallation
