@@ -1108,3 +1108,5 @@ stdEnv
 userAssigned
 userAssignedIdentities
 subscriptionId
+pubSubBrokers
+rabbitMQQueues
