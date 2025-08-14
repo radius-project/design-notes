@@ -266,14 +266,12 @@ There will be default Recipe Packs built into Radius for platform engineers to u
                 providers: {
                     azure: {
         -               scope: '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>'
-        +               // scope is now an object with subscriptionId and resourceGroupName properties
-        +               scope: {
-        +                   subscriptionId: '<SUBSCRIPTION_ID>' // required
-        +                   resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
-        +               }
+        +               // scope is removed in favor of separate subscriptionId and resourceGroupName properties
+        +               subscriptionId: '<SUBSCRIPTION_ID>' // required
+        +               resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
         +               // Identity property previously captured in 'compute' is moved here
         +               identity: {
-        +                   kind:'userAssigned'
+        +                   kind: 'userAssigned'
         +                   managedIdentity: ['/subscriptions/<>/resourceGroups/<>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<>']
         +               }
                     }
@@ -304,7 +302,7 @@ There will be default Recipe Packs built into Radius for platform engineers to u
         ```
         > The `compute` property is removed in favor of Recipe configurations, with the Kubernetes namespace moved to the providers section. If a Kubernetes provider is specified but no namespace is provided, then the namespace defaults to 'default' to align with Kubernetes conventions. Note that this is changed from how it's [implemented today](https://github.com/radius-project/radius/blob/main/pkg/cli/cmd/env/create/create.go#L119-L121). If the providers property is not specified, default to providers.kubernetes.namespace='default' and show a warning to the user: "Since no provider is specified for the environment, the default provider is set to 'kubernetes' with namespace 'default'.
 
-        > The `scope` property is now an object with subscriptionId and resourceGroupName as separate properties for Azure environments. `subscriptionId` (required) can be overridden by the Recipe if it also sets a `subscriptionId`. `resourceGroup` (optional) can be set in the Environment or by the Recipe (value set in the Recipe overrides the value set in the Environment). If the neither the Environment nor Recipe specifies a `resourceGroup` (optional) and the resource to be deployed needs to be scoped to a resource group, then the deployment would fail. This change allows for users to have Recipes set the `resourceGroup` dynamically upon resource creation.
+        > The `scope` property is deprecated in favor of splitting it out into its `subscriptionId` and `resourceGroupName` constituent parts as separate properties for Azure environments. `subscriptionId` (required) must be set in the Environment, while `resourceGroup` (optional) can be set in the Environment or by the Recipe (value set in the Recipe overrides the value set in the Environment). If the neither the Environment nor Recipe specifies a `resourceGroup` (optional) and the resource to be deployed needs to be scoped to a resource group, then the deployment would fail. This change allows for users to have Recipes set the `resourceGroup` dynamically upon resource creation.
 
         > If no Recipe Packs are provided, then the environment is created with the Recipe Packs which use Bicep to deploy to Kubernetes. The Recipe Packs will include Recipes for at least containers, gateways, secrets, as well as sqlDatabases, redisCaches, mongoDatabases, rabbitMQQueues, Dapr/pubSubBrokers, Dapr/secretStores, and Dapr/ to maintain parity with the "portable" resource experience today. This preserves the existing behavior where an Environment without recipes registered can still deploy to Kubernetes given the implementation of containers, etc. in the imperative Go code.
 
@@ -316,7 +314,8 @@ There will be default Recipe Packs built into Radius for platform engineers to u
 
     ```bash
     rad environment create my-aci-env \
-    --provider azure.scope='/subscriptions/mySubscriptionId/resourceGroups/my-resource-group' \
+    --provider azure.subscriptionId='mySubscriptionId' \
+    --provider azure.resourceGroupName='my-resource-group' \
     --recipe-pack azure-aci-pack
     ```
 
@@ -361,11 +360,9 @@ There will be default Recipe Packs built into Radius for platform engineers to u
             providers: {
                 azure: {
         -           scope: '/subscriptions/mySubscriptionId/resourceGroups/my-resource-group'
-        +               // scope is now an object with subscriptionId and resourceGroupName properties
-        +               scope: {
-        +                   subscriptionId: '<SUBSCRIPTION_ID>' // required
-        +                   resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
-        +               }
+        +           // scope is removed in favor of separate subscriptionId and resourceGroupName properties
+        +           subscriptionId: '<SUBSCRIPTION_ID>' // required
+        +           resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
                     identity: {
                         kind:'userAssigned'
                         managedIdentity: ['/subscriptions/<>/resourceGroups/<>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<>']
@@ -397,11 +394,9 @@ There will be default Recipe Packs built into Radius for platform engineers to u
             providers: {
                 azure: {
         -           scope: '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>'
-        +           // scope is now an object with subscriptionId and resourceGroupName properties
-        +           scope: {
-        +               subscriptionId: '<SUBSCRIPTION_ID>' // required
-        +               resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
-        +           }
+        +           // scope is removed in favor of separate subscriptionId and resourceGroupName properties
+        +           subscriptionId: '<SUBSCRIPTION_ID>' // required
+        +           resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
                     identity: {
                         kind:'userAssigned'
                         managedIdentity: ['/subscriptions/<>/resourceGroups/<>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<>']
@@ -586,7 +581,8 @@ This scenario demonstrates how a single application definition, containing both 
 * Example command to add a recipe pack for ACI compute with platform-specific options disabled:
 ```bash
 rad environment update my-aci-env \
---provider azure.scope='/subscriptions/mySubscriptionId/resourceGroups/my-resource-group' \
+--provider azure.subscriptionId mySubscriptionId \
+--provider azure.resourceGroupName my-resource-group \
 --recipe-packs azure-aci-pack \
 --parameters {"allowPlatformOptions": false}
 ```
@@ -1027,11 +1023,9 @@ resource environment 'Radius.Core/environments@2023-10-01-preview' = {
     providers: {
       azure: {
 -       scope: '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>'
-+       // scope is now an object with subscriptionId and resourceGroupName properties
-+       scope: {
-+           subscriptionId: '<SUBSCRIPTION_ID>' // required
-+           resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
-+       }
++       // scope is removed in favor of separate subscriptionId and resourceGroupName properties
++       subscriptionId: '<SUBSCRIPTION_ID>' // required
++       resourceGroupName: '<RESOURCE_GROUP_NAME>' // optional
       }
     }
   }
