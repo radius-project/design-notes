@@ -118,7 +118,7 @@ Radius deletes the Terraform binary from the Radius control plane.
 
 **Summary**
 
-Similar to Recipe Packs, Terraform settings are modeled as resources. A TerraformSetting resource can be created declaratively by deploying a `Radius.Config/terraformSettings` resource into a resource group. Unlike Recipe Packs, there is no way to configure Terraform via imperative commands. Imperative commands exist for simpler use cases. In the case of Terraform, there is no need to configure Terraform unless the platform engineer needs to configure advanced settings. In other words, Terraform works with the default out-of-the-box settings so imperative commands are not necessary.
+Similar to Recipe Packs, Terraform settings are modeled as resources. A TerraformSettings resource can be created declaratively by deploying a `Radius.Config/terraformSettings` resource into a resource group. Unlike Recipe Packs, there is no way to configure Terraform via imperative commands. Imperative commands exist for simpler use cases. In the case of Terraform, there is no need to configure Terraform unless the platform engineer needs to configure advanced settings. In other words, Terraform works with the default out-of-the-box settings so imperative commands are not necessary.
 
 The TerraformSettings resource is a like for like copy of the Terraform CLI configuration file (`terraformrc`) and settings available in the terraform block of main.tf files. The goal is for users to be able to bring their existing Terraform settings, provide them to Radius, and Terraform behaves exactly as if Terraform was ran from the user's workstation.
 
