@@ -1048,3 +1048,9 @@ CustomConfigValidationCheck
 dir
 rekey
 etcd's
+TerraformSettings
+AzureDevops
+backends
+Alibaba
+Tencent
+fluentbit
