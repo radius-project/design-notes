@@ -130,7 +130,7 @@ Step 2
         > Note that Recipe Packs are modeled as a new resource type called `Config`, which was introduced in [this feature spec](https://github.com/radius-project/design-notes/blob/main/features/2025-07-23-radius-configuration-ux.md)
    * e.g. `computeRecipePack.bicep`:
         ```bicep
-        resource computeRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
+        resource computeRecipePack 'Radius.Core/recipePacks@2025-05-01-preview' = {
             name: 'computeRecipePack'
             description: "Recipe Pack for deploying to Kubernetes."
             properties: {
@@ -156,7 +156,7 @@ Step 2
         ```
    * e.g. `dataRecipePack.bicep`:
         ```bicep
-        resource dataRecipePack 'Radius.Config/recipePacks@2025-05-01-preview' = {
+        resource dataRecipePack 'Radius.Core/recipePacks@2025-05-01-preview' = {
             name: 'dataRecipePack'
             description: "Recipe Pack for deploying data-related services to Kubernetes."
             properties: {
@@ -175,9 +175,11 @@ Step 2
         rad deploy dataRecipePack.bicep
         ```
    
-   > If the RRT for which a Recipe in the pack is specified to be deploying does not exist, the Recipe Pack creation process should fail gracefully, indicating which RRTs are missing in the error message.
+   > If the RRT for which a Recipe in the pack is specified to be deploying does not exist, the Recipe Pack creation (deployment) process should fail gracefully, indicating which RRTs are missing in the error message.
 
    > Only one Recipe per Resource Type is allowed within a single Recipe Pack. If multiple Recipes for the same Resource Type are included, the creation process should fail with an appropriate error message.
+   
+   > Named Recipes is not allowed in Recipe Packs, which means that only one Recipe per resource type is allowed per Environment. If alternative deployment behavior is needed, the platform engineer would expose a new option via a Recipe property/parameter, or create a new resource type. If the user tries to deploy a "legacy" portable resource type (e.g. `Applications.Datastores/redisCaches@2023-10-01-preview`) that specifies a named Recipe to a new Environment (i.e. `Radius.Core/environments@2025-05-01-preview`), the deployment would fail because named Recipes are not supported in the new Environment model.
 
 1. **Environment Utilizes Recipes from the Pack**:
     * Once the Recipe Pack is created and added to the Environment, Radius will use the recipes specified in the Recipe Pack.
@@ -197,7 +199,7 @@ Step 2
     
     > The `environments.properties.recipes` is removed in favor of `environments.properties.recipePacks`, which means users will no longer be allowed to add individual recipes directly to the environment. Recipes must now be packaged into Recipe Packs resources before they may be added to an environment, and a Recipe Pack can contain one or more recipes. This change simplifies environment management and promotes reuse of common configurations.
 
-    > If Recipes are duplicated across the Recipe Packs added to an Environment, Radius will fail the environment deployment with a clear error message indicating the conflicting Recipes. This ensures that recipe conflicts are detected early and prevents unpredictable behavior. The duplication is detected at the Resource Type level, e.g. if both computeRecipePack and dataRecipePack contain a Recipe for the same Resource Type, the deployment will fail.
+    > If Recipes are duplicated across the Recipe Packs added to an Environment, Radius will fail the environment deployment with a clear error message indicating the conflicting Recipes. This ensures that recipe conflicts are detected early and prevents unpredictable behavior. The duplication is detected at the Resource Type level, e.g. if both computeRecipePack and dataRecipePack contain a Recipe for the same Resource Type, the deployment will fail. Note that because we won't allow named Recipes in Recipe Packs, the conflict will only occur if the same Resource Type is specified in multiple Recipe Packs.
 
 1. **Manage and Update Recipe Packs**:
     * Platform engineers can update the Recipe Pack resource (e.g., point to new recipe versions, change default parameters, add other Recipes) and re-deploy the Recipe Pack resource. Since the Recipe Pack is modeled as a Radius resource, the Environment will automatically pick up the changes without needing to re-deploy the Environment.
@@ -206,7 +208,7 @@ Step 2
         $ rad recipe-pack show computeRecipePack
 
         RESOURCE                TYPE                            GROUP     STATE
-        computeRecipePack       Radius.Config/recipePacks       default   Succeeded
+        computeRecipePack       Radius.Core/recipePacks       default   Succeeded
 
         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
         Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
@@ -885,6 +887,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     ```
     `Applications.Core/environments` --> `Radius.Core/environments`
     `Applications.Core/applications` --> `Radius.Core/applications`
+    `Radius.Core/recipePacks` --> `Radius.Core/recipePacks` (new `recipePacks` resource added to `Core` namespace)
     `Applications.Core/containers` --> `Radius.Compute/containers`
     `Applications.Core/gateways` --> `Radius.Compute/gateways`
     `Applications.Core/volumes` --> `Radius.Storage/volumes`
@@ -894,7 +897,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     `Applications.Datastores/redisCaches` --> `Radius.Data/redisCaches`
     `Applications.Messaging/rabbitmqQueues` --> `Radius.Data/rabbitMQQueues`
     `Applications.Dapr/*` --> `Radius.Dapr/*`
-    `Radius.Config/*` --> `Radius.Config/*` (newly proposed parent namespace for `recipePacks` resource)
+    `Radius.Config/*` --> `Radius.Config/*` (new namespace to support future configurations like `terraformSettings`)
     `Radius.Resources/*` --> `Radius.Resources/*` (user defined custom resource types)
     ```
 
