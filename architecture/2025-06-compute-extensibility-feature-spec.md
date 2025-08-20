@@ -651,7 +651,7 @@ rad environment update my-k8s-env --kubernetes-namespace new-namespace
     *   Work with the maintainers to address any concerns until the PR is approved.
     *   Once approved, your contribution will be merged into the Radius repository where your contributed Recipes and/or Recipe Packs will be published to the Radius GHCR registry, making your Recipes/Recipe Pack available to the community.
 
-> The proposal is add core RRTs and Recipes to a new repo called `radius-project/resource-types-contrib` where both core (built-in) and extended (optional) types and Recipes will be stored in a structure like: <img src="2025-06-compute-extensibility-feature-spec/types-contrib-repo-structure.png" alt="diagram showing types-contrib repo structure that includes root directories for core and extended types" width="700"/>
+> The proposal is add core RRTs and Recipes to a new repo called `radius-project/resource-types-contrib` where both core (built-in) and extended (optional) types and Recipes will be stored in a structure shown in the [contribution guide](https://github.com/radius-project/resource-types-contrib/blob/main/contributing-docs/contributing-resource-types-recipes.md#3-create-a-new-resource-type-directory)
 
 #### User Story 7: As a platform engineer or app developer, I want to migrate existing Radius applications to use the new RRT-based core types and recipes, so that I can take advantage of the new extensibility features without breaking existing applications:
 
