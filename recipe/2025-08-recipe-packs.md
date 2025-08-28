@@ -6,7 +6,7 @@
 
 Recipes are external infrastructure-as-code (IaC) templates that operators register on a Radius Environment so developers can use them later for provisioning. They provide a mechanism for separation of concerns between developers and operators. 
 
-Today, Radius supports registering recipes individually, either via the Environment resource properties or the CLI (`rad recipe register`). For each Radius Environment, platform engineers have to piece together individual Recipes from scratch. Putting everything together manually this way each time can be error prone. 
+Today, Radius supports registering recipes individually, either via the Environment resource properties or the CLI (`rad recipe register`). For each Radius Environment, platform engineers have to piece together individual Recipes from scratch. Putting everything together manually this way for each environment is error prone. Recipes also do not have a lifecycle of their own and can be managed only by managing the environments pointing to them.
 
 This document details the introduction of Recipe Packs as a feature that makes recipe management easier. Recipe Packs are a collection of related recipes that a platform engineer can manage as a single entity. 
 
@@ -14,7 +14,6 @@ This document details the introduction of Recipe Packs as a feature that makes r
 
 | Term     | Definition                                                                                                                                                                                                 |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Registry | A specific protocol and versioned hosting system for Terraform modules. Has an official public registry service as well as private services as part of Terraform cloud. Scant open-source implementations. |
 | Recipe | IaC templates that operators register on a Radius Environment |
 |Recipe Pack| A collection of recipes that can be managed as an entity |
 
@@ -28,7 +27,7 @@ Provide Recipe Packs as a Radius feature to bundle related recipes for easier ma
 
 ### Non goals
 
-* Recipe Packs would bundle together Recipes, as we understand them today. We do not cover recipe versioning / other recipe specific enhancements in this design. 
+Recipe Packs would bundle together Recipes, as we understand them today. We do not cover recipe versioning / other recipe specific enhancements in this design. 
 
 
 ### User scenarios (optional)
@@ -49,9 +48,9 @@ We model Recipe Pack as a first class Radius resource.
 
 Pros:
 
-- Helps manage the size of environment resource
 - Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
 - As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and rbac independant of environments. 
+- Helps manage the size of environment resource
 
 [Question]: would environment and recipe pack ever have different rbac?
 
@@ -70,7 +69,7 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
     name: 'computeRecipePack'
     description: "Recipe Pack for deploying to Kubernetes."
     properties: {
-        recipes: [
+        recipes: { 
             Radius.Compute/container: {
                 recipeKind: 'terraform'
                 recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48'
@@ -86,7 +85,7 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
                 recipeKind: 'terraform'
                 recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes/kubernetes?ref=v0.48'
             }
-        ]
+        }
     }
 }
 ```
@@ -94,10 +93,63 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
 The schema for the type would look like:
 
 ```yaml
-
-
+namespace: Radius.Core
+  types:
+    recipePacks:
+      description: Recipe Pack for grouping and managing related recipes
+      apiVersions:
+        '2026-01-01-preview':
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The name of the recipe pack
+              description:
+                type: string
+                description: Description of what this recipe pack provides
+              recipes:
+                type: object
+                description: Map of resource types to their recipe configurations
+                additionalProperties:
+                  type: object
+                  properties:
+                    recipeKind:
+                      type: string
+                      description: The type of recipe (e.g., terraform, bicep)
+                      enum:
+                        - terraform
+                        - bicep
+                    recipeLocation:
+                      type: string
+                      description: URL or path to the recipe source
+                    parameters:
+                      type: object
+                      description: Parameters to pass to the recipe
+                      additionalProperties:
+                        type: string
+                  required:
+                    - recipeKind
+                    - recipeLocation
+            required:
+              - name
+              - recipes
 ```
 
+// Question: The recipe collection should be curly braces, is that OK (feature spec has []) ? OR we keep it array like below. Map could make it easier to look up using resource type.
+
+"recipes": [
+    {
+      "resourceType": "Radius.Compute/containers",
+      "recipeKind": "terraform",
+      "recipeLocation": "https://example.com/recipes/containers.zip"
+    },
+    {
+      "resourceType": "Radius.Storage/volumes",
+      "recipeKind": "terraform",
+      "recipeLocation": "https://example.com/recipes/volumes.zip"
+    }
+  ]
 
 ### API design (if applicable)
 
@@ -105,7 +157,6 @@ We should support CRUDL operations on recipe-pack resource. This should be fairl
 
 
 ### Server Side changes
-
 
 
 
@@ -283,7 +334,6 @@ Cons:
 
 ## Monitoring
 
-No changes needed
 
 ## Development plan
 
