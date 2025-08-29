@@ -226,10 +226,6 @@ It is unclear that this is needed. If the use case is identified it can be added
 
 The Kubernetes metadata extension allows developers to set Kubernetes labels and annotations on deployed resources. Setting labels and annotations is primarily a platform engineering function so this capability moves to the Recipe. 
 
-## Open Questions
-
-
-
 ## Appendix 1: Container platform API references
 
 - [Kubernetes Pod](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/)
