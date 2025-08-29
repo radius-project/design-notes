@@ -1048,3 +1048,9 @@ CustomConfigValidationCheck
 dir
 rekey
 etcd's
+GPUs
+impactful
+initContainer
+autoscaler
+NFS
+TaskDefinition
