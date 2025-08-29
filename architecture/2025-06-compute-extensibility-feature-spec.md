@@ -833,7 +833,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     }
     ```
 
-    > Note that this applies only to persistent volumes. Ephemeral volumes will continue to be defined directly in the container resource as they are today and will be managed by the container Recipe.
+    > Note that `ephemeral` volumes will continue to be defined directly in the container resource as they are today and will be managed by the container Recipe. We don't expect users to create separate `ephemeral` volume resources as they would `persistent` volumes since ephemeral volumes are short-lived and tied to the lifecycle of the container.
 
 1. **Deploy the Application**:
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
