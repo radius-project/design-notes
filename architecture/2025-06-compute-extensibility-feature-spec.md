@@ -251,6 +251,8 @@ There will be default Recipe Packs built into Radius for platform engineers to u
 
 > Contour is no longer installed and the `--skip-contour-install` option on `rad install` is removed
 
+>  `Radius.Core/environments@2025-05-01-preview` and `Radius.Core/applications@2025-05-01-preview` will continue to be implemented imperatively in the Radius core codebase and not implemented as RRTs given that they are Radius-specific constructs and we don't expect them to be extensible like other resource types.
+
 1.  **Initialize Workspace & Environment using an `env.bicep` file**:
     * Use `rad workspace` and `group` commands to create a Radius Group and/or Workspace. 
     * Define an environment in a Bicep file and then deploy it using `rad deploy env.bicep`. The new environment version (e.g., `Radius.Core/environments@2025-05-01-preview`) will not have a hard-coded `compute` kind.
@@ -809,7 +811,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
         }
     }
     ```
-    > Note that the configurations for this volume resource will be implemented in the recipe and not specified by the developer, e.g. in an Azure environment it might provision an Azure Disk while in an AWS environment it would provision an Elastic Block Store.
+    > Note that the configurations for this persistent volume resource will be implemented in the recipe and not specified by the developer, e.g. in an Azure environment it might provision an Azure Disk while in an AWS environment it would provision an Elastic Block Store.
 
 1. **Mount the Volume to a Container**:
     * The developer updates their container definition to include a volume that mounts the custom volume.
@@ -830,6 +832,8 @@ Given: my platform engineer has set up a Radius environment with recipes registe
             }
     }
     ```
+
+    > Note that this applies only to persistent volumes. Ephemeral volumes will continue to be defined directly in the container resource as they are today and will be managed by the container Recipe.
 
 1. **Deploy the Application**:
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
@@ -906,11 +910,11 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 ### Feature 1: RRT Implementation of Core Application Model Types
 <!-- One or two sentence summary -->
-Re-implement existing core types (`Applications.Core/environments`, `Applications.Core/applications`, `Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secrets`, `Applications.Core/volumes`) as Radius Resource Types (RRT) with new, versioned resource type names (i.e. `Radius.Core/environments`, `Radius.Core/applications`, `Radius.Compute/containers`, `Radius.Compute/gateways`, `Radius.Security/secrets`, `Radius.Storage/volumes`). These RRTs will form the basis of the extensible application model. These new core types must support Connections and may be modified by platform engineers to allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves.
+Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secrets`, `Applications.Core/volumes`) as Radius Resource Types (RRT) with new, versioned resource type names (i.e. `Radius.Compute/containers`, `Radius.Compute/gateways`, `Radius.Security/secrets`, `Radius.Storage/volumes`). These RRTs will form the basis of the extensible application model. These new core types must support Connections and may be modified by platform engineers to allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves.
 
 ### Feature 2: Extensible Environment Configuration
 <!-- One or two sentence summary -->
-Introduce a new version of the `Applications.Core/environments` resource type (e.g., `Radius.Core/environments@2025-05-01-preview`) that removes the hard-coded `compute` property and relies on recipe configurations and parameters for platform-specific settings.
+Introduce a new version of the `Applications.Core/environments` and `Applications.Core/applications` resource types that renames them to the new namespace (i.e. `Radius.Core/environments@2025-05-01-preview`, `Radius.Core/applications@2025-05-01-preview`) and removes the hard-coded `compute` Environment property and relies on recipe configurations and parameters for platform-specific settings. `Radius.Core/environments@2025-05-01-preview` and `Radius.Core/applications@2025-05-01-preview` will continue to be implemented imperatively in the Radius core codebase and not implemented as RRTs given that they are Radius-specific constructs and we don't expect them to be extensible like other resource types.
 
 ### Feature 3: Default Recipes for Kubernetes and ACI
 <!-- One or two sentence summary -->
