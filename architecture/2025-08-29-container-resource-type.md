@@ -204,7 +204,7 @@ In the future, we can enhance these types with:
 
 ### Change 2: The `command` and `args` properties are string arrays
 
-This is a small change to make Radius consistent with other container platforms. The `command` and `args` properties should be an array of strings. This 
+This is a small change to make Radius consistent with other container platforms. The `command` and `args` properties should be an array of strings.  
 
 ### Change 3: Other small changes
 
