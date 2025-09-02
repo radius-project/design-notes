@@ -19,11 +19,11 @@ The objective of this document is to define version two of the Containers Resour
 
 ### Non goals
 
-This document is focused solely on the Containers Resource Type. Volumes, Secrets, and Gateways are discussed elsewhere.
+This document is focused solely on the Containers Resource Type definition. Volumes, Secrets, and Gateways definitions are discussed elsewhere and Recipes are not addressed.
 
 ## Limitations of `Applications.Core/containers`
 
-The current version of Containers has several limitations:
+The current version of the Containers Resource Type has several limitations:
 
 ### Supports only one container
 
@@ -33,13 +33,19 @@ The Containers Resource Type has a single `container` property. This is in stark
 
 Since Containers does not support multiple containers, obviously it does not support any type of sequencing or startup dependencies. Kubernetes, ACA, ACI, and Cloud Run all support init containers. ECS has a more flexible model and offers the ability to specify arbitrary dependencies on containers within a Task.
 
+Init containers are common for container preparation and setup. For example:
+
+* Create a httpconf file based on environment variables
+* Validate database schema and apply DML if needed
+* Download data such as static assets for a website
+
 ### Does not support resource requests and limits
 
-Containers has no properties for specifying CPU and memory requirements. All other container platforms support at least requests and most support setting limits (ECS is the exception). Furthermore, most other platforms have enhanced the resource types to include GPUs for AI workloads.
+Containers has no properties for specifying CPU and memory requirements. All other container platforms support at least requests and most support setting limits (ECS is the exception). Most other platforms have enhanced the resource types to include GPUs for AI workloads which is a potential future Radius enhancement.
 
 ### Does not support autoscaling
 
-Containers only offers the ability to specify a fixed number of replicas. There is no support for autoscaling.
+Containers only offers the ability to specify a fixed number of replicas. There is no support for developers to define autoscaling metrics which the Recipe could use to configure autoscaling.
 
 ## Proposed New Capabilities
 
@@ -56,12 +62,12 @@ The Containers Resource Type will have a `containers` map property instead of a 
 The implications of this are not as impactful as one may think:
 
 * The application graph does not change. Resources are still connected to the parent Containers resource. Environment variables are still created in each of the containers just as they do today in the single container (unless `disableDefaultEnvVars` is true).
-* A Kubernetes Service is created for each container that exposes a container port just as today. The only difference is that now multiple Services may be created, one for each container port.
-* This forces volumes to be refactored which will enable storage sharing between containers.
+* A Kubernetes Service is created for each container that exposes a container port just as today. The only difference is that now, multiple Services may be created, one for each container port.
+* Volumes is refactored which will enable storage sharing between containers.
 
 > [!CAUTION]
 >
-> The inclusion of multiple containers raises the question of naming of Containers. As you can see in this document, great pain has been taken to refer to the Containers Resource Type and the `containers` property distinctly. This is why Kubernetes has the Pod term, ECS has the Task term, ACA has the Application term, ACI has the Container Group term, and Cloud Run has the Service and Job term. No change is being proposed today, but Radius is an exception amongst its peers which may be a caution sign.
+> The inclusion of multiple containers raises the question of naming of Containers. As you can see in this document, great pain has been taken to refer to the Containers Resource Type and the `containers` property distinctly. This is why Kubernetes has the Pod term, ECS has the Task term, ACA has the Application term, ACI has the Container Group term, and Cloud Run has the Service and Job terms. No change is being proposed today, but Radius is an exception amongst its peers which may be a caution sign.
 
 ### Addition 2: Addition of init containers
 
@@ -94,7 +100,7 @@ resources:
         cpu:
           type: float
           description: (Optional) The maximum number of vCPUs which can be used by the container.
-        memoryInMiB:
+        memoryInMib:
           type: integer
           description: (Optional) The maximum amount of memory which can be used by the container in MiB.
 ```
