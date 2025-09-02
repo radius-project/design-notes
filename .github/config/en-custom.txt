@@ -1116,3 +1116,5 @@ userAssignedIdentities
 subscriptionId
 pubSubBrokers
 rabbitMQQueues
+httpconf
+DML
