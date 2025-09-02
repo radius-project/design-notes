@@ -59,6 +59,26 @@ The Containers Resource Type will have a `containers` map property instead of a 
 * ACA Container App: `containerApps.template.container[]`
 * Google Cloud Run: `Service.spec.template.spec.containers[]`
 
+A developer, for example, could create a Container via:
+
+```yaml
+resource myContainer 'Radius.Compute/containers@2025-08-01-preview' = {
+  name: 'myContainer'
+  properties: {
+    environment: environment
+    application: myApplication.id
+    containers: {
+      frontend: {
+        image: 'frontend:latest'
+      }
+      sidecar: {
+        image: 'sidecar:latest'
+      }
+    }
+  }
+}
+```
+
 The implications of this are not as impactful as one may think:
 
 * The application graph does not change. Resources are still connected to the parent Containers resource. Environment variables are still created in each of the containers just as they do today in the single container (unless `disableDefaultEnvVars` is true).
@@ -74,6 +94,30 @@ The implications of this are not as impactful as one may think:
 The Containers Resource Type will have an `initContainers` property. This is only a special instance of multiple containers.
 
 Given an init container is just a container, this highlights one of the limitations of today's Resource Type definition YAML implementation. To model both a container and an initContainer, the schema for each of these properties must be duplicated. This makes the YAML file very unwieldy. See [Feature request: Support referring to existing object schemas in Resource Type definition YAML files #10276](https://github.com/radius-project/radius/issues/10276).
+
+A developer could, for example:
+
+```yaml
+resource myContainer 'Radius.Compute/containers@2025-08-01-preview' = {
+  name: 'myContainer'
+  properties: {
+    environment: environment
+    application: myApplication.id
+    containers: {
+      frontend: {
+        image: 'frontend:latest'
+      }
+    }
+    initContainers: {
+      config: {
+        image: 'init:latest'
+      }
+    }
+  }
+}
+```
+
+
 
 ### Addition 3: New resource request and limits properties
 
