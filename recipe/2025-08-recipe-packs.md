@@ -16,6 +16,7 @@ This document details the introduction of Recipe Packs as a feature that makes r
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Recipe | IaC templates that operators register on a Radius Environment |
 |Recipe Pack| A collection of recipes that can be managed as an entity |
+|RRT| [Radius Resource Type](https://docs.radapp.io/guides/author-apps/custom/overview/)|
 
 ## Objectives
 
@@ -23,7 +24,7 @@ This document details the introduction of Recipe Packs as a feature that makes r
 
 ### Goals
 
-Provide Recipe Packs as a Radius feature to bundle related recipes for easier management and sharing (e.g., a pack for ACI that includes all necessary recipes).
+Provide Recipe Packs as a Radius feature to bundle and import (register) multiple recipes into a Radius Environment (e.g., a pack for ACI that includes all necessary recipes).
 
 ### Non goals
 
@@ -44,7 +45,7 @@ As an operator I am responsible for creating Radius Environments using which dev
 
 ### Design details
 
-We model Recipe Pack as a first class Radius resource.
+We model Recipe Pack as a first class RRT.
 
 Pros:
 
@@ -127,7 +128,7 @@ namespace: Radius.Core
                       type: object
                       description: Parameters to pass to the recipe
                       additionalProperties:
-                        type: string
+                        type: any
                   required:
                     - recipeKind
                     - recipeLocation
@@ -135,6 +136,8 @@ namespace: Radius.Core
               - name
               - recipes
 ```
+
+Today the RRT schema does not allow `any` as a type for security reasons. We would have to remove that constraint in bicep tooling so that we can have the recipe parameters as defined above.
 
 // Question: The recipe collection should be curly braces, is that OK (feature spec has []) ? OR we keep it array like below. Map could make it easier to look up using resource type.
 
@@ -304,9 +307,12 @@ Cons:
 
 - Environment still stays a bloated object. Environment resource houses a lot of other properties and we could potentially risk hiting the mechanical limits that apply to serializing objects. 
   
+- Add Radius commands to publish recipe-packs, similar to what we have for recipes today. 
+  
 - a list of recipes could potentially be managed as a collection, including having its own rbac and appearance in app graph. The above approach does not allow for that possibility.
 
-2. store a URL to a YAML manifest in the Environment
+
+1. store a URL to a YAML manifest in the Environment
 
 We could fetch the yaml when needed, and use the available recipe.
 
@@ -341,6 +347,19 @@ Cons:
 
 
 ## Open issues
+
+
+## notes/questions for myself (TBD)
+
+recipe-pack : RRT or NOT? same question as RRT in the Radius.Config namespace (app, env). These types are not meant to be edited by users, and should be as defined by Radius so that Radius can work. 
+  
+- rad init today says instaling a "recipe-pack" -  might need changes here to enable choosing a pack.
+- rad init / install must be updated to create the recipe pack resource type ( as part of registering manifests logic we have today) 
+- if we want the ability to "init" with a selected pack say for az, how would we do it? it might help to allow url to recipe-pack manifest, and as part of rad init , create the rrt as well as the rrt resource (using the url for yaml manifest) and init the env with it. 
+-  we are moving away from named recipes. If a customer wishes to use same env for two applications, these application teams have their own recipes, then would we advice them to create 2 enviroments ? We could also guide them to a naming like contoso-recipe-pack and cool-prod-recipe-pack. But this would either require us to allow for duplicate recipes between packs, or require multiple teams to coordinate and ensure their types are different?
+-  now that the "unit" of importing recipes is recipe pack, would we "contrib" recipe pack manifests? 
+-  would we think about enforcing a size limit on recipe pack? how many recipes it can have ?
+
 
 
 
