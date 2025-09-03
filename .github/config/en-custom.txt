@@ -1048,6 +1048,12 @@ CustomConfigValidationCheck
 dir
 rekey
 etcd's
+TerraformSettings
+AzureDevops
+backends
+Alibaba
+Tencent
+fluentbit
 Balancer
 Fargate
 aci
@@ -1110,3 +1116,6 @@ userAssignedIdentities
 subscriptionId
 pubSubBrokers
 rabbitMQQueues
+bicepSettings
+terraformBackend
+bicepAuthentication
