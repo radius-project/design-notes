@@ -6,7 +6,7 @@
 
 Recipes are external infrastructure-as-code (IaC) templates that operators register on a Radius Environment so developers can use them later for provisioning. They provide a mechanism for separation of concerns between developers and operators. 
 
-Today, Radius supports registering recipes individually, either via the Environment resource properties or the CLI (`rad recipe register`). For each Radius Environment, platform engineers have to piece together individual Recipes from scratch. Putting everything together manually this way for each environment is error prone. Recipes also do not have a lifecycle of their own and can be managed only by managing the environments pointing to them.
+Today, Radius supports registering recipes individually, either via the `Applications.Core\environments` resource properties or the CLI (`rad recipe register`). For each Radius Environment, platform engineers have to piece together individual Recipes from scratch. Some customers could have 1000s of environments and putting everything together manually for each environment is error prone. Recipes also do not have a lifecycle of their own and can be managed only by managing the environments pointing to them.
 
 This document details the introduction of Recipe Packs as a feature that makes recipe management easier. Recipe Packs are a collection of related recipes that a platform engineer can manage as a single entity. 
 
@@ -15,8 +15,8 @@ This document details the introduction of Recipe Packs as a feature that makes r
 | Term     | Definition                                                                                                                                                                                                 |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Recipe | IaC templates that operators register on a Radius Environment |
-|Recipe Pack| A collection of recipes that can be managed as an entity |
-|RRT| [Radius Resource Type](https://docs.radapp.io/guides/author-apps/custom/overview/)|
+| Recipe Pack| A collection of recipes that can be managed as an entity |
+| RRT | [Radius Resource Type](https://docs.radapp.io/guides/author-apps/custom/overview/)|
 
 ## Objectives
 
@@ -24,7 +24,7 @@ This document details the introduction of Recipe Packs as a feature that makes r
 
 ### Goals
 
-Provide Recipe Packs as a Radius feature to bundle and import (register) multiple recipes into a Radius Environment (e.g., a pack for ACI that includes all necessary recipes).
+Provide Recipe Packs as a Radius feature to bundle multiple recipes as a single managable entity into a Radius Environment (e.g., a pack for ACI that includes all necessary recipes).
 
 ### Non goals
 
@@ -35,35 +35,46 @@ Recipe Packs would bundle together Recipes, as we understand them today. We do n
 
 #### Registering several recipes to an environment
 
-As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. This can be error prone when there are many recipes.  Radius should provide a way to bulk register( and manage) recipes.
+As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. This can be error prone when there are many recipes and environments.  Radius should provide a way to bulk register( and manage) recipes.
 
 #### Registering recipes to multiple environment
 
-As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. Some of my developers use ACI computes while others use Kubernetes. But they all use same networking resources. Today, I have to create 2 Radius environment and manually link the recipe for compute, data. and networking for each of these teams, since they need different computes. Or I can create one dev environment and have named recipes, so that each team can see a compute recipe they dont use along with the one they use. I would like to be able to better organize recipes so that I can group them together independent of the environment, and reuse them across environment when suitable. In my above situation, I could register the same data, networking recipe-packs across environments and only link a different compute pack.
+As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. I having 100s of environment which mostly use the same recipes. Piecing the same recipes together for each environment feels like rework.
 
 ## Design
 
-### Design details
+### Design Overview
 
-We model Recipe Pack as a first class RRT.
+We choose modelling Recipe Pack as a first class Radius Resource Type. [Alternatives considered](#alternatives-considered) section details some other possibilities.
 
 Pros:
 
 - Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
 - As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and rbac independant of environments. 
-- Helps manage the size of environment resource
+- Helps reduce the size of environment resource, which could reach serization limits with tons of recipes. 
+- Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
 
 [Question]: would environment and recipe pack ever have different rbac?
 
 Cons:
 
 - This approach is a deviation from the current tooling approach for recipes. 
+- While this brings in many advantages, RRTs can have their schema modified using rad resource-type commands. We should find ways to prevent this from happening. In general, Radius.Core namespace would have resources whose schema should be non-editable so that Radius can work as expected. Some other resources that would fall in this category are environments and applications.
 
+At a high level, this design approach needs the below steps 
 
+* Design schema for Radius.Core/recipePacks type
+* Register the resultant schema manifest as part of Radius start up sequence
+* Support `rad cli` commands that enable CRUDL operations on resources of type Radius.Core/recipePacks 
+* Design Radius.Core/environment schema 
+* Register the schema as part of Radius start up sequence
+* Support `rad cli` commands that enable managing Radius.Core/environment resources through CRUDL operations on this type of resource
+* Support `rad cli` commands that enable registering recipe-packs to a `Radius.Core\environments` environment resource
+* Enhance Dynamic RP to look through the set of registered recipe-packs in the active environment, fetch the recipe-pack resources and then fetch the link of recipe for resource provisioning
 
-### Schema
+### 
 
-A sample recipe pack resource looks like below:
+A sample recipe pack resource would look like below:
 
 ```
 resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
@@ -75,7 +86,8 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
                 recipeKind: 'terraform'
                 recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48'
                 parameters: {
-                allowPlatformOptions: true
+                  allowPlatformOptions: true
+                  anIntegerParam : 1
                 }
             }
             Radius.Security/secrets: {
@@ -137,7 +149,7 @@ namespace: Radius.Core
               - recipes
 ```
 
-Today the RRT schema does not allow `any` as a type for security reasons. We would have to remove that constraint in bicep tooling so that we can have the recipe parameters as defined above.
+Today the RRT schema does not allow `any` as a type for security reasons. We would have to remove that constraint in bicep tooling and radius so that we can have the recipe parameters as defined above.
 
 // Question: The recipe collection should be curly braces, is that OK (feature spec has []) ? OR we keep it array like below. Map could make it easier to look up using resource type.
 
