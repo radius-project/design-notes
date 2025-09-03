@@ -363,14 +363,16 @@ Cons:
 
 ## notes/questions for myself (TBD)
 
-recipe-pack : RRT or NOT? same question as RRT in the Radius.Config namespace (app, env). These types are not meant to be edited by users, and should be as defined by Radius so that Radius can work. 
-  
+- recipe-pack : RRT or NOT? same question as RRT in the Radius.Config namespace (app, env). These types are not meant to be edited by users, and should be as defined by Radius so that Radius can work. 
 - rad init today says instaling a "recipe-pack" -  might need changes here to enable choosing a pack.
 - rad init / install must be updated to create the recipe pack resource type ( as part of registering manifests logic we have today) 
 - if we want the ability to "init" with a selected pack say for az, how would we do it? it might help to allow url to recipe-pack manifest, and as part of rad init , create the rrt as well as the rrt resource (using the url for yaml manifest) and init the env with it. 
+- handling recipe-packs with dup recipes. at the time of creation, of recipe pack, it could have dups with another erescipe-pack. But we have to dtect dups at the time of registering to env. 
 -  we are moving away from named recipes. If a customer wishes to use same env for two applications, these application teams have their own recipes, then would we advice them to create 2 enviroments ? We could also guide them to a naming like contoso-recipe-pack and cool-prod-recipe-pack. But this would either require us to allow for duplicate recipes between packs, or require multiple teams to coordinate and ensure their types are different?
 -  now that the "unit" of importing recipes is recipe pack, would we "contrib" recipe pack manifests? 
 -  would we think about enforcing a size limit on recipe pack? how many recipes it can have ?
+-  - should recipe-pack resource have a list of env ids to which it belongs? typically, RRTs have an app id or env id.
+-  - cli -support versus deploying through bicep
 
 
 
