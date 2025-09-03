@@ -270,7 +270,7 @@ The Container Resource Type has an `imagePullPolicy` today. However, no other co
 
 ### Removal 2: Removal of `iam` property on connections
 
-It is unclear that this is needed. If the use case is identified it can be added back in.
+This property is used to specify the required IAM permissions of a connected resource when that resource is an Azure resource. Since all resources are expected to be Recipe-based, this property is no longer needed.
 
 ### Removal 3: Removal of the Kubernetes metadata extension
 
