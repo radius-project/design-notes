@@ -45,7 +45,7 @@ The Gateways Resource Type has several properties for configuring TLS including 
 
 The user experience for configuring ingress on Kubernetes, ECS, ACA, ACI, and Cloud Run was examined. Kubernetes and ECS are very similar—each has a load balancer, a listener, and a set of routes with matching rules. ACA and Cloud Run take a different approach with built-in ingress capabilities. Containers are deployed as services and ingress is simply enabled. Routing rules are possible with ACA and Cloud Run but both these services are more inclined to provide a fully-qualified domain name for each service reducing the need for routing rules.
 
-|                           | Load Balancer                                                | Listener                                                     | Route                                                        |
+| Platform                  | Load Balancer                                                | Listener                                                     | Route                                                        |
 | ------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Kubernetes                | [Gateway](https://gateway-api.sigs.k8s.io/reference/spec/#gateway) | [Listener](https://gateway-api.sigs.k8s.io/reference/spec/#listener) | [Routes](https://gateway-api.sigs.k8s.io/reference/spec/#httproute) |
 | AWS ECS                   | Application Load Balancer                                    | ALB Listener                                                 | [Listener Rule](https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_CreateRule.html) |
@@ -81,13 +81,11 @@ Routes also align with routes in ACA, Cloud Run, and ECS.
 
 The Routes Resource Type definition is modeled primarily on the Kubernetes [HTTPRoute](https://gateway-api.sigs.k8s.io/reference/spec/#httproute) and the [AWS ALB Rule](https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_RuleCondition.html). It has these high-level schema properties:
 
-`kind`
+`kind`: Routes will be a single Resource Type with a `kind` enum which includes: HTTP, TCP, TLS, and UDP. gRPC is a potential future enhancement.
 
-Routes will be a single Resource Type with a `kind` enum which includes: HTTP, TCP, TLS, and UDP. gRPC is a potential future enhancement.
+`rules`:
 
-`rules[]`: 
-
-- `matches`
+- `matches[]`:
   - `path`: The HTTP request path to match. Trailing space is ignored. Requests for `/abc`, `/abc/`, and ``/abc/def/` will all match `/abc`.
   - `httpHeaders[]`: HTTP headers to match. Specify only when kind is HTTP.
     - `name`: The HTTP header name to match
