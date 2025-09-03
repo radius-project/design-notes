@@ -71,7 +71,7 @@ Routes align with the Kubernetes Gateway API. The Gateway API is separated into 
 
   * `HTTPRoute`: L7 ingress with support for matching based on the hostname and HTTP header
   * `TCPRoute`: L4 ingress with no support for matching (all traffic to the requested port is forwarded to the backendRef)
-  * `TLSRoute`: L4 ingress only with the ability to match based on Server Name Indination (SNI) which is equivalent to hostname in TLS
+  * `TLSRoute`: L4 ingress only with the ability to match based on Server Name Indication (SNI) which is equivalent to hostname in TLS
 
   * `UDPRoute`: Same as TCPRoutes
 
