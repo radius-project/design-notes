@@ -1116,3 +1116,6 @@ userAssignedIdentities
 subscriptionId
 pubSubBrokers
 rabbitMQQueues
+bicepSettings
+terraformBackend
+bicepAuthentication
