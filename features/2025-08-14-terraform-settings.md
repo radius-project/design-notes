@@ -138,9 +138,13 @@ param string token
 resource myEnvironment 'Radius.Core/environments@2025-05-01-preview' = {
   name: 'myEnvironment'
   properties: {
+    recipePacks: [myRecipePack.id]
     terraformSettings: myTerraformSettings.id
   }
 }
+
+resource myRecipePack 'Radius.Config/recipePack@'
+{ ... }
 
 resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview' = {
   name: 'myTerraformSettings'
@@ -315,6 +319,27 @@ Platform engineers will be able to set `TF_LOG` and `TF_LOG_PATH` and:
 
 * Inspect Terraform logs separately from other Radius logs via a `rad` or `kubectl` command
 * Collect Terraform logs via fluentbit or equivalent log collector
+
+## Outstanding Issues
+
+### Issue 1: Private Bicep Recipes
+
+Environments has a Bicep property called `Environments.recipeConfig.bicep.authentication` which is used to [specify a Secret for accessing OCI registries](https://docs.radapp.io/guides/recipes/howto-private-bicep-registry/) where Bicep templates are stored. Therefore, it is not possible to completely remove the recipeConfig property.
+
+Options for handling this include:
+
+1. Leave `Environments.recipeConfig.bicep.authentication` as is. This will be awkward since only Bicep will remain in recipeConfig.
+2. Create an a bicepSettings Resource Type equivalent to Terraform. This may be the most extensible approach, however, today there is only a single property.
+3. Rather than having a standalone TerraformSettings Resource Type, have a RecipeConfig Resource Type. Environments will have a RecipePacks property and a RecipeConfig property which is easy to understand. The RecipeConfig Resource Type would include:
+   - terraformrc
+   - terraformBackend
+   - bicepAuthentication
+
+### Issue 2: Injecting Radius Secrets into Terraform Configurations
+
+Environments also has a property called `Environments.recipeConfig.terraform.providers` that allows an arbitrary map of data to be injected into specified Terraform providers. While the input is an arbitrary map, the use case is injecting a Radius Secret into a Terraform provider.
+
+The solution to this is TBD.
 
 ## Summary of changes
 
