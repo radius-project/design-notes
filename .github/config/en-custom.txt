@@ -1118,3 +1118,6 @@ pubSubBrokers
 rabbitMQQueues
 httpconf
 DML
+bicepSettings
+terraformBackend
+bicepAuthentication
