@@ -61,12 +61,11 @@ Routes are HTTP, TLS, TCP, and UDP network routes. They are not gateways, ingres
 
 Routes align with the Kubernetes Gateway API. The Gateway API is separated into separate API resources which map to platform engineers and developers respectively:
 
-* `Gateway`: 
-
+* `Gateway` (this is the Kubernetes Gateway API):  
   * `GatewayClass`: Defines the specific controller used 
   * `Listeners`: Define the hostnames, ports, protocol, termination, TLS settings and which routes can be attached to a listener.
   * `Addresses`: The network addresses for this Gateway
-
+  
 * Routes: Defines a set of rules to match and service destinations (`backendRefs`). 
 
   * `HTTPRoute`: L7 ingress with support for matching based on the hostname and HTTP header
@@ -77,13 +76,17 @@ Routes align with the Kubernetes Gateway API. The Gateway API is separated into 
 
 Routes also align with routes in ACA, Cloud Run, and ECS.
 
-### Proposed schema
+> [!NOTE]
+>
+> The L4 ingress enabled by TCPRoute, TLSRoute, and UDPRoute are distinct from the basic L4 networking capability of Kubernetes Pods and Services. When a containerPort is specified on a container, Radius deploys a Kubernetes Service of type `ClusterIP` which enables intra-cluster service-to-service connectivity. Routes enable ingress from outside of the cluster. 
+
+## Proposed schema
 
 The Routes Resource Type definition is modeled primarily on the Kubernetes [HTTPRoute](https://gateway-api.sigs.k8s.io/reference/spec/#httproute) and the [AWS ALB Rule](https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_RuleCondition.html). It has these high-level schema properties:
 
 `kind`: Routes will be a single Resource Type with a `kind` enum which includes: HTTP, TCP, TLS, and UDP. gRPC is a potential future enhancement.
 
-`rules`:
+`rules[]`:
 
 - `matches[]`:
   - `path`: The HTTP request path to match. Trailing space is ignored. Requests for `/abc`, `/abc/`, and ``/abc/def/` will all match `/abc`.
@@ -97,9 +100,103 @@ The Routes Resource Type definition is modeled primarily on the Kubernetes [HTTP
 
 - `destinationContainerId`: The Radius Container resource ID to route requests to.
 
-### Recipe Behavior
+## Developer Experience
 
-#### Kubernetes
+### User Story 1: Service-to-service connectivity
+
+***As a developer, my application has multiple micro-services which need to communicate with each other.***
+
+> [!NOTE]
+>
+> This user story is not related to Routes. It is included to demonstrate the multitude of networking use cases.
+
+Each of the developer's services opens a socket on a port then specifies that port in the `containerPort` property.
+
+```yaml
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = { ... }
+
+resource svcA 'Radius.Compute/containers@2025-08-01-preview' = {
+  name: 'svcA'
+  properties: {
+    application: myApp.id
+    container: {
+      image: 'svcA:latest'
+      ports: {
+        web: {
+          containerPort: 8080
+        }
+      }
+    }
+  }
+}
+
+resource svcB 'Radius.Compute/containers@2025-08-01-preview' = {
+  name: 'svcB'
+  properties: {
+    application: myApp.id
+    container: {
+      image: 'svcB:latest'
+      ports: {
+        web: {
+          containerPort: 8080
+        }
+      }
+    }
+  }
+}
+```
+
+When deploying the above example, Radius creates on the Kubernetes cluster:
+
+* Deployment for svcA
+* Deployment for svcB
+* Service for svcA of type ClusterIP
+* Service for svcB of type ClusterIP
+
+svcA can communicate with svcB using built-in Kubernetes service discovery (there is a `svcA.<namespace>.cluster.local` DNS entry and the kubeproxy handles the IP routing. 
+
+If a containerPort had not been specified, the two Services would not have been created.
+
+### User Story 2: Responding to external traffic
+
+***As a developer, I need my application to accept connections from external clients.***
+
+Prior to developers using Routes, the platform engineer must: 
+
+1. Configure a Gateway Controller 
+2. Set the `hostnames` and `parentRef` Recipe parameters on the Routes Recipe (see Recipe Behavior below)
+
+The developer then defines the application.
+
+```yaml
+resource myApp 'Applications.Core/applications@2023-10-01-preview' = { ... }
+
+resource frontend 'Radius.Compute/containers@2025-08-01-preview' = { ... }
+resource accounts 'Radius.Compute/containers@2025-08-01-preview' = { ... }
+
+resource ingressRule 'Radius.Compute/routes@2025-08-01-preview' = {
+  kind: 'HTTP'
+  rules: ]
+    {
+      matches: {
+        path: '/'
+      }
+      destinationContainerId: frontend.id
+    }
+    {
+      matches: {
+        path: '/accounts'
+      }
+      destinationContainerId: accounts.id
+    }
+  ]
+```
+
+When deployed, an HTTPRoutes resource is deploy to the Kubernetes cluster. This instructs the Gateway Controller to route HTTP requests for `/` to the frontend service and requests for `/accounts` to the accounts service.
+
+## Recipe Behavior
+
+### Kubernetes
 
 The Routes Recipe will deploy a HTTPRoute, TCPRoute, TLSRoute, or UDPRoute based on the kind. The Platform engineer is expected to:
 
