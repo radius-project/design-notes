@@ -1119,3 +1119,7 @@ HTTPRoute
 TCPRoute
 TLSRoute
 UDPRoute
+svcA
+svcB
+ClusterIP
+kubeproxy

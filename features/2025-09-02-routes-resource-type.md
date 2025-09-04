@@ -192,7 +192,7 @@ resource ingressRule 'Radius.Compute/routes@2025-08-01-preview' = {
   ]
 ```
 
-When deployed, an HTTPRoutes resource is deploy to the Kubernetes cluster. This instructs the Gateway Controller to route HTTP requests for `/` to the frontend service and requests for `/accounts` to the accounts service.
+When deployed, an HTTPRoute resource is deploy to the Kubernetes cluster. This instructs the Gateway Controller to route HTTP requests for `/` to the frontend service and requests for `/accounts` to the accounts service.
 
 ## Recipe Behavior
 
