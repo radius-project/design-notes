@@ -288,7 +288,7 @@ New GitHub workflows will adhere to the design principles.
 ## Open Questions and Actions
 
 * Which actions cannot be performed by the GitHub CLI? How will identity be provided to them?
-* Provide guidance on which git/GitHub CLI commands allow a PR reviewer to check out a PR to their own fork.
+* ~~Provide guidance on which git/GitHub CLI commands allow a PR reviewer to check out a PR to their own fork.~~ **RESOLVED**: See [PR Merge Guide](../guide/pr-merge-guide.md) for comprehensive git/GitHub CLI commands.
 * We need a prototype of moderate complexity that implements these principles.
 * Can we separate the scheduling from the workflows so that forks do not automatically run the workflows?
 

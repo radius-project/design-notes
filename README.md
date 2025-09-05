@@ -58,7 +58,7 @@ If the design is approved:
   - Please incorporate any outstanding feedback.
   - Please respond to, and resolve all comments in the document explaining the resolution of the feedback. 
   - One or more approvers will approve the pull-request so that it can be merged.
-  - Merge the pull-request.
+  - Merge the pull-request. (See the [PR Merge Guide](./guide/pr-merge-guide.md) for detailed instructions)
 
 Development work on implementing the design begins only after the design is approved.
 
@@ -80,6 +80,7 @@ The repository is organized into several sections, each corresponding to a speci
 | [bicep](./bicep/) | Contains the designs related to deployment-engine, Bicep compiler, and Bicep types. |
 | [cli](./cli/) | Contains the designs for Radius CLI. |
 | [features](./features/) | Contains feature specifications. |
+| [guide](./guide/) | Contains guides and documentation for contributors and maintainers. |
 | [recipe](./recipe/) | Contains the designs related to Radius recipes. |
 | [resources](./resources/) | Contains the designs for Radius resource types in `Application.*` namespace. | 
 | [tools](./tools/) | Contains the designs for engineering tools, such as GitHub Action Workflow and test-infra. |
