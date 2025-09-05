@@ -1048,6 +1048,12 @@ CustomConfigValidationCheck
 dir
 rekey
 etcd's
+GPUs
+impactful
+initContainer
+autoscaler
+NFS
+TaskDefinition
 Balancer
 Fargate
 aci
@@ -1110,3 +1116,8 @@ userAssignedIdentities
 subscriptionId
 pubSubBrokers
 rabbitMQQueues
+httpconf
+DML
+bicepSettings
+terraformBackend
+bicepAuthentication
