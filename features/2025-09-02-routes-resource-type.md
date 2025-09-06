@@ -6,7 +6,7 @@
 
 The compute extensibility project is implementing Recipe-backed Resource Types for the core Radius Resource Types including Containers, Volumes, Secrets, and Gateways. As part of this effort, Recipes are being developed replacing the imperative code in Applications RP. Because of this, we are taking the opportunity to re-examine the schema and make adjustments as needed. 
 
-This document proposes a new resource type, Routes, which replaces the existing Gateways resource. The rationale is explain within.
+This document proposes a new resource type, Routes, which replaces the existing Gateways resource. The rationale is explained within.
 
 ## Objectives
 
@@ -27,7 +27,7 @@ The current version of Gateways has several challenges.
 
 ### Dependency on Contour
 
-Today, Radius takes a very opinionated approach to the implementation of L7 ingress and requires Contour to be installed as part of a Radius installation. Unfortunately, Contour is far from universally used. Kubernetes platform engineers have a wide variety of ingress controllers to select from. Furthermore, Contour is not the leading option with NGINX being the most popular and Cilium becoming more popular given its use of eBPF.
+Today, Radius takes a very opinionated approach to the implementation of L7 ingress and requires Contour to be installed as part of a Radius installation. Unfortunately, Contour is far from universally used. Kubernetes platform engineers have a wide variety of Gateway Controllers to select from. Furthermore, Contour is not the leading option with NGINX being the most popular and Cilium becoming more popular given its use of eBPF.
 
 ### Modeled using HTTPProxy rather than the Gateway API
 
@@ -176,7 +176,7 @@ resource accounts 'Radius.Compute/containers@2025-08-01-preview' = { ... }
 
 resource ingressRule 'Radius.Compute/routes@2025-08-01-preview' = {
   kind: 'HTTP'
-  rules: ]
+  rules: [
     {
       matches: {
         path: '/'
@@ -223,15 +223,15 @@ Other notes:
 
 ### Hostname generation
 
-Because Gateways is tightly coupled with Contour, the hostname behavior is very specific. Contour and Gateways creates a hostname in the `nip.io` domain unless specified by the developer. Nip.io is a third-party DNS service useful for prototyping. Because Routes is ingress controller-agnostic, the current hostname behavior is removed and delegated to the platform engineer and their ingress controller of choice.
+Because Gateways is tightly coupled with Contour, the hostname behavior is very specific. Contour and Gateways creates a hostname in the `nip.io` domain unless specified by the developer. Nip.io is a third-party DNS service useful for prototyping. Because Routes is controller-agnostic, the current hostname behavior is removed and delegated to the platform engineer and their Gateway Controller of choice.
 
 ### TLS configuration
 
-Gateways expects the developer to provide a certificate stored in a Radius Secret. Because TLS is ingress controller-specific, TLS configuration is delegated to the platform engineer and their ingress controller of choice. 
+Gateways expects the developer to provide a certificate stored in a Radius Secret. Because TLS is Gateway Controller-specific, TLS configuration is delegated to the platform engineer and their Gateway Controller of choice. 
 
 ### Miscellaneous Gateway routes properties
 
-The following Gateways properties no longer supported since they are ingress controller-specific:
+The following Gateways properties no longer supported since they are Gateway Controller-specific:
 
 * `routes.replacePrefix`
 * `routes.enableWebsockets`
