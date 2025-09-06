@@ -1048,6 +1048,12 @@ CustomConfigValidationCheck
 dir
 rekey
 etcd's
+GPUs
+impactful
+initContainer
+autoscaler
+NFS
+TaskDefinition
 Balancer
 Fargate
 aci
@@ -1123,3 +1129,8 @@ svcA
 svcB
 ClusterIP
 kubeproxy
+httpconf
+DML
+bicepSettings
+terraformBackend
+bicepAuthentication
