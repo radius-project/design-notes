@@ -29,10 +29,10 @@ Radius makes the assumption that the installation environment has full access to
 | 1b   | `rad-bicep` binary                                           | `rad bicep download`                                         | Installed by `install.sh`                                    | Installed by `install.sh`                              |
 | 1c   | `bicepconfig.json`                                           | `rad init`                                                   | Created by to `install.sh`                                   | Created by to `install.sh`                             |
 | 2    | [Radius Helm chart](https://github.com/project-radius/radius/tree/main/deploy/Chart) | `rad init`, `rad install` or `helm repo add radius`          | No change                                                    | Chart manually pulled                                  |
-| 3    | Radius container images (  `ucpd`, `controller`, `applications-rp`, `dynamic-rp`, `bicep`, `dashboard`) | Downloaded via the Radius Helm chart from GHCR               | No change                                                    | Manually imported into the user's private OCI registry |
+| 3    | Radius container images (  `ucpd`, `controller`, `applications-rp`, `dynamic-rp`, `bicep`, `dashboard`, `pre-upgrade`) | Downloaded via the Radius Helm chart from GHCR               | No change                                                    | Manually imported into the user's private OCI registry |
 | 4    | Contour container images (`contour`, `envoy`)                | Downloaded via the Radius Helm chart from Docker Hub         | Short-term: No change; Long-term: Removal of Contour from Radius install | Radius will have an option to not install Contour      |
 | 5    | `radius` and `aws` Bicep extensions                          | Downloaded bi `rad-bicep` dynamically from ACR               | No change                                                    | Manually imported into the user's private OCI registry |
-| 6    | `manifest-to-bice-extension` NPM package                     | Remote code execution from [npmjs.com](https://www.npmjs.com/package/@radius-project/manifest-to-bicep-extension) | This package will be eliminated and implemented in the Go program | Same                                                   |
+| 6    | `manifest-to-bicep-extension` NPM package                    | Remote code execution from [npmjs.com](https://www.npmjs.com/package/@radius-project/manifest-to-bicep-extension) | This package will be eliminated and implemented in the Go program | Same                                                   |
 | 7    | Terraform binaries                                           | Dynamically installed by Applications RP from [hashicorp.com](https://releases.hashicorp.com/) | Explicitly installed into the Radius control plane by the platform engineer (not in scope for this document, see separate Terraform Settings feature spec) | Same                                                   |
 
 ## Scenario 1 – Installing Radius
@@ -78,7 +78,7 @@ $ helm pull https://github.com/radius-project/radius/tree/main/deploy/Chart
 
 **Container images**
 
-The platform engineer or security engineer imports the Radius container images (`ucpd`, `controller`, `applications-rp`, `dynamic-rp`, `bicep`, `dashboard`) into their OCI registry. 
+The platform engineer or security engineer imports the Radius container images (`ucpd`, `controller`, `applications-rp`, `dynamic-rp`, `bicep`, `dashboard`, `pre-upgrade`) into their OCI registry. 
 
 **Radius and AWS Bicep extensions**
 
@@ -94,7 +94,7 @@ The platform engineer or developer runs the installation script with additional 
 $ install.sh \
   --version <radius_version>
   --binary-install-source <path_to_rad_and_rad_bicep_cli> \
-  --bicep-extension-oci-registry <oci_registry_url>/<repository>
+  --bicep-extensions-oci-registry <oci_registry_url>/<repository>
 ```
 
 This script performs the following:
@@ -104,12 +104,16 @@ This script performs the following:
 3. Gets the latest release information if the version is not specified (as-is)
 4. Installs the `rad` binary in `/usr/local/bin` or `%LOCALAPPDATA%\radius` (as-is)
 5. Installs the `rad-bicep` binary in `/usr/local/bin` or `%LOCALAPPDATA%\radius` (change from as-is)
-6. Creates the `bicepconfig.json` in the user's home directory (new) using the `bicep-extension-oci-registry`, if specified (new)
+6. Creates the `bicepconfig.json` in the user's home directory (new) using the `bicep-extensions-oci-registry`, if specified (new)
 
 The key changes from today's `install.sh` include:
 
 * Today, `rad-bicep` is installed via the `rad bicep download` command. This approach is problematic in that is is not obvious that Radius is downloading a new binary. The command also installs the `rad-bicep` binary in a different directory (`~/.rad/bin`) which is not ideal. The `install.sh` script is enhanced to install the `rad-bicep` binary side-by-side `rad` and the `rad bicep download` command is removed.
-* Today, the `bicepconfig.json` file is created by `rad init`. This is problematic since offline installs will not use `rad init`. Also, the contents of `bicepconfig.json` file created by `rad init` is hard-coded. With this change, the `install.sh` script will create the `bicepconfig.json` file based on user input (`--bicep-extension-oci-registry`).
+* Today, the `bicepconfig.json` file is created by `rad init`. This is problematic since offline installs will not use `rad init`. Also, the contents of `bicepconfig.json` file created by `rad init` is hard-coded. With this change, the `install.sh` script will create the `bicepconfig.json` file based on user input (`--bicep-extensions-oci-registry`).
+
+> [!NOTE]
+>
+> Distributing the Bicep extension only supports ACR and a ZIP file on the filesystem today. There is future work planned to further optimize this user experience.
 
 ### User Story 3 – Install Radius via CLI
 
@@ -133,7 +137,7 @@ The `global.imageRegistry` is the private OCI registry where the Radius containe
 
 The `global.imageTag` is the tag of the container images to optionally be used.
 
-The `global.imagePullSecrets` is the name of the Kubernetes secret of type docker-registry to be used to pull the container images (the secret is created beforehand).
+The `global.imagePullSecrets` is an array of Kubernetes secrets of type docker-registry to be used to pull the container images (the secret is created beforehand).
 
 The `--skip-contour-install` does not install Contour. Therefore the Gateway resource types will not function until extensibility is implemented.
 
