@@ -162,8 +162,9 @@ interface RecipePacks {
 * We choose map of resource types to their recipe configurations so that the relevant recipe can be easily accessed. 
 * We will not be supporting named recipes going forward as documented in [RRT feature spec](https://github.com/willtsai/design-notes-radius/blob/f9c98baf515263c27e7637131d7a48ae5a01b2c0/features/2025-02-user-defined-resource-type-feature-spec.md#user-story-7--registering-recipes).  Therefore the `RecipeDefinition` model does not include a name.
 * The operations are all Synchronous, since Recipe Pack a light weight configuration resource.
-* createOrUpdate returns a `HTTP 201 Created` when recipe pack creation is successful and `HTTP 200 OK` for  successful updates, with json payload representing the recipe pack resource created. 
 
+
+* createOrUpdate returns a `HTTP 201 Created` when recipe pack creation is successful and `HTTP 200 OK` for  successful updates, with json payload representing the recipe pack resource created. 
 
 [Sample to be added]
 
@@ -214,29 +215,74 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
 
 At a high level, below changes are necessary -
 
-1. Add support to UCP to route `Radius.Core\recipePacks` resource operations to Applications RP.
-2. In Applications RP
-   1. Add schema / swagger changes to support the `Radius.Core\recipePacks` resource type
-   2. Add convertors for handling conversions from and to version agnostic data model. 
-   3. Add backend/controller support for creating/updating/listing/deleting the resource. Constraints for each operation are detailed later in [Recipe Pack Operations](#schema-and-api-design)
-   4. Finalize the `Radius.Core\environments` details and then
-   5. Add schema / swagger changes to support the `Radius.Core\environments` resource type
-   6. Add convertors for handling conversions from and to version agnostic data model. 
-   7. Add backend/controller support for creating/updating/deleting the resource. 
-   8. Add support to look up the `Radius.Core\environments` that is in use
-   9. Since we cannot register multiple recipe-packs that have recipe for same resource type, Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found.  
-   10. Use the recipe information just fetched and reuse the existing recipe engine mechanism. 
-3. In Dynamic RP, while deploying a dynamic resource
-   1. Add support to look up the `Radius.Core\environments` that is in use
-   2. Since we cannot register multiple recipe-packs that have recipe for same resource type, Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found.  
-   3. Use the recipe information just fetched and reuse the existing recipe engine mechanism. 
-4. No changes to controller or DE.
+#### UCP
+
+ Add support to UCP to route `Radius.Core\recipePacks` resource operations to Applications RP in below section. (might need more changes)
+
+/radius/deploy/Chart/templates/ucp/configmaps.yaml
+
+```yaml
+initialization:
+      planes:
+        - id: "/planes/radius/local"
+          properties:
+            resourceProviders:
+              Applications.Core: "http://applications-rp.radius-system:5443"
+              Applications.Dapr: "http://applications-rp.radius-system:5443"
+              Applications.Datastores: "http://applications-rp.radius-system:5443"
+              Applications.Messaging: "http://applications-rp.radius-system:5443"
+              Microsoft.Resources: "http://bicep-de.radius-system:6443"
+            kind: "UCPNative"
+```
+
+#### Applications RP
+
+There are two prerequisites for implementing recipe packs:
+
+1. Support new Radius.Core namespace. We would add Radius.Core namespace so that there is a transition time for users to move from Applications.Core/environments and recipes to Radius.Core/environment and Radius.Core/recipePacks.
+Eventually Applications.Core will be deprecated and removed.
+
+2. Radius.Core/environments design and implementation.
+   
+Below changes are needed for supporting recipe packs as new feature. 
+
+   1. Add schema /swagger changes to support the `Radius.Core\recipePacks` resource type ([typepec changes](#schema-and-api-design))
+
+   2. Create datamodel and convertors for handling recipe pack resource in /radius/pkg/corerp/api/v20231001preview/ and /radius/pkg/corerp/datamodel/
+            
+   3. Add controller support for creating/updating/listing/deleting the resource in `/radius/pkg/corerp/frontend/controller/`. Constraints for each operation are captured in [Recipe Pack Operations](#schema-and-api-design)
+   
+   4. When an Applications RP supported resource is being deployed, the resource could be recipe based (portable) or non recipe based today (applications and environment). For recipe based resources, `/radius/pkg/portableresources/backend/controller/createorupdateresource.go` should be updated to 
+      1. fetch environment's recipe-pack ids
+      2. get recipe-pack resource one at a time, stopping as soon as a match for resource-type is found. 
+      3. Then it should populate RecipeMetaData appropriately before calling the engine. 
+   This flow should come in place if the environment used for deploying is of type Radius.Core/environments only.
+   
+
+As part of Radius.Core/environments design/ implementation below points should be considered:
+
+   1. Finalize the `Radius.Core\environments` details and then
+
+   2. Add schema / swagger changes to support the `Radius.Core\environments` resource type
+
+   3. Add convertors for handling conversions from and to version agnostic data model. 
+
+   4. Add backend/controller support for creating/updating/deleting the resource. 
+
+   5. rad env register should support registering a recipe pack to Radius.Core/environments resource, and disallow recipes.
 
 
-Some of the design decisions we have are:
 
-* Recipes cannot registered to Radius.Core\environments. As a consequence, the users have to create a recipe-pack even when there is just one recipe to be registered. 
-* Recipe Packs cannot be registered to Applications.Core\environments. This is because Applications.Core\environments will be eventually deprecated in favor of Radius.Core/environments. 
+#### Dynamic RP changes
+
+1. In Dynamic RP, while deploying a dynamic resource
+   1. Add support to look up the `Radius.Core\environments` that is in use, fetch environment's recipe-pack ids
+   2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found.  
+   3. Use the recipe information just fetched and construct recipe details that can be passed to the existing recipe engine mechanism. 
+   
+#### Other components
+
+2. No changes to controller or DE.
 
 
 ### CLI design
@@ -309,8 +355,9 @@ If no -e is specified, this command should list all recipe packs in current scop
 We could delete recipe-packs that are not referenced by any environment in any resource-group. This requires  further thought and is similar to deletion of resources such as resource-type resource we have today.
 
 5. rad env register recipe-pack recipe-pack-name [-g group id] 
+We specify group resource id if the recipe-pack is in a different scope from the environment.
 
-5. rad env show should be updated
+6. rad env show should be updated
 
 Based on whether the environment namespace is Applications.Core or Radius.Core, the outputs differ. Eventually Applications.Core support will be removed.
 
@@ -326,6 +373,7 @@ computeRecipePack   Radius.Storage/volumes           terraform                  
 dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
 ```
 
+7. rad recipe list
 ```
 $ rad recipe list -environment my-env
 RECIPE PACK             RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
@@ -336,6 +384,31 @@ dataRecipePack          Radius.Data/redisCaches          terraform              
 networkingRecipePack    Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
 ```
 
+8. rad init 
+
+Today, rad init works as show below:
+
+```                                                  
+Initializing Radius. This may take a minute or two...
+                                                     
+🕒 Install Radius 7af38a9                            
+   - Kubernetes cluster: kind-kin2                   
+   - Kubernetes namespace: radius-system             
+⏳ Create new environment default                    
+   - Kubernetes namespace: default                   
+   - Recipe pack: local-dev                          
+⏳ Scaffold application resource-types-contrib       
+⏳ Update local configuration  
+```
+The default environment created is initialized with a "recipe pack" which is a bunch of kubernetes recipes. 
+
+We are choosing to keep the same behavior. But behind the scenes rad init would create. recipe pack resource, with recipe links we use today to construct recipe properties and add this recipe pack's resource id to the environment. 
+
+Providing an option for az/ aws based recipe packs requires considerable work and would be a future follow up to the feature. 
+
+### Graph support
+
+### Logging/ Tracing support
 
 ### Breaking changes
 
@@ -390,7 +463,7 @@ Cons:
 - Environment still stays a bloated object. Environment resource houses a lot of other properties and we could potentially risk hiting the mechanical limits that apply to serializing objects. 
   
 - Add Radius commands to publish recipe-packs, similar to what we have for recipes today. 
-  
+
 - a list of recipes could potentially be managed as a collection, including having its own rbac and appearance in app graph. The above approach does not allow for that possibility.
 
 
@@ -446,10 +519,10 @@ In general, Radius.Core namespace has resources whose schema should be non-edita
 ## Open issues
 
 
-## notes/questions for myself (TBD)
+## notes/questions for myself (to be deleted)
 
 - recipe-pack : RRT or NOT? same question as RRT in the Radius.Config namespace (app, env). These types are not meant to be edited by users, and should be as defined by Radius so that Radius can work. 
-- rad init today says instaling a "recipe-pack" -  might need changes here to enable choosing a pack.
+- rad init today says installing a "recipe-pack" -  might need changes here to enable choosing a pack.
 - rad init / install must be updated to create the recipe pack resource type ( as part of registering manifests logic we have today) 
 - if we want the ability to "init" with a selected pack say for az, how would we do it? it might help to allow url to recipe-pack manifest, and as part of rad init , create the rrt as well as the rrt resource (using the url for yaml manifest) and init the env with it. 
 - would environment and recipe pack ever have different rbac? should we "allow" recipepack is in different radius resource grpup from that of environment?
