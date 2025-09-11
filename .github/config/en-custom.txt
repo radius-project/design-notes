@@ -1022,6 +1022,15 @@ pdf
 pdfs
 Knative
 genericized
+
+discoverability
+ISV
+incentivize
+NoSQL
+configurationStores
+pubSubBrokers
+rabbitMQQueues
+stateStores
 ns
 deletable
 cardinality
