@@ -1022,6 +1022,15 @@ pdf
 pdfs
 Knative
 genericized
+gapped
+npmjs
+Sonatype
+amd
+darwin
+Homebrew
+Winget
+howto
+AzureDevOps
 ns
 deletable
 cardinality
@@ -1134,3 +1143,4 @@ DML
 bicepSettings
 terraformBackend
 bicepAuthentication
+filesystem
