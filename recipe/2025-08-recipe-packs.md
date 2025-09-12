@@ -42,24 +42,110 @@ As an operator I am responsible for creating Radius Environments using which dev
 
 As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. I have 100s of environments which mostly use the same recipes. Piecing the same recipes together for each environment feels like rework.
 
+#### Sharing Recipe Packs Across Environments and Organizations
+
+As an operator, I want to share and reuse Recipe Packs across different environments or organizations. Instead of manually registering individual recipes, I can import a pre-bundled Recipe Pack (e.g., for Kubernetes or ACI) published by a provider or another team. This streamlines environment setup, reduces errors, and ensures 
+
 ## Design
 
 ### Design Overview
 
-We choose modeling recipe packs as a first class Radius resource of type Radius.Core/recipePacks provisioned imperatively by Applications RP. [Alternatives considered](#alternatives-considered) section details some other approaches we considered.
+**Prefered Approach:**
+
+We choose modeling recipe packs as a first class Radius resource of type Radius.Core/recipePacks provisioned imperatively by Applications RP. Consequentilly their schema and operations are fixed and not editable.
 
 Pros:
-
 - Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
 - As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and RBAC independent of environments. 
 - Helps reduce the size of environment resource, which could reach serialization limits with tons of recipes. 
 - Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
-- Imperative provisioning prevents users from accidentally experimenting with the resource schema
+- Imperative provisioning ensures strict control over schema and behavior, preventing users from breaking core Radius constructs. 
+- Clear separation between user-extensible and core system resources, improving maintainability. 
 
 Cons:
 
 - This approach is a deviation from the current tooling approach for recipes. 
-- Supporting recipe packs as a Applications RP type requires manual implementation of schema and API in contrast to modeling it as a dynamic resources. 
+- Supporting recipe packs as a Applications RP type requires manual implementation of schema and API in contrast to modeling it as a dynamic resources. Versioning support is not automatic as in case of dynamic resources.
+
+In general, Radius.Core namespace has resources whose schema should be non-editable so that Radius can work as expected, for example Applications, Environments and recipePacks. These resources must be provisioned imperatively by Applications RP and their schema must be protected. 
+
+**Alternatives considered**
+
+Below options were considered as alternatives to modeling recipe pack as a first class Applications RP resource.
+
+***Model recipe packs as first class Radius Resource type provided by Dynamic RP***
+
+Pros:
+
+- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
+- As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and rbac independent of environments. 
+- Helps reduce the size of environment resource, which could reach serialization limits with tons of recipes. 
+- Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
+- API versioning is automatically supported
+
+Cons:
+
+- While this brings in just as many advantages as the chosen design approach plus automatic API versioning, RRTs can have their schema modified using rad resource-type commands. We would have to find ways to prevent this from happening. 
+
+***Embed all recipe mappings inline in the Environment***
+
+This is similar to what we have today. We could introduce a yaml spec similar to below, and when user executes a `rad recipe-pack register` this spec could be parsed and all recipes added to environment. 
+
+```yaml
+name: aci-production-pack
+version: 1.0.0
+description: "Recipe Pack for deploying to ACI in production."
+recipes:
+  - resourceType: "Radius.Compute/containers@2025-05-01-preview"   
+    recipeKind: "bicep"
+    recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
+    parameters:
+      cpu: "1.0"
+      memoryInGB: "2.0"
+      environmentVariables:
+        LOG_LEVEL: "Information"
+      # Optional: allow platform-specific options like containerGroupProfile for ACI
+      allowPlatformOptions: true
+  - resourceType: "Radius.Compute/gateways@2025-05-01-preview"
+    recipeKind: "bicep"
+    recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
+    parameters:
+      sku: "Standard_v2"
+  - resourceType: "Radius.Security/secrets@2025-05-01-preview"
+    recipeKind: "bicep"
+    recipeLocation: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
+    parameters:
+      skuName: "premium"
+```
+
+Pros: 
+
+- Most compatible to what we have in Radius today and hence the fastest approach. 
+- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the yaml manifest
+
+Cons: 
+
+- Environment still stays a bloated object. Environment resource houses a lot of other properties and we could potentially risk hitting the mechanical limits that apply to serializing objects. 
+- Add Radius commands to publish recipe-packs, similar to what we have for recipes today. 
+- A list of recipes could potentially be managed as a collection, including having its own rbac and appearance in app graph. The above approach does not allow for that possibility.
+
+***Store a URL to a YAML manifest in the Environment***
+
+We could fetch the yaml when needed, and use the available recipe.
+
+`rad environment update my-env --recipe-packs aci-production-pack='git::https://github.com/my-org/recipe-packs.git//aci-production-pack.yaml?ref=1.0.0'`
+
+Pros:
+
+- Helps manage the size of environment resource
+- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the yaml manifest
+
+Cons:
+
+- For each provisioning of resource, we make a call to registry to fetch the list to check if the recipe is available, and then a call to the specified recipe location to fetch it. We could cache the list and construct an in-memory recipe pack ephemeral object. But we still do not get the benefits of recipe pack as a first-class resource type. 
+
+### High level flow
+
 
 At a very high level, this design approach needs the below steps:
 
@@ -160,23 +246,9 @@ interface RecipePacks {
   
 * The operations are all Synchronous, since Recipe Pack is a lightweight configuration resource.
 
-* createOrUpdate returns a `HTTP 201 Created` when recipe pack creation is successful and `HTTP 200 OK` for successful updates, with json payload representing the recipe pack resource created. 
 
-[Sample to be added]
-
-* get returns `HTTP 200 OK` + payload of the serialized recipe pack resource that corresponds to the resource ID.
-
-[Sample to be added]
-
-* delete returns `HTTP 200 OK` upon successful deletion of recipe pack resource that corresponds to the resource ID. Other possible response is `HTTP 404 Not Found`.
   
-[Sample to be added]
-
-* listByScope returns `HTTP 200 OK` with payload containing a list of recipe packs in the given scope. 
-
-[Sample to be added]
-  
-#### Example
+#### Examples
 
 Below is a sample bicep definition of a recipe pack resource:
 
@@ -206,6 +278,142 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
   }
 }
 ```
+
+```
+resource env 'Radius.Core/environments@2025-05-01-preview' = { 
+    name: 'my-env' 
+    properties: { 
++       // The recipePacks property is an array of Recipe Pack IDs 
++       recipePacks: [computeRecipePack.id, dataRecipePack.id]
+        // Other properties
+    } 
+} 
+```
+
+
+Below are sample HTTP requests for managing a recipe pack resource
+
+CREATE request:
+
+```
+curl -X PUT \
+    "http://localhost:9000/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Radius.Core/recipePacks/testrecipepack?api-version=2023-10-01-preview" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "location": "global",
+      "properties": {
+        "description": "Test recipe pack with sample recipes",
+        "recipes": {
+          "Applications.Datastores/sqlDatabases": {
+            "recipeKind": "terraform",
+            "recipeLocation": "https://github.com/example/recipes/sql-database",
+            "parameters": {
+              "size": "small",
+              "backup": false
+            }
+          },
+          "Applications.Datastores/redisCaches": {
+            "recipeKind": "bicep",
+            "recipeLocation": "https://github.com/example/recipes/redis-cache.bicep",
+            "parameters": {
+              "tier": "basic"
+            }
+          }
+        }
+      }
+    }'
+ ```   
+
+CREATE response:
+
+```json
+{
+  "id": "/planes/radius/local/resourcegroups/default/providers/Radius.Core/recipePacks/testrecipepack",
+  "location": "global",
+  "name": "testrecipepack",
+  "properties": {
+    "description": "Test recipe pack with sample recipes",
+    "provisioningState": "Succeeded",
+    "recipes": {
+      "Applications.Datastores/redisCaches": {
+        "parameters": {
+          "tier": "basic"
+        },
+        "recipeKind": "bicep",
+        "recipeLocation": "https://github.com/example/recipes/redis-cache.bicep"
+      },
+      "Applications.Datastores/sqlDatabases": {
+        "parameters": {
+          "backup": false,
+          "size": "small"
+        },
+        "recipeKind": "terraform",
+        "recipeLocation": "https://github.com/example/recipes/sql-database"
+      }
+    }
+  },
+  "systemData": {
+    "createdAt": "0001-01-01T00:00:00Z",
+    "createdBy": "",
+    "createdByType": "",
+    "lastModifiedAt": "0001-01-01T00:00:00Z",
+    "lastModifiedBy": "",
+    "lastModifiedByType": ""
+  },
+  "tags": {},
+  "type": "Applications.Core/recipePacks"
+}
+
+```
+
+READ request:
+
+```
+nithya@MacBook-Pro ~ %  curl -X GET\
+    "http://localhost:9000/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Radius.Core/recipePacks/testrecipepack?api-version=2023-10-01-preview"
+```
+
+READ response:
+
+```json    
+{
+  "id": "/planes/radius/local/resourcegroups/default/providers/Radius.Core/recipePacks/testrecipepack",
+  "location": "global",
+  "name": "testrecipepack",
+  "properties": {
+    "description": "Test recipe pack with sample recipes",
+    "provisioningState": "Succeeded",
+    "recipes": {
+      "Applications.Datastores/redisCaches": {
+        "parameters": {
+          "tier": "basic"
+        },
+        "recipeKind": "bicep",
+        "recipeLocation": "https://github.com/example/recipes/redis-cache.bicep"
+      },
+      "Applications.Datastores/sqlDatabases": {
+        "parameters": {
+          "backup": false,
+          "size": "small"
+        },
+        "recipeKind": "terraform",
+        "recipeLocation": "https://github.com/example/recipes/sql-database"
+      }
+    }
+  },
+  "systemData": {
+    "createdAt": "0001-01-01T00:00:00Z",
+    "createdBy": "",
+    "createdByType": "",
+    "lastModifiedAt": "0001-01-01T00:00:00Z",
+    "lastModifiedBy": "",
+    "lastModifiedByType": ""
+  },
+  "tags": {},
+  "type": "Applications.Core/recipePacks"
+}                                                                               
+```
+
 
 ### Server Side changes
 
@@ -246,13 +454,12 @@ Below changes are needed for supporting recipe packs as new feature:
 2. Create datamodel and convertors for handling recipe pack resource in /radius/`pkg/corerp/api/v20231001preview/ and /radius/pkg/corerp/datamodel/`
         
 3. Add controller support for creating/updating/listing/deleting the resource in `/radius/pkg/corerp/frontend/controller/`. Constraints for each operation are captured in [Recipe Pack Operations](#schema-and-api-design)
-
-4. When an Applications RP supported resource is being deployed, the resource could be recipe based (portable) or non recipe based today (applications and environment). For recipe based resources, `/radius/pkg/portableresources/backend/controller/createorupdateresource.go` should be updated to:
-   1. fetch environment's recipe-pack ids
-   2. get recipe-pack resource one at a time, stopping as soon as a match for resource-type is found. 
-   3. Then it should populate RecipeMetaData appropriately before calling the engine. 
    
-   This flow should come in place if the environment used for deploying is of type Radius.Core/environments only.
+4. Update applications_core.yaml manifest to include the new type.
+
+5. When an Applications RP supported resource is being deployed, the resource could be recipe based (portable) or non recipe based today (applications and environment). For recipe based resources, `radius/pkg/rp/util/recipepacks.go` should be created, and have ability to fetch recipepacks, similar to `/radius/pkg/rp/util/environment.go`. Then `/radius/env-sup-rp/pkg/recipes/configloader/environment.go#L72` `getConfiguration` function must be updated to fetch the recipe pack resource one by one, and iterate until a recipe pack containing recipe for resource type of interest is found.   
+   
+This flow should come in place if the environment used for deploying is of type Radius.Core/environments only. We retain current behavior for Applications.Core/environments.
 
 As part of Radius.Core/environments design/implementation below points should be considered:
 
@@ -268,11 +475,15 @@ As part of Radius.Core/environments design/implementation below points should be
 
 #### Dynamic RP changes
 
-1. In Dynamic RP, while deploying a dynamic resource:
-   1. Add support to look up the `Radius.Core/environments` that is in use, fetch environment's recipe-pack ids
-   2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found.  
-   3. Use the recipe information just fetched and construct recipe details that can be passed to the existing recipe engine mechanism. 
-   
+In Dynamic RP, while deploying a dynamic resource:
+
+1. Add support to look up the `Radius.Core/environments` that is in use, fetch environment's recipe-pack ids
+2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found.  
+3. Use the recipe information just fetched and construct recipe details that can be passed to the existing recipe engine mechanism. 
+  
+Since Dynamic RP shares the recipe engine code with Applications RP, Dynamic Resources should be able to avail recipe packs once Applications RP code changes are complete. 
+
+
 #### Other components
 
 No changes to controller or DE.
@@ -415,89 +626,17 @@ Recipe packs will be displayed in application graphs as first-class resources wi
 
 ### Logging/Tracing support
 
-Standard logging and tracing will be implemented for all recipe pack operations through the existing Applications RP infrastructure.
+Standard logging and tracing will be implemented for all recipe pack operations through the existing Applications RP logging/tracing infrastructure.
 
 ### Breaking changes
 
 * Once we support recipe packs, the Radius.Core environments will allow only registration of recipe-packs and not a single recipe. Applications.Core environments will continue to work as it does today and support recipe registration but will be deprecated over time allowing transition time for customers to move from recipes to recipe packs. 
   
+We could also explore providing some tools to create the new environment resource and recipe packs based on existing environment and recipe information to ease transition. 
+
 * We will drop the support for named recipe - a way to register multiple recipes for the same resource-type in a single environment.
 
-## Alternatives considered
 
-Below options were considered as alternatives to modeling recipe pack as a first class RRT:
-
-### 1. Embed all recipe mappings inline in the Environment 
-
-This is similar to what we have today. We could introduce a yaml spec similar to below, and when user executes a `rad recipe-pack register` this spec could be parsed and all recipes added to environment. 
-
-```yaml
-name: aci-production-pack
-version: 1.0.0
-description: "Recipe Pack for deploying to ACI in production."
-recipes:
-  - resourceType: "Radius.Compute/containers@2025-05-01-preview"   
-    recipeKind: "bicep"
-    recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-container:1.2.0"
-    parameters:
-      cpu: "1.0"
-      memoryInGB: "2.0"
-      environmentVariables:
-        LOG_LEVEL: "Information"
-      # Optional: allow platform-specific options like containerGroupProfile for ACI
-      allowPlatformOptions: true
-  - resourceType: "Radius.Compute/gateways@2025-05-01-preview"
-    recipeKind: "bicep"
-    recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
-    parameters:
-      sku: "Standard_v2"
-  - resourceType: "Radius.Security/secrets@2025-05-01-preview"
-    recipeKind: "bicep"
-    recipeLocation: "oci://ghcr.io/my-org/recipes/azure/keyvault-secretstore:1.0.0"
-    parameters:
-      skuName: "premium"
-```
-
-Pros: 
-
-- Most compatible to what we have in Radius today and hence the fastest approach. 
-- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the yaml manifest
-
-Cons: 
-
-- Environment still stays a bloated object. Environment resource houses a lot of other properties and we could potentially risk hitting the mechanical limits that apply to serializing objects. 
-- Add Radius commands to publish recipe-packs, similar to what we have for recipes today. 
-- A list of recipes could potentially be managed as a collection, including having its own rbac and appearance in app graph. The above approach does not allow for that possibility.
-
-### 2. Store a URL to a YAML manifest in the Environment
-
-We could fetch the yaml when needed, and use the available recipe.
-
-`rad environment update my-env --recipe-packs aci-production-pack='git::https://github.com/my-org/recipe-packs.git//aci-production-pack.yaml?ref=1.0.0'`
-
-Pros:
-
-- Helps manage the size of environment resource
-- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the yaml manifest
-
-Cons:
-
-- For each provisioning of resource, we make a call to registry to fetch the list to check if the recipe is available, and then a call to the specified recipe location to fetch it. We could cache the list and construct an in-memory recipe pack ephemeral object. But we still do not get the benefits of recipe pack as a first-class resource type. 
-
-### 3. Model recipe packs as Radius Resource type provided by Dynamic RP
-
-Pros:
-
-- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
-- As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and rbac independent of environments. 
-- Helps reduce the size of environment resource, which could reach serialization limits with tons of recipes. 
-- Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
-
-Cons:
-
-- While this brings in just as many advantages as the chosen design approach, RRTs can have their schema modified using rad resource-type commands. We would have to find ways to prevent this from happening. 
-
-In general, Radius.Core namespace has resources whose schema should be non-editable so that Radius can work as expected, for example Applications, Environments and recipePacks. These resources must be provisioned imperatively by Applications RP.
 
 ## Test plan
 
@@ -517,7 +656,7 @@ In general, Radius.Core namespace has resources whose schema should be non-edita
 
 ## Development plan
 
-[To be completed]
+1. 
 
 ## Open issues
 
