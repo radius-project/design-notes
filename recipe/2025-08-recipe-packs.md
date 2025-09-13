@@ -86,7 +86,7 @@ Pros:
 Cons:
 
 - While this brings in just as many advantages as the chosen design approach plus automatic API versioning, 
-- RRTs can have their schema modified using rad resource-type commands. We could choose to implement schema validation to make sure users do not run rad resource-type CRUD operations on Radius.Core namespace.
+- RRTs can have their schema modified using rad resource-type commands. We could choose to implement schema validation to make sure users cannot not use rad resource-type CRUD operations on Radius.Core namespace.
 
 ### Other alternatives considered 
 
