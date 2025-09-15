@@ -51,42 +51,31 @@ As an operator, I want to share and reuse Recipe Packs across different environm
 ### Design Overview
 
 In general, Radius.Core namespace has resources whose schema should be non-editable so that Radius can work as expected, for example Applications, Environments and recipePacks. These resources must be provisioned imperatively  and their schema must be protected. With this constraint in mind, 2 approaches are possible: 
+1. Radius.Core/recipePacks provisioned imperatively by Applications RP
+2. Radius.Core/recipePacks provisioned Manually by Dynamic RP
 
+Both approaches have the below benefits:
 
-***Preferred Approach 1***
-
-We choose modeling recipe packs as a first class Radius resource of type Radius.Core/recipePacks provisioned imperatively by Applications RP. Consequentilly their schema and operations are fixed and not editable.
-
-Pros:
 - Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
 - As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and RBAC independent of environments. 
 - Helps reduce the size of environment resource, which could reach serialization limits with tons of recipes. 
 - Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
-- Imperative provisioning ensures strict control over schema and behavior, preventing users from breaking core Radius constructs. 
-- Clear separation between user-extensible and core system resources, improving maintainability. 
+- Helps with change isolation, since recipe pack updates are isolated from env updates.
+- Promotes reusablity since multiple environments can point to a recipe pack using the recipe pack ID. 
 
-Cons:
+Below table highlights the trade offs:
 
-- This approach is a deviation from the current tooling approach for recipes. 
-- Supporting recipe packs as a Applications RP type requires manual implementation of schema and API in contrast to modeling it as a dynamic resources. Versioning support is not automatic as in case of dynamic resources.
+| Aspect | Applications RP provisioning| Dynamic RP provisioning |
+|---------|-----------| ------------------------------------------|
+| **Tooling complexity** | ❌ Higher (TSP, converter, schema, API implemenetations needed) | ✅ Lower (YAML only, dynamic resource controllers reused)|
+| **Versioning**  | ❌ requires versioning support in Radius  |✅ Supports schema versioning| 
+| **Custom implementation for operations**  | ✅ can customize details of CRUDL|  ❌ falls back on dynamic resource controllers  |
 
-***Preferred Approach 2***
+Based on the above differences, *we choose Radius.Core/recipePacks to be provisioned imperatively by Applications RP as a first class Radius resource*. The main reason for this decision is that Radius Core resources such as enviroments and recipe-packs could have complex and custom deletion logic compared to what a dynamic resource deletion does. For instance, we need a cascase of deletion when an environment is deleted, or we might want to restrict deleting a recipe pack that is referenced in one or more environment. It is important to support robust core management operations of these resources where as the versioning can follow once Radius versioning support is available. 
 
-We choose modeling recipe packs as a first class Radius resource of type Radius.Core/recipePacks provisioned by Dynamic RP.
+We should make sure the rad resource-type commands cannot alter the schema of these types as part of schema validation (this namespace is reserved for Radius's use).
 
-Pros:
 
-- Solves the requirement for bulk registering recipes using single command with a one time effort of creating the recipe pack resource
-- As first class resource, recipe packs would be displayed in app graphs. They can also have their own lifecycle and rbac independent of environments. 
-- Helps reduce the size of environment resource, which could reach serialization limits with tons of recipes. 
-- Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
-- API versioning is automatically supported
-- DynamicRP already supports "ManualProvsiioning" as a capability for resource that do not need recipe provisioning. 
-
-Cons:
-
-- While this brings in just as many advantages as the chosen design approach plus automatic API versioning, 
-- RRTs can have their schema modified using rad resource-type commands. We could choose to implement schema validation to make sure users cannot not use rad resource-type CRUD operations on Radius.Core namespace.
 
 ### Other alternatives considered 
 
