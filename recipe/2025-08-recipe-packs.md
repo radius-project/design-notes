@@ -577,6 +577,8 @@ $ rad recipe-pack delete <recipe-pack-name>
 
 We could delete recipe-packs that are not referenced by any environment in any resource-group. This requires further thought and is similar to deletion of resources such as resource-type resource we have today.
 
+Environment commands related to recipe packs are:
+
 1. Create an Environment with a Recipe Pack:
 
 ```
