@@ -703,8 +703,8 @@ We could also explore providing some tools to create the new environment resourc
 - rad init today says installing a "recipe-pack" -  might need changes here to enable choosing a pack. (retain behavior)
 - rad init / install must be updated to create the recipe pack resource type ( as part of registering manifests logic we have today) 
 - if we want the ability to "init" with a selected pack say for az, how would we do it? it might help to allow url to recipe-pack manifest, and as part of rad init , create the rrt as well as the rrt resource (using the url for yaml manifest) and init the env with it. (in future)
-- would environment and recipe pack ever have different rbac? should we "allow" recipepack is in different radius resource grpup from that of environment? (yes , with -g)
-- - prereq: finalize new environment design
+- would environment and recipe pack ever have different rbac? should we "allow" recipepack is in different radius resource grpup from that of environment? (yes , with -g, consider 2 diff env owned by 2 diff team)
+- prereq: finalize new environment design
 - handling recipe-packs with dup recipes. at the time of creation, of recipe pack, it could have dups with another recipe-pack. But we have to dtect dups at the time of registering to env. 
 -  we are moving away from named recipes. If a customer wishes to use same env for two applications, these application teams have their own recipes, then would we advice them to create 2 enviroments ? We could also guide them to a naming like contoso-recipe-pack and cool-prod-recipe-pack. But this would either require us to allow for duplicate recipes between packs, or require multiple teams to coordinate and ensure their types are different? (its is upto the teams to decide how they want to organize)
 -  now that the "unit" of importing recipes is recipe pack, would we "contrib" recipe pack manifests? (yes)
