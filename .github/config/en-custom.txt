@@ -36,6 +36,7 @@ CosmosDB
 CreateOrUpdate
 Datastores
 DDD
+deserialize
 DNS
 dns
 DaemonSet
@@ -47,6 +48,7 @@ Docsy
 DocumentDB
 EKS
 eksClusterName
+emptyDir
 entrypoint
 EOF
 Extensibility
@@ -69,9 +71,12 @@ JSON
 JSON
 KeyVault
 Kinesis
+kubeconfig
 Kubernetes
 ListSecret
 Liveness
+LocalID
+maxReplicas
 MONGOMODULE
 MQ
 MacOS
@@ -102,6 +107,8 @@ ResourceDeploymentClient
 Rollout
 SaaS
 SDKs
+secretId
+SecretProviderClass
 SMTP
 SNI
 SQL
