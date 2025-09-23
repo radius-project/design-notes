@@ -48,6 +48,7 @@ Docsy
 DocumentDB
 EKS
 eksClusterName
+emptyDir
 entrypoint
 EOF
 Extensibility
