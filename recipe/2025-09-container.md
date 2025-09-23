@@ -1,6 +1,6 @@
 # Container Resource Recipe Migration
 
-* **Author**: Brooke Hamilton (@brooke-hamilton)
+* **Author**: Brooke Hamilton (@Brooke-Hamilton)
 
 ## Overview
 
