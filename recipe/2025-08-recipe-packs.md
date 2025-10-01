@@ -39,9 +39,9 @@ Recipe Packs would bundle together "recipes" as we understand them today. We do 
 
 As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. This can be error prone when there are many recipes and environments. Radius should provide a way to bulk register (and manage) recipes.
 
-#### Registering recipes to multiple environments
+#### Registering the same set of recipes to multiple environments
 
-As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. I have 100s of environments which mostly use the same recipes. Piecing the same recipes together for each environment feels like rework.
+As an operator I am responsible for creating Radius Environments using which developers can deploy their applications. As part of creating the environment, I manually link recipes one by one using `rad recipe register` or by updating the environment definition. I have 100s of environments which mostly use the same recipes. Piecing the same recipes together for each environment feels like rework. Radius should provide a way to avoid this rework.
 
 #### Sharing Recipe Packs Across Environments and Organizations
 
@@ -135,10 +135,11 @@ Pros:
 
 Cons:
 
-- For each provisioning of resource, we make a call to registry to fetch the list to check if the recipe is available, and then a call to the specified recipe location to fetch it. We could cache the list and construct an in-memory recipe pack ephemeral object. But we still do not get the benefits of recipe pack as a first-class resource type. 
+- For each provisioning of resource, we make a call to registry to fetch the list to check if the recipe is available, and then a call to the specified recipe location to fetch it. We could fetch the list and construct an in-memory recipe pack ephemeral object. But we still do not get the benefits of recipe pack as a first-class resource type. 
 
 ### High level flow
 
+Radius.Core/recipePacks will be provisioned imperatively by Applications RP.
 
 At a very high level, this design approach needs the below steps:
 
@@ -155,51 +156,61 @@ At a very high level, this design approach needs the below steps:
 As part of supporting Recipe Pack as a resource type, at a high-level, we define a recipePacks.tsp
    
 ```tsp
-namespace Radius.Core;
+namespace Applications.Core; 
 
-@doc("The recipe pack resource")
-model RecipePackResource 
-  is TrackedResourceRequired<RecipePackProperties, "recipePacks"> {
-  @doc("recipe pack name")
-  @key("recipePackName")
-  @path
-  @segment("recipePacks")
-  name: ResourceNameString;
-}
+@doc("The recipe pack resource") 
+model RecipePackResource  
+is TrackedResourceRequired<RecipePackProperties, "recipePacks"> { 
+@doc("recipe pack name") 
+@key("recipePackName") 
+@path 
+@segment("recipePacks") 
+name: ResourceNameString; 
+} 
 
-@doc("Recipe Pack properties")
-model RecipePackProperties {
-  @doc("The status of the asynchronous operation.")
-  @visibility("read")
-  provisioningState?: ProvisioningState;
+@doc("Recipe Pack properties") 
+model RecipePackProperties { 
+@doc("The status of the asynchronous operation.") 
+@visibility("read") 
+provisioningState?: ProvisioningState; 
 
-  @doc("Description of what this recipe pack provides")
-  description?: string;
+@doc("Description of what this recipe pack provides") 
+description?: string; 
 
-  @doc("Map of resource types to their recipe configurations")
-  recipes: Record<RecipeDefinition>;
-}
+@doc("Version of the recipe pack") 
+version: string; 
 
-@doc("Recipe definition for a specific resource type")
-model RecipeDefinition {
-  @doc("The type of recipe (e.g., terraform, bicep)")
-  recipeKind: RecipeKind;
+@doc("List of environment IDs that reference this recipe pack") 
+@visibility("read") 
+referencedBy?: string[]; 
 
-  @doc("URL or path to the recipe source")
-  recipeLocation: string;
+@doc("Map of resource types to their recipe configurations") 
+recipes: Record<RecipeDefinition>; 
+}  
 
-  @doc("Parameters to pass to the recipe")
-  parameters?: {};
-}
+@doc("Recipe definition for a specific resource type") 
+model RecipeDefinition { 
+@doc("The type of recipe (e.g., terraform, bicep)") 
+recipeKind: RecipeKind; 
 
-@doc("The type of recipe")
-enum RecipeKind {
-  @doc("Terraform recipe")
-  terraform: "terraform",
+@doc("URL or path to the recipe source") 
+recipeLocation: string; 
 
-  @doc("Bicep recipe")
-  bicep: "bicep",
-}
+@doc("recipe digest in the format algorithm:digest_value") 
+recipeDigest?: string; 
+
+@doc("Parameters to pass to the recipe") 
+parameters?: {}; 
+} 
+
+@doc("The type of recipe") 
+enum RecipeKind { 
+@doc("Terraform recipe") 
+terraform: "terraform", 
+
+@doc("Bicep recipe") 
+bicep: "bicep", 
+} 
 
 @armResourceOperations
 interface RecipePacks {
@@ -232,16 +243,21 @@ interface RecipePacks {
   >;
 }
 ```
-* As an enhancement that can fast follow, we would add a version attribute so that users can version their recipe packs. We could chose name+version as the internal name which would be used to construct recipe pack's resource id. 
+
+* We add a version attribute so that users can version their recipe packs. We could chose name+version as the internal name which would be used to construct recipe pack's resource id. 
 
 * We choose a map of resource types to their recipe configurations so that the relevant recipe for a type can be easily accessed. 
   
 * We will not be supporting named recipes going forward as documented in [RRT feature spec](https://github.com/willtsai/design-notes-radius/blob/f9c98baf515263c27e7637131d7a48ae5a01b2c0/features/2025-02-user-defined-resource-type-feature-spec.md#user-story-7--registering-recipes). Therefore the `RecipeDefinition` model does not include a name.
   
-* we are not supporting "scheme" (http|https|...). We can use the information in recipe location to determine that. We might have to introduce it back if we support other kinds of location for recipes in future.
+* we are not supporting "scheme" (http|https|...). We can use the information in recipe location to determine that. We might have to introduce it back if we support other kinds of location for recipes in future.We might also have to introduce it for functional tests.
   
-* The operations are all Synchronous, since Recipe Pack is a lightweight configuration resource unless we choose to validate the recipe location.
-In this case we might want to store the md5 of the recipe too, so that the content could be fetched and the md5 matched.
+* The operations are all Synchronous, since Recipe Pack is a lightweight configuration resource.
+  
+* We maintain a reverse index into environment IDs so that we can handle CRUDL operations gracefully. For example, only a recipe pack that is not referenced by any environment can be deleted or updated. 
+
+* We allow the users tp input a digest for a recipe to enhance security. More about this in [Verifying Recipy Integrity](#security)
+
 
   
 #### Examples
@@ -257,6 +273,7 @@ resource computeRecipePack 'Radius.Core/recipePacks@2026-01-01-preview' = {
       'Radius.Compute/containers': {
         recipeKind: 'terraform'
         recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48'
+        recipeDigest: 'sha256:4g5h6i7j8k9l0m1n2o3p4q5r6s7t8u9v0w1x2y3z4a5b6c7d8e9f0g1h2i3j4k5'
         parameters: {
           allowPlatformOptions: true
           anIntegerParam: 1
@@ -474,7 +491,8 @@ As part of Radius.Core/environments design/implementation below points should be
 In Dynamic RP, while deploying a dynamic resource:
 
 1. Add support to look up the `Radius.Core/environments` that is in use, fetch environment's recipe-pack ids
-2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found.  
+2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found. This is because, by design we dont allow duplicate recipes for a resource type either in one recipe pack or across recipe packs in on eenvironment.
+   
 3. Use the recipe information just fetched and construct recipe details that can be passed to the existing recipe engine mechanism. 
   
 Since Dynamic RP shares the recipe engine code with Applications RP, Dynamic Resources should be able to avail recipe packs once Applications RP code changes are complete. 
@@ -562,11 +580,9 @@ $ rad environment show my-env
 RESOURCE            TYPE                            GROUP     STATE
 my-env              Radius.Core/environments        default   Succeeded
 
-RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION            RECIPE PARAMETERS
-computeRecipePack   Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48.   myparameter(int)
-computeRecipePack   Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-computeRecipePack   Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
-dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+RECIPE PACKS        
+computeRecipePack   
+dataRecipePack      
 ```
 
 1. Delete recipe pack:
@@ -608,11 +624,9 @@ $ rad environment show my-env
 RESOURCE            TYPE                      GROUP     STATE
 my-env              Radius.Core/environments  default   Succeeded
 
-RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
-computeRecipePack   Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-computeRecipePack   Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-computeRecipePack   Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
-dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+RECIPE PACK        
+computeRecipePack  
+dataRecipePack
 ```
 
 7. List recipes in environment:
@@ -652,7 +666,7 @@ Providing an option to initialize Radius for az/aws based recipe packs requires 
 
 ### Graph support
 
-Recipe packs will be displayed in application graphs as first-class resources with their own lifecycle and relationships to environments.
+Recipe packs will not be displayed in application graphs since the are operatiors concept and not part of an application as a component.
 
 ### Logging/Tracing support
 
@@ -676,23 +690,84 @@ We could also explore providing some tools to create the new environment resourc
 
 ## Test plan
 
-[To be completed]
+* Add E2E to deploy application using recipe packs. 
+* As part of cleanup, all tests should migrate from Application.Core/ environment and recipes to Radius.Core/recipePacks
 
 ## Security
 
-[To be completed]
+**Current Security Posture**
+
+Today, Radius provides different levels of security for recipe integrity:
+
+- **Bicep recipes**: When using tags (e.g., `latest`), Radius fetches the digest of the specified tag from the repository, then downloads the image using that digest. If the image is tampered with but the digest remains unchanged, the download will fail.
+
+- **Terraform recipes**: Currently have no integrity verification checks.
+
+**Security Gaps**
+
+The current approach still has vulnerabilities:
+- An attacker who replaces both the image and its digest
+- Registry compromises where the image points to malicious content or gets redirected to a malicious server
+
+**Proposed Solution: Recipe Digests**
+
+To address these security gaps, Recipe Packs will support an optional `recipeDigest` field for each recipe. This enhancement provides:
+
+1. **User-specified digests**: Operators can input a known-good digest when creating a Recipe Pack
+2. **Engine-level verification**: Both Bicep and Terraform engines will be enhanced to validate recipes against the provided digest before execution
+3. **Comprehensive coverage**: Since most Radius resource types will be provisioned through Recipe Packs, this feature addresses security concerns across the platform
+
+**Integration with Dependency Management**
+
+For teams using dependency management tools:
+- **Dependabot integration**: When app definitions specify digests directly, Dependabot can automatically update hashes in IaC when newer images are available
+- **Automated workflows**: After merge, `rad deploy` fetches updated recipes using the new digests
+- **No double specification**: When digests are already specified in application code, operators don't need to duplicate them in Recipe Packs. Therefore, the "digest" attribute is optional while creating the recipe pack.
 
 ## Compatibility (optional)
 
-[To be completed]
+Users should migrate from Applications.Core to Radius.Core namespace to make use of new environments and recipePacks resources. 
+We will allow both namespac to coexist until a point where it would be safe to remove the support for Applications.Core. 
 
 ## Monitoring
 
-[To be completed]
+Logs and Traces should automatically capture most metrics. 
+We might want to add metrics related to recipe pack usage. 
 
 ## Development plan
+   
+#### Phase 1: Introduce Radius.Core namespace and setup routing
+- UCP changes to route Radius.Core resources to Applications RP
+- Applications RP changes to add new namespace 
+- Add a manifest to register the new namecpase and types
 
-1. 
+#### Resource Schema
+- Define `Radius.Core/recipePacks` schema
+- Add convertors and basic controllers
+
+#### Phase 2: Versioning 
+- Handle `version` field to `recipePack`
+- Update recipe pack CRUDL APIs to handle versions correctly
+
+#### Phase 3: Recipe Engine support
+- Add support to recipe engine to deploy an application using recipe packs
+- Add E2E to deploy an app using recipe packs.
+
+
+#### Phase 4: CLI & Bicep Support
+- CLI: `rad recipe-pack register | list | show | delete`.
+- Bicep: Add `Applications.Core/recipePacks` resource type.
+- Support referencing packs by name and version.
+
+  
+#### Phase 5: Digest Support
+- Add support in recipe engiens to validate recipe integrity using registered hashes. 
+
+### Phase 6: Documentation & Samples
+- Author guide for pack creation and usage.
+- Provide sample packs and migration docs.
+- Update todo app to display recipe packs in Use.
+
 
 ## Open issues
 
