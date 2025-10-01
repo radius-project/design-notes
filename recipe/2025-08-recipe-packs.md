@@ -719,7 +719,7 @@ To address these security gaps, Recipe Packs will support an optional `recipeDig
 
 **Integration with Dependency Management**
 
-For teams using dependency management tools:
+For teams using dependency management tools to keep their IaC updated:
 - **Dependabot integration**: When app definitions specify digests directly, Dependabot can automatically update hashes in IaC when newer images are available
 - **Automated workflows**: After merge, `rad deploy` fetches updated recipes using the new digests
 - **No double specification**: When digests are already specified in application code, operators don't need to duplicate them in Recipe Packs. Therefore, the "digest" attribute is optional while creating the recipe pack.
