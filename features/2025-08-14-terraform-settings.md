@@ -25,11 +25,9 @@ This feature specification refactors the existing Terraform functionality follow
 
 ### Goals
 
-* Enable platform engineers to install and upgrade their preferred version of the Terraform binary
-* Enable platform engineers to provide their existing Terraform settings to Radius without modification
-* Enable platform engineers to use, and authenticate to, their existing provider mirrors 
-* Enable platform engineers to specify credentials for their module sources
-* Enable platform engineers to use their existing Terraform modules without modifications or the need to create an intermediary main.tf configuration.
+* Enable platform engineers to install and upgrade their preferred version of the Terraform binary independently of Radius
+* Enable platform engineers the ability to specify Recipe settings independently of Environments to ease managing Environments at scale (similar objectives of Recipe Packs)
+* Enable platform engineers to provide their existing Terraform settings to Radius without modification, including using and authenticating to provider mirrors and internal module sources
 * Provide trace-level logs for Terraform when executed by Radius
 
 ### Non-Goals (out of scope)
@@ -76,9 +74,9 @@ The platform engineer uses the same command but with specific URL of the binary 
 
 ```bash
 $ rad terraform install \
-    --url="https://<TF_MIRROR_URL>/terraform_1.5.7_linux_amd64.zip" \
+    --url="https://<tf_mirror_url>/terraform_1.5.7_linux_amd64.zip" \
     --checksum="sha256:37f2d497ea512324d59b50ebf1b58a6fcc2a2828d638a4f6fdb1f41af00140f3"
-Downloading Terraform from <TF_MIRROR_URL>
+Downloading Terraform from <tf_mirror_url>
 Verifying checksum
 The specified Terraform CLI has been installed in the Radius control plane
 ```
@@ -118,7 +116,7 @@ Radius deletes the Terraform binary from the Radius control plane.
 
 **Summary**
 
-Similar to Recipe Packs, Terraform settings are modeled as resources. A TerraformSettings resource can be created declaratively by deploying a `Radius.Config/terraformSettings` resource into a resource group. Unlike Recipe Packs, there is no way to configure Terraform via imperative commands. Imperative commands exist for simpler use cases. In the case of Terraform, there is no need to configure Terraform unless the platform engineer needs to configure advanced settings. In other words, Terraform works with the default out-of-the-box settings so imperative commands are not necessary.
+Similar to Recipe Packs, Terraform settings are modeled as resources. A TerraformSettings resource can be created declaratively by deploying a `Radius.Core/terraformSettings` resource into a resource group. Unlike Recipe Packs, there is no way to configure Terraform via imperative commands. Imperative commands exist for simpler use cases. In the case of Terraform, there is no need to configure Terraform unless the platform engineer needs to configure advanced settings. In other words, Terraform works with the default out-of-the-box settings so imperative commands are not necessary.
 
 The TerraformSettings resource is a like for like copy of the Terraform CLI configuration file (`terraformrc`) and settings available in the terraform block of main.tf files. The goal is for users to be able to bring their existing Terraform settings, provide them to Radius, and Terraform behaves exactly as if Terraform was ran from the user's workstation.
 
@@ -135,7 +133,7 @@ The platform engineer creates a TerraformSettings resource and references that r
 ```yaml
 param string token
 
-resource myEnvironment 'Radius.Core/environments@2025-05-01-preview' = {
+resource myEnvironment 'Radius.Core/environments@2025-08-01-preview' = {
   name: 'myEnvironment'
   properties: {
     recipePacks: [myRecipePack.id]
@@ -143,15 +141,14 @@ resource myEnvironment 'Radius.Core/environments@2025-05-01-preview' = {
   }
 }
 
-resource myRecipePack 'Radius.Config/recipePack@'
-{ ... }
+resource myRecipePack 'Radius.Core/recipePacks@2025-08-01-preview'= { ... }
 
-resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview' = {
+resource myTerraformSettings 'Radius.Core/terraformSettings@2025-08-01-preview' = {
   name: 'myTerraformSettings'
   terraformrc: {
     provider_installation: {
       network_mirror: {
-        path: 'https://<TF_MIRROR_URL>/'
+        path: 'https://<tf_mirror_url>/'
         include: ["*"]
       }
       direct: {
@@ -160,7 +157,7 @@ resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview
     }
     // Equivilent to recipeConfig.authentication on Environments today
     credentials: [
-      <URL>: {
+      <url>: {
         secret: providerSecret.id
       }
     ]
@@ -173,7 +170,7 @@ resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview
   }
 }
 
-resource terraformProviderSecret 'Radius.Security/secret@2025-05-01-preview' = {
+resource terraformProviderSecret 'Radius.Security/secrets@2025-08-01-preview' = {
   name: 'terraformProviderSecret'
   properties: {
     type: 'generic'
@@ -210,21 +207,6 @@ The entire set of properties for credentials and provider_installation are suppo
 
 Unsupported settings are not part of the TerraformSettings resource schema, so the TerraformSettings resource will not deploy if unsupported settings are specified. 
 
-#### Refactoring Current Functionality
-
-The TerraformSettings resource replaces the `recipeConfig` property of the Environment. This approach is similar to the Recipe Pack approach of abstracting out properties historically on the Environment into their own resource which can be shared across multiple Environments (some Radius users are planning for hundreds of Environments).
-
-* `Environment.recipeConfig.terraform.authentication.pat` – Replaced by `TerraformSettings.credentials`
-* `Environment.recipeConfig.terraform.env` – Replaced by `TerraformSettings.env`
-
-#### Deprecating Current Functionality
-
-Radius currently supports customizing Terraform providers via the `Environment.recipeConfig.terraform.providers` property. The original feature request was to support injecting credentials into an arbitrary Terraform provider. 
-
-Tentatively, this feature is planned to be deprecated. This feature is a duplicate of the out-of-the-box credential injection. Rather than have duplicate features, we will identify gaps in the existing out-of-the-box credentials and close those gaps. 
-
-One user is known to be using this feature to inject Azure credentials into the AzureDevops Terraform provider. Once feedback is received from this user, this section will be updated.
-
 ### User Story 5 – Configure Terraform Backend
 
 ***As a platform engineer, I need to configure the Terraform backend state store.***
@@ -257,7 +239,7 @@ As with the Terraform CLI settings, Terraform backend is configured via the Terr
 **`terraformS3Backend.bicep`**
 
 ```yaml
-resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview' = {
+resource myTerraformSettings 'Radius.Core/terraformSettings@2025-08-14-preview' = {
   name: 'myTerraformSettings'
   terraformrc: { ... }
   backend: {
@@ -274,12 +256,12 @@ resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview
 **`terraformAzureBackend.bicep`**
 
 ```yaml
-resource myTerraformSettings 'Radius.Config/terraformSettings@2025-08-14-preview' = {
+resource myTerraformSettings 'Radius.Core/terraformSettings@2025-08-14-preview' = {
   name: 'myTerraformSettings'
   terraformrc: { ... }
   backend: {
     type: 'azurerm'
-    subscription_id: '<MY_SUBSCRIPTION_ID>'
+    subscription_id: '<subscription_id>'
     resource_group_name: 'terraform-state-rg'
     storage_account_name: 'terraformstate'
     container_name: 'tfstate'
@@ -297,49 +279,169 @@ Terraform backends support authentication very similar to Terraform providers. S
 
 No additional authentication configuration is support, therefore, users do not need to configure any additional credentials beyond what is already in place with Radius.
 
+### User Story 6 –Injecting Radius Secrets into Terraform Configurations
+
+***As a platform engineer, I need inject credentials into a Terraform provider other than azurerm and aws.***
+
+**Summary**
+
+Terraform configurations often have multiple Terraform providers in addition to the core Kubernetes, Azure, or AWS providers. Observability platforms such as Datadog is a prime example. Each Terraform provider may need credentials in order to deploy resources. Platform engineers need the ability to inject a Radius Secret value into an arbitrary Terraform provider.
+
+Radius supports this capability today via the [Customer Terraform Providers functionality](https://docs.radapp.io/guides/recipes/terraform/howto-custom-provider/). This works via the `Environments.recipeConfig.terraform.providers` property. It  allows an arbitrary map of data to be injected into specified Terraform providers. While the input is an arbitrary map, injecting a Radius Secret is possible.
+
+**User Experience**
+
+The new user experience leverages Recipe parameters. The platform engineer first defined a secret with an apiKey, for example:
+
+```yaml
+resource datadogCredentials 'Radius.Security/secrets@2025-08-01-preview' = {
+  name: 'datadogCredentials'
+  properties: {
+    environment: environment
+    application: myApplication.id
+    data: {
+      apikey: {
+        value: <datadog-api-key-value>
+      }
+      appKey: {
+        value <datadog-app-key-value>
+      }
+    }
+  }
+```
+
+They then add a parameter on the Recipe with the new apiKey secret:
+
+```yaml
+resource computeRecipePack 'Radius.Core/recipePacks@2025-05-01-preview' = { ...
+    recipes: [
+      Radius.Compute/container: {
+        recipeKind: 'terraform'
+        recipeLocation: '<recipe-git-url>'
+        parameters: {
+          apiKey: datadogCredentials.properties.data.apikey.value
+          appKey: datadogCredentials.properties.data.appkey.value
+        } ...
+```
+
+In the Recipe itself, a var for the Recipe parameter and the the var is used in the provider block:
+
+```yaml
+terraform {
+  required_providers {
+    datadog = {
+      source = "DataDog/datadog"
+    }
+  }
+}
+
+var datadog_api_key
+var datadog_app_key
+
+provider "datadog" {
+  api_key = var.datadog_api_key
+  app_key = var.datadog_app_key
+}
+```
+
+**Engineering Considerations**
+
+The Secret values must be handled securely within Radius. When a Recipe is called with a Recipe parameter referencing a Secret, Radius must retrieve the secret value and pass that to Terraform without storing the secret value within the Radius control plane or any logs.
+
 ## Scenario 3 – Observing Terraform
 
-### User Story 5 – Collecting Trace Logs
+### User Story 7 – Collecting Trace Logs
 
 ***As a platform engineer, I need to troubleshoot Terraform and Radius, therefore I need to see trace-level logs.***
 
 **Summary**
 
-Terraform logging level is set via the `TF_LOG` environment variable. Environment variables for Terraform are a property of the TerraformSettings resource. User story 4 includes the `env` block:
+The platform engineer must be able to:
 
-```yaml
-  env: {
-    TF_REGISTRY_CLIENT_TIMEOUT: 15
-    TF_LOG: 'TRACE'
-    TF_LOG_PATH: 'path/from/radius/documentation
-  }
-```
-
-Platform engineers will be able to set `TF_LOG` and `TF_LOG_PATH` and:
-
+* Set the Terraform logging level (`TRACE` , `DEBUG` , `INFO` , `WARN` , `ERROR` and `FATAL`)
 * Inspect Terraform logs separately from other Radius logs via a `rad` or `kubectl` command
 * Collect Terraform logs via fluentbit or equivalent log collector
 
-## Outstanding Issues
+The user experience is deferred to the technical design.
 
-### Issue 1: Private Bicep Recipes
+## Scenario 4 – Configuring Bicep
 
-Environments has a Bicep property called `Environments.recipeConfig.bicep.authentication` which is used to [specify a Secret for accessing OCI registries](https://docs.radapp.io/guides/recipes/howto-private-bicep-registry/) where Bicep templates are stored. Therefore, it is not possible to completely remove the recipeConfig property.
+### User Story 8 – Private Bicep Recipes
 
-Options for handling this include:
+**Summary**
 
-1. Leave `Environments.recipeConfig.bicep.authentication` as is. This will be awkward since only Bicep will remain in recipeConfig.
-2. Create an a bicepSettings Resource Type equivalent to Terraform. This may be the most extensible approach, however, today there is only a single property.
-3. Rather than having a standalone TerraformSettings Resource Type, have a RecipeConfig Resource Type. Environments will have a RecipePacks property and a RecipeConfig property which is easy to understand. The RecipeConfig Resource Type would include:
-   - terraformrc
-   - terraformBackend
-   - bicepAuthentication
+To meet the goal of *enabling platform engineers the ability to specify Recipe settings independently of Environments to ease managing Environments at scale*, the recipeConfig property needs to be refactored completely out of the Environments resource. Environments has a Bicep property named `Environments.recipeConfig.bicep.authentication` which is used to [specify a Secret for accessing OCI registries](https://docs.radapp.io/guides/recipes/howto-private-bicep-registry/) where Bicep templates are stored. In order to completely remove the recipeConfig property, an alternative property must be provided.
 
-### Issue 2: Injecting Radius Secrets into Terraform Configurations
+**User Experience**
 
-Environments also has a property called `Environments.recipeConfig.terraform.providers` that allows an arbitrary map of data to be injected into specified Terraform providers. While the input is an arbitrary map, the use case is injecting a Radius Secret into a Terraform provider.
+Just like Terraform, Bicep will have a BicepSettings resource. The platform engineer creates a BicepSettings resource and references that resource in a new property on the Environment.
 
-The solution to this is TBD.
+**`bicepEnvironment.bicep`**
+
+```yaml
+param string token
+
+resource myEnvironment 'Radius.Core/environments@2025-08-01-preview' = {
+  name: 'myEnvironment'
+  properties: {
+    recipePacks: [myRecipePack.id]
+    bicepSettings: myBicepSettings.id
+  }
+}
+
+resource myRecipePack 'Radius.Core/recipePacks@2025-08-01-preview'= { ... }
+
+resource myBicepSettings 'Radius.Core/bicepSettings@2025-08-01-preview' = {
+  name: 'myBicepSettings'
+  properties: {
+    registryAuthentication: {
+      // Supported authentication methods: BasicAuth (username, password), AzureWI, and AwsIrsa
+      authenticationMethod: 'BasicAuth'
+      // If using BasicAuth, Secret must have a `username` and `password` key
+      basicAuthSecretId: bicepRegistrySecret.id
+      azureWiClientId: '12345678-abcd-efgh-ijkl-9876543210ab'
+      azureWiTenantId: '12345678-abcd-efgh-ijkl-9876543210ab'
+      awsIamRoleArn: 'arn:aws:iam::012345678901:role/test-role'
+    }
+  }
+}
+
+resource bicepRegistrySecret 'Radius.Security/secrets@2025-08-01-preview' = {
+  name: 'bicepRegistrySecret'
+  properties: {
+    data: {
+      username: {
+        value: '<username>'
+      }
+      password: {
+        value: '<password>'
+      }
+    }
+  }
+}
+```
+
+The platform engineer then deploys the Environment and TerraformSettings.
+
+```bash
+$ rad deploy bicepEnvironment.bicep --group myGroup
+```
+
+**Other Engineering Changes**
+
+Azure workload identity client ID and tenant ID are not considered secrets. Nor is the AWS IAM ARN. Therefore this information is not required to be stored in a secret. With this change, the Secret kind property can be removed. 
+
+## Summary of Property Changes
+
+| As Is                                                        | To Be                                                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `Environment.recipeConfig.terraform.authentication.git.pat.secret` | `TerraformSettings.credentials`                              |
+| `Environment.recipeConfig.terraform.providers.<provider>.secrets` | Replaced by Recipe parameters                                |
+| `Environment.recipeConfig.bicep.authentication.<oci-registry>.secret` | `BicepSettings.registryAuthentication`                       |
+| `SecretStore.type: awsIRSA`                                  | `BicepSettings.registryAuthentication.awsIamRoleArn`         |
+| `SecretStore.type: azureWorkloadIdeneity`                    | `BicepSettings.registryAuthentication.azureWiClientId` and `azureWiTenantId` |
+| `Environment.recipeConfig.env`                               | `TerraformSettings.env`                                      |
+| `Environment.recipeConfig.envSecrets`                        | Not implemented, replaced with Recipe parameters             |
 
 ## Summary of changes
 
@@ -353,14 +455,100 @@ The solution to this is TBD.
 | p3       | M    | `kubernetes` backend type in TerraformSettings (same functionality as today but customizable) |
 | p3       | M    | New `rad terraform uninstall` command                        |
 
-## Future Work
+## Appendix: TerraformSettings Schema
 
-Credentials need additional work in the future. Today, Radius stores only one AWS and Azure credential globally. In the future, credentials will needs to be broken out into its own resource type and include:
+```yaml
+namespace: Radius.Core
+types:
+  terraformSettings:
+    apiVersions:
+      '2025-08-01-preview':
+        schema: 
+          type: object
+          properties:
+            terraformrc:
+              type: object
+              properties:
+                provider_installation:
+                  type: object
+                  properties:
+                    network_mirror:
+                      type: object
+                      properties:
+                        path:
+                          type: string
+                        include:
+                          type: array
+                          items:
+                            type: string
+                        exclude:
+                          type: array
+                          items:
+                            type: string
+                    direct:
+                      type: object
+                      properties:
+                        include:
+                          type: array
+                          items:
+                            type: string
+                        exclude:
+                          type: array
+                          items:
+                            type: string
+                credentials:
+                  type: object:
+                  additionalProperties:
+                    type: object
+                    properties:
+                      secret:
+                        type: string
+                env:
+                  type: object:
+                  additionalProperties:
+                    type: string
+```
 
-* `Radius.Config/kubernetesClientKey` – A client key for an arbitrary Kubernetes cluster not running the Radius control plane
-* `Radius.Config/azureServicePrincipal` – A client ID and secret for Azure
-* `Radius.Config/azureWorkloadIdentitySettings` – The client ID and tenant ID for workload identity configured on an AKS cluster
-* `Radius.Config/awsAccessKeys` – An access key for AWS
-* `Radius.Config/awsIamRole` – An AWS IAM role for use with AWS EKS configured with IRSA
+## Appendix: BicepSettings Schema
 
-Once these credentials resources exist, the Environment can be augmented with an Environment-specific set of credentials.
+```yaml
+namespace: Radius.Core
+types:
+  bicepSettings:
+    apiVersions:
+      '2025-08-01-preview':
+        schema: 
+          type: object
+          properties:
+            registryAuthentication:
+              type: string
+              enum: [BasicAuth, AzureWI, AwsIrsa]
+
+  properties: {
+    registryAuthentication: {
+      // Supported authentication methods: BasicAuth (username, password), AzureWI, and AwsIrsa
+      authenticationMethod: 'BasicAuth'
+      // If using BasicAuth, Secret must have a `username` and `password` key
+      basicAuthSecretId: bicepRegistrySecret.id
+      azureWiClientId: '12345678-abcd-efgh-ijkl-9876543210ab'
+      azureWiTenantId: '12345678-abcd-efgh-ijkl-9876543210ab'
+      awsIamRoleArn: 'arn:aws:iam::012345678901:role/test-role'
+    }
+  }
+}
+
+resource bicepRegistrySecret 'Radius.Security/secrets@2025-08-01-preview' = {
+  name: 'bicepRegistrySecret'
+  properties: {
+    data: {
+      username: {
+        value: '<username>'
+      }
+      password: {
+        value: '<password>'
+      }
+    }
+  }
+}
+```
+
