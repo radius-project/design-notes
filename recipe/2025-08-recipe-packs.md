@@ -771,7 +771,7 @@ We might want to add metrics related to recipe pack usage.
 
 ## Open issues
 
-[To be completed]
+https://dev.azure.com/azure-octo/Incubations/_workitems/edit/17257 should be a follow up to the feature. Named packs could offer a potential solution.
 
 
 ## notes/questions for myself (to be deleted before merging)
