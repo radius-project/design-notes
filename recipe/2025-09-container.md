@@ -18,7 +18,7 @@ This design describes replacing the imperative Go renderer chain for Application
 
 ### Goals
 
-- Replace the container renderer chain with a Bicep recipe for the new Radius.Compute/containers resource type
+- Replace the container renderer chain with a Bicep recipe for the new Radius Compute/containers resource type
 - Implement all current functionality for the new resource schema: multi-container deployments, volumes, identity, RBAC, connections
 - Enable platform engineers to customize container deployment through recipe modifications
 - Align with the new resource type schema defined in resource-types-contrib
@@ -55,16 +55,6 @@ resource myContainer 'Radius.Compute/containers@2025-08-01-preview' = {
 ```
 
 The recipe produces the same Kubernetes resources as the current renderer chain but works with the new resource type schema.
-
-## Bicep Kubernetes Extension Configuration
-
-**Extension Features:**
-- **Preview Status**: The Kubernetes extension is currently in preview 
-- **VS Code Integration**: "Import Kubernetes Manifest" command automatically converts YAML to Bicep
-- **Resource Type Format**: Uses `{group}/{kind}@{version}` syntax (e.g., `apps/Deployment@v1`)
-- **Namespace Management**: Handles namespace creation and validation automatically
-- **kubeConfig Parameter**: Requires base64-encoded Kubernetes configuration from Radius environment
-- **Type Safety**: Provides full IntelliSense and validation for Kubernetes resource properties
 
 ## Design
 
@@ -172,7 +162,7 @@ param platformOptions object = {} // Platform-specific properties (optional)
 
 #### Critical Implementation Challenges
 
-1. **Multi-Container Complexity**: The current renderer handles multiple containers in a single Deployment via the `containers` object map, not a single container as the design originally assumed.
+1. **Multi-Container Complexity**: The new containers schema will support multiple containers. The recipe must iterate over the `containers` map to create container specs in the Deployment. (If other platforms only support single containers, then the recipe for that platform must throw an error upon deployment.)
 
 2. **Extension Renderer Chain**: The current architecture uses wrapper renderers for extensions. The recipe must replicate:
    - Dapr sidecar annotations (`dapr.io/enabled`, `dapr.io/app-id`, etc.)
@@ -646,11 +636,10 @@ New registration will target Radius.Compute/containers with recipe configuration
 
 #### Critical Missing Capabilities
 
-1. **Dependency Access**: Recipe cannot access `options.Dependencies` map containing volume resource properties and computed values
-2. **Schema Translation**: Complex mapping from Applications.Core/containers internal model to Radius.Compute/containers schema
-3. **Extension Structure**: New schema uses different extension structure requiring significant recipe logic changes
-4. **Complex Type Processing**: Limited ability to replicate Go's flexible type conversion in environment variable processing
-5. **Volume Resolution**: No direct access to volume resource computed values needed for persistent volume setup
+1. **Schema Translation**: Complex mapping from Applications.Core/containers internal model to Radius.Compute/containers schema
+2. **Extension Structure**: New schema uses different extension structure requiring significant recipe logic changes
+3. **Complex Type Processing**: Limited ability to replicate Go's flexible type conversion in environment variable processing
+4. **Volume Resolution**: No direct access to volume resource computed values needed for persistent volume setup
 
 #### Workarounds Required
 
@@ -691,81 +680,8 @@ New registration will target Radius.Compute/containers with recipe configuration
 2. **Resource Output**: Validate recipe produces expected Kubernetes resources
 3. **Performance Impact**: Measure recipe execution time and resource usage
 
-## Alternatives Considered
 
-### Alternative 1: Traditional Bicep Templates (Rejected)
-
-Use standard Bicep ARM templates to create Azure Container Instances or other Azure container services.
-
-**Pros**: Well-established patterns, stable APIs
-**Cons**: Doesn't support Kubernetes deployment model, breaks compatibility with current architecture
-
-### Alternative 2: Helm Chart Integration (Rejected)
-
-Generate Helm charts from Bicep recipes and deploy via Helm.
-
-**Pros**: Leverages existing Helm ecosystem, maintains Kubernetes deployment
-**Cons**: Adds complexity with dual template systems, loses Bicep type safety
-
-### Alternative 3: Bicep Kubernetes Extension (Selected)
-
-**Leverage the Bicep Kubernetes extension (preview) for direct Kubernetes resource creation.**
-
-**Pros**: 
-- Native Kubernetes resource creation with full type safety
-- VS Code integration with YAML-to-Bicep conversion
-- Declarative approach with IntelliSense and validation
-- Maintains Kubernetes deployment model
-- Future-aligned with Bicep extensibility roadmap
-
-**Cons**: 
-- Preview status introduces potential stability risks
-- Requires experimental feature enablement
-- Limited to Kubernetes-compatible clusters
-
-### Alternative 4: Hybrid Approach (Rejected)
-
-Keep core container rendering in Go, move only extensions to recipes.
-
-**Pros**: Lower migration risk, preserves complex logic in Go
-**Cons**: Doesn't achieve full recipe-based architecture, increases complexity
-
-### Alternative 5: Gradual Migration (Considered)
-
-Migrate one feature at a time (base containers → extensions → volumes → identity).
-
-**Pros**: Reduced risk per iteration, easier testing
-**Cons**: Complex interim states, longer overall timeline, multiple resource type versions
-
-### Alternative 6: Enhanced Recipe Engine (Rejected)
-
-Extend recipe engine with container-specific capabilities (dependency access, strategic merge).
-
-**Pros**: Addresses traditional Bicep limitations, enables full functionality
-**Cons**: Significant recipe engine changes, affects other resource types, engineering overhead
-
-**Pros**: No migration risk, can validate functionality independently
-**Cons**: Maintains two implementations, increases maintenance burden
-
-## Recommendation
-
-**Proceed with Bicep Kubernetes Extension - Reduced complexity with strong technical foundation.**
-
-### Key Advantages of Kubernetes Extension Approach
-
-1. **Reduced Technical Risk**: Bicep Kubernetes extension provides native Kubernetes resource creation with full type safety
-2. **Improved Developer Experience**: VS Code integration with IntelliSense, validation, and automatic YAML-to-Bicep conversion
-3. **Future-Aligned Architecture**: Leverages Microsoft's investment in Bicep extensibility for infrastructure-as-code
-4. **Maintained Functionality**: All current container deployment capabilities preserved with cleaner implementation
-
-### Technical Benefits
-
-1. **Direct Resource Creation**: Eliminate complex Go renderer chains in favor of declarative Bicep templates
-2. **Type Safety**: Compile-time validation and IntelliSense for Kubernetes resource properties  
-3. **Simplified Extension Logic**: Replace wrapper renderer pattern with conditional Bicep logic
-4. **Resource Dependency Management**: Native Bicep dependency resolution vs manual renderer coordination
-
-### Recommended Implementation Strategy
+## Recommended Implementation Strategy
 
 1. **Enable Extension Support**: Configure bicepconfig.json with experimental extensibility features
 2. **Iterative Development**: Start with core deployment, add extension functionality progressively
@@ -773,7 +689,7 @@ Extend recipe engine with container-specific capabilities (dependency access, st
 4. **Comprehensive Testing**: Validate extension preview stability and performance characteristics
 5. **Documentation**: Create migration guides and best practices for Kubernetes extension usage
 
-### Risk Mitigation
+## Risk Mitigation
 
 1. **Extension Preview Status**: Monitor extension stability and provide fallback options
 2. **Performance Validation**: Benchmark recipe execution vs current Go renderer performance  
