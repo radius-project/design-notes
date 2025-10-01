@@ -1,4 +1,4 @@
-# Terraform Settings Feature Specification
+# Terraform and Bicep Settings Feature Specification
 
 [@zachcasper](https://github.com/zachcasper)
 
@@ -16,12 +16,17 @@ Radius integrates with Terraform today. It is highly opinionated in that Radius 
 * Lack of observability of Terraform executions
 * Lack of `terraform plan` functionality (although this is out of scope for this document)
 
-This feature specification refactors the existing Terraform functionality following these principles:
+This feature specification refactors the existing `Environments.recipeConfig` functionality following these principles:
 
 1. Platform engineers are able to use their existing Terraform modules with Radius without modifications or the need to create an intermediary main.tf configuration.
 2. Radius is unopinionated about how Terraform is configured. Users can provide their existing Terraform settings to Radius and should expect the exact same behavior as if they ran Terraform from their workstation. 
 3. Radius does not block the ability to use any Terraform features including `terraform plan`.
 4. Radius does not manage Terraform, it only executes the Terraform CLI.
+5. Ensures Bicep and Terraform have similar user experiences
+
+> [!NOTE]
+>
+> This feature spec does not add any functionality for Bicep but does refactor the existing `Environments.recipeConfig.bicep` to be consistent with Terraform.
 
 ### Goals
 
