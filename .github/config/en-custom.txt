@@ -1064,6 +1064,12 @@ CustomConfigValidationCheck
 dir
 rekey
 etcd's
+TerraformSettings
+AzureDevops
+backends
+Alibaba
+Tencent
+fluentbit
 GPUs
 impactful
 initContainer
@@ -1132,6 +1138,9 @@ userAssignedIdentities
 subscriptionId
 pubSubBrokers
 rabbitMQQueues
+bicepSettings
+terraformBackend
+bicepAuthentication
 eBPF
 httpRouteConfig
 backendRef
@@ -1151,3 +1160,4 @@ bicepSettings
 terraformBackend
 bicepAuthentication
 filesystem
+apiKey
