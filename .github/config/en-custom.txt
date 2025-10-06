@@ -88,6 +88,7 @@ MongoDb
 NAV
 NODEAPP
 NodeJS
+nodeSelector
 OAuth
 OCI
 OIDC
@@ -98,6 +99,9 @@ PYTHONAPP
 PowerShell
 Pre
 PubSub
+PVCs
+persistentVolumes
+PersistentVolumeClaims
 ProjectRadius
 Quickstart
 Quickstarts
