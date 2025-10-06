@@ -29,6 +29,7 @@ This design describes replacing the imperative Go renderer chain for Application
 - Modifying the recipe engine or deployment processor  
 - Supporting non-Kubernetes platforms in this phase
 - Maintaining compatibility with existing deployed Applications.Core/containers resources
+- Cascading Kubernetes metadata (labels/annotations) from Environment/Application resources to container deployments (this functionality exists today but will not be replicated in the recipe-based approach)
 
 ## User Experience
 
@@ -160,6 +161,16 @@ param extensions object = {}      // Extensions like daprSidecar (optional)
 param platformOptions object = {} // Platform-specific properties (optional)
 ```
 
+**Volume Handling Responsibilities:**
+
+The recipe handles three types of volumes with different responsibilities, following the Kubernetes volume conventions:
+
+1. **Ephemeral Volumes (emptyDir)**: Volumes specified with the `emptyDir` property are created directly by the recipe in the Deployment spec. These are temporary volumes that exist only for the lifetime of the pod. The `emptyDir` property follows the Kubernetes emptyDir convention.
+
+2. **Persistent Volumes**: Volumes specified with the `persistentVolume` property reference PersistentVolumeClaims (PVCs) that are created by the `Radius.Compute/persistentVolumes` resource type. The recipe receives the volume resource ID through `persistentVolume.resourceId` and mounts the corresponding PVC using `persistentVolumeClaim` volume sources.
+
+3. **Secret Volumes**: Volumes specified with the `secretId` property reference `Radius.Security/secrets` resources. The recipe mounts these as Kubernetes secrets for sensitive data that should not be exposed as environment variables.
+
 #### Critical Implementation Challenges
 
 1. **Multi-Container Complexity**: The new containers schema will support multiple containers. The recipe must iterate over the `containers` map to create container specs in the Deployment. (If other platforms only support single containers, then the recipe for that platform must throw an error upon deployment.)
@@ -167,7 +178,7 @@ param platformOptions object = {} // Platform-specific properties (optional)
 2. **Extension Renderer Chain**: The current architecture uses wrapper renderers for extensions. The recipe must replicate:
    - Dapr sidecar annotations (`dapr.io/enabled`, `dapr.io/app-id`, etc.)
    - Manual scaling replica settings
-   - Kubernetes metadata (custom labels/annotations)
+   - Kubernetes metadata (custom labels/annotations) - Note: In the new schema, Kubernetes metadata moves from extensions to `platformOptions.kubernetes.metadata`
 
 3. **Environment Variable Processing**: Complex logic in `getEnvVarsAndSecretData()`:
    - Connection-based environment variables with naming patterns
@@ -175,11 +186,12 @@ param platformOptions object = {} // Platform-specific properties (optional)
    - Type conversion and JSON marshaling for complex values
    - Secret reference handling
 
-4. **Volume Dependencies**: Persistent volumes require:
-   - Dependency resolution from `options.Dependencies`
-   - Volume resource property extraction
-   - SecretProviderClass creation for Azure Key Vault
-   - Role assignment creation for volume access
+4. **Volume Handling**: The recipe has different responsibilities for volume types following the Kubernetes volume conventions:
+   - **Ephemeral volumes (emptyDir)**: Recipe creates volume definitions directly using the `emptyDir` property, following Kubernetes emptyDir convention
+   - **Persistent volumes**: Recipe mounts pre-existing PersistentVolumeClaims (PVCs) created by the Radius.Compute/persistentVolumes resource type, referenced via `persistentVolume.resourceId`
+   - **Secret volumes**: Recipe mounts Kubernetes secrets as volumes, referenced via `secretId` pointing to Radius.Security/secrets resources
+   - **Dynamic RP Support Required**: The volumes construct in the new schema (where containers reference volume resources via `persistentVolume.resourceId` or `secretId`) requires the dynamic resource provider functionality to resolve volume resource references and pass the necessary mounting information (e.g., PVC names, mount paths) to the container recipe
+   - Volume resource property extraction for mount configuration
 
 5. **Identity and RBAC Logic**:
    - Conditional identity creation based on connections/volumes
@@ -232,15 +244,16 @@ var daprAnnotations = daprEnabled ? {
   'dapr.io/config': containerSpec.extensions.dapr.config ?? 'default'
 } : {}
 
-// Final labels combining base, extension metadata, and Dapr
+// Final labels combining base, platformOptions metadata, and Dapr
+// Note: Kubernetes metadata moved from extensions to platformOptions in new schema
 var finalLabels = union(
   commonLabels,
-  containerSpec.extensions?.kubernetesMetadata?.labels ?? {},
+  containerSpec.platformOptions?.kubernetes?.metadata?.labels ?? {},
   daprLabels
 )
 
 var finalAnnotations = union(
-  containerSpec.extensions?.kubernetesMetadata?.annotations ?? {},
+  containerSpec.platformOptions?.kubernetes?.metadata?.annotations ?? {},
   daprAnnotations
 )
 ```
@@ -439,21 +452,25 @@ resource deployment 'apps/Deployment@v1' = {
           }
         ]
         volumes: concat(
-          // Ephemeral volumes
+          // Ephemeral volumes - recipe creates these directly using emptyDir property
           [for volume in items(volumes): {
             name: volume.key
-            emptyDir: {}
-          } if volume.value.kind == 'ephemeral'],
-          // Persistent volumes (Key Vault)
+            emptyDir: volume.value.emptyDir ?? {}
+          } if volume.value.?emptyDir != null],
+          // Persistent volumes - recipe mounts PVCs created by persistentVolume resources
           [for volume in items(volumes): {
             name: volume.key
-            csi: {
-              driver: 'secrets-store.csi.k8s.io'
-              volumeAttributes: {
-                secretProviderClass: '${context.resource.name}-${volume.key}'
-              }
+            persistentVolumeClaim: {
+              claimName: volume.value.persistentVolume.resourceId // Reference to PVC created by Radius.Compute/persistentVolumes
             }
-          } if volume.value.kind == 'persistent']
+          } if volume.value.?persistentVolume != null],
+          // Secret volumes - recipe mounts Kubernetes secrets
+          [for volume in items(volumes): {
+            name: volume.key
+            secret: {
+              secretName: volume.value.secretId // Reference to Radius.Security/secrets
+            }
+          } if volume.value.?secretId != null]
         )
       }
     }
@@ -485,16 +502,16 @@ var replicaCount = contains(extensions, 'manualScaling')
   : (replicas ?? 1)
 ```
 
-**Kubernetes Metadata Extension** (`kubernetesmetadata.Renderer`):
+**Kubernetes Metadata** (moved from extensions to `platformOptions`):
 ```bicep
-// Custom labels and annotations
-var customLabels = contains(extensions, 'kubernetesMetadata') 
-  ? extensions.kubernetesMetadata.?labels ?? {} 
-  : {}
-var customAnnotations = contains(extensions, 'kubernetesMetadata')
-  ? extensions.kubernetesMetadata.?annotations ?? {}
-  : {}
+// Custom labels and annotations - now in platformOptions.kubernetes.metadata
+var customLabels = platformOptions.?kubernetes.?metadata.?labels ?? {}
+var customAnnotations = platformOptions.?kubernetes.?metadata.?annotations ?? {}
 ```
+
+**Notes**: 
+- In the new Radius.Compute/containers schema, Kubernetes metadata (labels and annotations) has been moved from the `extensions` array to `platformOptions.kubernetes.metadata` to better align with the platform-specific configuration model.
+- **Breaking Change**: The current implementation supports cascading Kubernetes metadata from Environment and Application resources to container deployments. This cascading behavior will NOT be replicated in the recipe-based approach. Platform engineers who need environment-level or application-level metadata must configure it through recipe parameters in the Environment definition, and the recipe must explicitly apply those labels/annotations to all generated resources.
 
 #### Resource Provisioning
 
@@ -632,6 +649,43 @@ New registration will target Radius.Compute/containers with recipe configuration
 5. Update tests for new resource type
 6. Update documentation for Radius.Compute/containers
 
+### Breaking Changes
+
+#### Kubernetes Metadata Cascading
+
+**Current Behavior**: The existing Applications.Core/containers implementation supports cascading Kubernetes metadata (labels and annotations) from Environment and Application resources to container deployments. This means labels/annotations defined at the environment or application level are automatically applied to all container resources within that scope.
+
+**New Behavior**: The recipe-based approach for Radius.Compute/containers will NOT support automatic cascading of Kubernetes metadata. This is a breaking change that requires platform engineers to explicitly handle metadata propagation.
+
+**Migration Path**: Platform engineers who need environment-level or application-level metadata must:
+1. Define metadata in the Environment's recipe parameters (e.g., `recipeParameters.Radius.Compute/containers.metadata.labels`)
+2. Update recipes to merge environment-level metadata with container-specific metadata from `platformOptions.kubernetes.metadata`
+3. Ensure the recipe applies the merged metadata to all generated Kubernetes resources (Deployment, Service, etc.)
+
+**Example Environment Configuration**:
+```bicep
+resource env 'Radius.Core/environments@2025-05-01-preview' = {
+  name: 'my-env'
+  properties: {
+    recipePacks: [kubernetesRecipePack.id]
+    recipeParameters: {
+      'Radius.Compute/containers': {
+        allowPlatformOptions: true
+        // Environment-level metadata that recipes should apply to all containers
+        metadata: {
+          labels: {
+            'team.contact.name': 'platform-team'
+            'cost-center': '12345'
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Impact**: Users who rely on metadata cascading will need to update their Environment configurations and potentially customize recipes to achieve the same behavior.
+
 ### Technical Challenges and Gaps
 
 #### Critical Missing Capabilities
@@ -639,7 +693,8 @@ New registration will target Radius.Compute/containers with recipe configuration
 1. **Schema Translation**: Complex mapping from Applications.Core/containers internal model to Radius.Compute/containers schema
 2. **Extension Structure**: New schema uses different extension structure requiring significant recipe logic changes
 3. **Complex Type Processing**: Limited ability to replicate Go's flexible type conversion in environment variable processing
-4. **Volume Resolution**: No direct access to volume resource computed values needed for persistent volume setup
+4. **Volume Resolution**: The new schema's volumes construct (where containers reference separate volume resources via `properties.volumes`) requires dynamic resource provider functionality to resolve these references at deployment time. The container recipe needs access to volume resource outputs (e.g., PVC names from Radius.Compute/persistentVolumes resources) to properly mount them. This cross-resource dependency resolution is not available in the current recipe system.
+5. **Metadata Cascading**: Current implementation cascades Kubernetes metadata (labels/annotations) from Environment and Application resources to container deployments. This functionality will NOT be replicated in recipes. Platform engineers must explicitly configure environment-level metadata through recipe parameters.
 
 #### Workarounds Required
 
@@ -648,6 +703,8 @@ New registration will target Radius.Compute/containers with recipe configuration
 3. **Extension Mapping**: Convert between extension array model (current) and object model (new schema)
 4. **Simplified Type Support**: Support only basic types in environment variables initially
 5. **Monolithic Recipe**: Single recipe handling all functionality vs modular renderer composition
+6. **Metadata Configuration Pattern**: Platform engineers must explicitly configure environment-level or application-level Kubernetes metadata through recipe parameters instead of relying on automatic cascading. The recipe must be designed to merge environment-level metadata with container-specific metadata.
+7. **Dynamic RP for Volume References**: The recipe engine must support dynamic resource provider functionality to resolve cross-resource dependencies. Specifically, when a container references volumes via `properties.volumes`, the recipe needs access to outputs from the referenced Radius.Compute/persistentVolumes resources (e.g., PVC names) to generate proper volume mounts.
 
 #### Development Effort Estimate
 
@@ -661,7 +718,11 @@ New registration will target Radius.Compute/containers with recipe configuration
 
 1. **Multi-Container Deployment**: Test containers map with multiple containers, shared volumes, different configurations using new schema
 2. **Extension Functionality**: Verify Dapr sidecars, scaling, auto-scaling work with new extension structure
-3. **Volume Integration**: Test ephemeral volumes, persistent volumes, volume mounts using new volume schema
+3. **Volume Integration**: 
+   - Test ephemeral volumes (emptyDir) created by recipe
+   - Test persistent volumes mounted from PVCs created by Radius.Compute/persistentVolumes resources
+   - Test secret volumes mounted from Kubernetes secrets
+   - Verify volume mount paths and configurations
 4. **Identity and RBAC**: Verify Azure workload identity, service accounts, role bindings work with recipe
 5. **Connection Processing**: Test environment variable generation from connections using new schema
 6. **Platform Options**: Test platform-specific properties for Kubernetes
@@ -697,13 +758,8 @@ New registration will target Radius.Compute/containers with recipe configuration
 
 ## Open Questions
 
-1. **Kubernetes Extension Stability**: How stable is the preview Kubernetes extension for production use?
-2. **kubeConfig Management**: How will Kubernetes configuration be securely passed from Radius environment to recipes?
-3. **Extension Capability Gaps**: Are there any current renderer capabilities that cannot be replicated with the Kubernetes extension?
-4. **Performance Characteristics**: What is the performance impact of Kubernetes extension calls compared to direct Go renderer execution?
-5. **Development & Debugging**: What tooling and debugging capabilities are available for Bicep recipes using the Kubernetes extension?
-6. **Volume Integration**: How will Azure Key Vault and persistent volume integration work with the Kubernetes extension?
-7. **Base Manifest Support**: Can user-provided YAML manifests be integrated with Kubernetes extension resources?
+1. **Extension Capability Gaps**: Are there any current renderer capabilities that cannot be replicated with the Kubernetes extension? We believe that all critical capabilities can be replicated, but we will be looking for confirmation during implementation.
+2. **Dynamic RP for Volume Dependencies**: How will the recipe engine support dynamic resource provider functionality to resolve cross-resource dependencies? Specifically, how will container recipes access outputs from referenced Radius.Compute/persistentVolumes resources to obtain PVC names and other mounting information?
 
 ## Appendix: Technical Details
 
@@ -724,6 +780,8 @@ New registration will target Radius.Compute/containers with recipe configuration
 
 **Extension Processing Order**: metadata → scaling → dapr → container (inner-to-outer execution)
 
+**Note**: In the new schema, Kubernetes metadata is no longer in the extension chain but is specified via `platformOptions.kubernetes.metadata`
+
 ### Resource Type Schema Differences
 
 **Current**: Applications.Core/containers (internal Go model)
@@ -732,10 +790,15 @@ New registration will target Radius.Compute/containers with recipe configuration
 Key schema differences requiring recipe parameter mapping:
 - Multi-container model: `properties.containers` (object map)
 - Extension structure: `properties.extensions.daprSidecar` (object) vs old array model
-- Volume configuration: `properties.volumes` with emptyDir/persistentVolume/secretId options
+- Volume configuration: `properties.volumes` with three distinct properties following Kubernetes conventions:
+  - `emptyDir`: Ephemeral volumes (follows Kubernetes emptyDir convention)
+  - `persistentVolume.resourceId`: Reference to Radius.Compute/persistentVolumes resource
+  - `secretId`: Reference to Radius.Security/secrets resource
 - Scaling options: `properties.replicas` and `properties.autoScaling` (direct properties)
 - Resource constraints: `properties.containers[name].resources.requests/limits`
-- Platform options: `properties.platformOptions` for Kubernetes-specific configuration
+- Platform options: `properties.platformOptions` for platform-specific configuration
+  - Kubernetes metadata moved from `extensions.kubernetesMetadata` to `platformOptions.kubernetes.metadata`
+  - Platform-specific pod configurations in `platformOptions.kubernetes` (e.g., tolerations, nodeSelector)
 
 ### Computed Values System
 
