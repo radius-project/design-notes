@@ -110,6 +110,7 @@ RabbitMQ
 ResourceDeploymentClient
 Rollout
 SaaS
+schema's
 SDKs
 secretId
 SecretProviderClass
