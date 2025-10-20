@@ -10,9 +10,6 @@ This design describes replacing the imperative Go renderer chain for Application
 
 - **Container Renderer Chain**: The composed renderers in `pkg/corerp/model/application_model.go` that process containers
 - **Bicep Recipe**: Declarative template that provisions infrastructure based on input parameters
-- **Extension Renderers**: Wrapper renderers that add functionality (Dapr sidecars, manual scaling, metadata)
-- **Base Manifest**: User-provided Kubernetes YAML merged with generated resources via `kubeutil.ParseManifest`
-- **LocalID**: Internal identifier for tracking output resource relationships (e.g., `rpv1.LocalIDDeployment`)
 
 ## Objectives
 
