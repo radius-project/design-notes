@@ -76,8 +76,6 @@ Based on the above differences, *we choose Radius.Core/recipePacks to be provisi
 
 We should make sure the rad resource-type commands cannot alter the schema of these types as part of schema validation (this namespace is reserved for Radius's use). Appropriate error message should be provided to the user. 
 
-
-
 ### Other alternatives considered 
 
 ***Embed all recipe mappings inline in the Environment***
@@ -177,8 +175,6 @@ provisioningState?: ProvisioningState;
 @doc("Description of what this recipe pack provides") 
 description?: string; 
 
-@doc("Version of the recipe pack") 
-version: string; 
 
 @doc("List of environment IDs that reference this recipe pack") 
 @visibility("read") 
@@ -193,14 +189,17 @@ model RecipeDefinition {
 @doc("The type of recipe (e.g., terraform, bicep)") 
 recipeKind: RecipeKind; 
 
+@doc("Connect to the location using HTTP (not HTTPS). This should be used when the location is known not to support HTTPS, for example in a locally hosted registry for Bicep recipes. Defaults to false (use HTTPS/TLS)")
+plainHttp?: boolean;
+
 @doc("URL or path to the recipe source") 
 recipeLocation: string; 
 
 @doc("recipe digest in the format algorithm:digest_value") 
 recipeDigest?: string; 
 
-@doc("Parameters to pass to the recipe") 
-parameters?: {}; 
+@doc("Parameters to pass to the recipe")
+parameters?: Record<unknown>; 
 } 
 
 @doc("The type of recipe") 
@@ -374,7 +373,7 @@ CREATE response:
     "lastModifiedByType": ""
   },
   "tags": {},
-  "type": "Applications.Core/recipePacks"
+  "type": "Radius.Core/recipePacks"
 }
 
 ```
@@ -423,7 +422,7 @@ READ response:
     "lastModifiedByType": ""
   },
   "tags": {},
-  "type": "Applications.Core/recipePacks"
+  "type": "Radius.Core/recipePacks"
 }                                                                               
 ```
 
@@ -538,9 +537,7 @@ resource computeRecipePack 'Radius.Core/recipePacks@2025-05-01-preview' = {
 rad deploy computeRecipePack.bicep
 ```
 
-The deploy operation should fail if the recipepack already exists AND there is atleast one resource deployed using the recipe pack, unless we are updating the pack to incrementally adding another type to the recipe pack. 
-
-If there is an edit to any of the recipe attributes (recipeKind/recipeLocation/parameters), For now, we should return error mentioning a new recipe pack should be created, but once we have the version support, we should provide error message indicating such changes should happen in a newer version of recipe.
+The deploy operation should succeed even if the recipepack already exists and is referenced by environments(update supported). This is in parity with the current recipe behavior we have.  
 
 Note: rad recipe-pack create command could be added as a fast follow feature. For now, we are using rad deploy to create recipe packs.  
 
@@ -550,8 +547,8 @@ Note: rad recipe-pack create command could be added as a fast follow feature. Fo
 ```
 $ rad recipe-pack show computeRecipePack............................................
 
-RESOURCE                TYPE                      GROUP     STATE
-computeRecipePack       Radius.Core/recipePacks   default   Succeeded
+RESOURCE                TYPE                      GROUP     
+computeRecipePack       Radius.Core/recipePacks   default   
 
 RESOURCE TYPE                    RECIPE KIND          RECIPE LOCATION    RECIPE PARAMETERS
 Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48  allowPlatformOptions(bool)
@@ -591,7 +588,7 @@ dataRecipePack
 $ rad recipe-pack delete <recipe-pack-name>
 ```
 
-We could delete recipe-packs that are not referenced by any environment in any resource-group. This requires further thought and is similar to deletion of resources such as resource-type resource we have today.
+We could delete recipe-packs that are not referenced by any environment in any resource-group. If referenced by envrinmonts, the delete should also update the environment to not have the recipepack ID in its list of recipe packs. Allowance of recipe pack deletion when there are resources refering to it is in parity with today's recipe behavior. 
 
 Environment commands related to recipe packs are:
 
@@ -633,7 +630,7 @@ dataRecipePack
 
 ```
 $ rad recipe list -environment my-env
-RECIPE PACK             RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+RECIPE PACK             RESOURCE TYPE                    RECIPE KIND           RECIPE LOCATION
 computeRecipePack       Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
 computeRecipePack       Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
 computeRecipePack       Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
@@ -667,11 +664,11 @@ Providing an option to initialize Radius for az/aws based recipe packs requires 
 ### Graph support
 
 Recipe packs will not be displayed in application graphs since the are operatiors concept and not part of an application as a component.
+However, dashboard will be enhanced to show a list of recipe packs, similar to the environment list we have today.
 
 ### Logging/Tracing support
 
 Standard logging and tracing will be implemented for all recipe pack operations through the existing Applications RP logging/tracing infrastructure.
-
 
 ### Community
 
@@ -774,17 +771,3 @@ We might want to add metrics related to recipe pack usage.
 https://dev.azure.com/azure-octo/Incubations/_workitems/edit/17257 should be a follow up to the feature. Named packs could offer a potential solution.
 
 
-## notes/questions for myself (to be deleted before merging)
-
-- recipe-pack : RRT or NOT? same question as RRT in the Radius.Config namespace (app, env). These types are not meant to be edited by users, and should be as defined by Radius so that Radius can work. (imperatative)
-- rad init today says installing a "recipe-pack" -  might need changes here to enable choosing a pack. (retain behavior)
-- rad init / install must be updated to create the recipe pack resource type ( as part of registering manifests logic we have today) 
-- if we want the ability to "init" with a selected pack say for az, how would we do it? it might help to allow url to recipe-pack manifest, and as part of rad init , create the rrt as well as the rrt resource (using the url for yaml manifest) and init the env with it. (in future)
-- would environment and recipe pack ever have different rbac? should we "allow" recipepack is in different radius resource grpup from that of environment? (yes , with -g, consider 2 diff env owned by 2 diff team)
-- prereq: finalize new environment design
-- handling recipe-packs with dup recipes. at the time of creation, of recipe pack, it could have dups with another recipe-pack. But we have to dtect dups at the time of registering to env. 
--  we are moving away from named recipes. If a customer wishes to use same env for two applications, these application teams have their own recipes, then would we advice them to create 2 enviroments ? We could also guide them to a naming like contoso-recipe-pack and cool-prod-recipe-pack. But this would either require us to allow for duplicate recipes between packs, or require multiple teams to coordinate and ensure their types are different? (its is upto the teams to decide how they want to organize)
--  now that the "unit" of importing recipes is recipe pack, would we "contrib" recipe pack manifests? (yes)
--  would we think about enforcing a size limit on recipe pack? how many recipes it can have ? (not now)
--  - should recipe-pack resource have a list of env ids to which it belongs? typically, RRTs have an app id or env id. (no, causes a cycle)
--  - cli -support versus deploying through bicep (create cmd can come later for recipe pack)
