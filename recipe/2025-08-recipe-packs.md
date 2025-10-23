@@ -12,22 +12,36 @@ This document proposes the design of a Recipe Pack as a first class resource typ
 
 ## Terms and definitions
 
-| Term        | Definition                                                                                         |
-| ----------- | -------------------------------------------------------------------------------------------------- |
-| Recipe      | IaC templates that operators register on a Radius Environment                                     |
-| Recipe Pack | A collection of recipes that can be managed as an entity                                          |
-| RRT         | [Radius Resource Type](https://docs.radapp.io/guides/author-apps/custom/overview/)               |
+| Term                    | Definition                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| Recipe                  | IaC templates that operators register on a Radius Environment                                     |
+| Recipe Pack             | A collection of recipes that can be managed as an entity                                          |
+| RRT                     | [Radius Resource Type](https://docs.radapp.io/guides/author-apps/custom/overview/)               |
+| Applications RP         | Applications Resource Provider - manages Radius application resources and recipe operations       |
+| Dynamic RP              | Dynamic Resource Provider - handles user-defined resource types and their provisioning           |
+| UCP                     | Universal Control Plane - routes resource operations to appropriate resource providers            |
+| IaC                     | Infrastructure as Code - declarative configuration files for managing infrastructure             |
+| Recipe Digest           | Cryptographic hash (e.g., SHA-256) used to verify the integrity of a recipe's content           |
+| Recipe Parameters       | Configuration values passed to recipes during resource provisioning                              |
+| Resource Type           | Identifier that defines the type of resource (e.g., `Radius.Compute/containers`)                |
+| Environment             | Radius resource that defines the deployment context and available recipes for applications       |
+| Namespace               | Logical grouping of resource types (e.g., `Applications.Core`, `Radius.Core`)                   |
+| Recipe Engine           | Component responsible for executing recipes during resource provisioning                         |
+| Portable Resource       | Radius resource that can be deployed across different cloud platforms using recipes             |
 
 ## Objectives
 
-> **Issue Reference:** 
+[**Recipe Packs**](https://github.com/radius-project/roadmap/issues/9)
 
 ### Goals
 
-Provide Recipe Packs as a Radius feature to bundle multiple recipes as a single manageable entity into a Radius Environment (e.g., a pack for ACI that includes all necessary recipes).
-
-  - Radius should provide APIs to manage Radius.Core/recipePacks resource through CRUDL operations
-  
+- Introduce Recipe Packs as a first-class resource type (`Radius.Core/recipePacks`) managed imperatively by Applications RP
+- Enable bundling multiple recipes for different resource types into reusable units that can be referenced by environments
+- Provide APIs for CRUDL (Create, Read, Update, Delete, List) operations on Recipe Pack resources
+- Support bulk registration of recipes to environments, reducing manual effort and errors when managing many recipes across multiple environments
+- Enhance recipe security by supporting optional digest verification for both Bicep and Terraform recipes
+- Provide CLI commands (`rad recipe-pack`) for managing Recipe Packs
+- Provide Dashboard view for recipe packs.  
 
 ### Non goals
 
@@ -255,10 +269,8 @@ interface RecipePacks {
   
 * We maintain a reverse index into environment IDs so that we can handle CRUDL operations gracefully. For example, only a recipe pack that is not referenced by any environment can be deleted or updated. 
 
-* We allow the users tp input a digest for a recipe to enhance security. More about this in [Verifying Recipy Integrity](#security)
-
-
-  
+* We allow the users to input a digest for a recipe to enhance security. More about this in [Verifying Recipy Integrity](#security)
+ 
 #### Examples
 
 Below is a sample bicep definition of a recipe pack resource:
