@@ -557,7 +557,7 @@ Note: rad recipe-pack create command could be added as a fast follow feature. Fo
 1. Show recipe pack details:
 
 ```
-$ rad recipe-pack show computeRecipePack............................................
+$ rad recipe-pack show computeRecipePack
 
 RESOURCE                TYPE                      GROUP     
 computeRecipePack       Radius.Core/recipePacks   default   
@@ -594,13 +594,15 @@ computeRecipePack
 dataRecipePack      
 ```
 
-1. Delete recipe pack:
+5. Delete recipe pack:
 
 ```
 $ rad recipe-pack delete <recipe-pack-name>
 ```
 
 We could delete recipe-packs that are not referenced by any environment in any resource-group. If referenced by envrinmonts, the delete should also update the environment to not have the recipepack ID in its list of recipe packs. Allowance of recipe pack deletion when there are resources refering to it is in parity with today's recipe behavior. 
+
+By default, dlete looks for rcipe-pack in current group. It should take in optional scope to delete recipe packs in Other scope. 
 
 Environment commands related to recipe packs are:
 
@@ -780,6 +782,8 @@ We might want to add metrics related to recipe pack usage.
 
 ## Open issues
 
-https://dev.azure.com/azure-octo/Incubations/_workitems/edit/17257 should be a follow up to the feature. Named packs could offer a potential solution.
+- Revisit recipe precedence decision. 
+- Versioning support on recipe/ recipe-packs.
+
 
 
