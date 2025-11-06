@@ -24,7 +24,7 @@ Identify inconsistencies, duplications, ambiguities, and underspecified items ac
 
 ### 1. Initialize Analysis Context
 
-Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
+Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` (Linux or macOS) or `.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` (Windows) once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
 
 - SPEC = FEATURE_DIR/spec.md
 - PLAN = FEATURE_DIR/plan.md
@@ -126,16 +126,16 @@ Output a Markdown report (no file writes) with the following structure:
 
 ## Specification Analysis Report
 
-| ID | Category | Severity | Location(s) | Summary | Recommendation |
-|----|----------|----------|-------------|---------|----------------|
-| A1 | Duplication | HIGH | spec.md:L120-134 | Two similar requirements ... | Merge phrasing; keep clearer version |
+| ID  | Category    | Severity | Location(s)      | Summary                      | Recommendation                       |
+| --- | ----------- | -------- | ---------------- | ---------------------------- | ------------------------------------ |
+| A1  | Duplication | HIGH     | spec.md:L120-134 | Two similar requirements ... | Merge phrasing; keep clearer version |
 
 (Add one row per finding; generate stable IDs prefixed by category initial.)
 
 **Coverage Summary Table:**
 
 | Requirement Key | Has Task? | Task IDs | Notes |
-|-----------------|-----------|----------|-------|
+| --------------- | --------- | -------- | ----- |
 
 **Constitution Alignment Issues:** (if any)
 
