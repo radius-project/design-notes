@@ -1,14 +1,16 @@
 <!--
 Sync Impact Report:
-- Version change: none → 1.0.0
-- Modified principles: N/A (initial constitution)
-- Added sections: Core Principles (8), Technology Stack & Standards, Development Workflow & Review, Governance
-- Removed sections: N/A
+- Version change: 1.0.0 → 1.1.0 (MINOR: added new principle, governance clarifications)
+- Modified principles: VIII. Simplicity Over Cleverness (clarified ordering rationale wording); Compliance section now references new principle explicitly
+- Added sections: Principle IX (Incremental Adoption & Backward Compatibility); Quarterly Review note in Governance
+- Removed sections: None
 - Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check section aligns)
-  ✅ .specify/templates/spec-template.md (User scenarios align with Collaboration-Centric principle)
-  ✅ .specify/templates/tasks-template.md (Testing discipline reflected in task structure)
-- Follow-up TODOs: None
+  ✅ .specify/templates/plan-template.md (Constitution Check remains generic, no change required)
+  ✅ .specify/templates/spec-template.md (Incremental adoption supported via independent user stories pattern)
+  ✅ .specify/templates/tasks-template.md (Incremental delivery language already present; aligns with new principle)
+  ⚠ .specify/templates/commands/* (Directory absent in repository; reference in prompt instructions only—TODO if future command templates are added)
+- Follow-up TODOs:
+  TODO(COMMAND_TEMPLATES): Create `.specify/templates/commands/` directory if command workflows are adopted to enable constitution alignment checks.
 -->
 
 # Radius Design Notes Constitution
@@ -73,6 +75,12 @@ Design specifications MUST be authored in markdown and stored in the public `des
 Start simple and add complexity only when proven necessary through actual requirements. Question every abstraction layer—each one adds cognitive overhead. Optimize for correctness first, testability second, and simplicity third. Reject over-engineering and "future-proofing" in favor of solving immediate, well-understood requirements. Apply YAGNI (You Aren't Gonna Need It) principles rigorously.
 
 **Rationale**: Premature complexity is the enemy of maintainability. Simple, direct solutions are easier to understand, test, debug, and evolve. Complexity should be justified by concrete needs, not hypothetical future scenarios.
+
+### IX. Incremental Adoption & Backward Compatibility
+
+Features, abstractions, and workflow changes MUST support gradual opt-in rather than forcing a disruptive migration. Breaking changes MUST provide a documented migration path and a deprecation period (minimum two release cycles) before removal. New abstractions MUST start behind feature flags or clearly labeled "experimental" status until validated by real usage. Backward compatibility MUST be maintained within a major version; removal or hard behavioral shifts REQUIRE either a guarded rollout or a MAJOR version bump with explicit migration guidance. Documentation MUST call out required user actions for any change that affects existing workflows.
+
+**Rationale**: Radius integrates with diverse existing toolchains (Bicep, Terraform, Kubernetes). Enforcing big-bang changes erodes trust and slows adoption. Iterative, reversible evolution encourages early feedback, reduces risk, and preserves stability for production users.
 
 ## Technology Stack & Standards
 
@@ -143,6 +151,7 @@ Reviewers MUST verify:
 - **Commit Hygiene**: Conventional commit messages; Signed-off-by present; no merge commits
 - **Error Handling**: Errors are not suppressed without justification; specific error types are handled appropriately
 - **Complexity**: Any violations of simplicity principles (e.g., new abstraction layers) are justified with concrete requirements
+- **Incremental Adoption**: Changes altering existing workflows include migration guidance, optionality (flags or config), and do not silently break existing deploy paths
 
 ## Governance
 
@@ -163,7 +172,11 @@ Amendments to this constitution require:
 
 ### Compliance and Enforcement
 
-All design specifications, plans, and implementation PRs MUST demonstrate compliance with this constitution. Maintainers MAY request changes to bring work into compliance with stated principles. Complexity that violates principles (especially Multi-Cloud Neutrality, Simplicity Over Cleverness, or Incremental Adoption) MUST be justified with explicit trade-off analysis documented in the PR or design note.
+All design specifications, plans, and implementation PRs MUST demonstrate compliance with this constitution. Maintainers MAY request changes to bring work into compliance with stated principles. Complexity that violates principles (especially Multi-Cloud Neutrality, Simplicity Over Cleverness, or Incremental Adoption & Backward Compatibility) MUST be justified with explicit trade-off analysis documented in the PR or design note.
+
+### Periodic Review
+
+This constitution MUST undergo a scheduled review at least quarterly (January, April, July, October) to assess relevance of principles, identify emerging gaps (e.g., security, observability evolution), and plan any prospective MINOR or MAJOR amendments transparently.
 
 For day-to-day development guidance beyond this constitution, refer to:
 
@@ -171,4 +184,4 @@ For day-to-day development guidance beyond this constitution, refer to:
 - [Developer guides](https://github.com/radius-project/radius/tree/main/docs/contributing) for detailed technical instructions
 - [Code organization guide](https://github.com/radius-project/radius/blob/main/docs/contributing/contributing-code/contributing-code-organization/README.md) for repository structure
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-06
+**Version**: 1.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-06
