@@ -1,16 +1,26 @@
 <!--
 Sync Impact Report:
-- Version change: 1.0.0 → 1.1.0 (MINOR: added new principle, governance clarifications)
-- Modified principles: VIII. Simplicity Over Cleverness (clarified ordering rationale wording); Compliance section now references new principle explicitly
-- Added sections: Principle IX (Incremental Adoption & Backward Compatibility); Quarterly Review note in Governance
+- Version change: 1.1.0 → 2.0.0 (MAJOR: significant principle additions and redefinitions for multi-repo support)
+- Modified principles:
+  - II. Go Idiomatic Code → II. Idiomatic Code Standards (broadened to all languages)
+  - IV. Testing Pyramid Discipline (expanded with repo-specific testing requirements)
+- Added sections:
+  - Principle X (TypeScript and React Standards)
+  - Principle XI (Frontend Testing Discipline)
+  - Principle XII (Resource Type Schema Quality)
+  - Principle XIII (Recipe Development Standards)
+  - Principle XIV (Documentation Structure and Quality)
+  - Principle XV (Documentation Contribution Standards)
+  - Principle XVI (Repository-Specific Standards)
+  - Principle XVII (Polyglot Project Coherence)
 - Removed sections: None
 - Templates requiring updates:
   ✅ .specify/templates/plan-template.md (Constitution Check remains generic, no change required)
   ✅ .specify/templates/spec-template.md (Incremental adoption supported via independent user stories pattern)
-  ✅ .specify/templates/tasks-template.md (Incremental delivery language already present; aligns with new principle)
-  ⚠ .specify/templates/commands/* (Directory absent in repository; reference in prompt instructions only—TODO if future command templates are added)
+  ✅ .specify/templates/tasks-template.md (Incremental delivery language already present; aligns with new principles)
 - Follow-up TODOs:
-  TODO(COMMAND_TEMPLATES): Create `.specify/templates/commands/` directory if command workflows are adopted to enable constitution alignment checks.
+  TODO(REPO_ADDENDUMS): Create constitution addendums for dashboard, resource-types-contrib, and docs repositories
+  TODO(CROSS_REPO_REVIEW): Establish cross-repository design review process for coordinated changes
 -->
 
 # Radius Design Notes Constitution
@@ -23,11 +33,20 @@ All features MUST be designed with well-defined APIs before implementation begin
 
 **Rationale**: Radius is fundamentally an API-driven platform enabling multi-cloud deployments and integration with various tools (Bicep, Terraform, Kubernetes). Clear API contracts ensure developers and platform engineers can collaborate effectively with well-understood interfaces.
 
-### II. Go Idiomatic Code
+### II. Idiomatic Code Standards
 
-All Go code MUST follow Effective Go patterns and conventions. Code MUST be formatted with `gofmt`. Every exported package, type, variable, constant, and function requires godoc comments explaining its purpose. Minimize exported surface area to simplify design. Code SHOULD leverage Go's simplicity rather than complex abstractions or object-oriented hierarchies. Errors MUST NOT be suppressed without explicit justification and handling of specific error types.
+All code MUST follow language-specific conventions and best practices appropriate to its ecosystem. Each language has community standards that improve readability, maintainability, and developer productivity.
 
-**Rationale**: Go's strength lies in its simplicity and directness. Adhering to idiomatic Go makes the codebase approachable for contributors, reduces cognitive load, and aligns with the broader Go ecosystem that Radius integrates with.
+**Directives**:
+
+- **Go**: Follow *Effective Go* patterns; format with `gofmt`; provide godoc comments for all exported items; minimize exported surface area; leverage Go's simplicity over complex abstractions; handle errors explicitly without suppression
+- **TypeScript**: Follow TypeScript handbook and Backstage guidelines; use ESLint and Prettier; enable strict mode; provide explicit types for public APIs; prefer functional patterns where appropriate
+- **Bicep**: Follow official best practices; use kebab-case for resources, camelCase for parameters; modularize with modules; add parameter descriptions; prefer secure defaults
+- **Terraform**: Follow HashiCorp style guide; format with `terraform fmt`; use modules for reusability; provide variable descriptions and validation; specify explicit dependencies
+- **Python**: Follow PEP 8; use type hints for function signatures; prefer comprehensions where readable; use virtual environments
+- **Markdown**: Follow CommonMark; maintain consistent heading hierarchy; use reference-style links in long documents
+
+**Rationale**: Idiomatic code reduces cognitive load and makes each repository approachable to contributors familiar with that language's ecosystem. Consistency within each language community improves collaboration across the multi-language Radius project.
 
 ### III. Multi-Cloud Neutrality
 
@@ -37,15 +56,36 @@ All designs MUST account for multi-cloud deployment scenarios (Kubernetes, Azure
 
 ### IV. Testing Pyramid Discipline (NON-NEGOTIABLE)
 
-Every feature MUST include comprehensive testing across three layers:
+Every feature MUST include comprehensive testing across appropriate layers for its repository type:
+
+**For Go code (radius repo)**:
 
 - **Unit tests**: Test individual functions and types in `pkg/` directories, runnable with basic prerequisites only (no external dependencies). Use `make test` to run all unit tests.
 - **Integration tests**: Test features with dependencies (databases, external services, cloud providers) in appropriate `test/` subdirectories.
 - **Functional tests**: End-to-end scenarios using the `magpiego` test framework in `test/functional/`, exercising realistic user workflows.
 
+**For TypeScript/React code (dashboard repo)**:
+
+- **Unit tests**: Test individual components, hooks, and utilities with Jest and React Testing Library; ensure proper mocking of external dependencies.
+- **Integration tests**: Test plugin interactions, API integrations, and complex component interactions.
+- **E2E tests**: Use Playwright to test full user workflows across the dashboard UI.
+
+**For IaC code (resource-types-contrib repo)**:
+
+- **Schema validation**: Test YAML schemas validate correctly against expected inputs.
+- **Recipe deployment tests**: Test Bicep/Terraform recipes deploy successfully in test environments.
+- **Integration tests**: Verify recipes integrate correctly with Radius control plane.
+
+**For documentation (docs repo)**:
+
+- **Build verification**: Hugo builds complete without errors.
+- **Link validation**: All internal and external links resolve correctly.
+- **Spelling validation**: Use `pyspelling` to catch typos and maintain consistency.
+- **Example validation**: All code examples build and run successfully.
+
 Tests MUST be written during feature implementation, not as an afterthought. Code coverage reports are reviewed in PRs to ensure adequate test coverage. New features MUST NOT be merged without corresponding tests at appropriate pyramid levels. Tests MUST fail before implementation (Red-Green-Refactor cycle).
 
-**Rationale**: Quality and reliability are paramount for a platform managing critical infrastructure across multiple clouds. The testing pyramid ensures bugs are caught early and features remain stable as the codebase evolves.
+**Rationale**: Quality and reliability are paramount for a platform managing critical infrastructure across multiple clouds. Repository-specific testing ensures bugs are caught early while respecting the unique validation needs of Go services, UI components, infrastructure recipes, and documentation.
 
 ### V. Collaboration-Centric Design
 
@@ -82,32 +122,138 @@ Features, abstractions, and workflow changes MUST support gradual opt-in rather 
 
 **Rationale**: Radius integrates with diverse existing toolchains (Bicep, Terraform, Kubernetes). Enforcing big-bang changes erodes trust and slows adoption. Iterative, reversible evolution encourages early feedback, reduces risk, and preserves stability for production users.
 
+### X. TypeScript and React Standards (Dashboard)
+
+All TypeScript code in the dashboard repository MUST follow Backstage's architectural patterns and community best practices. Components MUST be developed in isolation using Storybook with stories demonstrating all interactive states. React components MUST follow functional component patterns with hooks. Type safety MUST be enforced through TypeScript strict mode. API clients MUST use typed interfaces generated from OpenAPI specifications. State management MUST follow Backstage plugin conventions using context and hooks appropriately.
+
+**Rationale**: The dashboard provides the primary UI for Radius users. Consistent TypeScript and React practices ensure the UI remains maintainable, accessible, and performant as the feature set grows.
+
+### XI. Frontend Testing Discipline (Dashboard)
+
+All UI components MUST include unit tests using Jest and React Testing Library, testing component behavior rather than implementation details. Interactive components MUST have Storybook stories demonstrating all states (loading, error, success, empty). Critical user workflows MUST have Playwright E2E tests covering realistic scenarios. Visual regression MUST be monitored through Storybook's visual testing tools. Accessibility MUST be validated using automated tools (axe-core) and manual keyboard navigation testing.
+
+**Rationale**: Frontend bugs directly impact user experience and are often harder to detect through manual testing. Comprehensive frontend testing ensures the dashboard remains reliable and accessible across browsers and user contexts.
+
+### XII. Resource Type Schema Quality (Contrib)
+
+All resource type schemas MUST be valid YAML files with complete property definitions, descriptions, and examples. Schemas MUST include comprehensive inline documentation explaining each field's purpose and valid values. Required vs. optional fields MUST be clearly specified. Schemas MUST follow consistent naming conventions (camelCase for properties, kebab-case for resource names). Examples MUST be runnable and demonstrate realistic usage patterns. Maturity level (Alpha, Beta, Stable) MUST be clearly documented with stability guarantees.
+
+**Rationale**: Resource type schemas define the contract for community-contributed resources. High-quality schemas ensure developers can author Radius applications confidently without ambiguity or trial-and-error.
+
+### XIII. Recipe Development Standards (Contrib)
+
+All Recipes MUST be implemented in either Bicep or Terraform with clear module structure. Recipes MUST include comprehensive README documentation explaining purpose, prerequisites, parameters, and outputs. Parameters MUST have descriptions and sensible defaults where applicable. Recipes MUST follow secure-by-default principles (e.g., disable public access, enable encryption). Recipes MUST be tested in representative environments before contribution. Recipes SHOULD be cloud-agnostic where possible, with cloud-specific variants clearly documented.
+
+**Rationale**: Recipes enable platform engineers to define reusable infrastructure patterns. Well-structured recipes reduce duplication, improve security posture, and accelerate Radius adoption by providing production-ready infrastructure building blocks.
+
+### XIV. Documentation Structure and Quality (Docs)
+
+All documentation MUST follow the Diátaxis framework organizing content into Tutorials, How-To Guides, Reference, and Explanation. Documentation MUST be written in Markdown following the Docsy theme conventions. Code examples MUST be tested and runnable. Screenshots MUST be up-to-date with current UI state. Internal links MUST use Hugo shortcodes for maintainability. Navigation structure MUST support progressive disclosure from beginner to advanced topics.
+
+**Rationale**: Radius serves diverse audiences from platform engineers to application developers. Structured documentation following Diátaxis ensures users find answers quickly whether they're learning, solving problems, or seeking reference material.
+
+### XV. Documentation Contribution Standards (Docs)
+
+All documentation contributions MUST build successfully with Hugo (`hugo serve`). Markdown MUST pass markdownlint validation. Spelling MUST be validated with pyspelling. Links MUST be validated before merging. CLI documentation MUST be auto-generated from Cobra command definitions in the radius repo. API documentation MUST be auto-generated from OpenAPI specs. Manually-written docs MUST be kept in sync with code through CI validation.
+
+**Rationale**: Documentation quality directly impacts user success and satisfaction. Automated validation catches errors early while auto-generation from code ensures documentation stays accurate as the platform evolves.
+
+### XVI. Repository-Specific Standards
+
+Each repository MAY define additional standards and conventions in a `CONTRIBUTING.md` file that complement (but do not contradict) this constitution. Repository-specific standards SHOULD address:
+
+- **Build and test workflows**: How to run local builds, tests, and validation
+- **Code organization**: Directory structure conventions specific to that repo
+- **Review process**: Repository-specific review checklists and approval requirements
+- **Release process**: How changes are released and versioned for that repo
+- **Tool configuration**: Linters, formatters, and other tooling specific to that stack
+
+**Rationale**: Different repositories serve different purposes with different technology stacks. Repository-specific standards provide flexibility while maintaining coherence through shared core principles.
+
+### XVII. Polyglot Project Coherence
+
+Cross-cutting concerns (authentication, API patterns, error handling, observability) MUST have consistent design patterns across repositories despite different implementation languages. Shared concepts MUST use consistent terminology in documentation and code. Repository boundaries MUST be respected—avoid tight coupling between repos; prefer API contracts over shared code. Design decisions affecting multiple repositories MUST be documented in the design-notes repo with cross-repo impact clearly stated.
+
+**Rationale**: Radius is fundamentally a polyglot project spanning Go services, TypeScript UI, IaC templates, and documentation. Coherent patterns across repositories reduce cognitive load when contributors work across boundaries and ensure the platform feels unified to users despite its technical diversity.
+
 ## Technology Stack & Standards
 
 ### Supported Languages and Tools
 
-- **Go**: Primary implementation language for control plane services (`pkg/corerp/`, `pkg/ucp/`, etc.), CLI (`pkg/cli/`), and controllers (`pkg/controllers/`). Version specified in `go.mod`.
-- **TypeScript/Node.js**: TypeSpec definitions in `typespec/` directory, Bicep tooling in `bicep-tools/`, build scripts.
+- **Go**: Primary implementation language for control plane services (`pkg/corerp/`, `pkg/ucp/`, etc.), CLI (`pkg/cli/`), and controllers (`pkg/controllers/`) in the radius repo. Version specified in `go.mod`.
+- **TypeScript/Node.js**: Dashboard UI (Backstage-based), TypeSpec API definitions in `typespec/` directory, Bicep tooling in `bicep-tools/`, build scripts.
+- **React**: Frontend framework for dashboard UI components, using functional components with hooks.
 - **Python**: Code generation scripts in `hack/` and tooling automation.
-- **Bicep**: Primary Infrastructure as Code language for Radius resource definitions.
+- **Bicep**: Primary Infrastructure as Code language for Radius resource definitions and Recipes.
+- **Terraform**: Alternative IaC language for Recipes in resource-types-contrib repo.
 - **TypeSpec**: API definition language for generating OpenAPI specifications in `swagger/`.
+- **Hugo**: Static site generator for documentation using Docsy theme.
+- **Markdown**: Documentation format across all repositories.
 
 ### Development Environment Requirements
 
-All contributors MUST be able to develop using either:
+All contributors MUST be able to develop using appropriate tooling for their repository:
+
+**For radius repo**:
 
 - **VS Code with Dev Containers** (recommended): Pre-configured environment with all tools in `.devcontainer/devcontainer.json`
 - **Local installation**: Following prerequisites documented in `docs/contributing/contributing-code/contributing-code-prerequisites/`
 
-The dev container includes: Git, GitHub CLI, Go, Node.js, Python, gotestsum, kubectl, Helm, Docker, jq, k3d, kind, stern, Dapr CLI, and VS Code extensions (Go, Python, Bicep, Kubernetes, TypeSpec, YAML, shellcheck, Makefile Tools).
+The radius dev container includes: Git, GitHub CLI, Go, Node.js, Python, gotestsum, kubectl, Helm, Docker, jq, k3d, kind, stern, Dapr CLI, and VS Code extensions (Go, Python, Bicep, Kubernetes, TypeSpec, YAML, shellcheck, Makefile Tools).
 
-For local Kubernetes testing, prefer **k3d** as the primary tool. Secondarily consider **kind** for compatibility testing.
+For local Kubernetes testing in radius repo, prefer **k3d** as the primary tool. Secondarily consider **kind** for compatibility testing.
+
+**For dashboard repo**:
+
+- Node.js and yarn package manager
+- VS Code with recommended extensions: ESLint, Prettier, TypeScript
+- Local Radius installation for testing dashboard against real APIs
+
+**For resource-types-contrib repo**:
+
+- Bicep CLI for Bicep recipe development
+- Terraform CLI for Terraform recipe development
+- Text editor with YAML support for schema editing
+- Local Radius installation for testing recipes
+
+**For docs repo**:
+
+- Hugo extended version for local documentation builds
+- Python with pyspelling for spell checking
+- Text editor with Markdown support
 
 ### Code Quality Standards
+
+**For Go code (radius repo)**:
 
 - **Formatting**: All Go code MUST be formatted with `gofmt` (enforced by `make format-check`)
 - **Linting**: All code MUST pass `golangci-lint` checks (run via `make lint`)
 - **Documentation**: All exported Go packages, types, variables, constants, and functions MUST have godoc comments
+
+**For TypeScript code (dashboard repo)**:
+
+- **Formatting**: All TypeScript code MUST be formatted with Prettier
+- **Linting**: All code MUST pass ESLint checks with Backstage configuration
+- **Type checking**: All code MUST pass TypeScript strict mode checks
+- **Documentation**: All exported components, hooks, and utilities MUST have TSDoc comments
+
+**For Bicep code (resource-types-contrib repo)**:
+
+- **Formatting**: All Bicep code SHOULD be formatted with Bicep CLI formatter
+- **Linting**: All Bicep code MUST pass Bicep linter validation
+- **Documentation**: All modules MUST have parameter descriptions and examples
+
+**For Terraform code (resource-types-contrib repo)**:
+
+- **Formatting**: All Terraform code MUST be formatted with `terraform fmt`
+- **Linting**: All Terraform code SHOULD pass `terraform validate` checks
+- **Documentation**: All modules MUST have variable descriptions and examples
+
+**For Markdown (all repos)**:
+
+- **Formatting**: All Markdown SHOULD follow consistent style conventions
+- **Linting**: All Markdown MUST pass markdownlint validation (in docs repo)
+- **Spelling**: All documentation MUST pass pyspelling validation (in docs repo)
 - **Security**: CodeQL security analysis findings MUST be addressed or explicitly justified with rationale
 - **Generated Code**: All generated code (OpenAPI specs, Go types from specs, mocks via mockgen, Kubernetes API types via controller-gen) MUST be checked into source control and kept up-to-date via `make generate`
 - **Dependencies**: Submodules (e.g., `bicep-types`) MUST be updated with `git submodule update --init --recursive` before building
@@ -143,15 +289,43 @@ Each phase MUST be reviewed and approved before proceeding to the next. The desi
 
 Reviewers MUST verify:
 
-- **Principle Alignment**: Design and implementation align with constitution principles (especially Multi-Cloud Neutrality, Testing Pyramid, API-First)
+**For all repositories**:
+
+- **Principle Alignment**: Design and implementation align with constitution principles
 - **Testing**: Appropriate tests are present across the testing pyramid; tests were written before or during implementation
-- **API Contracts**: APIs are properly versioned using TypeSpec; OpenAPI specs are generated and checked in
-- **Documentation**: godoc comments are complete for exported symbols; user-facing docs are updated if needed
-- **Generated Code**: `make generate` has been run and all generated files are current
+- **Documentation**: Changes are documented appropriately (inline comments, README updates, or docs changes)
 - **Commit Hygiene**: Conventional commit messages; Signed-off-by present; no merge commits
-- **Error Handling**: Errors are not suppressed without justification; specific error types are handled appropriately
 - **Complexity**: Any violations of simplicity principles (e.g., new abstraction layers) are justified with concrete requirements
-- **Incremental Adoption**: Changes altering existing workflows include migration guidance, optionality (flags or config), and do not silently break existing deploy paths
+- **Incremental Adoption**: Changes altering existing workflows include migration guidance, optionality (flags or config), and do not silently break existing paths
+
+**For radius repo**:
+
+- **API Contracts**: APIs are properly versioned using TypeSpec; OpenAPI specs are generated and checked in
+- **Generated Code**: `make generate` has been run and all generated files are current
+- **Error Handling**: Errors are not suppressed without justification; specific error types are handled appropriately
+- **Resource cleanup**: Resources are properly cleaned up (no leaks)
+- **Bicep types**: Generated Bicep types are synchronized with TypeSpec changes
+
+**For dashboard repo**:
+
+- **Component stories**: Storybook stories demonstrate all interactive states
+- **Accessibility**: Components are keyboard-navigable and screen-reader friendly
+- **Type safety**: No `any` types without justification; prefer explicit typing
+- **Performance**: No unnecessary re-renders or expensive operations in render paths
+
+**For resource-types-contrib repo**:
+
+- **Schema completeness**: All properties are documented with descriptions
+- **Recipe security**: Recipes follow secure-by-default principles
+- **Examples validity**: All examples are tested and runnable
+- **Maturity labeling**: Alpha/Beta/Stable status is accurately assigned
+
+**For docs repo**:
+
+- **Build success**: Documentation builds without errors or warnings
+- **Link validity**: All links resolve correctly (internal and external)
+- **Code accuracy**: All code examples are tested and current
+- **Framework alignment**: Content follows Diátaxis framework organization
 
 ## Governance
 
@@ -184,4 +358,4 @@ For day-to-day development guidance beyond this constitution, refer to:
 - [Developer guides](https://github.com/radius-project/radius/tree/main/docs/contributing) for detailed technical instructions
 - [Code organization guide](https://github.com/radius-project/radius/blob/main/docs/contributing/contributing-code/contributing-code-organization/README.md) for repository structure
 
-**Version**: 1.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-06
+**Version**: 2.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-07
