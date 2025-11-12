@@ -36,6 +36,7 @@ CosmosDB
 CreateOrUpdate
 Datastores
 DDD
+deserialize
 DNS
 dns
 DaemonSet
@@ -47,6 +48,7 @@ Docsy
 DocumentDB
 EKS
 eksClusterName
+emptyDir
 entrypoint
 EOF
 Extensibility
@@ -69,9 +71,12 @@ JSON
 JSON
 KeyVault
 Kinesis
+kubeconfig
 Kubernetes
 ListSecret
 Liveness
+LocalID
+maxReplicas
 MONGOMODULE
 MQ
 MacOS
@@ -83,6 +88,7 @@ MongoDb
 NAV
 NODEAPP
 NodeJS
+nodeSelector
 OAuth
 OCI
 OIDC
@@ -93,6 +99,9 @@ PYTHONAPP
 PowerShell
 Pre
 PubSub
+PVCs
+persistentVolumes
+PersistentVolumeClaims
 ProjectRadius
 Quickstart
 Quickstarts
@@ -101,7 +110,10 @@ RabbitMQ
 ResourceDeploymentClient
 Rollout
 SaaS
+schema's
 SDKs
+secretId
+SecretProviderClass
 SMTP
 SNI
 SQL
