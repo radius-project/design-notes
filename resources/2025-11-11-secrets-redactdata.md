@@ -28,8 +28,7 @@ Currently, dynamic-rp stores all resource properties, including sensitive `data`
 1. **Enable recipe-based secret deployment**: Allow recipes to access sensitive data during execution to deploy secrets to various backends (Azure Key Vault, HashiCorp Vault, K8s, etc.)
 2. **Prevent persistent storage**: Ensure sensitive data is nullified from Radius database after successful recipe deployment
 3. **Minimal impact to dynamic-rp core**: Implement redaction as an extensible processor hook without requiring dynamic-rp to understand resource schemas
-4. **Best-effort cleanup on failures**: Attempt to redact sensitive data even when recipe execution fails, using defer blocks and error handlers
-5. **Support multi-backend flexibility**: Enable the same implementation to work with any recipe backend
+4. **Support multi-backend flexibility**: Enable the same implementation to work with any recipe backend
 
 ### Non goals
 
@@ -169,35 +168,13 @@ sequenceDiagram
 
 #### Option 1: Frontend Nullification (Rejected)
 
-**Description**: Nullify sensitive data in the frontend UpdateFilter before initial database save, similar to Applications.Core/secretStores.
+**Description**: Nullify sensitive data in the frontend controller before initial database save, similar to Applications.Core/secretStores.
 
-**Advantages**:
-- No temporary storage of plaintext secrets in database
-- Follows existing secretStores pattern
-- Simpler security model
-
-**Disadvantages**:
+**Reasons for rejection:
 - **Cannot support recipes**: Recipe execution happens in backend async operation and needs access to sensitive data
 - Breaks the recipe-based deployment model
-- Would require passing secrets through operation queue or cache (adds complexity)
 
-#### Option 2: Pass Secrets via Cache/Queue (Considered)
-
-**Description**: Store secrets in Redis/cache with TTL, pass reference through database, retrieve in backend.
-
-**Advantages**:
-- Minimal database exposure
-- Automatic cleanup via TTL
-- Better security isolation
-
-**Disadvantages**:
-- Requires additional infrastructure (Redis/cache)
-- Race conditions if recipe execution exceeds TTL
-- Secrets lost if cache crashes before recipe runs
-- Adds operational complexity
-- Secrets still persisted somewhere (cache instead of DB)
-
-#### Option 3: Backend Post-Recipe Redaction (Recommended)
+#### Option 2: Backend Post-Recipe Redaction (Recommended)
 
 **Description**: Store full resource in database temporarily, execute recipe using the data, redact after successful deployment.
 
@@ -211,7 +188,6 @@ sequenceDiagram
 
 **Disadvantages**:
 - Temporary exposure window (seconds to minutes) during recipe execution
-- Database backups taken during execution may contain plaintext
 - Requires infrastructure-level encryption at rest
 - Needs robust failure handling to ensure cleanup
 
@@ -225,9 +201,7 @@ sequenceDiagram
 3. Temporary exposure window is acceptable with proper safeguards:
    - Automatic cleanup on all exit paths (success/failure)
    - Infrastructure-level encryption at rest (etcd encryption, DB encryption)
-   - RBAC controls on database access
-   - Duration monitoring and alerting
-4. Provides clear path for future enhancements (field encryption, cache-based storage)
+
 
 ### API design (if applicable)
 
@@ -247,152 +221,9 @@ No changes required to Core RP. The implementation is isolated to portable resou
 
 **Primary Changes in Recipe Controller** (`pkg/portableresources/backend/controller/createorupdateresource.go`):
 
-1. **Add redaction hook after recipe execution** (after line 118):
-
-```go
-// Existing recipe status update (lines 109-118)
-if supportsRecipes {
-    recipeData := recipeDataModel.GetRecipe()
-    if recipeData != nil {
-        recipeData.DeploymentStatus = util.Success
-        recipeDataModel.SetRecipe(recipeData)
-    }
-    if recipeOutput != nil && recipeOutput.Status != nil {
-        setRecipeStatus(resource, *recipeOutput.Status)
-    }
-}
-
-// NEW: Redact sensitive data for Radius.Security/secrets
-if processor.SupportsSensitiveDataRedaction() {
-    if err := processor.RedactSensitiveData(ctx, resource); err != nil {
-        return ctrl.Result{}, fmt.Errorf("failed to redact sensitive data: %w", err)
-    }
-}
-
-// Existing save operation (lines 120-129)
-update := &database.Object{
-    Metadata: database.Metadata{ID: req.ResourceID},
-    Data:     recipeDataModel.(rpv1.RadiusResourceModel),
-}
-err = c.DatabaseClient().Save(ctx, update, database.WithETag(storedResource.ETag))
-```
-
-2. **Add cleanup handler to ensure redaction on errors**:
-
-```go
-func (c *CreateOrUpdateResource[P, T]) Run(ctx context.Context, req *ctrl.Request) (ctrl.Result, error) {
-    logger := ucplog.FromContextOrDiscard(ctx)
-
-    // Track when secrets were stored
-    secretStoredAt := time.Now()
-    var resource P
-
-    // Ensure cleanup on any exit path
-    defer func() {
-        if resource != nil && c.processor.SupportsSensitiveDataRedaction() {
-            // Always attempt redaction
-            if redactErr := c.processor.RedactSensitiveData(ctx, resource); redactErr != nil {
-                logger.Error(redactErr, "Failed to redact sensitive data in defer block")
-            }
-
-            // Best-effort save if redaction succeeded
-            _ = c.DatabaseClient().Save(ctx, &database.Object{
-                Metadata: database.Metadata{ID: req.ResourceID},
-                Data:     resource,
-            })
-
-            duration := time.Since(secretStoredAt)
-            logger.Info("Sensitive data cleanup completed",
-                "resourceID", req.ResourceID,
-                "duration", duration.String())
-        }
-    }()
-
-    // Existing logic...
-}
-```
-
-**New Processor Interface** (`pkg/portableresources/processors/interface.go`):
-
-```go
-// SensitiveDataProcessor extends ResourceProcessor with sensitive data handling
-type SensitiveDataProcessor[P interface {
-    *T
-    rpv1.RadiusResourceModel
-}, T any] interface {
-    ResourceProcessor[P, T]
-
-    // SupportsSensitiveDataRedaction returns true if this resource type requires
-    // sensitive data redaction after deployment
-    SupportsSensitiveDataRedaction() bool
-
-    // RedactSensitiveData removes sensitive data fields from the resource after
-    // successful deployment. This is called after recipe execution completes.
-    RedactSensitiveData(ctx context.Context, resource P) error
-}
-```
-
-**Dynamic Resource Processor** (`pkg/dynamicrp/backend/processor/dynamicresource.go`):
-
-```go
-// SupportsSensitiveDataRedaction implements SensitiveDataProcessor
-func (p *DynamicProcessor) SupportsSensitiveDataRedaction() bool {
-    return true // Dynamic resources may require redaction based on type
-}
-
-// RedactSensitiveData implements SensitiveDataProcessor
-func (p *DynamicProcessor) RedactSensitiveData(ctx context.Context, resource *datamodel.DynamicResource) error {
-    // Only redact Radius.Security/secrets type
-    if !strings.EqualFold(resource.Type, "Radius.Security/secrets") {
-        return nil // Not a sensitive type, no-op
-    }
-
-    if resource.Properties == nil {
-        return nil
-    }
-
-    // Nullify the data field
-    if _, exists := resource.Properties["data"]; exists {
-        logger := ucplog.FromContextOrDiscard(ctx)
-        logger.Info("Sanitizing sensitive data field",
-            "resourceID", resource.ID,
-            "resourceType", resource.Type)
-
-        resource.Properties["data"] = nil
-    }
-
-    return nil
-}
-```
-
-**Type Detection Helper** (`pkg/dynamicrp/backend/processor/sensitive.go` - new file):
-
-```go
-package processor
-
-import (
-    "strings"
-
-    "github.com/radius-project/radius/pkg/dynamicrp/datamodel"
-)
-
-const (
-    // SecuritySecretsType is the resource type that requires sensitive data redaction
-    SecuritySecretsType = "Radius.Security/secrets"
-)
-
-// RequiresRedaction returns true if the resource type requires sensitive data redaction
-func RequiresRedaction(resourceType string) bool {
-    return strings.EqualFold(resourceType, SecuritySecretsType)
-}
-
-// NullifySecretData removes the data field from a DynamicResource
-func NullifySecretData(resource *datamodel.DynamicResource) {
-    if resource.Properties != nil {
-        delete(resource.Properties, "data")
-    }
-}
-```
+-Add redaction hook after recipe execution** :
+-Add cleanup handler to ensure redaction on errors**:
+-Type Detection Helper
 
 ### Error Handling
 
@@ -421,7 +252,7 @@ func NullifySecretData(resource *datamodel.DynamicResource) {
 ### Unit Tests
 
 1. **Processor redaction logic**:
-   - Test `RedactSensitiveData()` correctly nullifies `data` field
+   - Test function that correctly nullifies `data` field
    - Test redaction is no-op for non-secret resource types
    - Test redaction handles missing `data` field gracefully
    - Test type detection logic correctly identifies `Radius.Security/secrets`
@@ -432,40 +263,30 @@ func NullifySecretData(resource *datamodel.DynamicResource) {
    - Test defer block redacts on unexpected errors
    - Test duration tracking and logging
 
-### Integration Tests
+### Integration/Functional Tests
 
 1. **Recipe-based deployment**:
-   - Deploy `Radius.Security/secrets` with Azure Key Vault recipe
-   - Verify secrets are created in Azure Key Vault
+   - Deploy `Radius.Security/secrets` with K8s secret recipe
+   - Verify secrets are created
    - Verify `data` field is null in Radius database after deployment
    - Verify output resources are correctly populated
 
-2. **Multi-backend support**:
-   - Deploy same resource with different recipes (K8s, HashiCorp Vault, Azure KV)
-   - Verify redaction works consistently across all backends
-
-3. **Failure scenarios**:
+2. **Failure scenarios**:
    - Trigger recipe execution failure
    - Verify `data` field is still nullified in database
    - Verify recipe error is properly surfaced to user
 
-4. **Update scenarios**:
+3. **Update scenarios**:
    - Update existing `Radius.Security/secrets` resource
    - Verify updated secrets are deployed and redactd
 
-### Functional Tests
-
-1. **End-to-end secret lifecycle**:
+4. **End-to-end secret lifecycle**:
    - Create resource with sensitive data
    - Verify recipe deploys to backend
    - Verify data is redactd after deployment
    - Read resource back and verify `data` is null
    - Reference secrets via output resources in consuming application
 
-2. **Performance testing**:
-   - Measure exposure window duration (time between save and redaction)
-   - Verify duration is within acceptable bounds (seconds, not minutes)
-   - Test with large secret payloads
 
 ## Security
 
@@ -662,23 +483,16 @@ Organizations deploying Radius with `Radius.Security/secrets` should ensure:
 
 ## Alternatives considered
 
-### Alternative 1: Frontend Nullification
+### Alternative 1: Frontend Nullification (Rejected)
 - Store secrets in cache/queue, nullify before database save
 - Rejected: Breaks recipe compatibility, adds infrastructure complexity
+- See Alternative 4 for detailed analysis of queue-based approaches
 
-### Alternative 2: Field-Level Encryption
-- Encrypt sensitive fields before database save
-- Deferred: Key management complexity, can be added as defense-in-depth later
-
-### Alternative 3: Streaming Secrets
-- Pass secrets directly from frontend to backend via operation context
-- Deferred: Operation queue still persists data, complexity outweighs benefits
-
-### Alternative 4: Resource-Specific Controller
+### Alternative 2: Resource-Specific Controller (Rejected)
 - Create dedicated controller for `Radius.Security/secrets` instead of using dynamic-rp
 - Rejected: Breaks type-agnostic model, doesn't scale to other sensitive types
 
-### Alternative 5: Database Encryption at Rest (Recommended Enhancement)
+### Alternative 3: Database Encryption at Rest (Recommended Enhancement)
 
 **Description**: Enable encryption at the infrastructure/database layer to protect sensitive data during the temporary exposure window (T0-T4).
 
@@ -691,7 +505,7 @@ Organizations deploying Radius with `Radius.Security/secrets` should ensure:
 
 **Implementation Options:**
 
-**Option A: Infrastructure-Level Encryption (Recommended for etcd)**
+**Option A: Infrastructure-Level Encryption (Recommended)**
 - **For current etcd backend**:
   - Kubernetes supports native etcd encryption via `EncryptionConfiguration`
   - Transparent to Radius application code
@@ -732,94 +546,13 @@ Organizations deploying Radius with `Radius.Security/secrets` should ensure:
 
 ---
 
-### Alternative 6: Bypass Frontend Database Save (Future Enhancement)
+### Alternative 4: Bypass Frontend Database Save (Not Recommended)
 
 **Description**: Pass sensitive data directly from frontend to async queue without saving to database, backend reads from queue instead of database.
-
-**Current Architecture Analysis:**
-
-**Frontend Flow** ([`pkg/armrpc/frontend/controller/operation.go:161-189`]):
-```go
-func PrepareAsyncOperation(...) {
-    // 1. Save resource to database (line 167)
-    c.SaveResource(ctx, resourceID, newResource, etag)
-
-    // 2. Queue async operation (line 180)
-    c.StatusManager().QueueAsyncOperation(ctx, serviceCtx, options)
-}
-```
-
-**Queue Message Structure** ([`pkg/armrpc/asyncoperation/statusmanager/statusmanager.go:192-204`]):
-```go
-msg := &ctrl.Request{
-    APIVersion:    sCtx.APIVersion,
-    OperationID:   sCtx.OperationID,
-    ResourceID:    aos.LinkedResourceID,  // Only ID, not full resource
-    OperationType: sCtx.OperationType.String(),
-    // ... metadata only, NO resource data
-}
-aom.queue.Enqueue(ctx, queue.NewMessage(msg))
-```
-
-**Key Finding**: Queue messages today contain **only metadata** (ResourceID, OperationID), not full resource data. Backend always reads resource from database.
-
-**Backend Flow** ([`pkg/portableresources/backend/controller/createorupdateresource.go:68-77`]):
-```go
-func Run(ctx context.Context, req *ctrl.Request) {
-    // Backend reads from DB using ResourceID from queue message
-    storedResource, err := c.DatabaseClient().Get(ctx, req.ResourceID)
-}
-```
-
-**Implementation Requirements to Bypass Database:**
-
-1. **Extend queue message to include resource data**:
-   ```go
-   // pkg/armrpc/asyncoperation/controller/types.go
-   type Request struct {
-       ResourceID    string
-       OperationID   uuid.UUID
-       // NEW: Optional full resource data
-       ResourceData  json.RawMessage  // For sensitive types
-   }
-   ```
-
-2. **Modify frontend to conditionally include data in queue**:
-   ```go
-   // Frontend: For sensitive types, embed data in queue
-   if isSensitiveType(resource) {
-       resourceJSON := serializeResource(resource)
-       queueOptions.ResourceData = resourceJSON
-
-       // Save minimal resource (without sensitive data)
-       redactedResource := redactSensitiveFields(resource)
-       c.SaveResource(ctx, resourceID, redactedResource, etag)
-   } else {
-       // Normal flow: save full resource to DB
-       c.SaveResource(ctx, resourceID, resource, etag)
-   }
-   ```
-
-3. **Modify backend to read from queue if present**:
-   ```go
-   // Backend controller
-   func Run(ctx context.Context, req *ctrl.Request) {
-       var resource Resource
-
-       if req.ResourceData != nil {
-           // Use data from queue message (sensitive types)
-           resource = deserializeResource(req.ResourceData)
-       } else {
-           // Read from database (normal flow)
-           resource = c.DatabaseClient().Get(ctx, req.ResourceID)
-       }
-   }
-   ```
 
 **Advantages**:
 - ✅ Eliminates database exposure window entirely
 - ✅ No plaintext secrets in database at any point
-- ✅ Simpler than field-level encryption (no key management)
 
 **Disadvantages**:
 - ❌ **Queue becomes sensitive storage**: Queue now stores plaintext secrets temporarily
@@ -833,7 +566,6 @@ func Run(ctx context.Context, req *ctrl.Request) {
   - In-memory queues: Lost on restart (need durable queue)
   - Distributed queues: Still persisted, same encryption concerns as database
 - ❌ **Operational complexity**:
-  - Different code paths for sensitive vs non-sensitive resources
   - Harder to debug (data not in standard location)
   - Increases testing surface area
 - ❌ **Race conditions**:
