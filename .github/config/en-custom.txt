@@ -1154,3 +1154,10 @@ terraformBackend
 bicepAuthentication
 filesystem
 apiKey
+misconfigurations
+LRT
+magpiego
+Ctrl
+misconfigured
+JUnit
+ucpd
