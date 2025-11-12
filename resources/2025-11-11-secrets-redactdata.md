@@ -6,7 +6,7 @@
 
 The `Radius.Security/secrets` resource type, defined in the [resource-types-contrib](https://github.com/radius-project/resource-types-contrib) repository, enables users to deploy sensitive data such as tokens, passwords, keys, and certificates to various secret backends (Azure Key Vault, HashiCorp Vault, Kubernetes secrets, etc.). This resource is handled by dynamic-rp, a type-agnostic processor providing CRUD operations for user-defined types.
 
-Currently, dynamic-rp stores all resource properties, including sensitive `data` fields, in the Radius database. This design proposes a mechanism to redact (nullify) sensitive data after the recipe successfully deploys the secrets to their designated backend, ensuring that plaintext secrets do not persist in the Radius database long-term.
+Currently, dynamic-rp stores all resource properties, including sensitive `data` fields, in the Radius database. This design proposes a mechanism to redact (nullify) sensitive data after the recipe successfully deploys the secrets to their designated backend, ensuring that secret data does not persist in the Radius database.
 
 ## Terms and definitions
 
@@ -15,8 +15,6 @@ Currently, dynamic-rp stores all resource properties, including sensitive `data`
 | **Dynamic-RP** | Type-agnostic resource provider that handles CRUD operations for user-defined types without prior knowledge of their schemas |
 | **Recipe** | Deployment template (Bicep/Terraform) that provisions infrastructure resources |
 | **Recipe-based deployment** | Asynchronous deployment flow where recipes execute to create actual infrastructure |
-| **Exposure window** | Time period during which sensitive data exists in plaintext in the database |
-| **Applications.Core/secretStores** | Existing Radius resource type for managing Kubernetes secrets (imperative, K8s-only) |
 | **Radius.Security/secrets** | New resource type for managing secrets across multiple backends (recipe-based, multi-backend) |
 
 ## Objectives
@@ -25,21 +23,22 @@ Currently, dynamic-rp stores all resource properties, including sensitive `data`
 
 ### Goals
 
-1. **Enable recipe-based secret deployment**: Allow recipes to access sensitive data during execution to deploy secrets to various backends (Azure Key Vault, HashiCorp Vault, K8s, etc.)
-2. **Prevent persistent storage**: Ensure sensitive data is nullified from Radius database after successful recipe deployment
-3. **Minimal impact to dynamic-rp core**: Implement redaction as an extensible processor hook without requiring dynamic-rp to understand resource schemas
+1. **Prevent persistent storage**: Ensure sensitive data is nullified from Radius database after successful recipe deployment
+2. **Minimal impact to dynamic-rp core**: Implement redaction as an extensible processor hook without requiring dynamic-rp to understand resource schemas.
+3. **Enable recipe-based secret deployment**: Allow recipes to access sensitive data during execution to deploy secrets to various backends (Azure Key Vault, HashiCorp Vault, K8s, etc.)
 4. **Support multi-backend flexibility**: Enable the same implementation to work with any recipe backend
+
 
 ### Non goals
 
 1. **Prevent all temporary storage**: The design accepts that sensitive data will temporarily exist in the database during recipe execution (seconds to minutes)
-2. **Guaranteed cleanup in all failure scenarios**: Cannot guarantee cleanup if process crashes, database is unavailable, or operation context is cancelled before defer completes. Cleanup is best-effort.
+
 
 ### User scenarios (optional)
 
 #### User story 1: Developer deploying secrets to Azure Key Vault
 
-Alice, a platform engineer, wants to deploy application secrets to Azure Key Vault using Radius. She defines a `Radius.Security/secrets` resource with sensitive credentials and associates it with an Azure Key Vault recipe. The recipe deploys the secrets to Azure Key Vault, and after successful deployment, the sensitive data is removed from Radius database. Alice can still reference the secrets via output resources, but plaintext values are no longer stored in Radius.
+Alice, a platform engineer, wants to deploy application secrets to Azure Key Vault using Radius. She defines a `Radius.Security/secrets` resource with sensitive credentials and associates it with an Azure Key Vault recipe. The recipe deploys the secrets to Azure Key Vault, and after successful deployment, the sensitive data is removed from Radius database. Alice can still reference the secrets via output resources, but sensitive values are no longer stored in Radius.
 
 #### User story 2: Multi-environment secret management
 
@@ -65,12 +64,6 @@ resource appSecrets 'Radius.Security/secrets@2025-08-01-preview' = {
         encoding: 'base64'
       }
     }
-    recipe: {
-      name: 'azure-keyvault'
-      parameters: {
-        vaultName: 'my-keyvault'
-      }
-    }
   }
 }
 ```
@@ -87,12 +80,6 @@ After deployment, the resource stored in Radius database:
     "environment": "/planes/radius/local/resourceGroups/my-rg/providers/Applications.Core/environments/myenv",
     "kind": "generic",
     "data": null,  // ← Sensitive data removed
-    "recipe": {
-      "name": "azure-keyvault",
-      "parameters": {
-        "vaultName": "my-keyvault"
-      }
-    },
     "status": {
       "outputResources": [
         {
@@ -137,13 +124,13 @@ sequenceDiagram
     Frontend->>Frontend: Validate request
     Frontend->>DB: Save resource<br/>(with secrets data)
     activate DB
-    Note over DB: ⚠️ Exposure window starts<br/>Secrets in plaintext
+    Note over DB: ⚠️ Exposure window starts<br/>Secrets in db
     Frontend->>Queue: Queue async operation
     Frontend-->>User: 202 Accepted
 
     Note over User,SecretStore: Phase 2: Backend Processing (Asynchronous)
     Queue->>Backend: Process operation
-    Backend->>DB: Read resource<br/>(with plaintext secrets)
+    Backend->>DB: Read resource<br/>(with secrets data)
     DB-->>Backend: Return full resource
     Backend->>Backend: Extract recipe config
     Backend->>Recipe: Execute recipe<br/>(with sensitive data)
@@ -171,41 +158,62 @@ sequenceDiagram
 **Description**: Nullify sensitive data in the frontend controller before initial database save, similar to Applications.Core/secretStores.
 
 **Reasons for rejection:
-- **Cannot support recipes**: Recipe execution happens in backend async operation and needs access to sensitive data
-- Breaks the recipe-based deployment model
+- **Cannot support recipes**: Recipe execution happens in backend async operation and needs access to sensitive data, this would break the recipe-based deployment.
 
 #### Option 2: Backend Post-Recipe Redaction (Recommended)
 
 **Description**: Store full resource in database temporarily, execute recipe using the data, redact after successful deployment.
 
 **Advantages**:
-- ✅ **Recipe compatible**: Recipe has full access to sensitive data during execution
-- ✅ **Type-agnostic**: Dynamic-rp doesn't need to understand specific schemas
-- ✅ **Multi-backend support**: Works with any recipe backend (Azure KV, HashiCorp, K8s)
-- ✅ **Follows recipe patterns**: Aligns with how other recipe outputs are handled
-- ✅ **Pragmatic**: Achieves security goal with minimal complexity
-- ✅ **Testable**: Clear boundaries for testing redaction logic
+- **Recipe compatible**: Recipe has full access to sensitive data during execution
+- **Type-agnostic**: Dynamic-rp doesn't need to understand specific schemas
+- **Multi-backend support**: Works with any recipe backend (Azure KV, HashiCorp, K8s)
+- **Follows recipe patterns**: Aligns with how other recipe outputs are handled
+- **Pragmatic**: Achieves security goal with minimal complexity
+- **Testable**: Clear boundaries for testing redaction logic
 
 **Disadvantages**:
 - Temporary exposure window (seconds to minutes) during recipe execution
-- Requires infrastructure-level encryption at rest
+- Recommended db encryption at rest
 - Needs robust failure handling to ensure cleanup
+
+### Option 3: Database Encryption at Rest (Recommended)
+
+**Description**: Recommend customers enable encryption at the infrastructure/database layer to protect sensitive data during the temporary exposure window (T0-T4). Both Azure AKS and AWS EKS provide encryption at rest for their etcd databases by default.
+
+**Current Database Architecture:**
+- **Provider abstraction**: `pkg/components/database/databaseprovider` supports pluggable backends
+- **Current backend**: Kubernetes API Server (backed by etcd)
+- **Future support**: Database will be configurable to support alternative backends
+
+ Both Azure AKS and AWS EKS provide encryption at rest for their etcd databases by default. For other etcd backends:
+  - Kubernetes supports native etcd encryption via `EncryptionConfiguration`
+  - Transparent to Radius application code
+  - Document recommended encryption requirements.
+  - **Setup**: Kubernetes admin configures encryption provider (AES-CBC, AES-GCM, or KMS)
+  - **Reference**: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+- For future database backends, rely on native encryption at rest features of the database
+
+**Advantages**:
+- No code changes needed and transparent to Radius application
+- Customer-controlled where Infrastructure teams configure and manage encryption
+- Protects secrets during exposure window (T0-T4)
+- Database backups are also encrypted
+- Separation of concerns: Security handled at appropriate infrastructure layer
+- Entire database encrypted, not just secrets
+
+**Disadvantages**:
+- Not automatic, customers must configure if not available by default.
+
+Document encryption requirement in Radius installation guides
 
 #### Proposed Option
 
-**Option 3: Backend Post-Recipe Redaction** is the recommended approach.
-
-**Rationale**:
-1. Preserves recipe-based deployment model which is core to Radius architecture
-2. Enables multi-backend flexibility without type-specific coupling
-3. Temporary exposure window is acceptable with proper safeguards:
-   - Automatic cleanup on all exit paths (success/failure)
-   - Infrastructure-level encryption at rest (etcd encryption, DB encryption)
-
+**Option 2 + Option 3: Backend Post-Recipe Redaction With Recommendation to encrypt db** is the recommended approach. 
 
 ### API design (if applicable)
 
-N/A - No changes to public REST API, CLI, or Go APIs. This is an internal implementation detail of how dynamic-rp handles specific resource types.
+N/A - No changes to public REST API, CLI, or Go APIs. This is an internal implementation detail of how secret data will be redacted for specific resource types during processing by dynamic-rp.
 
 ### CLI Design (if applicable)
 
@@ -215,7 +223,7 @@ N/A - No CLI changes required.
 
 #### Core RP (if applicable)
 
-No changes required to Core RP. The implementation is isolated to portable resources and dynamic-rp.
+No changes required to Core RP. The implementation is isolated to dynamic-rp.
 
 #### Portable Resources / Recipes RP (if applicable)
 
@@ -261,7 +269,6 @@ No changes required to Core RP. The implementation is isolated to portable resou
    - Test redaction is called after successful recipe execution
    - Test defer block redacts on recipe failure
    - Test defer block redacts on unexpected errors
-   - Test duration tracking and logging
 
 ### Integration/Functional Tests
 
@@ -287,49 +294,39 @@ No changes required to Core RP. The implementation is isolated to portable resou
    - Read resource back and verify `data` is null
    - Reference secrets via output resources in consuming application
 
-
 ## Security
 
 ### Security Model
 
-The design introduces a **temporary exposure window** during which sensitive data exists in plaintext in the Radius database (from frontend save to backend redaction, typically seconds to minutes). This is a deliberate trade-off to support recipe-based deployment while maintaining type-agnostic dynamic-rp design.
+The design includes a **temporary exposure window** during which sensitive data exists in the Radius database (from frontend save to backend redaction, typically seconds to minutes). This is a deliberate trade-off to support recipe-based deployment while maintaining type-agnostic dynamic-rp design.
 
 ### Security Threats and Mitigations
 
-**Threat 1: Plaintext secrets in database backups**
-- Risk: Database backup taken during exposure window contains plaintext secrets
-- Mitigation:
-  - Short exposure window (seconds) reduces probability
-  - Document requirement for point-in-time backup strategy
-  - Future enhancement: Exclude sensitive data from backups
+**Primary Defense: Database Encryption at Rest**
 
-**Threat 2: Unauthorized database access**
-- Risk: Attacker with database read access can retrieve plaintext secrets
-- Mitigation:
-  - Existing RBAC controls on database access
-  - Principle of least privilege for service accounts
-  - Audit logging of database access
+The recommended mitigation for temporary secret exposure is infrastructure-level database encryption at rest. This provides defense-in-depth protection against multiple threat vectors without requiring changes to Radius code.
 
-**Threat 3: Secrets in audit/query logs**
-- Risk: Database query logs may capture sensitive data
-- Mitigation:
-  - Review audit log configuration to exclude data payloads
-  - Encrypt audit logs at rest
-  - Retention policies for log cleanup
+- **For etcd** (current Kubernetes-based deployments): Enable Kubernetes EncryptionConfiguration if encyption not provided by default.
+- **For future database backends**: Enable native encryption at rest features
+- **Benefits**: Protects against backups, unauthorized access, and storage layer compromise
 
-**Threat 4: Recipe failure leaves secrets in database**
-- Risk: Failed recipe execution leaves plaintext secrets indefinitely
-- Mitigation:
-  - Defer block ensures cleanup on all exit paths
-  - Best-effort save in error handler
+**Threat 1: Recipe failure leaves secrets in database**
+- Risk: Failed recipe execution leaves secrets indefinitely
+- Primary Mitigation: **Database encryption at rest** - limits damage if cleanup fails
+- Additional Controls:
+  - Defer block ensures best-effort cleanup on all exit paths
+  - Error handler attempts save with redacted data
   - Future enhancement: Background cleanup job for orphaned secrets
 
-**Threat 5: Etcd storage (Kubernetes)**
-- Risk: Radius database backed by etcd may not have encryption at rest
-- Mitigation:
-  - **Required**: Enable etcd encryption at rest for Kubernetes deployments
-  - Document encryption setup in installation guide
-  - Add pre-flight checks to warn if encryption is disabled
+**Threat 2: Secrets in operational/debug logs**
+- Risk: Database operational logs may capture sensitive data in plaintext
+  - **For Kubernetes API Server**: Audit logs (separate from etcd) can capture request/response bodies. K8s audit policy can be configured to exclude request/response bodies to avoid logging sensitive data.
+  - **For future database backends**: Query logs and debug logs vary by implementation
+ - Avoid enabling debug logging in production environments
+  - Configure Kubernetes audit policy to exclude request/response bodies for sensitive operations
+  - Encrypt operational logs at rest
+  - Implement log retention policies for timely cleanup
+
 
 ### Infrastructure Requirements
 
@@ -348,64 +345,28 @@ Organizations deploying Radius with `Radius.Security/secrets` should ensure:
    - Service accounts with least privilege
    - Regular access audits
 
-4. **Monitoring** (Recommended):
-   - Alert on abnormal secret exposure durations
-   - Dashboard tracking secret lifecycle metrics
-   - Audit logging of secret operations
-
-### Comparison to Existing Patterns
-
-| Security Aspect | Applications.Core/secretStores | Radius.Security/secrets |
-|-----------------|-------------------------------|------------------------|
-| Plaintext DB storage | None | Temporary (seconds) |
-| Encryption requirement | K8s etcd encryption | Radius DB encryption |
-| Cleanup guarantee | Immediate | Deferred with fallback |
-| Backend flexibility | Single (K8s only) | Multiple (recipe-based) |
-| Type coupling | Imperative, K8s-specific | Generic, recipe-agnostic |
-
 ## Compatibility (optional)
 
 **No breaking changes**. This is a new feature for a new resource type (`Radius.Security/secrets`).
 
-**Forward compatibility**: The design allows future enhancements (field encryption, cache-based storage) without breaking changes to the API or user experience.
+**Forward compatibility**: 
 
 ## Monitoring and Logging
 
 ### Metrics
-
-1. **Secret exposure duration**:
-   - Metric: `radius.security.secrets.exposure_duration_seconds`
-   - Labels: `resource_id`, `recipe_name`, `result` (success/failure)
-   - Purpose: Track how long sensitive data exists in database
-
-2. **Redaction success rate**:
-   - Metric: `radius.security.secrets.redaction_total`
-   - Labels: `resource_id`, `status` (success/failure)
-   - Purpose: Monitor redaction reliability
-
-3. **Recipe execution with secrets**:
-   - Metric: `radius.recipes.execution_total`
-   - Labels: `resource_type`, `recipe_name`, `has_sensitive_data`
-   - Purpose: Track recipe usage with sensitive data
 
 ### Logging
 
 1. **Redaction events** (Info level):
    ```
    "Sanitizing sensitive data field"
-   Fields: resourceID, resourceType, duration
+   Fields: resourceID, resourceType
    ```
 
 2. **Redaction failures** (Error level):
    ```
    "Failed to redact sensitive data"
    Fields: resourceID, error
-   ```
-
-3. **Secret lifecycle completion** (Info level):
-   ```
-   "Secret data lifecycle completed"
-   Fields: resourceID, duration, recipe_name
    ```
 
 ### Troubleshooting
@@ -421,158 +382,70 @@ Organizations deploying Radius with `Radius.Security/secrets` should ensure:
 - Check: Verify redaction happens after recipe execution, not before
 - Action: Review recipe parameters, check recipe logs
 
-**Issue**: High secret exposure duration
-- Check: Recipe execution duration metrics
-- Check: Async operation queue depth
-- Action: Investigate recipe performance, scale async workers
-
 ## Development plan
 
-### Phase 1: Core Implementation (Sprint 1-2)
+### Phase 1: Core Implementation (Sprint 1)
 - **Week 1**: Implement redaction logic in processor
   - Create `SensitiveDataProcessor` interface
   - Implement `RedactSensitiveData()` in `DynamicProcessor`
   - Add type detection helper functions
   - Unit tests for redaction logic
-  - **Estimate**: 3 days
-
-- **Week 2**: Integrate with recipe controller
+  - Integrate with recipe controller
   - Add redaction hook in `CreateOrUpdateResource`
   - Implement defer block for cleanup on errors
-  - Add duration tracking and logging
-  - Integration tests with mock recipes
   - **Estimate**: 5 days
 
-### Phase 2: Testing and Validation (Sprint 3)
-- **Week 3-4**: Comprehensive testing
-  - Integration tests with real recipes (Azure KV, K8s, HashiCorp)
+### Phase 2: Testing and Validation (Sprint 1)
+- **Week 2**: Comprehensive testing
+  - Integration tests with K8s recipes
   - Failure scenario testing
-  - Performance testing for exposure duration
-  - Security review
-  - **Estimate**: 7 days
+  - **Estimate**: 2 days
 
-### Phase 3: Documentation and Hardening (Sprint 4)
-- **Week 5**: Documentation and monitoring
+### Phase 3: Documentation  (Sprint 1)
+- **Week 2**: Documentation
   - Update user documentation
-  - Security best practices guide
-  - Add metrics and alerting
-  - Dashboard for secret lifecycle tracking
-  - **Estimate**: 3 days
+  - **Estimate**: 1 days
 
-### Future Enhancements (Post-MVP)
-- **Phase 4**: Field-level encryption (Optional)
-- **Phase 5**: Cache-based storage (Optional)
-- **Phase 6**: Background cleanup job for orphaned secrets
 
 ## Open Questions
 
-1. **Q: Should we enforce encryption at rest or just document it as required?**
-   - A: Document as required for production deployments, add pre-flight checks to warn if disabled
-
-2. **Q: What should happen if redaction fails after successful recipe execution?**
-   - A: Log error but don't fail the operation; recipe already succeeded. Add monitoring alert for failed redaction.
-
-3. **Q: Should we add a configuration option to disable redaction for debugging?**
-   - A: Yes, add environment variable `RADIUS_DISABLE_SECRET_SANITIZATION=true` for development/debugging only
-
-4. **Q: How do we handle secrets in database backups?**
-   - A: Document backup strategy recommendations: point-in-time backups, exclude temporary data, encrypt backups at rest
-
-5. **Q: Should we add support for multiple redaction strategies (nullify vs encrypt)?**
-   - A: Start with nullify-only. Add interface for pluggable strategies in future if needed.
+1. **Q: Is it possible to add to pre-flight checks to warn if encryption is disabled and we add a warning?**
+- A:
 
 ## Alternatives considered
 
-### Alternative 1: Frontend Nullification (Rejected)
-- Store secrets in cache/queue, nullify before database save
-- Rejected: Breaks recipe compatibility, adds infrastructure complexity
-- See Alternative 4 for detailed analysis of queue-based approaches
-
-### Alternative 2: Resource-Specific Controller (Rejected)
+### Alternative 1: Resource-Specific Controller (Rejected)
 - Create dedicated controller for `Radius.Security/secrets` instead of using dynamic-rp
 - Rejected: Breaks type-agnostic model, doesn't scale to other sensitive types
 
-### Alternative 3: Database Encryption at Rest (Recommended Enhancement)
+### Alternative 2: Bypass Frontend Database Save (Not Recommended)
+Queue contains only metadata today. Resource details are retrieved using id.
 
-**Description**: Enable encryption at the infrastructure/database layer to protect sensitive data during the temporary exposure window (T0-T4).
-
-**Current Database Architecture:**
-- **Provider abstraction**: `pkg/components/database/databaseprovider` supports pluggable backends
-- **Current backend**: Kubernetes API Server (backed by etcd)
-- **Future support**: Database will be configurable to support alternative backends
-- **Current state**: No built-in encryption at application level
-- **Database client interface**: Generic `Save/Get/Delete` operations, no encryption hooks
-
-**Implementation Options:**
-
-**Option A: Infrastructure-Level Encryption (Recommended)**
-- **For current etcd backend**:
-  - Kubernetes supports native etcd encryption via `EncryptionConfiguration`
-  - Transparent to Radius application code
-  - **Recommendation**: Document as required for production deployments
-  - **Setup**: Kubernetes admin configures encryption provider (AES-CBC, AES-GCM, or KMS)
-  - **Reference**: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
-- **For future database backends**:
-  - Rely on native encryption at rest features of each database
-  - Document encryption requirements per backend type
+**Description**: Pass sensitive data directly from frontend to async queue Queue contains only metadata today. Resource details are retrieved using id.without saving to database, backend reads from queue instead of database.
 
 **Advantages**:
-- ✅ **No code changes**: Completely transparent to Radius application
-- ✅ **Customer-controlled**: Infrastructure teams configure and manage encryption
-- ✅ **Proven solutions**: Battle-tested, industry-standard implementations
-- ✅ **Defense in depth**: Protects secrets during exposure window (T0-T4)
-- ✅ **Protects backups**: Database backups are also encrypted
-- ✅ **Separation of concerns**: Security handled at appropriate infrastructure layer
-- ✅ **Works for all data**: Entire database encrypted, not just secrets
-- ✅ **No performance impact to Radius**: Encryption handled transparently by database
-- ✅ **Simpler than alternatives**: No special queue handling or application-level key management
+- Eliminates database exposure window entirely
+- No secrets data in database at any point
 
 **Disadvantages**:
-- ❌ **Requires customer setup**: Not automatic, customers must configure
-- ❌ **Infrastructure dependency**: Requires platform/infrastructure support
-- ❌ **Validation difficulty**: Hard for Radius to verify encryption is enabled programmatically
-
-**Recommendation**:
-- ✅ **Strongly recommended** as the preferred enhancement for defense-in-depth
-- Aligns with industry best practices and security recommendations (see Threat 5, line 548)
-- Simpler than queue bypass (Alternative 6) with no architectural changes
-- Maintains clean architecture - no special-case handling in Radius code
-- Scales naturally as new database backends are added
-
-**Implementation Plan**:
-1. **Phase 1** (Immediate): Document encryption requirement in installation/security guides
-2. **Phase 2** (Near-term): Add validation/warnings if encryption appears disabled
-3. **Phase 3** (Future): Provide tooling to help customers enable encryption
-
----
-
-### Alternative 4: Bypass Frontend Database Save (Not Recommended)
-
-**Description**: Pass sensitive data directly from frontend to async queue without saving to database, backend reads from queue instead of database.
-
-**Advantages**:
-- ✅ Eliminates database exposure window entirely
-- ✅ No plaintext secrets in database at any point
-
-**Disadvantages**:
-- ❌ **Queue becomes sensitive storage**: Queue now stores plaintext secrets temporarily
+- **Queue becomes sensitive storage**: Queue now stores plaintext secrets temporarily
   - Queue backend (internal in-memory or distributed) needs same security as database
   - Queue messages need encryption at rest and in transit
   - Problem just moves from database to queue
-- ❌ **Message size limits**: Queue messages have size limits
+- **Message size limits**: Queue messages have size limits
   - Large resources with many secrets might exceed limits
   - Current internal queue implementation may not handle large payloads
-- ❌ **Queue durability concerns**:
+- **Queue durability concerns**:
   - In-memory queues: Lost on restart (need durable queue)
   - Distributed queues: Still persisted, same encryption concerns as database
-- ❌ **Operational complexity**:
+- **Operational complexity**:
   - Harder to debug (data not in standard location)
   - Increases testing surface area
-- ❌ **Race conditions**:
+- **Race conditions**:
   - Frontend saves redacted resource to DB
   - If queue message lost, backend can't reconstruct full resource
   - Need fallback/retry mechanism
-- ❌ **Breaking change**: Requires changes to core async operation infrastructure used by ALL resource types
+- **Breaking change**: Requires changes to core async operation infrastructure used by ALL resource types
 
 **Current Queue Implementation:**
 - **Location**: `pkg/components/queue`
@@ -600,6 +473,5 @@ _(To be updated after design review meeting)_
 ## References
 
 - [Radius.Security/secrets type definition](https://github.com/radius-project/resource-types-contrib/blob/main/Security/secrets/secrets.yaml)
-- [Applications.Core/secretStores implementation](https://github.com/radius-project/radius/blob/main/pkg/corerp/frontend/controller/secretstores/kubernetes.go)
 - [Dynamic-RP architecture](https://github.com/radius-project/radius/tree/main/pkg/dynamicrp)
 - [Recipe controller](https://github.com/radius-project/radius/blob/main/pkg/portableresources/backend/controller/createorupdateresource.go)
