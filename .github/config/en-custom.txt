@@ -32,6 +32,7 @@ CSI
 CTRL
 Codespace
 Codespaces
+ConfigMap
 CosmosDB
 CreateOrUpdate
 Datastores
@@ -61,6 +62,7 @@ html
 HttpRoute
 HttpRoutes
 Kibana
+kubeconfig
 IAM
 IaC
 InternalServerError
