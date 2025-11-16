@@ -29,12 +29,12 @@ A Radius developer needs to provision their own isolated test environment to val
 
 **Why this priority**: This is the foundation that enables all other scenarios. Without the ability for developers to provision infrastructure and run tests locally, the entire modernization effort provides no value. This delivers immediate value by allowing developers to validate changes before pushing to forks.
 
-**Independent Test**: Can be fully tested by a developer with only an Azure subscription running a sequence of commands (`make lrt-deploy-infra`, `make lrt-run-all`, `make lrt-destroy-infra`) and verifying that infrastructure is created, tests execute, and resources are cleaned up successfully. Delivers the value of independent test environments.
+**Independent Test**: Can be fully tested by a developer with only an Azure subscription running a sequence of commands (`make lrt-deploy-infra`, `make test-functional-all`, `make lrt-destroy-infra`) and verifying that infrastructure is created, tests execute, and resources are cleaned up successfully. Delivers the value of independent test environments.
 
 **Acceptance Scenarios**:
 
 1. **Given** a developer has Azure CLI configured with valid credentials and required environment variables set, **When** they run `make lrt-deploy-infra`, **Then** an AKS cluster with all dependencies (Log Analytics, Grafana, Dapr, OIDC) is provisioned within 30 minutes and cluster readiness is validated
-2. **Given** an AKS cluster has been provisioned successfully, **When** the developer runs `make lrt-run-all`, **Then** all functional tests execute against their cluster and results are displayed locally
+2. **Given** an AKS cluster has been provisioned successfully, **When** the developer runs `make test-functional-all`, **Then** all functional tests execute against their cluster and results are displayed locally
 3. **Given** tests have completed (successfully or with failures), **When** the developer runs `make lrt-destroy-infra`, **Then** all Azure resources in the test resource group are deleted within 15 minutes
 4. **Given** a developer has only basic Azure permissions, **When** they attempt infrastructure deployment, **Then** the system provides clear error messages about missing permissions and documents the minimum required roles
 5. **Given** infrastructure deployment fails mid-way, **When** the developer runs `make lrt-deploy-infra` again, **Then** the deployment resumes or rolls back safely without leaving orphaned resources
@@ -80,11 +80,11 @@ A Radius developer working on a specific component wants to run just the LRT sui
 
 **Why this priority**: This enables rapid iteration during development. While developers can run tests, it's less critical than the ability to provision infrastructure (P1) which is a prerequisite. This story focuses on the testing phase after infrastructure exists.
 
-**Independent Test**: Can be fully tested by a developer with a running AKS cluster executing `make lrt-test-corerp` for a specific suite or `make lrt-run-all` for all suites, observing real-time test output in their terminal, and seeing a summary of passes/failures. Delivers fast feedback for iterative development.
+**Independent Test**: Can be fully tested by a developer with a running AKS cluster executing `make lrt-test` for a specific suite or `make test-functional-all` for all suites, observing real-time test output in their terminal, and seeing a summary of passes/failures. Delivers fast feedback for iterative development.
 
 **Acceptance Scenarios**:
 
-1. **Given** a developer has a configured AKS cluster and environment variables set, **When** they run `make lrt-run-all`, **Then** all functional test suites execute serially with progress displayed in real-time
+1. **Given** a developer has a configured AKS cluster and environment variables set, **When** they run `make test-functional-all`, **Then** all functional test suites execute with progress displayed in real-time
 2. **Given** a developer wants to test a specific component, **When** they run `make lrt-test` (or other specific test targets from the LRT workflow), **Then** only that test suite executes, saving time during iterative development
 3. **Given** tests are executing, **When** a test fails, **Then** the failure is logged with context (error message, relevant pod logs, resource state) and execution continues to remaining tests unless configured to fail-fast
 4. **Given** test execution completes, **When** the developer reviews results, **Then** they see a summary with total tests, passes, failures, execution time, and paths to detailed logs
@@ -151,7 +151,7 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 #### Test Execution
 
-- **FR-013**: System MUST provide Make targets for executing test suites. The `make lrt-test` target MUST be a .PHONY target that includes all test targets currently running in the LRT test workflow, and `make lrt-run-all` MUST execute the complete test suite.
+- **FR-013**: System MUST provide Make targets for executing test suites. The `make lrt-test` target MUST be a .PHONY target that includes all test targets currently running in the LRT test workflow, and `make test-functional-all` executes the complete test suite.
 - **FR-014**: Test execution MUST display real-time progress and output to terminal when run locally
 - **FR-015**: System MUST collect test results in structured format (JUnit XML or similar) for integration with CI systems
 - **FR-016**: Test execution MUST complete within 120 minutes for full suite on standard AKS cluster configuration
