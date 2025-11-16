@@ -1,2 +1,5 @@
 # These owners are the maintainers and approvers of this repo
 *       @radius-project/maintainers-design-notes @radius-project/approvers-design-notes
+
+# Files that Dependabot updates - on-call can also approve these
+.github/workflows/      @radius-project/maintainers-design-notes @radius-project/approvers-design-notes @radius-project/on-call
