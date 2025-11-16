@@ -64,10 +64,6 @@ A Radius maintainer needs confidence that each new release works correctly in re
 1. **Given** a test workflow starts execution, **When** the system checks versions, **Then** it compares the Radius CLI version against the cluster-installed version and triggers upgrade if cluster version is lower
 2. **Given** cluster version is lower than CLI version, **When** the upgrade process begins, **Then** the cluster is upgraded to match CLI version using `rad upgrade` command
 3. **Given** the cluster upgrade completes successfully, **When** functional tests are executed, **Then** all test suites run against the new version and results are collected
-4. **Given** tests complete with any outcome, **When** results are available, **Then** a summary is posted to configured notification channels (Slack, GitHub issue, etc.) with pass/fail status and links to detailed logs
-5. **Given** tests fail on a new release, **When** failures are detected, **Then** the system optionally rolls back to the previous Radius version (configurable behavior)
-6. **Given** release detection fails due to GitHub API rate limiting, **When** the error is encountered, **Then** the system retries with exponential backoff and logs the error for investigation
-
 ---
 
 ### User Story 4 - Local Test Execution (Priority: P2)
@@ -90,15 +86,15 @@ A Radius developer working on a specific component wants to run just the LRT sui
 
 ### User Story 5 - Test Environment Health Validation (Priority: P3)
 
-Before running expensive long-running tests, developers and CI systems need to validate that the test environment is healthy and properly configured. They should be able to run a health check command that verifies all prerequisites (cluster connectivity, required resources, Radius installation) and get a clear pass/fail result with actionable error messages.
+Before running expensive long-running tests, developers and CI systems need to validate that the test environment is healthy and properly configured. They should be able to run a health check command that verifies all prerequisites (cluster connectivity, required resources, Radius installation, environment variables, access to secrets) and get a clear pass/fail result with actionable error messages.
 
 **Why this priority**: While health checks are valuable for preventing wasted time on broken environments, they're less critical than core testing functionality. Developers can manually verify prerequisites initially, and health checks can be added incrementally.
 
-**Independent Test**: Can be fully tested by running `make lrt-health-check` against both healthy and intentionally misconfigured environments, verifying that the command correctly identifies issues (missing resources, incorrect versions, connectivity problems) and provides actionable guidance. Delivers fast failure detection before expensive test runs.
+**Independent Test**: Can be fully tested by running `make lrt-health-check` against both healthy and intentionally misconfigured environments, verifying that the command correctly identifies issues (missing resources, incorrect versions, connectivity problems, environment variables, access to secrets) and provides actionable guidance. Delivers fast failure detection before expensive test runs.
 
 **Acceptance Scenarios**:
 
-1. **Given** an AKS cluster has been provisioned, **When** a developer runs `make lrt-health-check`, **Then** the system verifies cluster connectivity, Radius installation, required Kubernetes resources, and pre-provisioned test resources
+1. **Given** an AKS cluster has been provisioned, **When** a developer runs `make lrt-health-check`, **Then** the system verifies cluster connectivity, Radius installation, required Kubernetes resources, environment variables, access to secrets, and pre-provisioned test resources
 2. **Given** a health check detects missing prerequisites, **When** the check completes, **Then** it exits with non-zero code and displays clear error messages with remediation steps (e.g., "CosmosDB connection not found in AKS secrets - run `make lrt-setup-test-resources`")
 3. **Given** all prerequisites are met, **When** health check runs, **Then** it completes in under 2 minutes and exits with zero code and confirmation message
 4. **Given** Radius is installed but the wrong version, **When** health check runs, **Then** it reports version mismatch and suggests upgrade commands
@@ -108,8 +104,6 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 ### Edge Cases
 
-- **What happens when release detection identifies a pre-release or draft release?** System should have configurable filters to only process stable releases (non-pre-release, non-draft) unless explicitly configured otherwise.
-
 - **How does the system handle partial test failures?** By default, all test suites run to completion even if individual suites fail, providing complete results. A `fail-fast` configuration option allows stopping on first failure for faster feedback during development.
 
 - **What if AKS cluster is in a failed or degraded state?** Health check detects degraded state and prevents test execution. System provides commands to re-provision infrastructure or recover cluster state.
@@ -118,9 +112,9 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 - **What happens if a developer's Bicep deployment fails mid-way?** Deployment script is idempotent - re-running continues from failure point or safely rolls back. Failed deployments don't leave orphaned resources due to Azure resource group lifecycle management.
 
-- **How are test resources cleaned up when tests are interrupted (Ctrl+C, runner crash)?** Cleanup is implemented in trap handlers for shell scripts and deferred functions in Go code. Resource groups have auto-expiry tags. A separate `make lrt-cleanup-orphaned` command finds and removes abandoned resources.
+- **How are test resources cleaned up when tests are interrupted (Ctrl+C, runner crash)?** Cleanup is implemented in trap handlers for shell scripts and deferred functions in Go code. A separate `make lrt-cleanup` command finds and removes abandoned resources.
 
-- **What if multiple developers accidentally deploy to the same resource group?** This scenario is prevented by design - each developer provisions a dedicated AKS cluster in their own uniquely-named resource group (including user principal name hash or explicit prefix). Deployment scripts check for existing resources and fail with clear error if conflict detected, ensuring complete isolation between developer environments.
+- **What if multiple developers accidentally deploy to the same resource group?** This scenario is prevented by design - each developer provisions a dedicated AKS cluster in their own uniquely-named resource group. Deployment scripts check for existing resources and fail with clear error if conflict detected, ensuring complete isolation between developer environments.
 
 - **How are AKS cluster quota limits handled in a subscription?** Pre-deployment validation checks subscription quotas and provides clear error if insufficient quota. Documentation guides developers on requesting quota increases or using different regions/SKUs.
 
@@ -138,17 +132,14 @@ Before running expensive long-running tests, developers and CI systems need to v
 - **FR-002**: Infrastructure deployment MUST be idempotent - re-running deployment against same resource group either completes partial deployment or reports current state
 - **FR-003**: System MUST support environment variable configuration for all deployment parameters (resource group name, location, cluster size, Grafana enablement)
 - **FR-004**: System MUST validate Azure permissions before deployment and fail with actionable error messages if insufficient permissions detected
-- **FR-005**: Infrastructure deployment MUST complete within 30 minutes for standard configuration (AKS, Log Analytics, no Grafana) and 45 minutes with Grafana enabled
-- **FR-006**: System MUST provide a Make target (`make lrt-health-check`) that validates cluster readiness including connectivity, Radius installation, required resources, and test prerequisites
+- **FR-005**: System MUST provide a Make target (`make lrt-health-check`) that validates cluster readiness including connectivity, Radius installation, required resources, and test prerequisites
 
 #### Release Detection & Upgrade
 
 - **FR-007**: System MUST compare Radius CLI version against cluster-installed version at workflow start. If cluster version is lower than CLI version, system MUST upgrade cluster using `rad upgrade` command before executing tests.
-- **FR-008**: System MUST filter releases based on configurable criteria (stable only vs. including pre-releases, version pattern matching)
-- **FR-009**: Release detection MUST capture release metadata including version number, Helm chart URL, container image tags, and release notes URL
-- **FR-010**: System MUST upgrade Radius installation on AKS cluster using `rad upgrade` command (preferred) or Helm upgrade commands as fallback
+- **FR-008**: System MUST use the current release version to install using the standard installer script provided by Radius (not hardcoded versions).
+- **FR-010**: System MUST upgrade Radius installation on AKS cluster using `rad upgrade` command if the cli version is greater than the radius server version.
 - **FR-011**: Upgrade process MUST verify successful upgrade by checking pod readiness and Radius API availability before proceeding to tests
-- **FR-012**: System MUST support rollback to previous Radius version if tests fail after upgrade (configurable behavior, disabled by default)
 
 #### Test Execution
 
@@ -176,10 +167,15 @@ Before running expensive long-running tests, developers and CI systems need to v
 - **FR-028**: System MUST support retention tags on resource groups to prevent accidental deletion of long-lived resources
 - **FR-029**: System MUST provide a command (`make lrt-cleanup-orphaned`) to identify and remove abandoned test resources older than configured threshold
 
+#### Authentication & Identity
+
+- **FR-040**: Workload identity MUST be configured on the test cluster and MUST reuse the same Azure identity based on a tag that is set on the identity. The system MUST locate and bind the existing Azure identity to the cluster using the tag selector rather than creating new identities per cluster.
+- **FR-041**: All secrets (database credentials, API keys, connection strings) MUST be stored in Kubernetes as Secret resources. All non-sensitive environment settings MUST be stored in Kubernetes ConfigMap resources. No credentials MUST be stored in environment variables or external secret stores. Test code and test scripts MAY reference secrets and configuration settings via environment variables, but these environment variables MUST be automatically populated from values retrieved from Kubernetes Secrets and ConfigMaps (not manually set by developers).
+- **FR-042**: Local connection to Kubernetes clusters (both AKS and other Kubernetes distributions) MUST be done via the kubectl configuration file (~/.kube/config or KUBECONFIG environment variable). The system MUST NOT require additional authentication mechanisms beyond standard kubeconfig contexts.
+
 #### Reporting & Observability
 
 - **FR-030**: Test results MUST be reported with summary including total tests, passes, failures, skipped tests, and execution time
-- **FR-031**: System MUST support configurable notification channels for automated test runs (GitHub issue creation, Slack webhook, email)
 - **FR-032**: Test execution MUST generate log artifacts including container logs, resource state dumps, and test framework output
 - **FR-033**: System MUST integrate with existing monitoring (Grafana, Azure Monitor) if enabled on test cluster
 - **FR-034**: Release testing results MUST include metadata linking results to specific Radius version tested
