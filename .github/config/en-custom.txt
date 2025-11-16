@@ -32,6 +32,7 @@ CSI
 CTRL
 Codespace
 Codespaces
+ConfigMap
 CosmosDB
 CreateOrUpdate
 Datastores
@@ -61,6 +62,7 @@ html
 HttpRoute
 HttpRoutes
 Kibana
+kubeconfig
 IAM
 IaC
 InternalServerError
@@ -1154,3 +1156,12 @@ terraformBackend
 bicepAuthentication
 filesystem
 apiKey
+misconfigurations
+LRT
+magpiego
+Ctrl
+misconfigured
+JUnit
+ucpd
+teardown
+iteratively
