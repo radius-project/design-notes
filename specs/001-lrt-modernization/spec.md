@@ -13,6 +13,14 @@
 - Q: Should developers provision dedicated AKS clusters or share clusters with isolation? → A: Each developer provisions their own dedicated AKS cluster (no sharing, full isolation)
 - Q: How should release detection polling interval be configured? → A: At workflow start, check CLI version vs cluster version; if cluster version is lower than CLI version, upgrade cluster using radius upgrade command
 
+### Session 2025-11-15
+
+- Q: How is test parallelization controlled and what is the default concurrency limit? → A: Parallel by default with concurrency=2 (balanced approach)
+- Q: What is the retention policy and storage location for diagnostic artifacts from failed tests? → A: No persistent storage; only display in terminal output during test execution
+- Q: What happens when the tagged workload identity doesn't exist during first-time setup? → A: Fail deployment with instructions to manually create identity with required tag first
+- Q: What test suite names/components are supported for individual execution? → A: make lrt-test will be a .PHONY target that includes the test targets currently running in the LRT test workflow
+- Q: Is cleanup after tests opt-in or automatic, and can it be skipped? → A: Cleanup runs by default; opt-out via flag (e.g., `SKIP_CLEANUP=true`) to preserve resources
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Developer Infrastructure Setup (Priority: P1)
@@ -77,7 +85,7 @@ A Radius developer working on a specific component wants to run just the LRT sui
 **Acceptance Scenarios**:
 
 1. **Given** a developer has a configured AKS cluster and environment variables set, **When** they run `make lrt-run-all`, **Then** all functional test suites execute serially with progress displayed in real-time
-2. **Given** a developer wants to test a specific component, **When** they run `make lrt-test-<component>` (e.g., `make lrt-test-corerp`), **Then** only that test suite executes, saving time during iterative development
+2. **Given** a developer wants to test a specific component, **When** they run `make lrt-test` (or other specific test targets from the LRT workflow), **Then** only that test suite executes, saving time during iterative development
 3. **Given** tests are executing, **When** a test fails, **Then** the failure is logged with context (error message, relevant pod logs, resource state) and execution continues to remaining tests unless configured to fail-fast
 4. **Given** test execution completes, **When** the developer reviews results, **Then** they see a summary with total tests, passes, failures, execution time, and paths to detailed logs
 5. **Given** tests require pre-provisioned resources (CosmosDB, SQL), **When** the developer runs tests, **Then** the system retrieves connection details from Kubernetes secrets via service account RBAC and connects successfully
@@ -112,9 +120,9 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 - **What happens if a developer's Bicep deployment fails mid-way?** Deployment script is idempotent - re-running continues from failure point or safely rolls back. Failed deployments don't leave orphaned resources due to Azure resource group lifecycle management.
 
-- **How are test resources cleaned up when tests are interrupted (Ctrl+C, runner crash)?** Cleanup is implemented in trap handlers for shell scripts and deferred functions in Go code. A separate `make lrt-cleanup` command finds and removes abandoned resources.
+- **How are test resources cleaned up when tests are interrupted (Ctrl+C, runner crash)?** Cleanup is implemented in trap handlers for shell scripts and deferred functions in Go code, running by default even on interruption. A separate `make lrt-cleanup` command finds and removes abandoned resources. Developers can set `SKIP_CLEANUP=true` to preserve infrastructure for debugging.
 
-- **What if multiple developers accidentally deploy to the same resource group?** This scenario is prevented by design - each developer provisions a dedicated AKS cluster in their own uniquely-named resource group. Deployment scripts check for existing resources and fail with clear error if conflict detected, ensuring complete isolation between developer environments.
+- **What if the tagged Azure workload identity doesn't exist during first-time setup?** Deployment fails with clear error message and instructions to manually create the identity with the required tag. Documentation provides step-by-step guide for creating the identity with correct permissions and tags.
 
 - **How are AKS cluster quota limits handled in a subscription?** Pre-deployment validation checks subscription quotas and provides clear error if insufficient quota. Documentation guides developers on requesting quota increases or using different regions/SKUs.
 
@@ -143,13 +151,13 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 #### Test Execution
 
-- **FR-013**: System MUST provide Make targets for executing test suites individually (`make lrt-test-<component>`) and collectively (`make lrt-run-all`)
+- **FR-013**: System MUST provide Make targets for executing test suites. The `make lrt-test` target MUST be a .PHONY target that includes all test targets currently running in the LRT test workflow, and `make lrt-run-all` MUST execute the complete test suite.
 - **FR-014**: Test execution MUST display real-time progress and output to terminal when run locally
 - **FR-015**: System MUST collect test results in structured format (JUnit XML or similar) for integration with CI systems
 - **FR-016**: Test execution MUST complete within 120 minutes for full suite on standard AKS cluster configuration
 - **FR-017**: System MUST support parallel test execution (configurable, serial by default for resource compatibility)
 - **FR-018**: System MUST retrieve test resource credentials (CosmosDB, SQL Server) from Kubernetes secrets using service account RBAC (not from environment variables or GitHub organization secrets). Test pods MUST authenticate via service accounts with minimal required permissions.
-- **FR-019**: Failed tests MUST generate diagnostic artifacts including relevant pod logs, resource state, and error context
+- **FR-019**: Failed tests MUST generate diagnostic output including relevant pod logs, resource state, and error context displayed in terminal output (no persistent artifact storage)
 
 #### Fork Compatibility
 
@@ -162,21 +170,21 @@ Before running expensive long-running tests, developers and CI systems need to v
 #### Test Resource Management
 
 - **FR-025**: System MUST provide commands to setup pre-provisioned test resources (CosmosDB, SQL Server) and store credentials in Kubernetes secrets with appropriate RBAC policies. Service accounts for test execution MUST be created with read-only access to credential secrets.
-- **FR-026**: System MUST clean up test-created cloud resources (Azure resource groups, AWS resources) after test execution completes
-- **FR-027**: Cleanup MUST be implemented in trap handlers and deferred functions to execute even when tests are interrupted
+- **FR-026**: System MUST clean up test-created cloud resources (Azure resource groups, AWS resources) after test execution completes by default, with opt-out via environment variable (e.g., `SKIP_CLEANUP=true`) to preserve resources for debugging
+- **FR-027**: Cleanup MUST be implemented in trap handlers and deferred functions to execute by default even when tests are interrupted, unless opt-out flag is set
 - **FR-028**: System MUST support retention tags on resource groups to prevent accidental deletion of long-lived resources
 - **FR-029**: System MUST provide a command (`make lrt-cleanup-orphaned`) to identify and remove abandoned test resources older than configured threshold
 
 #### Authentication & Identity
 
-- **FR-040**: Workload identity MUST be configured on the test cluster and MUST reuse the same Azure identity based on a tag that is set on the identity. The system MUST locate and bind the existing Azure identity to the cluster using the tag selector rather than creating new identities per cluster.
+- **FR-040**: Workload identity MUST be configured on the test cluster and MUST reuse the same Azure identity based on a tag that is set on the identity. The system MUST locate and bind the existing Azure identity to the cluster using the tag selector. If the tagged identity does not exist, deployment MUST fail with clear instructions to manually create the identity with the required tag before proceeding.
 - **FR-041**: All secrets (database credentials, API keys, connection strings) MUST be stored in Kubernetes as Secret resources. All non-sensitive environment settings MUST be stored in Kubernetes ConfigMap resources. No credentials MUST be stored in environment variables or external secret stores. Test code and test scripts MAY reference secrets and configuration settings via environment variables, but these environment variables MUST be automatically populated from values retrieved from Kubernetes Secrets and ConfigMaps (not manually set by developers).
 - **FR-042**: Local connection to Kubernetes clusters (both AKS and other Kubernetes distributions) MUST be done via the kubectl configuration file (~/.kube/config or KUBECONFIG environment variable). The system MUST NOT require additional authentication mechanisms beyond standard kubeconfig contexts.
 
 #### Reporting & Observability
 
 - **FR-030**: Test results MUST be reported with summary including total tests, passes, failures, skipped tests, and execution time
-- **FR-032**: Test execution MUST generate log artifacts including container logs, resource state dumps, and test framework output
+- **FR-032**: Test execution MUST generate log output including container logs, resource state dumps, and test framework output displayed in terminal during execution
 - **FR-033**: System MUST integrate with existing monitoring (Grafana, Azure Monitor) if enabled on test cluster
 - **FR-034**: Release testing results MUST include metadata linking results to specific Radius version tested
 
@@ -212,7 +220,7 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 - **SC-004**: Test coverage remains at 100% parity with current LRT system (all existing test suites execute with same coverage)
 
-- **SC-005**: Failed tests provide actionable diagnostics in 90% of failures (developers can identify root cause from logs and error messages without additional investigation)
+- **SC-005**: Failed tests provide actionable diagnostics in 90% of failures (developers can identify root cause from terminal output and error messages without additional investigation)
 
 - **SC-006**: Infrastructure provisioning succeeds on first attempt for 85% of developers following documented setup steps (15% tolerance for environment-specific issues like quota limits)
 
@@ -224,6 +232,4 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 - **SC-010**: Cleanup mechanisms remove all test resources within 30 minutes of test completion for 99% of test runs (1% tolerance for edge cases requiring manual intervention)
 
-- **SC-011**: System handles transient failures gracefully with automatic retries for operations like release detection (GitHub API), cluster operations (transient k8s API errors), and resource provisioning (Azure RP throttling)
-
-- **SC-012**: Local test execution provides real-time feedback with test progress visible within 10 seconds of starting execution and incremental results displayed as tests complete
+- **SC-011**: Local test execution provides real-time feedback with test progress visible within 10 seconds of starting execution and incremental results displayed as tests complete
