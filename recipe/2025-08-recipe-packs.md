@@ -628,15 +628,26 @@ If the Recipe Pack is in a different Resource Group than the Environment, the Re
 
 Based on whether the environment namespace is Applications.Core or Radius.Core, the outputs differ. Eventually Applications.Core support will be removed.
 
-```
 $ rad environment show my-env
-RESOURCE            TYPE                      GROUP     STATE
-my-env              Radius.Core/environments  default   Succeeded
+ENVIRONMENT         GROUP
+my-env              default
 
-RECIPE PACK        
-computeRecipePack  
-dataRecipePack
-```
+KUBERNETES
+Namespace: my-env
+
+AWS:
+Account ID: 1234567890123
+Region:     us-east-1
+
+AZURE:
+Subscription ID:     c95e0456-ea5b-4a22-a0cd-e3767f24725b
+Resource Group Name: myResourceGroup
+
+RECIPE PACKS        GROUP
+computeRecipePack   default
+dataRecipePack      default
+myCustomPack1       myGroup1
+myCustomPack2       myGroup2
 
 7. List recipes in environment:
 
