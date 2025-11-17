@@ -646,12 +646,12 @@ dataRecipePack
 
 ```
 $ rad recipe list -environment my-env
-RECIPE PACK             RESOURCE TYPE                    RECIPE KIND           RECIPE LOCATION
-computeRecipePack       Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-computeRecipePack       Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-computeRecipePack       Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
-dataRecipePack          Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
-networkingRecipePack    Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
+RECIPE PACK             GROUP      RESOURCE TYPE                    RECIPE KIND           RECIPE LOCATION
+computeRecipePack       default    Radius.Compute/containers        terraform             https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+computeRecipePack       default    Radius.Security/secrets          terraform             https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+computeRecipePack       default    Radius.Storage/volumes           terraform             https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+dataRecipePack          default    Radius.Data/redisCaches          terraform             https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+networkingRecipePack    default    Radius.Compute/gateways          terraform             https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
 ```
 
 8. Initialize Radius:
