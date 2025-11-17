@@ -580,17 +580,6 @@ myCustomPack2           myGroup2
 
 if --group or -g is provided, results are filtered for the specified Resource Group.
 
-4. Show environment
-
-```
-$ rad environment show my-env
-RESOURCE            TYPE                            GROUP     STATE
-my-env              Radius.Core/environments        default   Succeeded
-
-RECIPE PACKS        
-computeRecipePack   
-dataRecipePack      
-```
 
 5. Delete recipe pack:
 
