@@ -76,17 +76,17 @@ Both approaches have the below benefits:
 - Helps reduce the size of environment resource, which could reach serialization limits with tons of recipes. 
 - Helps reduce overall size of Radius datastore, since common recipe information could now be stored as a single resource instead of being duplicated across several environments.
 - Helps with change isolation, since recipe pack updates are isolated from env updates.
-- Promotes reusablity since multiple environments can point to a recipe pack using the recipe pack ID. 
+- Promotes reusability since multiple environments can point to a recipe pack using the recipe pack ID. 
 
 Below table highlights the trade offs:
 
 | Aspect | Applications RP provisioning| Dynamic RP provisioning |
 |---------|-----------| ------------------------------------------|
-| **Tooling complexity** | ❌ Higher (TSP, converter, schema, API implemenetations needed) | ✅ Lower (YAML only, dynamic resource controllers reused)|
+| **Tooling complexity** | ❌ Higher (TSP, converter, schema, API implementations needed) | ✅ Lower (YAML only, dynamic resource controllers reused)|
 | **Versioning**  | ❌ requires versioning support in Radius  |✅ Supports schema versioning| 
 | **Custom implementation for operations**  | ✅ can customize details of CRUDL|  ❌ falls back on dynamic resource controllers  |
 
-Based on the above differences, *we choose Radius.Core/recipePacks to be provisioned imperatively by Applications RP as a first class Radius resource*. The main reason for this decision is that Radius Core resources such as enviroments and recipe-packs could have complex and custom deletion logic compared to what a dynamic resource deletion does. For instance, we need a cascade of deletion when an environment is deleted, or we might want to restrict deleting a recipe pack that is referenced in one or more environment. It is important to support robust core management operations of these resources where as the versioning of the type can follow once Radius versioning support is available. 
+Based on the above differences, *we choose Radius.Core/recipePacks to be provisioned imperatively by Applications RP as a first class Radius resource*. The main reason for this decision is that Radius Core resources such as environments and recipe-packs could have complex and custom deletion logic compared to what a dynamic resource deletion does. For instance, we need a cascade of deletion when an environment is deleted, or we might want to restrict deleting a recipe pack that is referenced in one or more environment. It is important to support robust core management operations of these resources where as the versioning of the type can follow once Radius versioning support is available. 
 
 We should make sure the rad resource-type commands cannot alter the schema of these types as part of schema validation (this namespace is reserved for Radius's use). Appropriate error message should be provided to the user. 
 
@@ -265,7 +265,7 @@ interface RecipePacks {
   
 * We maintain a reverse index into environment IDs so that we can handle CRUDL operations gracefully. For example, only a recipe pack that is not referenced by any environment can be deleted or updated. 
 
-* We allow the users to input a digest for a recipe to enhance security. More about this in [Verifying Recipy Integrity](#security)
+* We allow the users to input a digest for a recipe to enhance security. More about this in [Verifying Recipe Integrity](#security)
  
 #### Examples
 
@@ -443,7 +443,7 @@ At a high level, below changes are necessary:
 
 Add support to UCP to route `Radius.Core/recipePacks` resource operations to Applications RP in below section. (might need more changes)
 
-/radius/deploy/Chart/templates/ucp/configmaps.yaml
+/radius/deploy/Chart/templates/ucp/ConfigMaps.yaml
 
 ```yaml
 initialization:
@@ -471,7 +471,7 @@ Below changes are needed for supporting recipe packs as new feature:
 
 1. Add schema /swagger changes to support the `Radius.Core/recipePacks` resource type ([typespec changes](#schema-and-api-design))
 
-2. Create datamodel and convertors for handling recipe pack resource in /radius/`pkg/corerp/api/v20231001preview/ and /radius/pkg/corerp/datamodel/`
+2. Create datamodel and converters for handling recipe pack resource in /radius/`pkg/corerp/api/v20231001preview/ and /radius/pkg/corerp/datamodel/`
         
 3. Add controller support for creating/updating/listing/deleting the resource in `/radius/pkg/corerp/frontend/controller/`. Constraints for each operation are captured in [Recipe Pack Operations](#schema-and-api-design)
    
@@ -487,7 +487,7 @@ As part of Radius.Core/environments design/implementation below points should be
 
 2. Add schema / swagger changes to support the `Radius.Core/environments` resource type
 
-3. Add convertors for handling conversions from and to version agnostic data model. 
+3. Add converters for handling conversions from and to version agnostic data model. 
 
 4. Add backend/controller support for creating/updating/deleting the resource. 
 
@@ -498,7 +498,7 @@ As part of Radius.Core/environments design/implementation below points should be
 In Dynamic RP, while deploying a dynamic resource:
 
 1. Add support to look up the `Radius.Core/environments` that is in use, fetch environment's recipe-pack ids
-2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found. This is because, by design we dont allow duplicate recipes for a resource type either in one recipe pack or across recipe packs in on eenvironment.
+2. Go over the recipe packs registered in environment one by one until the first recipe pack holding the recipe for the resource type of interest is found. This is because, by design we don't allow duplicate recipes for a resource type either in one recipe pack or across recipe packs in one environment.
    
 3. Use the recipe information just fetched and construct recipe details that can be passed to the existing recipe engine mechanism. 
   
@@ -675,7 +675,7 @@ Providing an option to initialize Radius for az/aws based recipe packs requires 
 
 ### Graph support
 
-Recipe packs will not be displayed in application graphs since the are operatiors concept and not part of an application as a component.
+Recipe packs will not be displayed in application graphs since they are operators concept and not part of an application as a component.
 However, dashboard will be enhanced to show a list of recipe packs, similar to the environment list we have today.
 
 ### Logging/Tracing support
@@ -736,7 +736,7 @@ For teams using dependency management tools to keep their IaC updated:
 ## Compatibility (optional)
 
 Users should migrate from Applications.Core to Radius.Core namespace to make use of new environments and recipePacks resources. 
-We will allow both namespac to coexist until a point where it would be safe to remove the support for Applications.Core. 
+We will allow both namespace to coexist until a point where it would be safe to remove the support for Applications.Core. 
 
 ## Monitoring
 
@@ -748,11 +748,11 @@ We might want to add metrics related to recipe pack usage.
 #### Phase 1: Introduce Radius.Core namespace and setup routing
 - UCP changes to route Radius.Core resources to Applications RP
 - Applications RP changes to add new namespace 
-- Add a manifest to register the new namecpase and types
+- Add a manifest to register the new namespace and types
 
 #### Resource Schema
 - Define `Radius.Core/recipePacks` schema
-- Add convertors and basic controllers
+- Add converters and basic controllers
 
 #### Phase 2: Versioning 
 - Handle `version` field to `recipePack`
@@ -770,7 +770,7 @@ We might want to add metrics related to recipe pack usage.
 
   
 #### Phase 5: Digest Support
-- Add support in recipe engiens to validate recipe integrity using registered hashes. 
+- Add support in recipe engines to validate recipe integrity using registered hashes. 
 
 ### Phase 6: Documentation & Samples
 - Author guide for pack creation and usage.
