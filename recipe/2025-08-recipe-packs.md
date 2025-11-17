@@ -598,9 +598,9 @@ dataRecipePack
 $ rad recipe-pack delete <recipe-pack-name>
 ```
 
-We could delete recipe-packs that are not referenced by any environment in any resource-group. If referenced by environments, the delete should also update the environment to not have the recipepack ID in its list of recipe packs. Allowance of recipe pack deletion when there are resources refering to it is in parity with today's recipe behavior. 
+The delete command deletes the Recipe Pack and removes the Recipe Pack from all existing Environments. Because the Recipe is stored on each resource's status property, Radius retains details of the actual Recipe used to deploy the resource. Therefore, deleting a Recipe Pack only impacts the ability to deploy new resources using the referenced Recipes. This is in parity with today's Recipe behavior. 
 
-By default, delete looks for recipe-pack in current group. It should take in optional scope to delete recipe packs in Other scope. 
+By default, delete looks for Recipe Packs in the current Resource Group. Users can also specify the --group or -g parameter to reference a different Resource Group.
 
 Environment commands related to recipe packs are:
 
