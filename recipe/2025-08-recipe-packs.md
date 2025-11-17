@@ -555,8 +555,8 @@ Note: rad recipe-pack create command could be added as a fast follow feature. Fo
 ```
 $ rad recipe-pack show computeRecipePack
 
-RESOURCE                TYPE                      GROUP     
-computeRecipePack       Radius.Core/recipePacks   default   
+RECIPE PACK             GROUP     
+computeRecipePack       default   
 
 RESOURCE TYPE                    RECIPE KIND          RECIPE LOCATION
 Radius.Compute/containers        terraform            https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48  
