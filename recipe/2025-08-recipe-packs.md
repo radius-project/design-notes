@@ -573,13 +573,13 @@ Radius.Storage/volumes           terraform            https://github.com/project
 3. List recipe packs:
 
 ```
-$ rad recipe-pack list [-g mygroup]
+$ rad recipe-pack list
 
-Lists all recipe packs in all scopes. 
-
-RESOURCE                TYPE                      GROUP     STATE
-computeRecipePack       Radius.Core/recipePacks   default   Succeeded
-dataRecipePack          Radius.Core/recipePacks   default   Succeeded
+RECIPE PACK             GROUP
+computeRecipePack       default
+dataRecipePack          default
+myCustomPack1           myGroup1
+myCustomPack2           myGroup2
 ```
 
 if -g is provided, list recipe packs in that scope.
