@@ -186,10 +186,6 @@ model RecipePackProperties {
 @visibility("read") 
 provisioningState?: ProvisioningState; 
 
-@doc("Description of what this recipe pack provides") 
-description?: string; 
-
-
 @doc("List of environment IDs that reference this recipe pack") 
 @visibility("read") 
 referencedBy?: string[]; 
