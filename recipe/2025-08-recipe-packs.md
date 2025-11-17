@@ -562,10 +562,12 @@ $ rad recipe-pack show computeRecipePack
 RESOURCE                TYPE                      GROUP     
 computeRecipePack       Radius.Core/recipePacks   default   
 
-RESOURCE TYPE                    RECIPE KIND          RECIPE LOCATION    RECIPE PARAMETERS
-Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48  allowPlatformOptions(bool)
-Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+RESOURCE TYPE                    RECIPE KIND          RECIPE LOCATION
+Radius.Compute/containers        terraform            https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48  
+  PARAMETERS:
+   - allowPlatformOptions: true
+Radius.Security/secrets          terraform            https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+Radius.Storage/volumes           terraform            https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
 ```
 
 3. List recipe packs:
