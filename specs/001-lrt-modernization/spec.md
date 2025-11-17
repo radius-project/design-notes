@@ -33,7 +33,7 @@ A Radius developer needs to provision their own isolated test environment to val
 
 **Acceptance Scenarios**:
 
-1. **Given** a developer has Azure CLI configured with valid credentials and required environment variables set, **When** they run `make lrt-deploy-infra`, **Then** an AKS cluster with all dependencies (Log Analytics, Grafana, Dapr, OIDC) is provisioned within 30 minutes and cluster readiness is validated
+1. **Given** a developer has Azure CLI configured with valid credentials and required environment variables set, **When** they run `make lrt-deploy-infra`, **Then** an AKS cluster with all dependencies (Log Analytics, Grafana, Dapr, OIDC) is provisioned successfully (P50 <25 min, P95 <45 min) and cluster readiness is validated
 2. **Given** an AKS cluster has been provisioned successfully, **When** the developer runs `make test-functional-all`, **Then** all functional tests execute against their cluster and results are displayed locally
 3. **Given** tests have completed (successfully or with failures), **When** the developer runs `make lrt-destroy-infra`, **Then** all Azure resources in the test resource group are deleted within 15 minutes
 4. **Given** a developer has only basic Azure permissions, **When** they attempt infrastructure deployment, **Then** the system provides clear error messages about missing permissions and documents the minimum required roles
@@ -151,10 +151,10 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 #### Test Execution
 
-- **FR-013**: System MUST provide Make targets for executing test suites. The `make lrt-test` target MUST be a .PHONY target that includes all test targets currently running in the LRT test workflow, and `make test-functional-all` executes the complete test suite.
+- **FR-013**: System MUST provide Make targets for executing test suites. The `make lrt-test` target MUST be a .PHONY meta-target that invokes all test targets currently running in the LRT test workflow (enabling LRT-specific suite execution), while `make test-functional-all` executes the complete functional test suite across all components.
 - **FR-014**: Test execution MUST display real-time progress and output to terminal when run locally
 - **FR-015**: System MUST collect test results in structured format (JUnit XML or similar) for integration with CI systems
-- **FR-016**: Test execution MUST complete within 120 minutes for full suite on standard AKS cluster configuration
+- **FR-016**: Test execution MUST complete within 120 minutes for full suite on standard AKS cluster configuration (3-node cluster, Standard_D4s_v3 VMs, 16GB RAM and 4 vCPUs per node)
 - **FR-017**: System MUST support parallel test execution (configurable, serial by default for resource compatibility)
 - **FR-018**: System MUST retrieve test resource credentials (CosmosDB, SQL Server) from Kubernetes secrets using service account RBAC (not from environment variables or GitHub organization secrets). Test pods MUST authenticate via service accounts with minimal required permissions.
 - **FR-019**: Failed tests MUST generate diagnostic output including relevant pod logs, resource state, and error context displayed in terminal output (no persistent artifact storage)
