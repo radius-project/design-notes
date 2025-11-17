@@ -578,7 +578,7 @@ myCustomPack1           myGroup1
 myCustomPack2           myGroup2
 ```
 
-if -g is provided, list recipe packs in that scope.
+if --group or -g is provided, results are filtered for the specified Resource Group.
 
 4. Show environment
 
