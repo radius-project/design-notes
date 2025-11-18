@@ -7,6 +7,27 @@
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
+## Progress Summary
+
+- **Total Tasks**: 95
+- **Completed**: 95 (100%)
+- **Remaining**: 0 (0%)
+- **MVP Tasks (P1)**: 50 (Phases 1-4)
+- **MVP Completed**: 50 (100% of MVP) ✅
+
+### Phase Breakdown
+
+- Phase 1 (Setup): 4/4 complete ✅
+- Phase 2 (Foundational): 10/10 complete ✅
+- Phase 3 (User Story 1): 22/22 complete ✅
+- Phase 4 (User Story 2): 14/14 complete ✅
+- Phase 5 (User Story 3): 12/12 complete ✅
+- Phase 6 (User Story 4): 10/10 complete ✅
+- Phase 7 (User Story 5): 8/8 complete ✅
+- Phase 8 (Polish): 15/15 complete ✅
+
+---
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
@@ -27,10 +48,10 @@ All paths relative to `radius/` repository root:
 
 **Purpose**: Project initialization and directory structure for LRT system
 
-- [ ] T001 Create `test/infra/azure/scripts/` directory for deployment scripts
-- [ ] T002 Create `build/lrt.mk` for LRT-specific Make targets
-- [ ] T003 [P] Create `.github/instructions/lrt.instructions.md` for contributor guidance
-- [ ] T004 [P] Create `docs/contributing/lrt-testing.md` documentation directory
+- [X] T001 Create `test/infra/azure/scripts/` directory for deployment scripts
+- [X] T002 Create `build/lrt.mk` for LRT-specific Make targets
+- [X] T003 [P] Create `.github/instructions/lrt.instructions.md` for contributor guidance
+- [X] T004 [P] Create `docs/contributing/lrt-testing.md` documentation directory
 
 ---
 
@@ -40,16 +61,16 @@ All paths relative to `radius/` repository root:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create `test/infra/azure/scripts/deploy-infra.sh` with argument parsing, validation, and Azure CLI deployment orchestration
-- [ ] T006 Create `test/infra/azure/scripts/destroy-infra.sh` with safety checks, retention tag validation, and cleanup logic
-- [ ] T007 Create `test/infra/azure/scripts/health-check.sh` with cluster connectivity, Radius version, dependency checks
-- [ ] T008 Create `test/infra/azure/scripts/setup-credentials.sh` with CosmosDB/SQL provisioning and Kubernetes secret creation
-- [ ] T009 Add `lrt-deploy-infra` target to `build/lrt.mk` calling deploy-infra.sh with environment variables
-- [ ] T010 Add `lrt-destroy-infra` target to `build/lrt.mk` calling destroy-infra.sh with force flag support
-- [ ] T011 Add `lrt-health-check` target to `build/lrt.mk` calling health-check.sh
-- [ ] T012 Add `lrt-setup-test-resources` target to `build/lrt.mk` calling setup-credentials.sh
-- [ ] T013 Include `build/lrt.mk` in main `Makefile` after existing test.mk inclusion
-- [ ] T014 Update `build/test.sh` to enhance idempotency with resource existence checks and resume logic
+- [X] T005 Create `test/infra/azure/scripts/deploy-infra.sh` with argument parsing, validation, and Azure CLI deployment orchestration
+- [X] T006 Create `test/infra/azure/scripts/destroy-infra.sh` with safety checks, retention tag validation, and cleanup logic
+- [X] T007 Create `test/infra/azure/scripts/health-check.sh` with cluster connectivity, Radius version, dependency checks
+- [X] T008 Create `test/infra/azure/scripts/setup-credentials.sh` with CosmosDB/SQL provisioning and Kubernetes secret creation
+- [X] T009 Add `lrt-deploy-infra` target to `build/lrt.mk` calling deploy-infra.sh with environment variables
+- [X] T010 Add `lrt-destroy-infra` target to `build/lrt.mk` calling destroy-infra.sh with force flag support
+- [X] T011 Add `lrt-health-check` target to `build/lrt.mk` calling health-check.sh
+- [X] T012 Add `lrt-setup-test-resources` target to `build/lrt.mk` calling setup-credentials.sh
+- [X] T013 Include `build/lrt.mk` in main `Makefile` after existing test.mk inclusion
+- [X] T014 Update `build/test.sh` to enhance idempotency with resource existence checks and resume logic
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -63,28 +84,28 @@ All paths relative to `radius/` repository root:
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Implement Azure CLI authentication check in `test/infra/azure/scripts/deploy-infra.sh`
-- [ ] T016 [P] [US1] Implement environment variable validation in `test/infra/azure/scripts/deploy-infra.sh` (AZURE_SUBSCRIPTION_ID, TEST_AKS_RG, TEST_AKS_AZURE_LOCATION)
-- [ ] T017 [P] [US1] Implement Azure permissions validation in `test/infra/azure/scripts/deploy-infra.sh` checking Contributor role
-- [ ] T018 [US1] Implement workload identity tag lookup in `test/infra/azure/scripts/deploy-infra.sh` with clear error if not found
-- [ ] T019 [US1] Implement Bicep deployment orchestration in `test/infra/azure/scripts/deploy-infra.sh` calling `az deployment group create`
-- [ ] T020 [US1] Implement kubeconfig update in `test/infra/azure/scripts/deploy-infra.sh` using `az aks get-credentials`
-- [ ] T021 [US1] Implement health check validation call at end of `test/infra/azure/scripts/deploy-infra.sh`
-- [ ] T022 [US1] Implement colored output helpers (print_info, print_success, print_error, print_warning) in `test/infra/azure/scripts/deploy-infra.sh`
-- [ ] T023 [US1] Implement trap handlers for cleanup on error in `test/infra/azure/scripts/deploy-infra.sh`
-- [ ] T024 [P] [US1] Implement resource group existence check in `test/infra/azure/scripts/destroy-infra.sh`
-- [ ] T025 [P] [US1] Implement retention tag validation in `test/infra/azure/scripts/destroy-infra.sh` preventing deletion of tagged resources
-- [ ] T026 [P] [US1] Implement confirmation prompt in `test/infra/azure/scripts/destroy-infra.sh` (skip if FORCE_DESTROY=true)
-- [ ] T027 [US1] Implement resource group deletion in `test/infra/azure/scripts/destroy-infra.sh` using `az group delete`
-- [ ] T028 [US1] Implement kubeconfig cleanup in `test/infra/azure/scripts/destroy-infra.sh` removing cluster context
-- [ ] T029 [P] [US1] Implement cluster connectivity check in `test/infra/azure/scripts/health-check.sh` using `kubectl version`
-- [ ] T030 [P] [US1] Implement Radius installation check in `test/infra/azure/scripts/health-check.sh` using `rad version --server`
-- [ ] T031 [P] [US1] Implement dependency checks in `test/infra/azure/scripts/health-check.sh` (Dapr, cert-manager pods)
-- [ ] T032 [US1] Implement test resource secret checks in `test/infra/azure/scripts/health-check.sh` (CosmosDB, SQL secrets)
-- [ ] T033 [US1] Implement node resource availability check in `test/infra/azure/scripts/health-check.sh`
-- [ ] T034 [US1] Add `--dry-run` flag support to `test/infra/azure/scripts/deploy-infra.sh` for configuration validation
-- [ ] T035 [US1] Update `test/infra/README.md` with Make target documentation and usage examples
-- [ ] T036 [US1] Create `docs/contributing/lrt-testing.md` with setup guide, prerequisites, and troubleshooting
+- [X] T015 [P] [US1] Implement Azure CLI authentication check in `test/infra/azure/scripts/deploy-infra.sh`
+- [X] T016 [P] [US1] Implement environment variable validation in `test/infra/azure/scripts/deploy-infra.sh` (AZURE_SUBSCRIPTION_ID, TEST_AKS_RG, TEST_AKS_AZURE_LOCATION)
+- [X] T017 [P] [US1] Implement Azure permissions validation in `test/infra/azure/scripts/deploy-infra.sh` checking Contributor role
+- [X] T018 [US1] Implement workload identity tag lookup in `test/infra/azure/scripts/deploy-infra.sh` with clear error if not found
+- [X] T019 [US1] Implement Bicep deployment orchestration in `test/infra/azure/scripts/deploy-infra.sh` calling `az deployment group create`
+- [X] T020 [US1] Implement kubeconfig update in `test/infra/azure/scripts/deploy-infra.sh` using `az aks get-credentials`
+- [X] T021 [US1] Implement health check validation call at end of `test/infra/azure/scripts/deploy-infra.sh`
+- [X] T022 [US1] Implement colored output helpers (print_info, print_success, print_error, print_warning) in `test/infra/azure/scripts/deploy-infra.sh`
+- [X] T023 [US1] Implement trap handlers for cleanup on error in `test/infra/azure/scripts/deploy-infra.sh`
+- [X] T024 [P] [US1] Implement resource group existence check in `test/infra/azure/scripts/destroy-infra.sh`
+- [X] T025 [P] [US1] Implement retention tag validation in `test/infra/azure/scripts/destroy-infra.sh` preventing deletion of tagged resources
+- [X] T026 [P] [US1] Implement confirmation prompt in `test/infra/azure/scripts/destroy-infra.sh` (skip if FORCE_DESTROY=true)
+- [X] T027 [US1] Implement resource group deletion in `test/infra/azure/scripts/destroy-infra.sh` using `az group delete`
+- [X] T028 [US1] Implement kubeconfig cleanup in `test/infra/azure/scripts/destroy-infra.sh` removing cluster context
+- [X] T029 [P] [US1] Implement cluster connectivity check in `test/infra/azure/scripts/health-check.sh` using `kubectl version`
+- [X] T030 [P] [US1] Implement Radius installation check in `test/infra/azure/scripts/health-check.sh` using `rad version --server`
+- [X] T031 [P] [US1] Implement dependency checks in `test/infra/azure/scripts/health-check.sh` (Dapr, cert-manager pods)
+- [X] T032 [US1] Implement test resource secret checks in `test/infra/azure/scripts/health-check.sh` (CosmosDB, SQL secrets)
+- [X] T033 [US1] Implement node resource availability check in `test/infra/azure/scripts/health-check.sh`
+- [X] T034 [US1] Add `--dry-run` flag support to `test/infra/azure/scripts/deploy-infra.sh` for configuration validation
+- [X] T035 [US1] Update `test/infra/README.md` with Make target documentation and usage examples
+- [X] T036 [US1] Create `docs/contributing/lrt-testing.md` with setup guide, prerequisites, and troubleshooting
 
 **Checkpoint**: User Story 1 complete - developers can provision infrastructure, run tests, and clean up locally
 
@@ -92,28 +113,29 @@ All paths relative to `radius/` repository root:
 
 ## Phase 4: User Story 2 - Fork-Based Workflow Testing (Priority: P1)
 
-**Goal**: Enable contributors to test LRT workflows on their forks using their own Azure resources
+**Goal**: Enable contributors to test LRT workflows on their forks using pre-deployed infrastructure in their own Azure subscriptions
 
-**Independent Test**: Fork repository, configure Azure credentials in fork secrets, push workflow change, trigger via workflow_dispatch, verify workflow executes using fork resources
+**Independent Test**: Fork repository, manually deploy infrastructure with `make lrt-deploy-infra`, configure Azure OIDC credentials (client-id, tenant-id, subscription-id) and cluster name in fork secrets, push workflow change, trigger via workflow_dispatch, verify workflow authenticates to Azure using OIDC, sets kubectl context, and executes tests using pre-deployed infrastructure
 
 ### Implementation for User Story 2
 
-- [ ] T037 [P] [US2] Create `.github/workflows/long-running-tests.yml` with workflow_dispatch trigger for manual execution
-- [ ] T038 [P] [US2] Add schedule trigger to `.github/workflows/long-running-tests.yml` with repository filter (only radius-project/radius)
-- [ ] T039 [P] [US2] Add workflow inputs to `.github/workflows/long-running-tests.yml` (test_suites, skip_cleanup)
-- [ ] T040 [US2] Add Azure login step to `.github/workflows/long-running-tests.yml` using fork-configured secrets
-- [ ] T041 [US2] Add infrastructure deployment step to `.github/workflows/long-running-tests.yml` calling `make lrt-deploy-infra`
-- [ ] T042 [US2] Add health check step to `.github/workflows/long-running-tests.yml` calling `make lrt-health-check`
-- [ ] T043 [US2] Add test execution step to `.github/workflows/long-running-tests.yml` calling `make lrt-test`
-- [ ] T044 [US2] Add cleanup step to `.github/workflows/long-running-tests.yml` with `if: always()` and skip_cleanup check
-- [ ] T045 [US2] Add test results upload to `.github/workflows/long-running-tests.yml` using actions/upload-artifact
-- [ ] T046 [US2] Add repository filter job condition to `.github/workflows/long-running-tests.yml` preventing scheduled runs on forks
-- [ ] T047 [US2] Add container registry configuration to `.github/workflows/long-running-tests.yml` with fallback to ghcr.io
-- [ ] T048 [US2] Document required secrets in `.github/workflows/long-running-tests.yml` header comments
-- [ ] T049 [US2] Update `.github/instructions/lrt.instructions.md` with fork testing workflow
-- [ ] T050 [US2] Add fork configuration examples to `docs/contributing/lrt-testing.md`
+#### T037: Create `.github/workflows/long-running-tests.yml` with workflow_dispatch trigger for manual execution
+- [X] T037: Create `.github/workflows/long-running-tests.yml` with workflow_dispatch trigger for manual execution
+- [X] T038 [P] [US2] Add schedule trigger to `.github/workflows/long-running-tests.yml` with repository filter (only radius-project/radius)
+- [X] T039 [P] [US2] Add workflow inputs to `.github/workflows/long-running-tests.yml` (test_suites, resource_group, cluster_name)
+- [X] T040 [US2] Add Azure login step to `.github/workflows/long-running-tests.yml` using OIDC authentication (azure/login@v2 with client-id, tenant-id, subscription-id from fork secrets)
+- [X] T041 [US2] Add kubectl context setup step to `.github/workflows/long-running-tests.yml` calling `az aks get-credentials --resource-group ${{ inputs.resource_group }} --name ${{ inputs.cluster_name }}` (infrastructure must be pre-deployed manually)
+- [X] T042 [US2] Add health check step to `.github/workflows/long-running-tests.yml` calling `make lrt-health-check`
+- [X] T043 [US2] Add test execution step to `.github/workflows/long-running-tests.yml` calling `make lrt-test`
+- [X] T044 [US2] Remove cleanup step from workflow (infrastructure is persistent and managed manually by developers, not destroyed by workflow)
+- [X] T045 [US2] Add test results upload to `.github/workflows/long-running-tests.yml` using actions/upload-artifact
+- [X] T046 [US2] Add repository filter job condition to `.github/workflows/long-running-tests.yml` preventing scheduled runs on forks
+- [X] T047: Add run tests step with suite selection logic (parse test_suites input, invoke make targets)
+- [X] T048: Add test results upload step (upload-artifact with dist/test_results/ and logs)
+- [X] T049: Update workflow to document that infrastructure is pre-deployed and persistent (not destroyed by workflow)
+- [X] T050: Create `.github/workflows/README.md` documenting fork testing setup (manual infrastructure deployment using personal Azure account, required OIDC secrets for workflow authentication: client-id/tenant-id/subscription-id, workflow execution)
 
-**Checkpoint**: User Story 2 complete - contributors can test workflows on forks independently
+**Checkpoint**: User Story 2 complete - contributors can test workflows on forks using pre-deployed infrastructure independently
 
 ---
 
@@ -125,18 +147,18 @@ All paths relative to `radius/` repository root:
 
 ### Implementation for User Story 3
 
-- [ ] T051 [P] [US3] Create `test/infra/azure/scripts/version-check.sh` comparing CLI and cluster Radius versions
-- [ ] T052 [P] [US3] Create `test/infra/azure/scripts/upgrade-cluster.sh` executing `rad upgrade` command
-- [ ] T053 [US3] Implement version detection in `test/infra/azure/scripts/version-check.sh` using `rad version` and `rad version --server`
-- [ ] T054 [US3] Implement semantic version comparison in `test/infra/azure/scripts/version-check.sh`
-- [ ] T055 [US3] Implement upgrade recommendation output in `test/infra/azure/scripts/version-check.sh`
-- [ ] T056 [US3] Implement upgrade execution in `test/infra/azure/scripts/upgrade-cluster.sh` using `rad upgrade`
-- [ ] T057 [US3] Implement post-upgrade validation in `test/infra/azure/scripts/upgrade-cluster.sh` checking pod readiness and API version
-- [ ] T058 [US3] Add `lrt-version-check` target to `build/lrt.mk` calling version-check.sh
-- [ ] T059 [US3] Add `lrt-upgrade-cluster` target to `build/lrt.mk` calling upgrade-cluster.sh
-- [ ] T060 [US3] Add version check step to `.github/workflows/long-running-tests.yml` before test execution
-- [ ] T061 [US3] Add conditional upgrade step to `.github/workflows/long-running-tests.yml` if version mismatch detected
-- [ ] T062 [US3] Update `docs/contributing/lrt-testing.md` with version management documentation
+- [X] T051 [P] [US3] Create `test/infra/azure/scripts/version-check.sh` comparing CLI and cluster Radius versions
+- [X] T052 [P] [US3] Create `test/infra/azure/scripts/upgrade-cluster.sh` executing `rad upgrade` command
+- [X] T053 [US3] Implement version detection in `test/infra/azure/scripts/version-check.sh` using `rad version` and `rad version --server`
+- [X] T054 [US3] Implement semantic version comparison in `test/infra/azure/scripts/version-check.sh`
+- [X] T055 [US3] Implement upgrade recommendation output in `test/infra/azure/scripts/version-check.sh`
+- [X] T056 [US3] Implement upgrade execution in `test/infra/azure/scripts/upgrade-cluster.sh` using `rad upgrade`
+- [X] T057 [US3] Implement post-upgrade validation in `test/infra/azure/scripts/upgrade-cluster.sh` checking pod readiness and API version
+- [X] T058 [US3] Add `lrt-version-check` target to `build/lrt.mk` calling version-check.sh
+- [X] T059 [US3] Add `lrt-upgrade-cluster` target to `build/lrt.mk` calling upgrade-cluster.sh
+- [X] T060 [US3] Add version check step to `.github/workflows/long-running-tests.yml` before test execution
+- [X] T061 [US3] Add conditional upgrade step to `.github/workflows/long-running-tests.yml` if version mismatch detected
+- [X] T062 [US3] Update `docs/contributing/lrt-testing.md` with version management documentation
 
 **Checkpoint**: User Story 3 complete - automated version detection and upgrade working
 
@@ -150,16 +172,16 @@ All paths relative to `radius/` repository root:
 
 ### Implementation for User Story 4
 
-- [ ] T063 [P] [US4] Add `lrt-test` target to `build/lrt.mk` as .PHONY meta-target invoking all LRT workflow test targets
-- [ ] T064 [US4] Add test suite dependencies to `lrt-test` target in `build/lrt.mk` (test-functional-corerp-cloud, test-functional-daprrp-cloud, etc.)
-- [ ] T065 [P] [US4] Implement CosmosDB provisioning in `test/infra/azure/scripts/setup-credentials.sh` using `az cosmosdb create`
-- [ ] T066 [P] [US4] Implement SQL Server provisioning in `test/infra/azure/scripts/setup-credentials.sh` using `az sql server create`
-- [ ] T067 [US4] Implement connection string retrieval in `test/infra/azure/scripts/setup-credentials.sh`
-- [ ] T068 [US4] Implement Kubernetes secret creation in `test/infra/azure/scripts/setup-credentials.sh` for CosmosDB and SQL
-- [ ] T069 [US4] Implement service account creation in `test/infra/azure/scripts/setup-credentials.sh` with RBAC for secret access
-- [ ] T070 [US4] Add SKIP_CLEANUP environment variable support to test execution in `build/lrt.mk`
-- [ ] T071 [US4] Add TEST_TIMEOUT environment variable support to test execution in `build/lrt.mk`
-- [ ] T072 [US4] Update `docs/contributing/lrt-testing.md` with test execution examples and troubleshooting
+- [X] T063 [P] [US4] Add `lrt-test` target to `build/lrt.mk` as .PHONY meta-target invoking all LRT workflow test targets
+- [X] T064 [US4] Add test suite dependencies to `lrt-test` target in `build/lrt.mk` (test-functional-corerp-cloud, test-functional-daprrp-cloud, etc.)
+- [X] T065 [P] [US4] Implement CosmosDB provisioning in `test/infra/azure/scripts/setup-credentials.sh` using `az cosmosdb create`
+- [X] T066 [P] [US4] Implement SQL Server provisioning in `test/infra/azure/scripts/setup-credentials.sh` using `az sql server create`
+- [X] T067 [US4] Implement connection string retrieval in `test/infra/azure/scripts/setup-credentials.sh`
+- [X] T068 [US4] Implement Kubernetes secret creation in `test/infra/azure/scripts/setup-credentials.sh` for CosmosDB and SQL
+- [X] T069 [US4] Implement service account creation in `test/infra/azure/scripts/setup-credentials.sh` with RBAC for secret access
+- [X] T070 [US4] Add SKIP_CLEANUP environment variable support to test execution in `build/lrt.mk`
+- [X] T071 [US4] Add TEST_TIMEOUT environment variable support to test execution in `build/lrt.mk`
+- [X] T072 [US4] Update `docs/contributing/lrt-testing.md` with test execution examples and troubleshooting
 
 **Checkpoint**: User Story 4 complete - local test execution with credential management working
 
@@ -173,14 +195,14 @@ All paths relative to `radius/` repository root:
 
 ### Implementation for User Story 5
 
-- [ ] T073 [P] [US5] Add workload identity validation to `test/infra/azure/scripts/health-check.sh` checking OIDC configuration
-- [ ] T074 [P] [US5] Add detailed error messages with remediation steps to `test/infra/azure/scripts/health-check.sh`
-- [ ] T075 [P] [US5] Add version mismatch detection to `test/infra/azure/scripts/health-check.sh` comparing expected vs actual Radius version
-- [ ] T076 [US5] Add node resource capacity warnings to `test/infra/azure/scripts/health-check.sh` for insufficient CPU/memory
-- [ ] T077 [US5] Add environment variable validation to `test/infra/azure/scripts/health-check.sh` checking required vars are set
-- [ ] T078 [US5] Add timeout to health checks in `test/infra/azure/scripts/health-check.sh` (max 2 minutes)
-- [ ] T079 [US5] Add structured output format to `test/infra/azure/scripts/health-check.sh` with ✓/✗ indicators per component
-- [ ] T080 [US5] Update `docs/contributing/lrt-testing.md` with health check interpretation guide
+- [X] T073 [P] [US5] Add workload identity validation to `test/infra/azure/scripts/health-check.sh` checking OIDC configuration
+- [X] T074 [P] [US5] Add detailed error messages with remediation steps to `test/infra/azure/scripts/health-check.sh`
+- [X] T075 [P] [US5] Add version mismatch detection to `test/infra/azure/scripts/health-check.sh` comparing expected vs actual Radius version
+- [X] T076 [US5] Add node resource capacity warnings to `test/infra/azure/scripts/health-check.sh` for insufficient CPU/memory
+- [X] T077 [US5] Add environment variable validation to `test/infra/azure/scripts/health-check.sh` checking required vars are set
+- [X] T078 [US5] Add timeout to health checks in `test/infra/azure/scripts/health-check.sh` (max 2 minutes)
+- [X] T079 [US5] Add structured output format to `test/infra/azure/scripts/health-check.sh` with ✓/✗ indicators per component
+- [X] T080 [US5] Update `docs/contributing/lrt-testing.md` with health check interpretation guide
 
 **Checkpoint**: User Story 5 complete - comprehensive health validation implemented
 
@@ -190,21 +212,21 @@ All paths relative to `radius/` repository root:
 
 **Purpose**: Improvements that affect multiple user stories and final cleanup
 
-- [ ] T081 [P] Create `test/infra/azure/scripts/cleanup-orphaned.sh` to find and remove abandoned resources older than threshold (default: 7 days)
-- [ ] T082 [P] Add `lrt-cleanup-orphaned` target to `build/lrt.mk` calling cleanup-orphaned.sh
-- [ ] T083 [P] Add help text to all Make targets in `build/lrt.mk` for `make help` integration
-- [ ] T084 [P] Update `build/help.mk` to include LRT targets if not automatically discovered
-- [ ] T085 [P] Add integration tests for deployment scripts in `test/infra/azure/scripts/test/`
-- [ ] T086 Update `test/infra/README.md` with complete Make target reference and architecture overview
-- [ ] T087 Add troubleshooting section to `docs/contributing/lrt-testing.md` with common errors and solutions
-- [ ] T088 Add quickstart validation to ensure `quickstart.md` examples work end-to-end
-- [ ] T089 Add security review for credential handling and secret management patterns
-- [ ] T090 Add performance benchmarks for infrastructure deployment and test execution times
-- [ ] T091 Add code duplication validation: Review scripts and Make targets to ensure zero duplicate logic (SC-007)
-- [ ] T092 Code cleanup: Ensure all scripts follow shell.instructions.md conventions (set -euo pipefail, trap handlers)
-- [ ] T093 Code cleanup: Ensure all Make targets follow make.instructions.md conventions (.PHONY, help text)
-- [ ] T094 Code cleanup: Ensure workflow follows github.workflows.instructions.md conventions (fork-testability, workflow_dispatch)
-- [ ] T095 Final documentation review: Verify all paths, commands, and examples are accurate and tested
+- [X] T081 [P] Create `test/infra/azure/scripts/cleanup-orphaned.sh` to find and remove abandoned resources older than threshold (default: 7 days)
+- [X] T082 [P] Add `lrt-cleanup-orphaned` target to `build/lrt.mk` calling cleanup-orphaned.sh
+- [X] T083 [P] Add help text to all Make targets in `build/lrt.mk` for `make help` integration
+- [X] T084 [P] Update `build/help.mk` to include LRT targets if not automatically discovered
+- [X] T085 [P] Add integration tests for deployment scripts in `test/infra/azure/scripts/test/`
+- [X] T086 Update `test/infra/README.md` with complete Make target reference and architecture overview
+- [X] T087 Add troubleshooting section to `docs/contributing/lrt-testing.md` with common errors and solutions
+- [X] T088 Add quickstart validation to ensure `quickstart.md` examples work end-to-end
+- [X] T089 Add security review for credential handling and secret management patterns
+- [X] T090 Add performance benchmarks for infrastructure deployment and test execution times
+- [X] T091 Add code duplication validation: Review scripts and Make targets to ensure zero duplicate logic (SC-007)
+- [X] T092 Code cleanup: Ensure all scripts follow shell.instructions.md conventions (set -euo pipefail, trap handlers)
+- [X] T093 Code cleanup: Ensure all Make targets follow make.instructions.md conventions (.PHONY, help text)
+- [X] T094 Code cleanup: Ensure workflow follows github.workflows.instructions.md conventions (fork-testability, workflow_dispatch)
+- [X] T095 Final documentation review: Verify all paths, commands, and examples are accurate and tested
 
 ---
 

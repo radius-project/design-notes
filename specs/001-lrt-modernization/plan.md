@@ -18,8 +18,9 @@ Modernize the Radius Long-Running Test (LRT) system to enable developer self-ser
 **Target Platform**: AKS 1.30+ clusters on Azure (primary), local Kubernetes (k3d/kind) for development
 **Project Type**: Infrastructure testing system (deployment automation + functional test orchestration)
 **Performance Goals**: Infrastructure deployment <30 min, full test suite <120 min, health checks <2 min
-**Constraints**: Fork-testable workflows (no organization secrets), idempotent deployments, cleanup by default with opt-out
+**Constraints**: Fork-testable workflows (no organization secrets), idempotent deployments, cleanup by default with opt-out, OIDC authentication for workflows (no service principals)
 **Scale/Scope**: ~20 test suites, ~5 developers running simultaneously, infrastructure per-developer (no sharing)
+**Authentication**: GitHub workflows use Azure OIDC (client-id/tenant-id/subscription-id), developers use personal Azure accounts locally
 
 ## Constitution Check
 
@@ -75,10 +76,10 @@ build/
 ├── test.sh              # Existing deployment script - enhance for idempotency
 └── lrt.mk               # NEW - LRT-specific Make targets extracted from workflow logic
 
-# GitHub workflows (fork-compatible)
+# GitHub workflows (fork-compatible - uses pre-deployed infrastructure)
 .github/
 ├── workflows/
-│   └── long-running-tests.yml  # NEW or enhanced - fork-testable LRT workflow
+│   └── long-running-tests.yml  # NEW or enhanced - fork-testable LRT workflow (OIDC auth + runs tests, does NOT deploy infra)
 └── instructions/
     └── lrt.instructions.md     # NEW - LRT testing guidance for contributors
 

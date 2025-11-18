@@ -21,6 +21,11 @@
 - Q: What test suite names/components are supported for individual execution? → A: make lrt-test will be a .PHONY target that includes the test targets currently running in the LRT test workflow
 - Q: Is cleanup after tests opt-in or automatic, and can it be skipped? → A: Cleanup runs by default; opt-out via flag (e.g., `SKIP_CLEANUP=true`) to preserve resources
 
+### Session 2025-11-16
+
+- Q: What authentication method should be used for Azure access in GitHub workflows and local development? → A: GitHub workflows use Azure OIDC authentication (azure/login@v2 with client-id/tenant-id/subscription-id); developers use their personal Azure accounts (az login) for local testing. Service principals are NOT used.
+- Q: How is workload identity configured for AKS clusters? → A: Developers specify the workload identity when deploying infrastructure; the identity must be pre-created with appropriate tags.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Developer Infrastructure Setup (Priority: P1)
@@ -43,19 +48,19 @@ A Radius developer needs to provision their own isolated test environment to val
 
 ### User Story 2 - Fork-Based Workflow Testing (Priority: P1)
 
-A Radius contributor working on a fork needs to test workflow changes before submitting a PR to the main repository. They should be able to push changes to their fork, manually trigger the LRT workflow via GitHub UI, and see test results—all without needing access to `radius-project` organization resources or secrets.
+A Radius contributor working on a fork needs to test workflow changes before submitting a PR to the main repository. They should be able to manually deploy LRT infrastructure using Make commands, push workflow changes to their fork, manually trigger the LRT workflow via GitHub UI (which authenticates to Azure and configures kubectl context), and see test results—all without needing access to `radius-project` organization resources or secrets.
 
 **Why this priority**: This addresses a critical pain point preventing contributors from validating workflow changes. Currently, workflows are tightly coupled to organization-specific resources, making it impossible to test on forks. This is equally critical as P1 because it enables workflow improvements and community contributions.
 
-**Independent Test**: Can be fully tested by a contributor forking the repository, making a change to a workflow file, pushing to their fork, triggering the workflow via GitHub Actions UI with workflow_dispatch, and verifying that the workflow executes successfully using only resources in their own Azure subscription. Delivers independent validation of workflow correctness.
+**Independent Test**: Can be fully tested by a contributor forking the repository, manually deploying infrastructure with `make lrt-deploy-infra`, configuring fork secrets with Azure credentials and cluster name, pushing a workflow change, triggering the workflow via GitHub Actions UI with workflow_dispatch, and verifying that the workflow authenticates to Azure, sets kubectl context, executes tests successfully, and uses only resources in their own Azure subscription. Delivers independent validation of workflow correctness.
 
 **Acceptance Scenarios**:
 
-1. **Given** a contributor has forked the radius repository, **When** they configure their fork with Azure credentials and push a workflow change, **Then** they can manually trigger the LRT workflow via workflow_dispatch on any branch
-2. **Given** a workflow is triggered on a fork, **When** the workflow executes, **Then** it uses environment variables/secrets configured in the fork (not radius-project organization secrets) and completes successfully
+1. **Given** a contributor has manually deployed LRT infrastructure to their Azure subscription using their personal account, **When** they configure their fork with Azure OIDC credentials (client-id, tenant-id, subscription-id) and cluster name, **Then** they can manually trigger the LRT workflow via workflow_dispatch on any branch
+2. **Given** a workflow is triggered on a fork with pre-deployed infrastructure, **When** the workflow executes, **Then** it authenticates to Azure using OIDC (azure/login@v2), sets kubectl context using `az aks get-credentials`, and runs tests against the pre-deployed cluster successfully
 3. **Given** a contributor has no access to `ghcr.io/radius-project/*` registries, **When** they run the workflow on their fork, **Then** the workflow uses an alternative registry specified in their fork's configuration without code changes
 4. **Given** a workflow is scheduled to run, **When** it triggers on a fork, **Then** the schedule is ignored and the workflow does not execute automatically (only manual dispatch works on forks)
-5. **Given** workflow execution completes on a fork, **When** the contributor views results, **Then** they see detailed logs, test outcomes, and resource cleanup status in GitHub Actions UI
+5. **Given** workflow execution completes on a fork, **When** the contributor views results, **Then** they see detailed logs, test outcomes, and resource cleanup status in GitHub Actions UI (infrastructure remains deployed unless manually destroyed)
 
 ---
 
@@ -161,11 +166,12 @@ Before running expensive long-running tests, developers and CI systems need to v
 
 #### Fork Compatibility
 
-- **FR-020**: GitHub workflows MUST execute successfully on repository forks using only resources accessible to fork owner (not radius-project organization resources)
+- **FR-020**: GitHub workflows MUST execute successfully on repository forks using pre-deployed infrastructure accessible to fork owner (not radius-project organization resources). Workflows authenticate to Azure and configure kubectl context but do NOT deploy infrastructure.
 - **FR-021**: Workflows MUST support manual triggering via workflow_dispatch event on any branch
 - **FR-022**: Scheduled workflow triggers MUST NOT execute on forks (schedule ignored unless repository matches configured organization/repository pattern)
-- **FR-023**: Workflows MUST accept configuration through environment variables or repository secrets (container registries, cloud credentials, cluster names)
+- **FR-023**: Workflows MUST accept configuration through environment variables or repository secrets (container registries, cloud credentials, cluster names, resource group names)
 - **FR-024**: All core test logic MUST be implemented in Make targets and shell scripts, not embedded in workflow YAML (enabling local execution)
+- **FR-029**: Workflows MUST authenticate to Azure using fork-configured credentials and set kubectl context to pre-deployed cluster using `az aks get-credentials --resource-group <rg> --name <cluster>` (infrastructure deployment is manual and occurs before workflow execution)
 
 #### Test Resource Management
 
