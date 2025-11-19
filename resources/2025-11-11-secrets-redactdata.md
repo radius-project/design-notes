@@ -157,7 +157,7 @@ sequenceDiagram
 
 **Description**: Nullify sensitive data in the frontend controller before initial database save, similar to Applications.Core/secretStores.
 
-**Reasons for rejection:
+**Reasons for rejection**:
 - **Cannot support recipes**: Recipe execution happens in backend async operation and needs access to sensitive data, this would break the recipe-based deployment.
 
 #### Option 2: Backend Post-Recipe Redaction (Recommended)
@@ -207,9 +207,68 @@ sequenceDiagram
 
 Document encryption requirement in Radius installation guides
 
+### Option 4: Application-Level Encryption in Dynamic-RP
+
+**Description**: Implement encryption/decryption of sensitive data at the application layer using Go crypto APIs with ChaCha20-Poly1305 cipher and per-request nonce.
+
+**Implementation Details:**
+- Store root key in a Kubernetes secret (similar to ucp-cert)
+- Use Go's `crypto/cipher` package with ChaCha20-Poly1305 AEAD cipher
+- Generate unique nonce per encryption operation
+- Encrypt sensitive data before database save, decrypt when needed for recipe execution
+
+**Advantages**:
+- Adds application-level protection even if database encryption is not encrypted at rest
+- Encrypts resource JSON data before database storage
+- Implementation available: Go crypto APIs provide ChaCha20-Poly1305 support
+
+**Disadvantages**:
+- Performance overhead: Encryption/decryption adds latency to both save and recipe execution
+- Key management
+- Increased code complexity: Error handling for crypto operations
+
+**Notes**: OpenSSL is CLI-only; Go crypto APIs are recommended for programmatic encryption.
+  - **Alternative considered**: Using initContainer to load root key as a file was discussed but rejected due to:
+    - Security concerns: Pod that can mount the volume could read the key
+    - Managing writes on pod restarts and scaling complexity with multiple pods
+    - Kubernetes secrets provide better access controls via RBAC
+
+### Option 5: Type-Specific vs Annotation-Based Encryption + Redaction
+
+**Description**: Two approaches to identify resources requiring sensitive resource data encryption and redaction:
+
+**Option A: Type-Specific**
+- Hard-code encryption and redaction logic for specific resource types (e.g., `Radius.Security/secrets`)
+- Check resource type string in dynamic-rp backend controller
+- Explicitly detect known sensitive resource types
+
+**Option B: Annotation-Based (Extensible)**
+- Use OpenAPI extension annotations (e.g., `x-radius-sensitive`/ `x-radius-secure`) in resource type definitions
+- Dynamic-rp reads schema annotations to determine which resources need encryption and which fields will need redaction
+- Type schema declares its sensitivity requirements
+- More flexible for future resource types without code changes
+
+**Trade-offs:**
+
+| Aspect | Type-Specific | Annotation-Based |
+|--------|---------------|------------------|
+| **Implementation complexity** | Simple: hardcoded type check | Complex: schema parsing, annotation handling |
+| **Extensibility** | Requires code changes for new types | New types declare sensitivity via schema |
+| **Type safety** | Explicit and clear | Requires schema validation |
+| **Performance** | Minimal overhead (string comparison) | Schema lookup/parsing overhead |
+
+**Notes**:
+- **Standard OpenAPI keywords considered but rejected**:
+  - `writeOnly`: Indicates property should not be returned in responses. Constraint: Only controls response serialization, does not enforce encryption or database-level field nullification.
+  - `format: password`: UI hint for masking input fields in forms. Constraint: Client-side UX concern, not server-side security enforcement.
+  - Both keywords have well-defined OpenAPI semantics that don't align with Radius encryption/redaction requirements
+  - Decision: Use custom `x-radius-*` annotations for Radius-specific security semantics to avoid overloading standard OpenAPI keywords.
+
+**Recommendation**: TBD - requires team discussion. Is this a "do it now vs later" decision?
+
 #### Proposed Option
 
-**Option 2 + Option 3: Backend Post-Recipe Redaction With Recommendation to encrypt db** is the recommended approach. 
+**Option 2 + Option 3 + Option 4 + (Option 5 approach TBD): Backend Post-Recipe Redaction With Recommendation to encrypt db** is the recommended approach. 
 
 ### API design (if applicable)
 
@@ -229,8 +288,8 @@ No changes required to Core RP. The implementation is isolated to dynamic-rp.
 
 **Primary Changes in Recipe Controller** (`pkg/portableresources/backend/controller/createorupdateresource.go`):
 
--Add redaction hook after recipe execution** :
--Add cleanup handler to ensure redaction on errors**:
+-Add redaction hook after recipe execution
+-Add cleanup handler to ensure redaction on errors
 -Type Detection Helper
 
 ### Error Handling
@@ -285,12 +344,12 @@ No changes required to Core RP. The implementation is isolated to dynamic-rp.
 
 3. **Update scenarios**:
    - Update existing `Radius.Security/secrets` resource
-   - Verify updated secrets are deployed and redactd
+   - Verify updated secrets are deployed and redacted
 
 4. **End-to-end secret lifecycle**:
    - Create resource with sensitive data
    - Verify recipe deploys to backend
-   - Verify data is redactd after deployment
+   - Verify data is redacted after deployment
    - Read resource back and verify `data` is null
    - Reference secrets via output resources in consuming application
 
@@ -306,7 +365,7 @@ The design includes a **temporary exposure window** during which sensitive data 
 
 The recommended mitigation for temporary secret exposure is infrastructure-level database encryption at rest. This provides defense-in-depth protection against multiple threat vectors without requiring changes to Radius code.
 
-- **For etcd** (current Kubernetes-based deployments): Enable Kubernetes EncryptionConfiguration if encyption not provided by default.
+- **For etcd** (current Kubernetes-based deployments): Enable Kubernetes Encryption if encryption not provided by default.
 - **For future database backends**: Enable native encryption at rest features
 - **Benefits**: Protects against backups, unauthorized access, and storage layer compromise
 
@@ -352,8 +411,6 @@ Organizations deploying Radius with `Radius.Security/secrets` should ensure:
 **Forward compatibility**: 
 
 ## Monitoring and Logging
-
-### Metrics
 
 ### Logging
 
