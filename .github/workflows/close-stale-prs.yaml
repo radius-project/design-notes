@@ -4,7 +4,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#    
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -15,12 +15,15 @@
 # ------------------------------------------------------------
 
 # See: https://github.com/actions/stale
+
+# yaml-language-server: $schema=https://www.schemastore.org/github-workflow.json
+---
 name: Stale pull requests
 on:
   workflow_dispatch:
   schedule:
     # This is a cron job that runs every day at midnight
-    - cron: '0 18 * * *' # Run the workflow every day at 6PM UTC (10AM PST).
+    - cron: "0 18 * * *" # Run the workflow every day at 6PM UTC (10AM PST).
 jobs:
   stale-prs:
     name: Check stale pull requests
@@ -28,13 +31,13 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-     - uses: actions/stale@v10
-       with:
-        stale-pr-message: |
-          This pull request has been automatically marked as stale because it has been inactive for 90 days. Remove stale label or comment or this will be closed in 7 days.
-        close-pr-message: |
-          This pull request has been closed due to inactivity. Feel free to reopen if you are still working on it.
-        days-before-stale: 90
-        days-before-close: 7
-        days-before-issue-stale: -1 # Ignore issues
-        days-before-issue-close: -1 # Ignore issues
+      - uses: actions/stale@5f858e3efba33a5ca4407a664cc011ad407f2008 # v10.1.0
+        with:
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has been inactive for 90 days. Remove stale label or comment or this will be closed in 7 days.
+          close-pr-message: |
+            This pull request has been closed due to inactivity. Feel free to reopen if you are still working on it.
+          days-before-stale: 90
+          days-before-close: 7
+          days-before-issue-stale: -1 # Ignore issues
+          days-before-issue-close: -1 # Ignore issues
