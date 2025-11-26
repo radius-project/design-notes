@@ -358,4 +358,4 @@ For day-to-day development guidance beyond this constitution, refer to:
 - [Developer guides](https://github.com/radius-project/radius/tree/main/docs/contributing) for detailed technical instructions
 - [Code organization guide](https://github.com/radius-project/radius/blob/main/docs/contributing/contributing-code/contributing-code-organization/README.md) for repository structure
 
-**Version**: 2.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-07
+**Version**: 1.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-07
