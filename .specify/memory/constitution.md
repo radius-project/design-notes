@@ -1,6 +1,6 @@
 <!--
 Sync Impact Report:
-- Version change: 1.1.0 → 2.0.0 (MAJOR: significant principle additions and redefinitions for multi-repo support)
+- Version change: 1.0.0
 - Modified principles:
   - II. Go Idiomatic Code → II. Idiomatic Code Standards (broadened to all languages)
   - IV. Testing Pyramid Discipline (expanded with repo-specific testing requirements)
