@@ -40,6 +40,7 @@ CreateOrUpdate
 completable
 Datastores
 DDD
+deserialize
 DNS
 dns
 DaemonSet
@@ -51,6 +52,7 @@ Docsy
 DocumentDB
 EKS
 eksClusterName
+emptyDir
 entrypoint
 executionMode
 EOF
@@ -79,10 +81,13 @@ JSON
 JSON
 KeyVault
 Kinesis
+kubeconfig
 Kubernetes
 ListSecret
 Liveness
 lrt
+LocalID
+maxReplicas
 MONGOMODULE
 MQ
 MacOS
@@ -95,6 +100,7 @@ MongoDb
 NAV
 NODEAPP
 NodeJS
+nodeSelector
 OAuth
 OCI
 OIDC
@@ -107,6 +113,9 @@ PowerShell
 parseable
 Pre
 PubSub
+PVCs
+persistentVolumes
+PersistentVolumeClaims
 ProjectRadius
 Quickstart
 Quickstarts
@@ -117,7 +126,10 @@ ResourceDeploymentClient
 reusability
 Rollout
 SaaS
+schema's
 SDKs
+secretId
+SecretProviderClass
 SMTP
 SNI
 SQL
