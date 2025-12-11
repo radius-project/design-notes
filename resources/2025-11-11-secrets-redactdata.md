@@ -1,6 +1,6 @@
 # Redacting Sensitive Data for Radius Resource Types
 
-* **Author**: Lakshmi Javadekar (@lakshmimsft)
+* **Author**: `Lakshmi Javadekar (@lakshmimsft)`
 
 ## Overview
 
@@ -135,15 +135,15 @@ The design introduces encryption and redaction mechanisms that minimize sensitiv
 1. **Frontend (sync)**: Encrypts sensitive data (fields marked with `x-radius-sensitive` annotation), stores encrypted resource in database, queues async operation
 2. **Backend (async)**: Reads resource from database (with encrypted data), decrypts sensitive fields in memory, immediately nullifies sensitive fields in database
 3. **Recipe execution**: Executes recipe using in-memory decrypted data (never re-persisted to database)
-4. **Completion**: Updates resource with recipe outputs (outputResources). On success, returns normal success result. On failure, returns `Result{Requeue: false}` to prevent retries that would fail due to missing sensitive data.
+4. **Completion**: Updates resource with recipe outputs (`outputResources`). On success, returns normal success result. On failure, returns `Result{Requeue: false}` to prevent retries that would fail due to missing sensitive data.
 
 Key components:
 - **Type Converter** (`bicep-tools/pkg/converter`): Maps fields with `x-radius-sensitive: true` annotation to `secureString`/`secureObject` Bicep types during YAML-to-Bicep type conversion. 
-- **Frontend Controller**: Encrypts sensitive fields marked with `x-radius-sensitive` before database save using application-layer encryption (ChaCha20-Poly1305)
+- **Frontend Controller**: Encrypts sensitive fields marked with `x-radius-sensitive` before database save using application-layer encryption (`ChaCha20-Poly1305`)
 - **Backend Recipe Controller** (`pkg/portableresources/backend/controller/createorupdateresource.go`): Decrypts encrypted data, immediately redacts from database, then orchestrates recipe execution with in-memory data
 - **GET Controller**: Checks schema for `x-radius-sensitive` annotations and redacts fields when `provisioningState` is not in `Succeeded` state. For other  states perform redaction to ensure no encrypted data exposure.
 
-- **Encryption/Decryption Logic**: Application-layer encryption using Go `crypto/cipher` package with ChaCha20-Poly1305 AEAD cipher, root key stored in Kubernetes secret
+- **Encryption/Decryption Logic**: Application-layer encryption using Go `crypto/cipher` package with `ChaCha20-Poly1305 AEAD` cipher, root key stored in Kubernetes secret
 - **No-Retry Logic**: Backend controller returns `Result{Requeue: false}` on all failure paths for resources with sensitive fields, requiring user resubmission on failure. Successful operations return normal success result.
 
 ### Architecture Diagram
@@ -234,7 +234,7 @@ sequenceDiagram
 
 ##### Application-Layer Encryption Details
 - Store root key in a Kubernetes secret (similar to ucp-cert)
-- Use Go's `crypto/cipher` package with ChaCha20-Poly1305 AEAD cipher
+- Use Go's `crypto/cipher` package with `ChaCha20-Poly1305 AEAD` cipher
 - Generate unique nonce per encryption operation
 - Key rotation:
     - **Initial implementation (Manual)**: 
@@ -249,7 +249,7 @@ sequenceDiagram
         1. System generates new key (version N+1)
         2. Adds to secret alongside existing keys
         3. Controllers hot-reload keys without restart
-        4. New encryptions use latest key version
+        4. New encryption uses latest key version
         5. Decryption uses versioned key (old data still readable during transition)
         6. After grace period (e.g., 24 hours), remove old key versions
       - Benefits: Zero-downtime rotation, gradual migration, no data loss
@@ -259,7 +259,7 @@ sequenceDiagram
 1. Check schema for fields with `x-radius-sensitive: true` annotation
 2. For each sensitive field:
    - Generate random 24-byte nonce
-   - Encrypt field value using ChaCha20-Poly1305 with root key and nonce
+   - Encrypt field value using `ChaCha20-Poly1305` with root key and nonce
    - Store as: `{"encrypted": base64(ciphertext), "nonce": base64(nonce)}`
 3. Save encrypted resource to database
 
@@ -268,7 +268,7 @@ sequenceDiagram
 2. Check schema for fields with `x-radius-sensitive: true` annotation
 3. For each encrypted field:
    - Extract nonce and ciphertext
-   - Decrypt using ChaCha20-Poly1305 with root key and nonce
+   - Decrypt using `ChaCha20-Poly1305` with root key and nonce
    - Store decrypted value in memory only
 4. Nullify encrypted fields in resource: set to `null`
 5. Save sanitized resource to database
@@ -280,7 +280,7 @@ sequenceDiagram
 - Schema annotation missing: Skip encryption/decryption (treat as non-sensitive)
 
 **Notes**: 
-- OpenSSL is CLI-only; Go crypto APIs are used for programmatic encryption
+- `OpenSSL` is CLI-only; Go crypto APIs are used for programmatic encryption
 - **Alternative considered**: Using initContainer to load root key as a file was discussed but rejected due to:
   - Security concerns: Pod that can mount the volume could read the key
   - Managing writes on pod restarts and scaling complexity with multiple pods
@@ -299,7 +299,7 @@ sequenceDiagram
   - Kubernetes supports native etcd encryption via `EncryptionConfiguration`
   - Transparent to Radius application code
   - Document recommended encryption requirements.
-  - **Setup**: Kubernetes admin configures encryption provider (AES-CBC, AES-GCM, or KMS)
+  - **Setup**: Kubernetes admin configures encryption provider (`AES-CBC, AES-GCM, or KMS`)
   - **Reference**: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
 - For future database backends, rely on native encryption at rest features of the database
 
@@ -334,7 +334,7 @@ Document encryption requirement in Radius installation guides
 **Manual Re-deployment Overwrites Encrypted Data**:
 - Existing functionality includes the Frontend PUT handler checking for existing resource and it will overwrite encrypted data with new request (normal PUT behavior) when user re-runs the deployment.
 
-**Future Enhancement**: Background cleanup job to identify `Failed` resources older than configurable threshold (e.g., 24 hours) and nullify any encrypted fields within those resource entries.
+**Cleanup**: Background cleanup job to identify `Failed` resources older than configurable threshold and nullify any encrypted fields within those resource entries.
 
 #### Proposed Option
 
@@ -470,13 +470,13 @@ No changes required to Core RP. The implementation is isolated to dynamic-rp.
 
 The design employs a **defense-in-depth approach** with multiple security layers:
 
-1. **Application-Layer Encryption (Primary)**: Sensitive fields marked with `x-radius-sensitive` are encrypted using ChaCha20-Poly1305 AEAD cipher before database storage
+1. **Application-Layer Encryption (Primary)**: Sensitive fields marked with `x-radius-sensitive` are encrypted using `ChaCha20-Poly1305 AEAD` cipher before database storage
 2. **Short Exposure Window**: Encrypted data exists in database for few seconds (frontend save → backend redaction)
 3. **In-Memory Processing**: Decrypted data exists only in process memory during recipe execution, never re-persisted
 4. **GET Redaction**: Sensitive fields redacted in API responses during deployment to prevent exposure
 5. **Database Encryption at Rest (Secondary/Recommended to Customers)**: Customer-configured infrastructure-level encryption provides additional protection
 
-**Temporary Exposure Window**: Encrypted sensitive data exists in the Radius database from frontend save to backend redaction, typically upto few seconds. This is a deliberate trade-off to support recipe-based deployment while maintaining type-agnostic dynamic-rp design.
+**Temporary Exposure Window**: Encrypted sensitive data exists in the Radius database from frontend save to backend redaction, typically up to few seconds. This is a deliberate trade-off to support recipe-based deployment while maintaining type-agnostic dynamic-rp design.
 
 ### Security Threats and Mitigations
 
@@ -524,6 +524,13 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
    - Create Kubernetes Secret `radius-encryption-key` with 256-bit key
    - Restrict access via RBAC to Radius service accounts only
    - Rotate key periodically (manual process initially)
+  
+2. **Enable Kubernetes `EncryptionConfiguration`** (Required):
+   - Configure etcd encryption to protect all Kubernetes Secrets at rest
+   - This encrypts the root encryption key itself
+   - Reference: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+   - Note: Azure AKS and AWS EKS enable this by default
+
 
 2. **Network encryption** (Required):
    - TLS for all database connections
@@ -547,25 +554,25 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 ## Logging
 
 1. **Encryption Success (Info level)**:
-"Encrypted sensitive field for storage" Fields: resourceID, resourceType, fieldName, operation="encrypt"
+`"Encrypted sensitive field for storage" Fields: resourceID, resourceType, fieldName, operation="encrypt"`
 
 2. **Encryption Failure (Error level)**:
-"Failed to encrypt sensitive field" Fields: resourceID, resourceType, fieldName, error, operation="encrypt_failed"
+`"Failed to encrypt sensitive field" Fields: resourceID, resourceType, fieldName, error, operation="encrypt_failed"`
 
 3. **Decryption Success (Info level)**:
-"Decrypted sensitive field from storage" Fields: resourceID, resourceType, fieldName, operation="decrypt"
+`"Decrypted sensitive field from storage" Fields: resourceID, resourceType, fieldName, operation="decrypt"`
 
 4. **Decryption Failure (Error level)**:
-"Failed to decrypt sensitive field" Fields: resourceID, resourceType, fieldName, error, operation="decrypt_failed"
+`"Failed to decrypt sensitive field" Fields: resourceID, resourceType, fieldName, error, operation="decrypt_failed"`
 
 5. **Redaction Success (Info level)**:
-"Redacted sensitive field from database" Fields: resourceID, resourceType, fieldName, operation="redact"
+`"Redacted sensitive field from database" Fields: resourceID, resourceType, fieldName, operation="redact"`
 
 6. **Redaction Failure (Error level)**:
-"Failed to redact sensitive field from database" Fields: resourceID, resourceType, fieldName, error, operation="redact_failed"
+`"Failed to redact sensitive field from database" Fields: resourceID, resourceType, fieldName, error, operation="redact_failed"`
 
 7. **Key Not Found (Error level)**:
-"Encryption key not found in Kubernetes Secret" Fields: secretName="radius-encryption-key", namespace, error
+`"Encryption key not found in Kubernetes Secret" Fields: secretName="radius-encryption-key", namespace, error`
 
 ### Troubleshooting
 
@@ -613,20 +620,26 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 
 **2. Encryption/Decryption Infrastructure** (3 days):
 - Create `pkg/crypto/encryption` package
-  - Implement ChaCha20-Poly1305 encryption/decryption
+  - Implement `ChaCha20-Poly1305` encryption/decryption
   - Key management (load from Kubernetes Secret)
   - Nonce generation
   - Error handling
 - Unit tests for crypto operations
 - Integration with `pkg/components/secret` for key retrieval
 
-**3. Schema Annotation Detection** (2 days):
+**3. Schema Annotation Detection** (3 days):
 - Implement schema fetching from UCP
 - Parse `x-radius-sensitive: true` annotations
 - Handle nested fields
 - Unit tests for annotation detection
 
-**4. Kubernetes Secret Setup and Installation** (2-3 days):
+**4. Schema Validation** (1 days):
+- Update schema validation. When a resource type schema is registered (via `rad resource-type create`), validate:
+  - Fields marked with `x-radius-sensitive: true` must have `type: string` or `type: object`
+  - Return error if `x-radius-sensitive` is applied to other types (number, boolean, array, etc.)
+- Unit tests for schema validation logic
+
+**5. Kubernetes Secret Setup and Installation** (2-3 days):
 - **Helm Chart Updates**:
   - Add template for `radius-encryption-key` Kubernetes Secret
   - Generate 256-bit random key during Helm install
@@ -643,14 +656,14 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 
 ### Phase 2: Frontend Implementation (Sprint 2-3)
 
-**4. Frontend Encryption** (3 days):
+**6. Frontend Encryption** (3 days):
 - Add encryption logic to frontend PUT handler
 - Encrypt fields marked with `x-radius-sensitive`
 - Store encrypted format: `{"encrypted": "...", "nonce": "..."}`
 - Error handling for encryption failures
 - Unit tests for frontend encryption
 
-**5. GET Controller Redaction** (2 days):
+**7. GET Controller Redaction** (2 days):
 - Add redaction logic to GET controller
 - Check `provisioningState` and redact if not `Succeeded`
 - Handle schema fetch failures gracefully
@@ -658,7 +671,7 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 
 ### Phase 3: Backend Implementation (Sprint 2-3)
 
-**6. Backend Decryption and Redaction** (5 days):
+**8. Backend Decryption and Redaction** (5 days):
 - Update `pkg/portableresources/backend/controller/createorupdateresource.go`
 - Add decryption after database read
 - Immediate redaction (save `data: null`) before recipe
@@ -666,7 +679,28 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 - Return `Result{Requeue: false}` on failures
 - Unit tests for backend flow
 
-**7. Error Handling and Recovery** (2 days):
+**9. Background Cleanup Job for Lingering Encrypted Data** (5 days):
+- Create background controller/job to periodically scan for orphaned encrypted data
+- Identify resources with `provisioningState!= Succeeded` where `SystemData.LastModifiedAt` is older than configurable threshold 
+- For each Failed resource:
+  - Fetch resource schema
+  - Check for fields with `x-radius-sensitive: true` annotation
+  - Nullify any encrypted fields still present in the resource
+  - Save cleaned resource back to database
+- Configuration:
+  - Configurable cleanup interval
+  - Configurable age threshold
+  - Enable/disable cleanup via feature flag or configuration
+- Logging:
+  - Log each cleanup operation (resourceID, fields nullified, timestamp)
+- Error handling:
+  - Handle schema fetch failures gracefully
+  - Continue processing other resources if one fails
+- Unit tests for cleanup logic
+- Integration tests verifying cleanup runs and nullifies encrypted data
+
+
+**10. Error Handling and Recovery** (4 days):
 - Implement comprehensive error handling
 - Add logging for all operations
 - Test failure scenarios
@@ -675,7 +709,7 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 
 ### Phase 4: Testing + Documentation(Sprint 3-4)
 
-**8. Integration Testing** (5 days):
+**11. Integration Testing** (5 days):
 - End-to-end encryption → decryption → redaction flow
 - Recipe execution with in-memory data
 - GET during deployment
@@ -683,7 +717,7 @@ Organizations deploying Radius with resources containing `x-radius-sensitive` fi
 - Multi-backend recipe testing (K8s, Azure KV)
 - Performance testing
 
-**9. Documentation** (2 days):
+**12. Documentation** (2 days):
 - User documentation for `x-radius-sensitive` annotation
 - Installation guide for encryption key setup
 - Troubleshooting guide
@@ -745,7 +779,7 @@ Pass sensitive data directly from frontend to async queue.without saving to data
 
 ## Design Review Notes
 
-An earlier version of this design document focussed on detecting Radius.Security/secrets type and performing encryption/redaction for it's specific field. After discussions we updated the approach to now detect `x-radius-sensitive` annotation in any type and perform encryption/redaction for the sensitive fields.
+An earlier version of this design document focused on detecting Radius.Security/secrets type and performing encryption/redaction for it's specific field. After discussions we updated the approach to now detect `x-radius-sensitive` annotation in any type and perform encryption/redaction for the sensitive fields.
 ---
 
 ## References
