@@ -10,7 +10,7 @@ For more information on how to contribute to Radius visit [CONTRIBUTING.md](http
 
 ## Review note review process and instructions
 
-Our design note review review process is based on pull-requests to this repository. 
+Our design note review review process is based on pull-requests to this repository.
 
 - Major design topics will be reviewed during our design review meetings.
 - Minor design review topics may be asynchronously reviewed without a meeting depending on capacity.
@@ -55,10 +55,10 @@ As a reviewer: Please make a record of all major questions and feedback in the p
 
 If the design is approved:
 
-  - Please incorporate any outstanding feedback.
-  - Please respond to, and resolve all comments in the document explaining the resolution of the feedback. 
-  - One or more approvers will approve the pull-request so that it can be merged.
-  - Merge the pull-request.
+- Please incorporate any outstanding feedback.
+- Please respond to, and resolve all comments in the document explaining the resolution of the feedback.
+- One or more approvers will approve the pull-request so that it can be merged.
+- Merge the pull-request.
 
 Development work on implementing the design begins only after the design is approved.
 
@@ -66,9 +66,15 @@ If there are updates come up during development work that need consideration and
 
 If the design is not approved:
 
-  - Please leave a comment on the pull-request explaining the major feedback and next steps for proceeding.
-  - It is **your** responsibility as the author to document the next steps clearly so we can pick up where we left off.
-  - Please iterate on the proposal and prepare the next review. This may include responding to and resolving feedback in the pull-request.
+- Please leave a comment on the pull-request explaining the major feedback and next steps for proceeding.
+- It is **your** responsibility as the author to document the next steps clearly so we can pick up where we left off.
+- Please iterate on the proposal and prepare the next review. This may include responding to and resolving feedback in the pull-request.
+
+## Spec Kit
+
+The Radius team is optionally using [Spec Kit](https://github.com/github/spec-kit) to help manage and organize specifications. Spec Kit provides tooling for authoring, reviewing, and maintaining specification documents.
+
+Some specifications may appear in a different folder structure according to the way Spec Kit works. Spec Kit organizes content in a `specs/` directory with its own conventions for document structure and metadata. Both the traditional folder structure described below and the Spec Kit structure are valid locations for design documents.
 
 ## Structure
 
@@ -81,7 +87,7 @@ The repository is organized into several sections, each corresponding to a speci
 | [cli](./cli/) | Contains the designs for Radius CLI. |
 | [features](./features/) | Contains feature specifications. |
 | [recipe](./recipe/) | Contains the designs related to Radius recipes. |
-| [resources](./resources/) | Contains the designs for Radius resource types in `Application.*` namespace. | 
+| [resources](./resources/) | Contains the designs for Radius resource types in `Application.*` namespace. |
 | [tools](./tools/) | Contains the designs for engineering tools, such as GitHub Action Workflow and test-infra. |
 | [template](./template/) | Contains the template for design documents.|
 | [ucp](./ucp/) | Contains the designs for the Universal Control Plane (UCP). |
