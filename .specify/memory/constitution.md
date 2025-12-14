@@ -41,7 +41,7 @@ All code MUST follow language-specific conventions and best practices appropriat
 
 - **Go**: Follow *Effective Go* patterns; format with `gofmt`; provide godoc comments for all exported items; minimize exported surface area; leverage Go's simplicity over complex abstractions; handle errors explicitly without suppression
 - **TypeScript**: Follow TypeScript handbook and Backstage guidelines; use ESLint and Prettier; enable strict mode; provide explicit types for public APIs; prefer functional patterns where appropriate
-- **Bicep**: Follow official best practices; use kebab-case for resources, camelCase for parameters; modularize with modules; add parameter descriptions; prefer secure defaults
+- **Bicep**: Follow official best practices; use kebab-case for resources, camelCase for parameters; modularize with modules; add parameter descriptions; prefer secure defaults. Note: Radius uses its own Bicep extension that provides type definitions for Radius resource types; ensure compatibility with this extension
 - **Terraform**: Follow HashiCorp style guide; format with `terraform fmt`; use modules for reusability; provide variable descriptions and validation; specify explicit dependencies
 - **Python**: Follow PEP 8; use type hints for function signatures; prefer comprehensions where readable; use virtual environments
 - **Markdown**: Follow CommonMark; maintain consistent heading hierarchy; use reference-style links in long documents
@@ -60,7 +60,7 @@ Every feature MUST include comprehensive testing across appropriate layers for i
 
 **For Go code (radius repo)**:
 
-- **Unit tests**: Test individual functions and types in `pkg/` directories, runnable with basic prerequisites only (no external dependencies). Use `make test` to run all unit tests.
+- **Unit tests**: Test individual functions and types in `pkg/` directories, runnable with basic prerequisites only (no external dependencies). Use `make test` to run all unit tests. Note: Running the full test suite may take significant time without test caching tools; consider using targeted test runs during development.
 - **Integration tests**: Test features with dependencies (databases, external services, cloud providers) in appropriate `test/` subdirectories.
 - **Functional tests**: End-to-end scenarios using the `magpiego` test framework in `test/functional/`, exercising realistic user workflows.
 
@@ -98,29 +98,31 @@ Environment and Recipe abstractions MUST be designed to allow platform engineers
 
 **Rationale**: Radius exists to bridge the gap between development and operations teams. Every feature should reinforce this collaboration rather than creating new silos or imposing unnecessary constraints.
 
-### VI. Infrastructure as Code Integration
-
-All infrastructure-related features MUST support Bicep as the primary authoring experience. Bicep type definitions in `bicep-types/` MUST be generated from TypeSpec definitions and kept in sync through `make generate`. Features SHOULD integrate with Terraform through the Recipe system where appropriate. Kubernetes manifests MUST be supported for native Kubernetes resources through existing integration patterns in `pkg/kubernetes/`.
-
-**Rationale**: Organizations have existing IaC investments and expertise. Radius must meet teams where they are rather than forcing wholesale adoption of new tooling, enabling incremental adoption.
-
-### VII. Open Source and Community-First
+### VI. Open Source and Community-First
 
 Design specifications MUST be authored in markdown and stored in the public `design-notes` repository before implementation begins. Significant features MUST follow the issue-first workflow at github.com/radius-project/radius, with community discussion before work begins. Design decisions MUST be documented with clear rationale. Breaking changes MUST be called out explicitly with migration guidance. All commits MUST include a `Signed-off-by` line (Developer Certificate of Origin).
 
-**Rationale**: As a CNCF sandbox project, transparency and community involvement are essential. Public design discussions ensure better outcomes, build trust with the community, and align with open source governance practices.
+**Rationale**: As a CNCF sandbox project, transparency and community involvement are essential. Documented design decisions ensure better outcomes, build trust with the community, and align with open source governance practices.
 
-### VIII. Simplicity Over Cleverness
+### VII. Simplicity Over Cleverness
 
 Start simple and add complexity only when proven necessary through actual requirements. Question every abstraction layer—each one adds cognitive overhead. Optimize for correctness first, testability second, and simplicity third. Reject over-engineering and "future-proofing" in favor of solving immediate, well-understood requirements. Apply YAGNI (You Aren't Gonna Need It) principles rigorously.
 
 **Rationale**: Premature complexity is the enemy of maintainability. Simple, direct solutions are easier to understand, test, debug, and evolve. Complexity should be justified by concrete needs, not hypothetical future scenarios.
 
+### VIII. Separation of Concerns and Modularity
+
+Components MUST have single, well-defined responsibilities with clear boundaries. Modules MUST be designed for reuse where appropriate without introducing unnecessary coupling. Dependencies between components MUST flow in one direction (avoid circular dependencies). Domain logic MUST be separated from infrastructure concerns (e.g., HTTP handlers, database access). Cross-cutting concerns (logging, authentication, telemetry) MUST be implemented through consistent patterns rather than scattered throughout the codebase.
+
+**Rationale**: Clean separation enables independent testing, easier refactoring, and parallel development. Modular design allows components to evolve independently and promotes code reuse across the project.
+
 ### IX. Incremental Adoption & Backward Compatibility
 
-Features, abstractions, and workflow changes MUST support gradual opt-in rather than forcing a disruptive migration. Breaking changes MUST provide a documented migration path and a deprecation period (minimum two release cycles) before removal. New abstractions MUST start behind feature flags or clearly labeled "experimental" status until validated by real usage. Backward compatibility MUST be maintained within a major version; removal or hard behavioral shifts REQUIRE either a guarded rollout or a MAJOR version bump with explicit migration guidance. Documentation MUST call out required user actions for any change that affects existing workflows.
+Features, abstractions, and workflow changes MUST support gradual opt-in rather than forcing a disruptive migration. New abstractions MUST start behind feature flags or clearly labeled "experimental" status until validated by real usage. Documentation MUST call out required user actions for any change that affects existing workflows.
 
-**Rationale**: Radius integrates with diverse existing toolchains (Bicep, Terraform, Kubernetes). Enforcing big-bang changes erodes trust and slows adoption. Iterative, reversible evolution encourages early feedback, reduces risk, and preserves stability for production users.
+**Breaking Changes Policy**: Radius has not yet reached version 1.0.0, so breaking changes are acceptable when necessary to improve the platform. We strive to minimize breaking changes and provide migration guidance when they occur, but we do not guarantee backward compatibility until the 1.0.0 release. After 1.0.0, backward compatibility will be maintained within major versions with proper deprecation periods.
+
+**Rationale**: Radius integrates with diverse existing toolchains (Bicep, Terraform, Kubernetes). While we aim to minimize disruption, the pre-1.0 phase allows us to make necessary improvements based on community feedback. Iterative evolution with clear communication reduces risk and builds trust with early adopters.
 
 ### X. TypeScript and React Standards (Dashboard)
 
@@ -142,15 +144,15 @@ All resource type schemas MUST be valid YAML files with complete property defini
 
 ### XIII. Recipe Development Standards (Contrib)
 
-All Recipes MUST be implemented in either Bicep or Terraform with clear module structure. Recipes MUST include comprehensive README documentation explaining purpose, prerequisites, parameters, and outputs. Parameters MUST have descriptions and sensible defaults where applicable. Recipes MUST follow secure-by-default principles (e.g., disable public access, enable encryption). Recipes MUST be tested in representative environments before contribution. Recipes SHOULD be cloud-agnostic where possible, with cloud-specific variants clearly documented.
+All Recipes MUST be implemented in either Terraform or Bicep with clear module structure. Terraform is the preferred language for Recipe authoring due to its broader ecosystem and community familiarity. Recipes MUST include comprehensive README documentation explaining purpose, prerequisites, parameters, and outputs. Parameters MUST have descriptions and sensible defaults where applicable. Recipes MUST follow secure-by-default principles (e.g., disable public access, enable encryption). Recipes MUST be tested in representative environments before contribution. Recipes are inherently platform-specific (targeting Azure, AWS, or other infrastructure providers); a set of Recipes with the same resource type can provide cloud-agnostic behavior to applications by offering equivalent functionality across platforms.
 
 **Rationale**: Recipes enable platform engineers to define reusable infrastructure patterns. Well-structured recipes reduce duplication, improve security posture, and accelerate Radius adoption by providing production-ready infrastructure building blocks.
 
 ### XIV. Documentation Structure and Quality (Docs)
 
-All documentation MUST follow the Diátaxis framework organizing content into Tutorials, How-To Guides, Reference, and Explanation. Documentation MUST be written in Markdown following the Docsy theme conventions. Code examples MUST be tested and runnable. Screenshots MUST be up-to-date with current UI state. Internal links MUST use Hugo shortcodes for maintainability. Navigation structure MUST support progressive disclosure from beginner to advanced topics.
+All documentation MUST follow the [Diátaxis](https://diataxis.fr/) framework organizing content into Tutorials, How-To Guides, Reference, and Explanation. Documentation MUST be written in Markdown following the Docsy theme conventions. Code examples MUST be tested and runnable. Screenshots MUST be up-to-date with current UI state. Internal links MUST use Hugo shortcodes for maintainability. Navigation structure MUST support progressive disclosure from beginner to advanced topics. See the Docs repo [contributing guide](https://github.com/radius-project/docs/blob/8c5c60a743dcd4392a6795359e701362ad3da9b0/docs/content/contributing/docs/contributing-docs/index.md) for details.
 
-**Rationale**: Radius serves diverse audiences from platform engineers to application developers. Structured documentation following Diátaxis ensures users find answers quickly whether they're learning, solving problems, or seeking reference material.
+**Rationale**: Radius serves diverse audiences from platform engineers to application developers. Structured documentation helps users find answers quickly whether they're learning, solving problems, or seeking reference material.
 
 ### XV. Documentation Contribution Standards (Docs)
 
@@ -184,8 +186,9 @@ Cross-cutting concerns (authentication, API patterns, error handling, observabil
 - **TypeScript/Node.js**: Dashboard UI (Backstage-based), TypeSpec API definitions in `typespec/` directory, Bicep tooling in `bicep-tools/`, build scripts.
 - **React**: Frontend framework for dashboard UI components, using functional components with hooks.
 - **Python**: Code generation scripts in `hack/` and tooling automation.
-- **Bicep**: Primary Infrastructure as Code language for Radius resource definitions and Recipes.
-- **Terraform**: Alternative IaC language for Recipes in resource-types-contrib repo.
+- **Bicep**: Infrastructure as Code language for Radius resource definitions and application authoring.
+- **Terraform**: Primary IaC language for Recipe authoring in resource-types-contrib repo due to broader ecosystem familiarity.
+- **Bicep (Recipes)**: Alternative IaC language for Recipes, particularly useful for Azure-native scenarios.
 - **TypeSpec**: API definition language for generating OpenAPI specifications in `swagger/`.
 - **Hugo**: Static site generator for documentation using Docsy theme.
 - **Markdown**: Documentation format across all repositories.
