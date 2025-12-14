@@ -76,6 +76,15 @@ The Radius team is optionally using [Spec Kit](https://github.com/github/spec-ki
 
 Some specifications may appear in a different folder structure according to the way Spec Kit works. Spec Kit organizes content in a `specs/` directory with its own conventions for document structure and metadata. Both the traditional folder structure described below and the Spec Kit structure are valid locations for design documents.
 
+### Multi-Repo Workspace Configuration
+
+Spec Kit is designed to work within a single repository. However, Radius is a multi-repo project where specifications are kept in this `design-notes` repository while the implementation code lives across multiple repositories.
+
+To bridge this gap, we have added a VS Code workspace configuration ([design-notes.code-workspace](./design-notes.code-workspace)) in this repository. This workspace configuration enables two key workflows:
+
+- **Authoring specifications**: Spec Kit users can open the workspace to author specifications in context with the rest of the Radius repositories, providing visibility into related code and documentation across the project.
+- **Implementing specifications**: When spec authors are ready to implement code, they can run Spec Kit's implementation prompts from the VS Code workspace. This gives them the entire context of both specifications and code together, making it easier to translate designs into working implementations.
+
 ## Structure
 
 The repository is organized into several sections, each corresponding to a specific area of Radius:
