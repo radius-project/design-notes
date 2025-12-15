@@ -35,7 +35,7 @@ $ rad version --output json
 }
 ```
 
-Another option is to specify only the CLI version number, which outputs a json version for the CLI version only. However, this option does not display the control plane version. 
+Another option is to specify only the CLI version number, which outputs a json version for the CLI version only. However, this option does not display the control plane version.
 
 ```shell
 $ rad version --cli --output json
@@ -206,13 +206,14 @@ Error: preflight checks failed: pre-flight check 'Version Compatibility' failed:
 TraceId:  9776424e46d2ec03f2bed0061f7620a0
 ```
 
-**Long-running Azure Workflow Steps**
+## Long-running Azure Workflow Steps
 
 This document summarizes the jobs and steps in the GitHub Actions workflow file for the long-running Azure tests and provides clickable VS Code links to each step.
 
 File: [.github/workflows/long-running-azure.yaml](.github/workflows/long-running-azure.yaml)
 
-**Jobs**
+### Jobs
+
 - **build**: [Build Radius for test](.github/workflows/long-running-azure.yaml#L115)
 - **tests**: [Run functional tests](.github/workflows/long-running-azure.yaml#L368)
 - **report-failure**: [Report test failure](.github/workflows/long-running-azure.yaml#L762)
