@@ -16,7 +16,7 @@ This document consolidates research findings for implementing the long-running t
 **Finding**: The official Radius installer script is available at:
 
 ```bash
-curl -fsSL "https://get.radapp.dev/tools/rad/install.sh" | /bin/bash
+wget -q "https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh" -O - | /bin/bash
 ```
 
 This script:
@@ -24,9 +24,9 @@ This script:
 - Detects the operating system and architecture
 - Downloads the appropriate binary from GitHub releases
 - Installs to `/usr/local/bin/rad` by default
-- Requires `curl` and `bash` (both available on GitHub runners)
+- Requires `wget` and `bash` (both available on GitHub runners)
 
-**Decision**: Use the official installer script via curl
+**Decision**: Use the official installer script via wget
 **Rationale**: Matches the end-user experience exactly as specified in FR-001
 **Alternatives Considered**:
 

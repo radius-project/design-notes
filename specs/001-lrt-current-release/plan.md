@@ -93,36 +93,45 @@ No constitution violations. This change reduces complexity by removing:
 
 ## Implementation Phases
 
-### Phase 1: Remove Build Job
+### Phase 1: Setup (Shared Infrastructure)
+
+- Create `manage-radius-installation.sh` helper script
+- Implement version detection logic (parse rad version output)
+- Implement conditional install/upgrade logic
+- Add error handling for upgrade failures
+
+### Phase 2: Remove Build Job (User Story 4)
 
 - Delete the entire `build` job from workflow
 - Remove build-related environment variables
 - Update workflow file header comments
 
-### Phase 2: Add CLI Installation
+### Phase 3: Add CLI Installation (User Story 1)
 
 - Add step to install CLI via official installer
 - Add step to verify CLI installation
 - Update PATH configuration
+- Move recipe publishing steps to tests job
 
-### Phase 3: Add Version Detection & Installation Logic
+### Phase 4: Smart Control Plane Installation (User Story 2)
 
-- Create `manage-radius-installation.sh` script
-- Implement version parsing from `rad version`
-- Implement conditional install/upgrade logic
-- Add error handling for upgrade failures
+- Add step to invoke manage-radius-installation.sh script
+- Ensure script has execute permissions
+- Add logging output for version detection results
 
-### Phase 4: Update Tests Job
+### Phase 5: Graceful Upgrade Failure Handling (User Story 3)
 
-- Remove build job dependencies (`needs: build`, output references)
-- Move recipe publishing steps (if still needed)
-- Update step conditions (remove SKIP_BUILD references)
+- Add error capture and display when rad upgrade command fails
+- Ensure non-zero exit code propagates to workflow
+- Add descriptive error message explaining upgrade failure reason
 
-### Phase 5: Cleanup & Documentation
+### Phase 6: Polish & Cross-Cutting Concerns
 
-- Remove unused environment variables
-- Update workflow file documentation/comments
-- Test workflow execution
+- Remove skip-build workflow_dispatch input option
+- Verify BICEP_RECIPE_REGISTRY and TEST_BICEP_TYPES_REGISTRY env vars are retained
+- Update workflow file header documentation block
+- Run workflow validation per quickstart.md success verification checklist
+- Verify functional tests execute successfully with installed CLI
 
 ## References
 

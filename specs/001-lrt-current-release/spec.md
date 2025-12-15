@@ -107,9 +107,9 @@ As a Radius maintainer, I want all build-related logic removed from the workflow
 
 #### Upgrade Handling
 
-- **FR-013**: System MUST rely on the Radius upgrade command to determine if an upgrade is possible.
-- **FR-014**: System MUST report an error and stop execution if the upgrade command indicates upgrade is not possible.
-- **FR-015**: System MUST provide a clear error message when upgrade fails.
+- **FR-012**: System MUST rely on the Radius upgrade command to determine if an upgrade is possible.
+- **FR-013**: System MUST report an error and stop execution if the upgrade command indicates upgrade is not possible.
+- **FR-014**: System MUST provide a clear error message when upgrade fails.
 
 ### Assumptions
 
