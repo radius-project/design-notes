@@ -24,10 +24,10 @@
 
 **Purpose**: Create helper script and prepare for workflow changes
 
-- [ ] T001 Create manage-radius-installation.sh script in radius/.github/scripts/manage-radius-installation.sh
-- [ ] T002 Implement version detection logic (parse rad version output for CLI and control plane versions)
-- [ ] T003 Implement conditional install/upgrade logic (not installed → install, same version → skip, different → upgrade)
-- [ ] T004 Add error handling for upgrade failures with clear error messages
+- [X] T001 Create manage-radius-installation.sh script in radius/.github/scripts/manage-radius-installation.sh
+- [X] T002 Implement version detection logic (parse rad version output for CLI and control plane versions)
+- [X] T003 Implement conditional install/upgrade logic (not installed → install, same version → skip, different → upgrade)
+- [X] T004 Add error handling for upgrade failures with clear error messages
 
 **Checkpoint**: Helper script ready for integration into workflow
 
@@ -43,12 +43,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T005 [US4] Remove entire `build` job from radius/.github/workflows/long-running-azure.yaml
-- [ ] T006 [P] [US4] Remove VALID_RADIUS_BUILD_WINDOW environment variable from radius/.github/workflows/long-running-azure.yaml
-- [ ] T007 [P] [US4] Remove CONTAINER_REGISTRY environment variable from radius/.github/workflows/long-running-azure.yaml
-- [ ] T008 [US4] Remove `needs: build` dependency from tests job in radius/.github/workflows/long-running-azure.yaml
-- [ ] T009 [US4] Remove build job outputs references from tests job env section in radius/.github/workflows/long-running-azure.yaml
-- [ ] T010 [US4] Update workflow file header comments to reflect new behavior (no build from source)
+- [X] T005 [US4] Remove entire `build` job from radius/.github/workflows/long-running-azure.yaml
+- [X] T006 [P] [US4] Remove VALID_RADIUS_BUILD_WINDOW environment variable from radius/.github/workflows/long-running-azure.yaml
+- [X] T007 [P] [US4] Remove CONTAINER_REGISTRY environment variable from radius/.github/workflows/long-running-azure.yaml
+- [X] T008 [US4] Remove `needs: build` dependency from tests job in radius/.github/workflows/long-running-azure.yaml
+- [X] T009 [US4] Remove build job outputs references from tests job env section in radius/.github/workflows/long-running-azure.yaml
+- [X] T010 [US4] Update workflow file header comments to reflect new behavior (no build from source)
 
 **Checkpoint**: Workflow has no build logic; tests job has no build dependencies
 
@@ -62,10 +62,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Add step to install Radius CLI via official installer script in tests job in radius/.github/workflows/long-running-azure.yaml
-- [ ] T012 [US1] Add step to verify CLI installation (run `rad version` and check output) in radius/.github/workflows/long-running-azure.yaml
-- [ ] T013 [US1] Update PATH configuration to include installed CLI location in radius/.github/workflows/long-running-azure.yaml
-- [ ] T014 [US1] Move recipe publishing steps to tests job after CLI installation in radius/.github/workflows/long-running-azure.yaml
+- [X] T011 [US1] Add step to install Radius CLI via official installer script in tests job in radius/.github/workflows/long-running-azure.yaml
+- [X] T012 [US1] Add step to verify CLI installation (run `rad version` and check output) in radius/.github/workflows/long-running-azure.yaml
+- [X] T013 [US1] Update PATH configuration to include installed CLI location in radius/.github/workflows/long-running-azure.yaml
+- [X] T014 [US1] Move recipe publishing steps to tests job after CLI installation in radius/.github/workflows/long-running-azure.yaml
 
 **Checkpoint**: CLI is installed from release; workflow can proceed to control plane management
 
@@ -79,9 +79,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add step to invoke manage-radius-installation.sh script in tests job in radius/.github/workflows/long-running-azure.yaml
-- [ ] T016 [US2] Ensure script has execute permissions and is callable from workflow
-- [ ] T017 [US2] Add logging output for version detection results in manage-radius-installation.sh
+- [X] T015 [US2] Add step to invoke manage-radius-installation.sh script in tests job in radius/.github/workflows/long-running-azure.yaml
+- [X] T016 [US2] Ensure script has execute permissions and is callable from workflow
+- [X] T017 [US2] Add logging output for version detection results in manage-radius-installation.sh
 
 **Checkpoint**: Control plane is installed/upgraded/skipped based on version comparison
 
@@ -95,9 +95,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Add error capture and display when rad upgrade command fails in manage-radius-installation.sh
-- [ ] T019 [US3] Ensure non-zero exit code propagates to workflow when upgrade fails
-- [ ] T020 [US3] Add descriptive error message explaining upgrade failure reason
+- [X] T018 [US3] Add error capture and display when rad upgrade command fails in manage-radius-installation.sh
+- [X] T019 [US3] Ensure non-zero exit code propagates to workflow when upgrade fails
+- [X] T020 [US3] Add descriptive error message explaining upgrade failure reason
 
 **Checkpoint**: Upgrade failures stop workflow with clear error message
 
@@ -107,9 +107,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T021 [P] Remove skip-build workflow_dispatch input option from radius/.github/workflows/long-running-azure.yaml
-- [ ] T022 [P] Verify BICEP_RECIPE_REGISTRY and TEST_BICEP_TYPES_REGISTRY env vars are retained
-- [ ] T023 [P] Update workflow file header documentation block to describe new behavior
+- [X] T021 [P] Remove skip-build workflow_dispatch input option from radius/.github/workflows/long-running-azure.yaml
+- [X] T022 [P] Verify BICEP_RECIPE_REGISTRY and TEST_BICEP_TYPES_REGISTRY env vars are retained
+- [X] T023 [P] Update workflow file header documentation block to describe new behavior
 - [ ] T024 Run workflow validation per quickstart.md success verification checklist
 - [ ] T025 Verify functional tests execute successfully with installed CLI
 
