@@ -83,7 +83,7 @@ As a Radius maintainer, I want all build-related logic removed from the workflow
 #### CLI Installation
 
 - **FR-001**: System MUST install the current Radius CLI release using the official installer script (the same method end users use).
-- **FR-002**: System MUST verify the installed CLI version after installation.
+- **FR-002**: System MUST verify the installed CLI version after installation and fail immediately with a clear error message if verification fails.
 
 #### Build Logic Removal
 
@@ -103,7 +103,7 @@ As a Radius maintainer, I want all build-related logic removed from the workflow
 
 - **FR-009**: System MUST install the current release control plane when Radius is not installed on the cluster.
 - **FR-010**: System MUST skip installation when the installed control plane version matches the CLI version.
-- **FR-011**: System MUST attempt an upgrade when the installed control plane version differs from the CLI version.
+- **FR-011**: System MUST attempt an upgrade when the installed control plane version differs from the CLI version. The Radius upgrade command will determine if the transition is valid (including rejecting downgrades).
 
 #### Upgrade Handling
 
@@ -132,3 +132,12 @@ As a Radius maintainer, I want all build-related logic removed from the workflow
 - **SC-005**: Workflow file contains zero build-from-source steps after changes.
 - **SC-006**: Workflow uses the same installation method as documented for end users.
 - **SC-007**: Functional tests pass at the same rate as before the workflow changes (baseline comparison).
+
+## Clarifications
+
+### Session 2024-12-15
+
+- Q: How should the workflow handle downgrades (cluster has newer version than CLI)? → A: Rely on Radius upgrade command to reject incompatible transitions
+- Q: How should timeout behavior be handled for long-running operations? → A: Rely on existing job-level timeout and CLI built-in timeouts
+- Q: What action to take if CLI version verification fails? → A: Fail workflow immediately with clear error message
+- Q: How to determine if Radius is installed on the cluster? → A: Use rad version command; implementation details deferred to plan
