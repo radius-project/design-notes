@@ -1,10 +1,17 @@
 <!--
-Sync Impact Report:
-- Version change: 1.0.0
-- Modified principles:
-  - II. Go Idiomatic Code → II. Idiomatic Code Standards (broadened to all languages)
-  - IV. Testing Pyramid Discipline (expanded with repo-specific testing requirements)
+Sync Impact Report
+- Version change: N/A -> 1.0.0
+- Modified principles: none (new document)
 - Added sections:
+  - Principle I (API-First Design)
+  - Principle II (Idiomatic Code Standards)
+  - Principle III (Multi-Cloud Neutrality)
+  - Principle IV (Testing Pyramid Discipline)
+  - Principle V (Collaboration-Centric Design)
+  - Principle VI (Open Source and Community-First)
+  - Principle VII (Simplicity Over Cleverness)
+  - Principle VIII (Separation of Concerns and Modularity)
+  - Principle IX (Incremental Adoption & Backward Compatibility)
   - Principle X (TypeScript and React Standards)
   - Principle XI (Frontend Testing Discipline)
   - Principle XII (Resource Type Schema Quality)
@@ -13,7 +20,7 @@ Sync Impact Report:
   - Principle XV (Documentation Contribution Standards)
   - Principle XVI (Repository-Specific Standards)
   - Principle XVII (Polyglot Project Coherence)
-- Removed sections: None
+- Removed sections: none
 - Templates requiring updates:
   ✅ .specify/templates/plan-template.md (Constitution Check remains generic, no change required)
   ✅ .specify/templates/spec-template.md (Incremental adoption supported via independent user stories pattern)
