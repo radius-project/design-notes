@@ -1172,3 +1172,10 @@ NoSQL
 configurationStores
 stateStores
 ISV
+decrypt
+plaintext
+decrypts
+resubmission
+ciphertext
+deserialization
+Requeue
