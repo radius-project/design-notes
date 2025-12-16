@@ -1,6 +1,6 @@
 # Research: Long-Running Tests Use Current Release
 
-**Feature**: 001-lrt-current-release  
+**Feature**: 001-lrt-current-release
 **Date**: 2024-12-15
 
 ## Summary
@@ -207,14 +207,14 @@ The UDT types step also uses the CLI and can work with the installed version.
 
 ## Implementation Decisions Summary
 
-| Decision | Choice | Key Reason |
-|----------|--------|------------|
-| CLI Installation | Official installer script | Matches end-user experience (FR-001) |
-| Version Parsing | Text output with grep/awk | JSON output is malformed |
-| Status Detection | Check "Installed"/"Not Installed" | Direct CLI output |
-| Upgrade Handling | Let CLI handle errors | CLI provides clear messages |
-| Build Job | Remove entirely | No longer needed |
-| Recipe Publishing | Move to tests job | Still needed, uses installed CLI |
+| Decision          | Choice                            | Key Reason                           |
+|-------------------|-----------------------------------|--------------------------------------|
+| CLI Installation  | Official installer script         | Matches end-user experience (FR-001) |
+| Version Parsing   | Text output with grep/awk         | JSON output is malformed             |
+| Status Detection  | Check "Installed"/"Not Installed" | Direct CLI output                    |
+| Upgrade Handling  | Let CLI handle errors             | CLI provides clear messages          |
+| Build Job         | Remove entirely                   | No longer needed                     |
+| Recipe Publishing | Move to tests job                 | Still needed, uses installed CLI     |
 
 ## Open Items
 

@@ -9,31 +9,31 @@ Update the long-running Azure test workflow to install the current official Radi
 
 ## Technical Context
 
-**Language/Version**: YAML (GitHub Actions), Bash  
-**Primary Dependencies**: Radius CLI (installed via official installer), `rad version`, `rad upgrade kubernetes`, `rad install kubernetes`  
-**Storage**: N/A (workflow only)  
-**Testing**: Manual workflow execution, CI validation  
-**Target Platform**: GitHub Actions runners (ubuntu-24.04), AKS cluster  
-**Project Type**: CI/CD workflow modification  
-**Performance Goals**: Workflow completion time should be comparable or faster (no build step)  
-**Constraints**: Must work with existing AKS test infrastructure, must handle version detection edge cases  
+**Language/Version**: YAML (GitHub Actions), Bash
+**Primary Dependencies**: Radius CLI (installed via official installer), `rad version`, `rad upgrade kubernetes`, `rad install kubernetes`
+**Storage**: N/A (workflow only)
+**Testing**: Manual workflow execution, CI validation
+**Target Platform**: GitHub Actions runners (ubuntu-24.04), AKS cluster
+**Project Type**: CI/CD workflow modification
+**Performance Goals**: Workflow completion time should be comparable or faster (no build step)
+**Constraints**: Must work with existing AKS test infrastructure, must handle version detection edge cases
 **Scale/Scope**: Single workflow file modification
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| I. API-First Design | ✅ Pass | N/A - workflow change, not API |
-| II. Idiomatic Code Standards | ✅ Pass | Bash scripts follow shell.instructions.md, YAML follows github-workflows.instructions.md |
-| III. Multi-Cloud Neutrality | ✅ Pass | N/A - test infrastructure only |
-| IV. Testing Pyramid Discipline | ✅ Pass | Workflow tests itself via functional test execution |
-| V. Collaboration-Centric Design | ✅ Pass | Simplifies workflow for all contributors |
-| VI. Open Source and Community-First | ✅ Pass | Design documented in design-notes |
-| VII. Simplicity Over Cleverness | ✅ Pass | Removes complexity (build logic), uses standard CLI commands |
-| VIII. Separation of Concerns | ✅ Pass | Version detection logic in shell script, workflow handles orchestration |
-| IX. Incremental Adoption | ✅ Pass | No breaking changes to other workflows |
+| Principle                           | Status  | Notes                                                                                    |
+|-------------------------------------|---------|------------------------------------------------------------------------------------------|
+| I. API-First Design                 | ✅ Pass | N/A - workflow change, not API                                                           |
+| II. Idiomatic Code Standards        | ✅ Pass | Bash scripts follow shell.instructions.md, YAML follows github-workflows.instructions.md |
+| III. Multi-Cloud Neutrality         | ✅ Pass | N/A - test infrastructure only                                                           |
+| IV. Testing Pyramid Discipline      | ✅ Pass | Workflow tests itself via functional test execution                                      |
+| V. Collaboration-Centric Design     | ✅ Pass | Simplifies workflow for all contributors                                                 |
+| VI. Open Source and Community-First | ✅ Pass | Design documented in design-notes                                                        |
+| VII. Simplicity Over Cleverness     | ✅ Pass | Removes complexity (build logic), uses standard CLI commands                             |
+| VIII. Separation of Concerns        | ✅ Pass | Version detection logic in shell script, workflow handles orchestration                  |
+| IX. Incremental Adoption            | ✅ Pass | No breaking changes to other workflows                                                   |
 
 ## Project Structure
 
@@ -77,17 +77,17 @@ No constitution violations. This change reduces complexity by removing:
 
 *Re-evaluated after Phase 1 design completion.*
 
-| Principle | Status | Post-Design Notes |
-|-----------|--------|-------------------|
-| I. API-First Design | ✅ Pass | No API changes |
-| II. Idiomatic Code Standards | ✅ Pass | Shell script follows `set -euo pipefail`, proper quoting, clear variable names |
-| III. Multi-Cloud Neutrality | ✅ Pass | Test infrastructure only, no cloud-specific dependencies added |
-| IV. Testing Pyramid Discipline | ✅ Pass | Functional tests validate the workflow; manual verification steps documented |
-| V. Collaboration-Centric Design | ✅ Pass | Simplified workflow benefits all contributors |
-| VI. Open Source and Community-First | ✅ Pass | Design fully documented in design-notes repository |
-| VII. Simplicity Over Cleverness | ✅ Pass | Net reduction of ~300 lines; uses standard CLI commands |
-| VIII. Separation of Concerns | ✅ Pass | Version logic in shell script, workflow handles orchestration |
-| IX. Incremental Adoption | ✅ Pass | No breaking changes to other workflows or user-facing behavior |
+| Principle                           | Status  | Post-Design Notes                                                              |
+|-------------------------------------|---------|--------------------------------------------------------------------------------|
+| I. API-First Design                 | ✅ Pass | No API changes                                                                 |
+| II. Idiomatic Code Standards        | ✅ Pass | Shell script follows `set -euo pipefail`, proper quoting, clear variable names |
+| III. Multi-Cloud Neutrality         | ✅ Pass | Test infrastructure only, no cloud-specific dependencies added                 |
+| IV. Testing Pyramid Discipline      | ✅ Pass | Functional tests validate the workflow; manual verification steps documented   |
+| V. Collaboration-Centric Design     | ✅ Pass | Simplified workflow benefits all contributors                                  |
+| VI. Open Source and Community-First | ✅ Pass | Design fully documented in design-notes repository                             |
+| VII. Simplicity Over Cleverness     | ✅ Pass | Net reduction of ~300 lines; uses standard CLI commands                        |
+| VIII. Separation of Concerns        | ✅ Pass | Version logic in shell script, workflow handles orchestration                  |
+| IX. Incremental Adoption            | ✅ Pass | No breaking changes to other workflows or user-facing behavior                 |
 
 **Gate Status**: ✅ PASSED - Ready for task breakdown (/speckit.tasks)
 

@@ -1,6 +1,6 @@
 # Quickstart: Long-Running Tests Use Current Release
 
-**Feature**: 001-lrt-current-release  
+**Feature**: 001-lrt-current-release
 **Date**: 2024-12-15
 
 ## Overview
@@ -131,13 +131,13 @@ tests job:
 
 ## Key Commands Reference
 
-| Action | Command |
-|--------|---------|
-| Install CLI | `wget -q "https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh" -O - \| /bin/bash` |
-| Check versions | `rad version` |
-| Install control plane | `rad install kubernetes` |
-| Upgrade control plane | `rad upgrade kubernetes` |
-| Download Bicep | `rad bicep download` |
+| Action                | Command                                                                                                      |
+|-----------------------|--------------------------------------------------------------------------------------------------------------|
+| Install CLI           | `wget -q "https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh" -O - \| /bin/bash` |
+| Check versions        | `rad version`                                                                                                |
+| Install control plane | `rad install kubernetes`                                                                                     |
+| Upgrade control plane | `rad upgrade kubernetes`                                                                                     |
+| Download Bicep        | `rad bicep download`                                                                                         |
 
 ## Success Verification
 
