@@ -1172,3 +1172,9 @@ terraformBackend
 bicepAuthentication
 filesystem
 apiKey
+discoverability
+incentivize
+NoSQL
+configurationStores
+stateStores
+ISV
