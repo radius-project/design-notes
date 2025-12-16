@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../radius"
+		},
+		{
+			"path": "../dashboard"
+		},
+		{
+			"path": "../docs"
+		},
+		{
+			"path": "../resource-types-contrib"
+		}
+	],
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			".specify/scripts/bash/": true,
+			".specify/scripts/powershell/": true
+		}
+	}
+}
