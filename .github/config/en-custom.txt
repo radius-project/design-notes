@@ -164,6 +164,7 @@ arn
 async
 auth
 auth
+awk
 aws
 az
 azure
@@ -223,6 +224,7 @@ fullyQualifiedHostname
 geos
 github
 githubPath
+gotestsum
 githubRepo
 handoff
 hardcoding
@@ -250,6 +252,7 @@ json
 jumpbox
 kafka
 keyvault
+kubeconf
 kubecontext
 kubeConfig
 kubectl
@@ -261,6 +264,7 @@ linkTitle
 linter
 linux
 liveness
+lrt
 livenessProbe
 localWorkspace
 localhost
@@ -360,6 +364,7 @@ shortname
 SoTrx
 spanId
 specificed
+speckit
 spf
 sql
 sqlDatabases
@@ -399,6 +404,7 @@ vsix
 webapp
 webpage
 westus
+wget
 westus2
 wi
 workingDir
