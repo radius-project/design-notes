@@ -84,32 +84,33 @@ As a Radius maintainer, I want all build-related logic removed from the workflow
 
 - **FR-001**: System MUST install the current Radius CLI release using the official installer script (the same method end users use).
 - **FR-002**: System MUST verify the installed CLI version after installation and fail immediately with a clear error message if verification fails.
+- **FR-003**: System MUST install and use release candidates when a release candidate is published, treating release candidates as the latest version of Radius.
 
 #### Build Logic Removal
 
 > **Note**: "Build logic removal" refers to building the Radius CLI and control plane container images. The Radius codebase must still be present on the build runner because the functional tests are contained within the codebase. Running the test make targets will build the test code as a side effect—no separate build commands are required. The CLI itself is installed via the official installer script, not built locally.
 
-- **FR-003**: System MUST NOT contain any steps to build the Radius CLI or control plane container images from source code.
-- **FR-004**: System MUST NOT contain any caching logic for previously built binaries.
-- **FR-005**: System MUST NOT contain any "skip build" conditional logic.
-- **FR-006**: System MUST NOT contain any logic to determine if a build is required based on time windows.
+- **FR-004**: System MUST NOT contain any steps to build the Radius CLI or control plane container images from source code.
+- **FR-005**: System MUST NOT contain any caching logic for previously built binaries.
+- **FR-006**: System MUST NOT contain any "skip build" conditional logic.
+- **FR-007**: System MUST NOT contain any logic to determine if a build is required based on time windows.
 
 #### Control Plane Version Detection
 
-- **FR-007**: System MUST detect whether Radius is currently installed on the test cluster.
-- **FR-008**: System MUST retrieve the version of the Radius control plane if installed.
+- **FR-008**: System MUST detect whether Radius is currently installed on the test cluster.
+- **FR-009**: System MUST retrieve the version of the Radius control plane if installed.
 
 #### Control Plane Installation Logic
 
-- **FR-009**: System MUST install the current release control plane when Radius is not installed on the cluster.
-- **FR-010**: System MUST skip installation when the installed control plane version matches the CLI version.
-- **FR-011**: System MUST attempt an upgrade when the installed control plane version differs from the CLI version. The Radius upgrade command will determine if the transition is valid (including rejecting downgrades).
+- **FR-010**: System MUST install the current release control plane when Radius is not installed on the cluster.
+- **FR-011**: System MUST skip installation when the installed control plane version matches the CLI version.
+- **FR-012**: System MUST attempt an upgrade when the installed control plane version differs from the CLI version. The Radius upgrade command will determine if the transition is valid (including rejecting downgrades).
 
 #### Upgrade Handling
 
-- **FR-012**: System MUST rely on the Radius upgrade command to determine if an upgrade is possible.
-- **FR-013**: System MUST report an error and stop execution if the upgrade command indicates upgrade is not possible.
-- **FR-014**: System MUST provide a clear error message when upgrade fails.
+- **FR-013**: System MUST rely on the Radius upgrade command to determine if an upgrade is possible.
+- **FR-014**: System MUST report an error and stop execution if the upgrade command indicates upgrade is not possible.
+- **FR-015**: System MUST provide a clear error message when upgrade fails.
 
 ### Assumptions
 
@@ -117,7 +118,7 @@ As a Radius maintainer, I want all build-related logic removed from the workflow
 - The Radius CLI provides commands to detect the control plane version on a cluster.
 - The Radius upgrade command returns appropriate exit codes or messages to indicate upgrade feasibility.
 - The test cluster (AKS) is accessible and credentials are valid when the workflow runs.
-- The "current release" refers to the latest stable release of Radius, not pre-release or edge versions.
+- The "current release" refers to the latest published release of Radius, including release candidates when they are published. Release candidates are considered the latest version until superseded by a stable release or a newer release candidate.
 - The Radius codebase must be checked out on the build runner because the functional tests reside in the repository.
 - The make targets for running tests will build the test code as needed—no explicit build step is required.
 
