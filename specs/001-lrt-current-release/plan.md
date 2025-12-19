@@ -5,7 +5,7 @@
 
 ## Summary
 
-Update the long-running Azure test workflow to install the current official Radius release instead of building from the main branch. The workflow will use the official installer script to install the CLI, detect the control plane version on the cluster using `rad version`, and intelligently install/upgrade based on version comparison. All build-related logic (container image builds, caching, skip-build conditions) will be removed.
+Update the long-running Azure test workflow to install the current official Radius release (including release candidates when published) instead of building from the main branch. The workflow will use the official installer script to install the CLI, detect the control plane version on the cluster using `rad version`, and intelligently install/upgrade based on version comparison. All build-related logic (container image builds, caching, skip-build conditions) will be removed.
 
 ## Technical Context
 
@@ -14,7 +14,7 @@ Update the long-running Azure test workflow to install the current official Radi
 **Storage**: N/A (workflow only)
 **Testing**: Manual workflow execution, CI validation
 **Target Platform**: GitHub Actions runners (ubuntu-24.04), AKS cluster
-**Project Type**: CI/CD workflow modification
+**Project Type**: CI/CD workflow modification, installer script enhancement
 **Performance Goals**: Workflow completion time should be comparable or faster (no build step)
 **Constraints**: Must work with existing AKS test infrastructure, must handle version detection edge cases
 **Scale/Scope**: Single workflow file modification
@@ -59,10 +59,12 @@ radius/
 │   │   └── long-running-azure.yaml    # Primary file to modify
 │   └── scripts/
 │       └── manage-radius-installation.sh  # New: version detection and install/upgrade logic
+├── deploy/
+│   └── install.sh                     # Modify: add optional --include-rc parameter
 └── Makefile                           # No changes needed (tests run via existing make targets)
 ```
 
-**Structure Decision**: Minimal changes - single workflow file modification plus a helper script for version management logic. The helper script follows the principle of extracting complex logic from workflow YAML into testable shell scripts.
+**Structure Decision**: Minimal changes - single workflow file modification, a helper script for version management logic, and an enhancement to the official installer script. The helper script follows the principle of extracting complex logic from workflow YAML into testable shell scripts. The installer script enhancement adds an optional parameter to include release candidates when determining the latest version.
 
 ## Complexity Tracking
 
@@ -93,10 +95,19 @@ No constitution violations. This change reduces complexity by removing:
 
 ## Implementation Phases
 
+### Phase 0: Installer Script Enhancement
+
+- Modify `deploy/install.sh` to add an optional `--include-rc` parameter
+- When `--include-rc` is specified, the `getLatestRelease` function should include release candidate versions (remove `grep -v rc` filter)
+- When `--include-rc` is not specified, behavior remains unchanged (release candidates are excluded)
+- Add corresponding `INCLUDE_RC` environment variable support (e.g., `INCLUDE_RC=true`) as an alternative to the command-line flag
+- Update script usage/help text to document the new parameter
+- Ensure backward compatibility: existing installations without the flag continue to work as before
+
 ### Phase 1: Setup (Shared Infrastructure)
 
 - Create `manage-radius-installation.sh` helper script
-- Implement version detection logic (parse rad version output)
+- Implement version detection logic (parse rad version output, including release candidate version formats like `v0.40.0-rc1`)
 - Implement conditional install/upgrade logic
 - Add error handling for upgrade failures
 
@@ -108,7 +119,7 @@ No constitution violations. This change reduces complexity by removing:
 
 ### Phase 3: Add CLI Installation (User Story 1)
 
-- Add step to install CLI via official installer
+- Add step to install CLI via official installer with `--include-rc` flag to support release candidate versions
 - Add step to verify CLI installation
 - Update PATH configuration
 - Move recipe publishing steps to tests job
