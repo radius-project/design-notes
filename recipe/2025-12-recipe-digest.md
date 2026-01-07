@@ -4,20 +4,11 @@
 
 ## Overview
 
-Radius recipes enable consistent, reusable provisioning of infrastructure by allowing applications to reference
-externally stored infrastructure definitions, such as Bicep templates or Terraform modules, through recipe
-packs. These recipes are sourced from external systems including registries and repositories and are later
-executed as part of application deployment.
+Radius recipes enable consistent, reusable provisioning of infrastructure by allowing applications to reference externally stored infrastructure definitions, such as Bicep templates or Terraform modules, through recipe packs. These recipes are sourced from external systems including registries and repositories and are later executed as part of application deployment.
 
-In the current model, recipe references typically rely on version identifiers that may be mutable, such as tags
-or unpinned versions. If the underlying artifact changes without the reference changing, Radius has no built‑in
-way to detect the modification. This can result in unintended infrastructure changes and exposes Radius
-deployments to supply‑chain risks.
+In the current model, recipe references typically rely on version identifiers that may be mutable, such as tags or unpinned versions. If the underlying artifact changes without the reference changing, Radius has no built‑in way to detect the modification. This can result in unintended infrastructure changes.
 
-This proposal introduces a consistent approach to **recipe source integrity**, ensuring that recipes executed
-during deployment are identical to those originally intended. By validating artifact identity at both
-registration and deployment time, Radius can detect unexpected changes and prevent execution of modified
-content.
+This proposal introduces a consistent approach to **recipe source integrity**, ensuring that recipes executed during deployment are identical to those originally intended. By validating artifact identity deployment time, Radius can detect unexpected changes and prevent execution of modified content.
 
 
 ## Terms and definitions
@@ -25,7 +16,6 @@ content.
 Recipe pack: Radius resource that groups recipes and metadata for provisioning.
 Recipe digest: OCI content hash (e.g., sha256:…) uniquely identifying an image manifest.
 Mutable tag: Registry tag that can be moved to point at a different digest (latest, semantic versions).
-Dependency confusion: Pulling a similarly named artifact from an unintended origin. (Context in template.)
 
 ## Objectives
 ### Goals
@@ -130,7 +120,6 @@ Advantages:
 - **Strong integrity guarantee**: Protects against scenarios where the recipe is modified in the registry between publish and registration.
 - **Explicit user intent**: The user declares exactly which artifact is trusted and allowed to execute.
 - **Simple implementation**: Leverages existing registry metadata resolution with minimal additional logic.
-Clear trust boundary: Digest is treated as an explicit, trusted input rather than derived implicitly.
 
 Disadvantages:
 - **Manual step required**: Users must copy the digest from publish output into the recipe pack definition.
@@ -200,19 +189,6 @@ Radius.Compute/containers
    Location: test.acr.io/computepack/recipe:1.0
 +  Digest: sha256:c6a1…eabb   
 ```
-
-
-### Implementation Details
-<!--
-High level description of updates to each component. Provide information on 
-the specific sub-components that will be updated, for example, controller, processor, renderer,
-recipe engine, driver, to name a few.
--->
-
-#### Core RP (if applicable)
-#### Portable Resources / Recipes RP (if applicable)
-Bicep Driver:
-- Adding 
 
 
 ### Error Handling
