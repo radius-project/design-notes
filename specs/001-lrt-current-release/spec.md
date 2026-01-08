@@ -9,7 +9,7 @@
 
 ### User Story 1 - Run Tests Against Current Release (Priority: P1)
 
-As a Radius maintainer, I want the long-running test workflow to use the current official Radius release instead of building from the main branch, so that tests validate the released version that users actually consume.
+As a Radius maintainer, I want the long-running test workflow to use the current official Radius release or release candidate instead of building from the main branch, so that tests validate the released version that users actually consume.
 
 **Why this priority**: This is the core value of the feature - ensuring long-running tests validate the same Radius version that end users install.
 
