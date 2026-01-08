@@ -165,7 +165,7 @@ Global Flags:
   -o, --output string   output format (supported formats are json, table) (default "table")
 ```
 
-Here is an example of the command being used to attempt an upgrade in which the control plan is already at the latest version:
+Here is an example of the command being used to attempt an upgrade in which the control plane is already at the latest version:
 
 ```shell
 $ rad upgrade kubernetes
