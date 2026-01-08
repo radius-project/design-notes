@@ -169,7 +169,6 @@ Here is an example of the command being used to attempt an upgrade in which the 
 
 ```shell
 $ rad upgrade kubernetes
-$ rad upgrade kubernetes
 Current Radius version: 0.54.0
 Target Radius version: 0.54.0
 Running pre-flight checks...
