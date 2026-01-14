@@ -25,7 +25,6 @@ This proposal introduces a consistent approach to **recipe source integrity**, e
 
 - Allow recipe authors/platform teams to pin Bicep recipes to a specific digest inside recipe packs.
 - Ensure that recipes executed during deployment are identical to the artifacts originally published and intended
-- Prevent unexpected recipe drift by validating artifact identity at deployment time.
 - Maintain backward compatibility for existing recipes that do not specify a digest.
 
 ### Non goals
@@ -37,7 +36,7 @@ This proposal introduces a consistent approach to **recipe source integrity**, e
 As a platform engineer, I want to pin a recipe to an immutable digest when I register it in a recipe pack, so that any deployment using that recipe executes exactly the artifact I reviewed and approved.
 
 #### User story 2
-As a user of Radius recipes, I want Radius to execute the same recipe artifact that I originally published and intended during deployment, so that hidden registry changes cannot cause unexpected infrastructure behavior.
+As a user of Radius recipes, I want Radius to execute the same recipe artifact that I originally published and intended during deployment, so that changes such as a registry tag being retargeted to a different artifact cannot cause unexpected infrastructure behavior.
 
 ## User Experience (if applicable)
 This proposal introduces minor, intentional changes to how recipes are registered, while preserving the existing publishing experience. Recipe immutability is expressed using OCI‑native references, allowing users to choose between tag‑based and digest‑based recipe resolution
@@ -168,7 +167,7 @@ Disadvantages
 Option 1 is recommended. While Option 2 offers a slightly smoother authoring experience, it can result in the recipe pack being bound to a different artifact than the one originally published. Option 1 requires the digest to be explicitly provided by the user, making the intended recipe artifact clear, stable, and auditable. The additional manual step is acceptable for infrastructure recipes and aligns with established digest‑pinning practices used for OCI artifacts.
 
 #### Recipe Execution
-During recipe execution, the recipe driver uses the digest information recorded as part of the recipeLocation  in the recipe definition.
+During recipe execution, the recipe driver uses the digest information recorded as part of the `recipeLocation`  in the recipe definition.
 
 When a recipeLocation is defined with a digest:
 - The recipe driver retrieves the digest from the recipeLocation.
@@ -227,6 +226,16 @@ RECIPES:
 Radius.Compute/containers
    Kind: bicep
 +   Location: test.acr.io/computepack/recipe@sha256:c6a1…eabb
+```
+
+Adding digest info to the `rad bicep publish` command output
+```diff
+    $ rad bicep publish --file redis-recipe.bicep --target br:vishwaradius.azurecr.io/redis:1.0
+
+    Building redis-recipe.bicep...
+    Pushed to test.azurecr.io:redis@sha256:c6a1…eabb
+    Successfully published Bicep file "redis-recipe.bicep" to "test.acr.io/redis:1.0"
++   Copy the digest (sha256:c6a1…eabb) into your recipe pack to pin the artifact immutably.
 ```
 
 ### Error Handling
