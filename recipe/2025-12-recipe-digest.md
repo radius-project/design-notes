@@ -1,4 +1,4 @@
-# Title
+# Enhance recipe-engine to support digests
 
 * **Author**: Vishwanath Hiremath (@vishwahiremat)
 
@@ -13,9 +13,12 @@ This proposal introduces a consistent approach to **recipe source integrity**, e
 
 ## Terms and definitions
 
-Recipe pack: Radius resource that groups recipes and metadata for provisioning.
-Recipe digest: OCI content hash (e.g., sha256:…) uniquely identifying an image manifest.
-Mutable tag: Registry tag that can be moved to point at a different digest (latest, semantic versions).
+
+| Term            | Definition                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Recipe pack     | Radius resource that groups recipes and metadata for provisioning.                                   |
+| Recipe digest   | OCI content hash (e.g., `sha256:…`) uniquely identifying an image manifest. Most OCI registries currently support only `sha256` digests.|
+| Mutable tag     | Registry tag that can be moved to point at a different digest (e.g., `latest`, semantic versions).   |
 
 ## Objectives
 ### Goals
@@ -37,7 +40,7 @@ As a platform engineer, I want to pin a recipe to an immutable digest when I reg
 As a user of Radius recipes, I want Radius to execute the same recipe artifact that I originally published and intended during deployment, so that hidden registry changes cannot cause unexpected infrastructure behavior.
 
 ## User Experience (if applicable)
-This proposal introduces minor changes to the recipe publishing and registration experience to make recipe immutability explicit and easy to use. The overall workflow remains the same, with an additional step to surface and persist the recipe digest for bicep recipes.
+This proposal introduces minor, intentional changes to how recipes are registered, while preserving the existing publishing experience. Recipe immutability is expressed using OCI‑native references, allowing users to choose between tag‑based and digest‑based recipe resolution
 
 #### Publishing a Bicep recipe
 
@@ -53,8 +56,20 @@ When publishing a Bicep recipe to an OCI registry, the CLI surfaces the resolved
 
 ```
 #### Registering a recipe pack
-When registering a recipe pack, users can optionally specify the digest of the recipe artifact. When provided, the digest becomes the authoritative identifier used for deployment.
+When registering a recipe pack, users specify how the recipe should be resolved at deployment time by choosing the appropriate recipeLocation format.
 
+##### Tag‑based recipe reference (mutable):
+To continue using tag‑based resolution, users specify a tag as they do today:
+```
+recipeLocation: 'vishwaradius.azurecr.io/redis:1.0'
+```
+In this mode:
+- The recipe is resolved using the tag.
+- The recipe contents may change if the tag is retargeted.
+- This preserves existing behavior for backward compatibility.
+
+##### Digest‑based recipe reference (immutable):
+To pin a recipe to an immutable artifact, users specify a digest‑qualified OCI reference :
 ```diff
 resource redisPack 'Radius.Core/recipePacks@2025-05-01-preview' = {
   name: 'redisPack'
@@ -62,46 +77,30 @@ resource redisPack 'Radius.Core/recipePacks@2025-05-01-preview' = {
     recipes: {
       'Radius.Cache/redis': {
         recipeKind: 'bicep'
-        recipeLocation: 'vishwaradius.azurecr.io/redis:1.0' 
-+        digest: 'sha256:c6a1…eabb'
++        recipeLocation: 'vishwaradius.azurecr.io/redis@sha256:c6a1…eabb' 
       }
     }
   }
 }
 ```
-**Sample Recipe Contract:**
-recipepacks.tsp 
-```diff
-@doc("Recipe definition for a specific resource type")
-model RecipeDefinition {
-  @doc("The type of recipe (e.g., Terraform, Bicep)")
-  recipeKind: RecipeKind;
 
-  @doc("Connect to the location using HTTP (not HTTPS). This should be used when the location is known not to support HTTPS, for example in a locally hosted registry for Bicep recipes. Defaults to false (use HTTPS/TLS)")
-  plainHttp?: boolean;
-
-  @doc("URL path to the recipe")
-  recipeLocation: string;
-
-  @doc("Parameters to pass to the recipe")
-  parameters?: Record<unknown>;
-
-+  @doc("Immutable content digest (sha256:...) for Bicep recipes)
-+  digest?: string;
-}
-```
+In this mode:
+- The digest uniquely identifies the recipe artifact.
+- Radius always pulls and executes the recipe by digest.
+- Mutable tags are not used for content resolution.
+- The recipe executed during deployment is guaranteed to be the exact artifact originally published and intended.
 
 ## Design
 
 ### High Level Design
-This design ensures the integrity of Bicep recipes by binding recipe execution to an immutable OCI digest instead of a mutable version tag.
+This design enforces recipe integrity by binding execution to an immutable OCI digest rather than a mutable version tag. The goal is to ensure that the deployed infrastructure always originates from the exact recipe artifact that was published and registered.
 
 The core idea is :
-- A recipe is registered with both a tag and a digest
+- A recipe is registered with a digest.
 - The digest represents the exact recipe artifact that is allowed to execute
-- During deployment, recipes are pulled by digest, not by tag
+- During deployment, recipes are pulled by digest.
 
-This guarantees that the infrastructure deployed by Radius is always derived from the same recipe artifact that was originally published and registered.and persists the new digest.
+This guarantees that the infrastructure deployed by Radius is always derived from the same recipe artifact that was originally published and registered.
 
 ### Detailed Design
 
@@ -109,12 +108,34 @@ This guarantees that the infrastructure deployed by Radius is always derived fro
 To bind recipe execution to an immutable artifact, the recipe pack must record a digest that uniquely identifies the intended recipe contents. This section evaluates two possible approaches for how the digest is introduced during recipe registration.
 
 ##### Option 1: User‑Provided Digest at Registration Time
-In this approach, the digest is explicitly supplied by the user when creating or updating a recipe pack. The digest is typically obtained from the output of the recipe publish command and added as part of the recipe definition.
+In this approach, the digest is explicitly provided by the user when creating or updating a recipe pack. The digest is typically obtained from the output of the recipe publish command and added as part of the recipe definition.
+
 Workflow
 - The user publishes a Bicep recipe to an OCI registry.
-- The publish command surfaces the resolved digest.
+  ```diff
+    $ rad bicep publish --file redis-recipe.bicep --target br:vishwaradius.azurecr.io/redis:1.0
+
+    Building redis-recipe.bicep...
+    Pushed to test.azurecr.io:redis@sha256:c6a1…eabb
+    Successfully published Bicep file "redis-recipe.bicep" to "test.acr.io/redis:1.0"
+  + Copy the digest (sha256:c6a1…eabb) into your recipe pack to pin the artifact immutably.
+  ```
+- The publish command surfaces the resolved digest. (e.g: sha256:c6a1…eabb)
 - The user includes this digest in the recipe pack definition during registration.
-- Receipe is created with digest details.
+  ```diff
+  resource redisPack 'Radius.Core/recipePacks@2025-05-01-preview' = {
+    name: 'redisPack'
+    properties: {
+      recipes: {
+        'Radius.Cache/redis': {
+          recipeKind: 'bicep'
+  +       recipeLocation: 'vishwaradius.azurecr.io/redis@sha256:c6a1…eabb' 
+        }
+      }
+    }
+  }
+  ```
+- Recipe is created with digest details.
 
 Advantages:
 - **Strong integrity guarantee**: Protects against scenarios where the recipe is modified in the registry between publish and registration.
@@ -147,14 +168,20 @@ Disadvantages
 Option 1 is recommended. While Option 2 offers a slightly smoother authoring experience, it can result in the recipe pack being bound to a different artifact than the one originally published. Option 1 requires the digest to be explicitly provided by the user, making the intended recipe artifact clear, stable, and auditable. The additional manual step is acceptable for infrastructure recipes and aligns with established digest‑pinning practices used for OCI artifacts.
 
 #### Recipe Execution
-During recipe execution, the recipe driver uses the digest information recorded in the recipe definition to ensure that the correct recipe artifact is retrieved and executed.
-When a recipe includes a digest:
-- The recipe driver retrieves the digest field from the recipe definition stored in the recipe pack.
-- Instead of pulling the recipe using a version tag, the driver constructs a digest‑qualified OCI reference.
-- The recipe artifact is fetched using ORAS with the digest reference, for example:
-```
-oras pull test.acr.io/redis@sha256:c6a1...eabb
-```
+During recipe execution, the recipe driver uses the digest information recorded as part of the recipeLocation  in the recipe definition.
+
+When a recipeLocation is defined with a digest:
+- The recipe driver retrieves the digest from the recipeLocation.
+- Pull the recipe artifact directly from the OCI registry using the digest reference. example:
+  ```
+  oras pull test.acr.io/redis@sha256:c6a1...eabb
+
+  # instead of
+
+  oras pull test.acr.io/redis:1.0
+  ```
+-  Execute the retrieved recipe artifact.
+
 
 Because OCI digests are immutable, this pull operation deterministically retrieves the exact recipe artifact that was originally published and registered.
 
@@ -171,12 +198,25 @@ However, these guarantees are post‑selection: Terraform validates integrity af
 Terraform recipes require source‑specific immutability rules that align with Terraform’s supported module sources. However, this can be achieved for most module sources, but plain HTTPS or S3 needs explicit versioning or checksums.
 
 - **Git/Mercurial Based Modules** : Pin module sources using immutable commit SHAs (ref=<commit‑sha>)
-- **Terraform Registry Modules** : Registry enforces immutability of published versions.
+  ```diff
+  resource redisPack 'Radius.Core/recipePacks@2025-05-01-preview' = {
+    name: 'redisPack'
+    properties: {
+      recipes: {
+        'Radius.Cache/redis': {
+          recipeKind: 'terraform'
+  +       recipeLocation: 'git::https://github.com/recipes/test-module.git?ref=9f3c2e1a4b6d7c8e9f0123456789abcd12345678' 
+        }
+      }
+    }
+  }
+  ```
+- **Terraform Registry Modules** : Module versions in the Terraform Registry are not inherently immutable, but can be effectively pinned by using immutable Git tags or releases in the backing repository.
 - **S3/HTTP URL based modules** : S3 or HTTP URLs are mutable and do not provide first‑download integrity guarantees.
 
 
 ### CLI Design (if applicable)
-Adding digest details to `rad recipe-pack show` command.
+Adding digest details to `rad recipe-pack show` command output.
 
 ```diff
 $ rad recipe-pack show computeRecipePack
@@ -186,27 +226,21 @@ computeRecipePack  default
 RECIPES:
 Radius.Compute/containers
    Kind: bicep
-   Location: test.acr.io/computepack/recipe:1.0
-+  Digest: sha256:c6a1…eabb   
++   Location: test.acr.io/computepack/recipe@sha256:c6a1…eabb
 ```
-
 
 ### Error Handling
 - Digest not found (registration/deploy): `Recipe digest not found: <registry>/<repo>@sha256:<digest> (404 from registry)`
-- Tag retargeted (deploy re-resolve): `Tag digest changed: <repo>:<tag> now points to sha256:<actual>; expected sha256:<expected>. Deployment aborted.`
+- Invalid digest format : Returned when the provided digest does not conform to the expected `sha256:<hex>` format.
 
 ## Test plan
 **Unit**
 - Resolve tag → digest (happy path; plainHttp=false/true).
-- Mismatch detection: provided digest vs registry digest.
 - Not-found digest.
-- Deployment pull-by-digest path; fallback pull-by-tag when digest missing.
-- TSP/schema: `digest?: string` serialization/deserialization.
+- Deployment pull-by-digest path.
 
 **E2E / Functional **
-- publish, register with digest, deploy; verify recipe pulled by digest.
-- pack without digest
-- Retargeted tag: detect and block at deploy.
+- publish, register with digest, update the recipe for the current tag, verify recipe pulled by digest.
 
 ## Security
 
@@ -220,18 +254,15 @@ Changes to recipe contents occur without any modification to recipe pack configu
 
 ## Development plan
 
-**Phase 1: Schema & UX**
-- Add `digest?: string` to recipe pack schema (Bicep only); update TSP and conversions.
+**Phase 1: UX and refactoring**
 - CLI: ensure `rad bicep publish` output highlights digest; add `rad recipe-pack show` to display stored digest.
+- refactor the code for version/tag check from the recipeLocation where ever needed.
 
-**Phase 2: Bicep engine (deployment)**
-- Pull recipes by stored digest (`repo@sha256:...`); tag used only for readability/re-resolve checks.
-- Fall back to tag pull only when no digest exists (back-compat), and record resolved digest.
-
-**Phase 3: Tests**
-- Unit: resolve/compare logic, error paths (mismatch, not found, auth).
-- Integration: publish → register with digest; register without digest (auto-resolve); deploy with retargeted tag (fail); deploy without digest (legacy).
-- E2E/func: happy path and negative paths against a test ACR.
+**Phase 2: Bicep engine (deployment) and Tests**
+- Pull recipes by specified digest (`repo@sha256:...`).
+- Unit Tests: resolve/compare logic, error paths (mismatch, not found, auth).
+- Integration Tests: publish → register with digest; register without digest (auto-resolve); deploy with retargeted tag ; deploy without digest.
+- E2E/functional Tests: happy path and negative paths against a test ACR.
 
 **Phase 4: Docs**
 - Update authoring guide: copy digest from publish output into recipe pack.
