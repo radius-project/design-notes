@@ -14,6 +14,7 @@
 ## Scope
 
 This plan addresses:
+
 - FR-001: bicep-types git submodule completely removed
 - FR-002: .gitmodules configuration removed
 - FR-003: No `git submodule` commands required for build/test
@@ -277,7 +278,7 @@ After Phase 4 (US2) completes:
 ## Summary
 
 | Metric | Value |
-|--------|-------|
+| ------- | ----- |
 | Total Tasks | 59 |
 | Setup/Foundational | 6 |
 | US1 (P1) | 16 |

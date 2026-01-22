@@ -13,6 +13,7 @@
 ## Scope
 
 This plan addresses:
+
 - FR-004: Go code references bicep-types-go through go.mod as standard module
 - FR-005: Go module dependencies resolvable via `go mod` commands
 - FR-006: Go module pinned to specific git commit SHA
@@ -171,7 +172,7 @@ After Phase 3 (US1) completes:
 ## Summary
 
 | Metric | Value |
-|--------|-------|
+| ------- | ----- |
 | Total Tasks | 22 |
 | Setup/Foundational | 5 |
 | US1 (P1) | 5 |

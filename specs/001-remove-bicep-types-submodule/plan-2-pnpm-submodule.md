@@ -11,7 +11,8 @@ Migrate all JavaScript/TypeScript tooling from npm to pnpm, update bicep-types n
 ## Technical Context
 
 **Language/Version**: Node.js (per .node-version), TypeScript
-**Primary Dependencies**: 
+**Primary Dependencies**:
+
 - `bicep-types` npm package (currently via `file:` reference to submodule)
 - Various npm packages in `typespec/`, `hack/bicep-types-radius/`
 **Package Manager**: npm → pnpm migration
@@ -21,7 +22,7 @@ Migrate all JavaScript/TypeScript tooling from npm to pnpm, update bicep-types n
 **Project Type**: Monorepo with TypeScript tooling, Go services
 **Performance Goals**: Build time should not regress; pnpm typically improves it
 **Constraints**: Must maintain reproducible builds via lockfiles with commit SHA pinning
-**Scale/Scope**: 
+**Scale/Scope**:
 - 3 npm package directories requiring pnpm migration
 - 8 CI workflow files with 15 `submodules:` occurrences to remove
 - Multiple Makefile targets using npm commands
@@ -31,7 +32,7 @@ Migrate all JavaScript/TypeScript tooling from npm to pnpm, update bicep-types n
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 | Principle | Status | Notes |
-|-----------|--------|-------|
+| --------- | ------ | ----- |
 | **I. API-First Design** | ✅ PASS | No API changes - tooling/build system only |
 | **II. Idiomatic Code Standards** | ✅ PASS | pnpm is modern, widely adopted package manager |
 | **III. Multi-Cloud Neutrality** | ✅ PASS | No cloud-specific changes |
@@ -49,7 +50,7 @@ Migrate all JavaScript/TypeScript tooling from npm to pnpm, update bicep-types n
 ## Requirements Addressed
 
 | Requirement | Coverage |
-|-------------|----------|
+| ----------- | -------- |
 | FR-001 | bicep-types git submodule completely removed |
 | FR-002 | .gitmodules configuration removed |
 | FR-003 | No `git submodule` commands required for build/test |
@@ -140,6 +141,7 @@ radius/
 ### Current State
 
 **Package References** (in `hack/bicep-types-radius/src/*/package.json`):
+
 ```json
 {
   "devDependencies": {
@@ -149,15 +151,17 @@ radius/
 ```
 
 **Makefile** (`build/generate.mk`):
+
 ```makefile
 generate-bicep-types:
-	git submodule update --init --recursive; \
-	npm --prefix bicep-types/src/bicep-types install; \
-	npm --prefix bicep-types/src/bicep-types ci && npm --prefix bicep-types/src/bicep-types run build; \
-	npm --prefix hack/bicep-types-radius/src/autorest.bicep ci && ...
+ git submodule update --init --recursive; \
+ npm --prefix bicep-types/src/bicep-types install; \
+ npm --prefix bicep-types/src/bicep-types ci && npm --prefix bicep-types/src/bicep-types run build; \
+ npm --prefix hack/bicep-types-radius/src/autorest.bicep ci && ...
 ```
 
 **Workflows** (multiple files):
+
 ```yaml
 - uses: actions/checkout@<sha>
   with:
@@ -165,6 +169,7 @@ generate-bicep-types:
 ```
 
 **Dependabot**:
+
 ```yaml
 - package-ecosystem: gitsubmodule
   directory: /
@@ -175,6 +180,7 @@ generate-bicep-types:
 ### Target State
 
 **Package References** (pnpm git subdirectory reference):
+
 ```json
 {
   "devDependencies": {
@@ -184,21 +190,24 @@ generate-bicep-types:
 ```
 
 **Makefile**:
+
 ```makefile
 generate-bicep-types:
-	pnpm --prefix hack/bicep-types-radius/src/autorest.bicep install && \
-	pnpm --prefix hack/bicep-types-radius/src/autorest.bicep run build; \
-	pnpm --prefix hack/bicep-types-radius/src/generator install && \
-	pnpm --prefix hack/bicep-types-radius/src/generator run generate -- ...
+ pnpm --prefix hack/bicep-types-radius/src/autorest.bicep install && \
+ pnpm --prefix hack/bicep-types-radius/src/autorest.bicep run build; \
+ pnpm --prefix hack/bicep-types-radius/src/generator install && \
+ pnpm --prefix hack/bicep-types-radius/src/generator run generate -- ...
 ```
 
 **Workflows**:
+
 ```yaml
 - uses: actions/checkout@<sha>
   # No submodules property needed
 ```
 
 **Dependabot** (add missing directories, remove gitsubmodule):
+
 ```yaml
 # KEEP: Already exists in current config
 - package-ecosystem: npm  # pnpm uses npm ecosystem in dependabot
@@ -234,6 +243,7 @@ generate-bicep-types:
 ### Rollback Strategy
 
 Standard git revert of the PR. Since this is atomic, reverting:
+
 - Restores `.gitmodules` and submodule reference
 - Restores npm lockfiles and commands
 - Restores workflow submodule settings
@@ -329,7 +339,7 @@ make build
 ## Success Criteria
 
 | Criterion | Validation |
-|-----------|------------|
+| --------- | ---------- |
 | SC-001 | New contributors complete setup in <10 minutes |
 | SC-002 | Zero submodule-related build failures |
 | SC-003 | 100% of workflows have no git submodule commands |
@@ -341,7 +351,7 @@ make build
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
-|------|--------|------------|
+| ---- | ------ | ---------- |
 | pnpm git subdirectory references not stable | HIGH | Research in Phase 0; test extensively before merge |
 | bicep-types requires local build steps | MEDIUM | Document additional build steps if needed |
 | Contributor confusion during transition | MEDIUM | Clear migration guide, announcement in release notes |
@@ -351,7 +361,7 @@ make build
 ## Workflow Files Requiring Updates
 
 | File | Current Setting | Target Setting |
-|------|-----------------|----------------|
+| ---- | --------------- | -------------- |
 | `.github/workflows/build.yaml` | `submodules: recursive` (4 occurrences, lines 110, 212, 369, 436) | Remove property |
 | `.github/workflows/codeql.yml` | `submodules: recursive` (line 95) | Remove property |
 | `.github/workflows/lint.yaml` | `submodules: recursive` (line 58) | Remove property |
@@ -372,7 +382,7 @@ make build
 ## Phase Summary
 
 | Phase | Output | Status |
-|-------|--------|--------|
+| ----- | ------ | ------ |
 | Phase 0 | [research-2-pnpm.md](./research-2-pnpm.md) | ✅ COMPLETE |
 | Phase 1 | quickstart.md (above), migration-guide.md (above) | ✅ INCLUDED |
 | Phase 2 | tasks-2-pnpm-submodule.md | NOT STARTED (via /speckit.tasks) |
