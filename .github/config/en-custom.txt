@@ -30,6 +30,7 @@ CRON
 CRUDL
 CSI
 CTRL
+Codegen
 Codespace
 Codespaces
 CosmosDB
@@ -37,6 +38,7 @@ CreateOrUpdate
 Datastores
 DDD
 deserialize
+desynchronization
 DNS
 dns
 DaemonSet
@@ -226,6 +228,7 @@ github
 githubPath
 gotestsum
 githubRepo
+gitmodules
 handoff
 hardcoding
 hostname
@@ -266,10 +269,13 @@ linux
 liveness
 lrt
 livenessProbe
+lockfiles
+Lockfiles
 localWorkspace
 localhost
 macOS
 macos
+Makefiles
 managedStore
 md
 memorydb
@@ -315,6 +321,7 @@ pem
 performant
 periodSeconds
 pfx
+pnpm
 powershell
 pre
 preconfigured
@@ -340,6 +347,7 @@ redisCaches
 redoc
 replacePrefix
 repo
+reproducibility
 resourceGroupName
 resourceId
 resourcegroup
@@ -377,6 +385,10 @@ statestore
 stdout
 stgSuffixes
 submodules
+submodule
+Submodule
+subdirectory
+src
 subnet
 subnets
 subscriptionID
@@ -410,6 +422,10 @@ wi
 workingDir
 workspaceTypes
 workspaces
+worktree
+Worktree
+worktrees
+Worktrees
 walkthrough
 yaml
 yml
@@ -705,6 +721,7 @@ Convertor
 DataModel
 PRs
 TypeSpec
+TypeScript
 TerraformConfig
 envVariables
 EnvironmentVariables
