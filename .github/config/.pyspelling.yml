@@ -8,6 +8,12 @@ matrix:
     wordlists:
     - .github/config/en-custom.txt
   pipeline:
+  - pyspelling.filters.context:
+      context_visible_first: true
+      delimiters:
+      # Remove markdown image links: ![alt text](path/to/image.png)
+      - open: '!\['
+        close: '\)'
   - pyspelling.filters.markdown:
       markdown_extensions:
       - markdown.extensions.fenced_code
@@ -16,6 +22,7 @@ matrix:
       ignores:
       - code
       - pre
+  - pyspelling.filters.url
   sources:
   - '**/*.md'
   default_encoding: utf-8
