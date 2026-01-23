@@ -33,12 +33,20 @@ CTRL
 Codegen
 Codespace
 Codespaces
+codeql
 CosmosDB
+corepack
+Corepack
 CreateOrUpdate
 Datastores
 DDD
+dep
+deps
 deserialize
 desynchronization
+devcontainer
+devcontainers
+dirs
 DNS
 dns
 DaemonSet
@@ -178,6 +186,7 @@ centric
 cli
 clusterName
 codebase
+codegen
 codespace
 codespaces
 codetab
@@ -229,6 +238,8 @@ githubPath
 gotestsum
 githubRepo
 gitmodules
+gitsubmodule
+gomod
 handoff
 hardcoding
 hostname
@@ -269,12 +280,14 @@ linux
 liveness
 lrt
 livenessProbe
+lockfile
 lockfiles
 Lockfiles
 localWorkspace
 localhost
 macOS
 macos
+Makefile
 Makefiles
 managedStore
 md
@@ -283,6 +296,9 @@ microservice
 microservice
 microservices
 microsoft
+mk
+Monorepo
+monorepos
 mongo
 mongoDB
 mongoDatabase
@@ -305,6 +321,7 @@ namespaces
 nav
 navbar
 newtab
+noncloud
 npm
 objectname
 oidcIssuer
@@ -322,6 +339,8 @@ performant
 periodSeconds
 pfx
 pnpm
+pnpm's
+postCreateCommand
 powershell
 pre
 preconfigured
@@ -340,6 +359,8 @@ rabbitmq
 radapp
 radiuspublic
 rbac
+READMEs
+recurse
 rediscaches
 readinessProbe
 redis
@@ -388,6 +409,8 @@ submodules
 submodule
 Submodule
 subdirectory
+subdirectories
+Symlinked
 src
 subnet
 subnets
