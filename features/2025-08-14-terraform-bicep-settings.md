@@ -39,83 +39,9 @@ This feature specification refactors the existing `Environments.recipeConfig` fu
 
 * `terraform plan` functionality (this will be addressed in a future feature specification)
 
-## Scenario 1 – Installing and Updating Terraform
+## Scenario 1 – Configuring Terraform
 
-### User Story 1 – Install Terraform
-
-***As a platform engineer, I need to install Terraform into the Radius control plane in my connected environment.***
-
-##### **Summary**
-
-Today, the Application RP container dynamically downloads the Terraform binary from hashicorp.com when a Terraform recipe is executed. This is problematic because Terraform is Radius dependency, not a Radius component. So platform engineers need to be in control of what Terraform is being used. They may use a specific version of Terraform within their organization. They may have specific licensing concerns about Terraform. Or they may simply not want Terraform to be running in their environment.
-
-Therefore, Radius will move to a model where the platform engineer explicitly installs Terraform. This is true for offline installations as well as connected installations.
-
-##### **User Experience 1 – Quick Install**
-
-The platform engineer installs Terraform using the new `rad terraform install` command.
-
-```bash
-$ rad terraform install
-No Terraform release specified, installing the latest from releases.hashicorp.com
-terraform_1.12.2_linux_amd64 installed in the Radius control plane
-```
-
-When this command is executed, Radius:
-
-* Downloads the latest Terraform release from releases.hashicorp.com and validates the checksum
-* Installs the Terraform binary in the appropriate location within the Radius control plane
-* Performs a `terraform init` and reports any output to the platform engineer
-
-Note that `terraform init` will need to be re-executed on recipe execution to initialize to a user-provided backend which happens later.
-
-Changes from today's Radius:
-
-* Terraform is no longer dynamically installed in Application RP
-
-**User Experience 2 – Advanced Install**
-
-The platform engineer uses the same command but with specific URL of the binary and its checksum.
-
-```bash
-$ rad terraform install \
-    --url="https://<tf_mirror_url>/terraform_1.5.7_linux_amd64.zip" \
-    --checksum="sha256:37f2d497ea512324d59b50ebf1b58a6fcc2a2828d638a4f6fdb1f41af00140f3"
-Downloading Terraform from <tf_mirror_url>
-Verifying checksum
-The specified Terraform CLI has been installed in the Radius control plane
-```
-
-When this command is executed, Radius:
-
-* Downloads the Terraform binary specified by the user
-* If the checksum argument is provided, the checksum is validated; if no checksum is provided, this step is skipped
-* Installs the Terraform binary in the appropriate location within the Radius control plane
-* Performs a `terraform init` and reports any output to the platform engineer
-
-### User Story 2 – Upgrading Terraform
-
-***As a platform engineer, I need to upgrade the version of Terraform used by Radius***
-
-The platform engineer uses the same `rad terraform install` command as before. The install command overrides the existing installation with either the latest version or the version specified in the URL argument.
-
-### User Story 3 – Uninstall Terraform
-
-***As a platform engineer, I need to remove all Terraform installations from my environment, including Radius***
-
-Terraform is a third-party solution which the platform engineer installs into Radius. Given this, Radius must enable platform engineers to remove Terraform as well.
-
-The platform engineer deletes the Terraform resource.
-
-```bash
-$ rad terraform uninstall
-```
-
-Radius deletes the Terraform binary from the Radius control plane.
-
-## Scenario 2 – Configuring Terraform
-
-### User Story 4 – Configure Terraform CLI
+### User Story 1 – Configure Terraform CLI
 
 ***As a platform engineer, I need to configure the Terraform CLI running in the Radius control plane.***
 
@@ -212,7 +138,7 @@ The entire set of properties for credentials and provider_installation are suppo
 
 Unsupported settings are not part of the TerraformSettings resource schema, so the TerraformSettings resource will not deploy if unsupported settings are specified. 
 
-### User Story 5 – Configure Terraform Backend
+### User Story 2 – Configure Terraform Backend
 
 ***As a platform engineer, I need to configure the Terraform backend state store.***
 
@@ -284,7 +210,7 @@ Terraform backends support authentication very similar to Terraform providers. S
 
 No additional authentication configuration is support, therefore, users do not need to configure any additional credentials beyond what is already in place with Radius.
 
-### User Story 6 –Injecting Radius Secrets into Terraform Configurations
+### User Story 3 – Injecting Radius Secrets into Terraform Configurations
 
 ***As a platform engineer, I need inject credentials into a Terraform provider other than azurerm and aws.***
 
@@ -353,9 +279,9 @@ provider "datadog" {
 
 The Secret values must be handled securely within Radius. When a Recipe is called with a Recipe parameter referencing a Secret, Radius must retrieve the secret value and pass that to Terraform without storing the secret value within the Radius control plane or any logs.
 
-## Scenario 3 – Observing Terraform
+## Scenario 2 – Observing Terraform
 
-### User Story 7 – Collecting Trace Logs
+### User Story 4 – Collecting Trace Logs
 
 ***As a platform engineer, I need to troubleshoot Terraform and Radius, therefore I need to see trace-level logs.***
 
@@ -369,9 +295,10 @@ The platform engineer must be able to:
 
 The user experience is deferred to the technical design.
 
-## Scenario 4 – Configuring Bicep
 
-### User Story 8 – Private Bicep Recipes
+## Scenario 3 – Configuring Bicep
+
+### User Story 5 – Private Bicep Recipes
 
 **Summary**
 
@@ -436,29 +363,104 @@ $ rad deploy bicepEnvironment.bicep --group myGroup
 
 Azure workload identity client ID and tenant ID are not considered secrets. Nor is the AWS IAM ARN. Therefore this information is not required to be stored in a secret. With this change, the Secret kind property can be removed. 
 
+## Scenario 4 – Installing and Updating Terraform
+
+### User Story 6 – Install Terraform
+
+***As a platform engineer, I need to install Terraform into the Radius control plane in my connected environment.***
+
+##### **Summary**
+
+Today, the Application RP container dynamically downloads the Terraform binary from hashicorp.com when a Terraform recipe is executed. This is problematic because Terraform is Radius dependency, not a Radius component. So platform engineers need to be in control of what Terraform is being used. They may use a specific version of Terraform within their organization. They may have specific licensing concerns about Terraform. Or they may simply not want Terraform to be running in their environment.
+
+Therefore, Radius will move to a model where the platform engineer explicitly installs Terraform. This is true for offline installations as well as connected installations.
+
+##### **User Experience 1 – Quick Install**
+
+The platform engineer installs Terraform using the new `rad terraform install` command.
+
+```bash
+$ rad terraform install
+No Terraform release specified, installing the latest from releases.hashicorp.com
+terraform_1.12.2_linux_amd64 installed in the Radius control plane
+```
+
+When this command is executed, Radius:
+
+* Downloads the latest Terraform release from releases.hashicorp.com and validates the checksum
+* Installs the Terraform binary in the appropriate location within the Radius control plane
+* Performs a `terraform init` and reports any output to the platform engineer
+
+Note that `terraform init` will need to be re-executed on recipe execution to initialize to a user-provided backend which happens later.
+
+Changes from today's Radius:
+
+* Terraform is no longer dynamically installed in Application RP
+
+**User Experience 2 – Advanced Install**
+
+The platform engineer uses the same command but with specific URL of the binary and its checksum.
+
+```bash
+$ rad terraform install \
+    --url="https://<tf_mirror_url>/terraform_1.5.7_linux_amd64.zip" \
+    --checksum="sha256:37f2d497ea512324d59b50ebf1b58a6fcc2a2828d638a4f6fdb1f41af00140f3"
+Downloading Terraform from <tf_mirror_url>
+Verifying checksum
+The specified Terraform CLI has been installed in the Radius control plane
+```
+
+When this command is executed, Radius:
+
+* Downloads the Terraform binary specified by the user
+* If the checksum argument is provided, the checksum is validated; if no checksum is provided, this step is skipped
+* Installs the Terraform binary in the appropriate location within the Radius control plane
+* Performs a `terraform init` and reports any output to the platform engineer
+
+### User Story 7 – Upgrading Terraform
+
+***As a platform engineer, I need to upgrade the version of Terraform used by Radius***
+
+The platform engineer uses the same `rad terraform install` command as before. The install command overrides the existing installation with either the latest version or the version specified in the URL argument.
+
+### User Story 8 – Uninstall Terraform
+
+***As a platform engineer, I need to remove all Terraform installations from my environment, including Radius***
+
+Terraform is a third-party solution which the platform engineer installs into Radius. Given this, Radius must enable platform engineers to remove Terraform as well.
+
+The platform engineer deletes the Terraform resource.
+
+```bash
+$ rad terraform uninstall
+```
+
+Radius deletes the Terraform binary from the Radius control plane.
+
 ## Summary of Property Changes
 
-| As Is                                                        | To Be                                                        |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `Environment.recipeConfig.terraform.authentication.git.pat.secret` | `TerraformSettings.credentials`                              |
-| `Environment.recipeConfig.terraform.providers.<provider>.secrets` | Replaced by Recipe parameters                                |
-| `Environment.recipeConfig.bicep.authentication.<oci-registry>.secret` | `BicepSettings.registryAuthentication`                       |
-| `SecretStore.type: awsIRSA`                                  | `BicepSettings.registryAuthentication.awsIamRoleArn`         |
-| `SecretStore.type: azureWorkloadIdeneity`                    | `BicepSettings.registryAuthentication.azureWiClientId` and `azureWiTenantId` |
-| `Environment.recipeConfig.env`                               | `TerraformSettings.env`                                      |
-| `Environment.recipeConfig.envSecrets`                        | Not implemented, replaced with Recipe parameters             |
+| As Is                                                                 | To Be                                                                        |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `Environment.recipeConfig.terraform.authentication.git.pat.secret`    | `TerraformSettings.credentials`                                              |
+| `Environment.recipeConfig.terraform.providers.<provider>.secrets`     | Not implemented, replaced with Recipe parameters                             |
+| `Environment.recipeConfig.bicep.authentication.<oci-registry>.secret` | `BicepSettings.registryAuthentication`                                       |
+| `SecretStore.type: awsIRSA`                                           | `BicepSettings.registryAuthentication.awsIamRoleArn`                         |
+| `SecretStore.type: azureWorkloadIdeneity`                             | `BicepSettings.registryAuthentication.azureWiClientId` and `azureWiTenantId` |
+| `Environment.recipeConfig.env`                                        | `TerraformSettings.env`                                                      |
+| `Environment.recipeConfig.envSecrets`                                 | Not implemented, replaced with Recipe parameters                             |
 
 ## Summary of changes
 
-| Priority | Size | Description                                                  |
-| -------- | ---- | ------------------------------------------------------------ |
-| p0       | L    | New `rad terraform install` command with URL and checksum; removal of dynamic Terraform installation |
-| p1       | M    | Setting the Terraform CLI configuration based on the new TerraformSettings resource |
+| Priority | Size | Description                                                                                                                |
+| -------- | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| p1       | M    | Setting the Terraform CLI configuration based on the new TerraformSettings resource                                        |
 | p1       | M    | `azurerm` backend type in TerraformSettings; service principal and managed identity authentication from Radius credentials |
-| p1       | S    | Support for `TF_LOG` and `TF_LOG_PATH`                       |
-| p2       | M    | `s3` backend type in TerraformSettings; access key authentication from Radius credentials |
-| p3       | M    | `kubernetes` backend type in TerraformSettings (same functionality as today but customizable) |
-| p3       | M    | New `rad terraform uninstall` command                        |
+| p1       | M    | `s3` backend type in TerraformSettings; access key authentication from Radius credentials                                  |
+| p1       | M    | `kubernetes` backend type in TerraformSettings (same functionality as today but customizable)                              |
+| p1       | M    | Setting the Bicep configuration based on the new BicepSettings resource                                                    |
+| p2       | S    | Support for `TF_LOG` and `TF_LOG_PATH`                                                                                     |
+| p3       | L    | New `rad terraform install` command with URL and checksum; removal of dynamic Terraform installation                       |
+| p3       | M    | New `rad terraform uninstall` command                                                                                      |
 
 ## Appendix: TerraformSettings Schema
 
