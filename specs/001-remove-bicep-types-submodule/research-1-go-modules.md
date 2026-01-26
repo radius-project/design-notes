@@ -20,7 +20,7 @@ From Plan 1, the following items required research:
 ### 1. Current Submodule Commit SHA
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | The bicep-types submodule points to commit `c1a289be58bea8e23cecbce871a11a3fad8c3467` |
 | **Evidence** | `git submodule status` returns: `+c1a289be58bea8e23cecbce871a11a3fad8c3467 bicep-types (heads/main-8-gc1a289b)` |
 | **Rationale** | This commit is the baseline. The Go module version should match this commit or newer. |
@@ -29,7 +29,7 @@ From Plan 1, the following items required research:
 ### 2. Go Module Structure in Azure/bicep-types
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | ✅ A valid Go module exists at `github.com/Azure/bicep-types/src/bicep-types-go` |
 | **Evidence** | The `src/bicep-types-go/go.mod` file contains: |
 
@@ -45,6 +45,7 @@ require github.com/stretchr/testify v1.11.1
 | **Alternatives Considered** | Forking bicep-types to Radius org - rejected as unnecessary complexity |
 
 **Module Packages Available:**
+
 - `types/` - Core Bicep type definitions
 - `factory/` - Type factory for creating Bicep types
 - `index/` - Type indexing utilities
@@ -54,7 +55,7 @@ require github.com/stretchr/testify v1.11.1
 ### 3. Go Subdirectory Module Support
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Go natively supports modules in subdirectories of monorepos |
 | **Evidence** | [Go Modules Reference](https://go.dev/ref/mod): "If the module is not defined in the repository's root directory, the module subdirectory is the part of the module path that names the directory." |
 | **Rationale** | The pattern `github.com/Azure/bicep-types/src/bicep-types-go` is standard Go practice (similar to `golang.org/x/tools/gopls`) |
@@ -63,12 +64,14 @@ require github.com/stretchr/testify v1.11.1
 **Version Tagging Convention:**
 
 For subdirectory modules, semantic version tags must be prefixed with the module subdirectory path:
+
 - Tag format: `src/bicep-types-go/v1.0.0`
 - If no tags exist, Go uses pseudo-versions: `v0.0.0-20260115000000-c1a289be58be`
 
 **Current Tag Status:**
 
 ⚠️ Azure/bicep-types does NOT publish semantic version tags with the subdirectory prefix. This means:
+
 - We must use commit-based pseudo-versions
 - Format: `v0.0.0-YYYYMMDDHHMMSS-<12-char-commit-hash>`
 - Example: `v0.0.0-20260115000000-c1a289be58be`
@@ -76,7 +79,7 @@ For subdirectory modules, semantic version tags must be prefixed with the module
 ### 4. Dependabot Support for Subdirectory Go Modules
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Dependabot fully supports Go modules in subdirectories |
 | **Evidence** | [Dependabot documentation](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file) confirms `gomod` ecosystem with `directory` option |
 | **Rationale** | No special configuration needed - Dependabot will detect updates to the bicep-types-go dependency |
@@ -106,12 +109,14 @@ updates:
 ### go.mod Changes
 
 **Current State:**
+
 ```go
 // replace github.com/radius-project/radius/bicep-types/src/bicep-types-go => ./bicep-types/src/bicep-types-go
 replace github.com/Azure/bicep-types/src/bicep-types-go => ./bicep-types/src/bicep-types-go
 ```
 
 **Target State:**
+
 ```go
 require (
     github.com/Azure/bicep-types/src/bicep-types-go v0.0.0-20260115000000-c1a289be58be
@@ -140,6 +145,7 @@ make test
 ### Dependabot Configuration
 
 The existing Dependabot configuration already includes:
+
 ```yaml
 - package-ecosystem: gomod
   directory: /
@@ -154,7 +160,7 @@ This will automatically pick up the new dependency. No changes required.
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
+| ---- | ---------- | ------ | ---------- |
 | Pseudo-version format changes | Low | Low | Go's pseudo-version format is stable and well-documented |
 | Upstream breaking changes | Medium | Medium | Pin to specific commit; review Dependabot PRs carefully |
 | Build failures due to missing dependencies | Low | High | Test thoroughly before merge; easy rollback available |
@@ -164,7 +170,7 @@ This will automatically pick up the new dependency. No changes required.
 ## Summary
 
 | Research Question | Answer | Confidence |
-|-------------------|--------|------------|
+| ----------------- | ------ | ---------- |
 | Current submodule commit | `c1a289be58bea8e23cecbce871a11a3fad8c3467` | ✅ High |
 | Go module available | Yes, at `github.com/Azure/bicep-types/src/bicep-types-go` | ✅ High |
 | API compatible | Yes, same module path used by Radius imports | ✅ High |

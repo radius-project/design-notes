@@ -22,7 +22,7 @@ From Plan 2, the following items required research:
 ### 1. pnpm Git Subdirectory References
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Use `github:Azure/bicep-types#path:/src/bicep-types` syntax |
 | **Evidence** | [pnpm.io/package-sources](https://pnpm.io/package-sources) documents the `#path:/` parameter |
 | **Rationale** | This is the official pnpm syntax for referencing packages in subdirectories |
@@ -60,7 +60,7 @@ Use commit SHA pinning for reproducibility:
 ### 2. pnpm + Dependabot Integration
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Use `package-ecosystem: "npm"` for pnpm projects; git dependencies require manual updates |
 | **Evidence** | [GitHub Dependabot docs](https://docs.github.com/code-security/dependabot) - pnpm v7-v10 lockfiles supported under npm ecosystem |
 | **Rationale** | Dependabot treats pnpm as npm-compatible; git-based deps have limited auto-update support |
@@ -98,7 +98,7 @@ updates:
 **Limitations:**
 
 | Feature | Support |
-|---------|---------|
+| ------- | ------- |
 | pnpm lockfile updates | ✅ Supported (v7-v10) |
 | Registry package updates | ✅ Full support |
 | Git-based dependency updates | ⚠️ Limited - manual process needed |
@@ -129,7 +129,7 @@ jobs:
 ### 3. npm to pnpm Migration
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Use `pnpm import` for lockfile conversion, then `pnpm install` |
 | **Evidence** | [pnpm.io/cli/import](https://pnpm.io/cli/import) documents the import command |
 | **Rationale** | Preserves exact dependency resolutions from package-lock.json |
@@ -167,7 +167,7 @@ rm package-lock.json
 **Key Differences from npm:**
 
 | Aspect | npm | pnpm |
-|--------|-----|------|
+| ------ | --- | ---- |
 | node_modules structure | Flat | Symlinked from store |
 | Disk usage | Duplicated | Content-addressable (shared) |
 | Install speed | Slower | Faster |
@@ -179,7 +179,7 @@ rm package-lock.json
 ### 4. pnpm in GitHub Actions
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Use `pnpm/action-setup@v4` with `actions/setup-node@v4` caching |
 | **Evidence** | [github.com/pnpm/action-setup](https://github.com/pnpm/action-setup) |
 | **Rationale** | Official pnpm action with built-in store caching |
@@ -206,7 +206,7 @@ rm package-lock.json
 **Action Features:**
 
 | Option | Description | Recommended |
-|--------|-------------|-------------|
+| ------ | ----------- | ----------- |
 | `version` | pnpm version (10, 10.x, 10.8.1) | `10` |
 | `run_install` | Auto-run install | `false` (explicit is better) |
 | Built-in cache | Automatic store caching | Uses setup-node cache |
@@ -246,7 +246,7 @@ jobs:
 ### 5. Dev Container pnpm Installation
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | Use official Node.js feature with Corepack activation |
 | **Evidence** | [containers.dev/features](https://containers.dev/features) - Node feature includes pnpm via Corepack |
 | **Rationale** | Corepack is the Node.js-native package manager manager |
@@ -290,7 +290,7 @@ The Radius dev container already includes Node.js. The update needed:
 ### 6. bicep-types npm Package Structure
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **Decision** | The `src/bicep-types/` directory is a valid, self-contained TypeScript npm package |
 | **Evidence** | Repository exploration of Azure/bicep-types |
 | **Rationale** | Package has complete package.json, TypeScript config, and test suite |
@@ -298,7 +298,7 @@ The Radius dev container already includes Node.js. The update needed:
 
 **Package Structure:**
 
-```
+```text
 src/bicep-types/
 ├── package.json          # Package configuration
 ├── tsconfig.json         # TypeScript compilation config
@@ -330,7 +330,7 @@ export * from "./types";             // TypeFactory, TypeIndex, BicepType, etc.
 **Key Types Used by Radius:**
 
 | Type | Purpose |
-|------|---------|
+| ---- | ------- |
 | `TypeFactory` | Creates and manages Bicep types |
 | `TypeIndex` | Index structure for resources and functions |
 | `BicepType` | Union of all Bicep type variants |
@@ -430,7 +430,7 @@ generate-bicep-types:
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
+| ---- | ---------- | ------ | ---------- |
 | pnpm git subdirectory refs unstable | Low | High | Well-documented feature; test thoroughly |
 | Dependabot can't update git deps | Medium | Low | Document manual process; consider future Renovate |
 | Dev container pnpm issues | Low | Medium | Use Corepack which is Node.js-native |
@@ -442,7 +442,7 @@ generate-bicep-types:
 ## Summary
 
 | Research Question | Answer | Confidence |
-|-------------------|--------|------------|
+| ----------------- | ------ | ---------- |
 | Git subdirectory syntax | `github:Azure/bicep-types#<sha>&path:/src/bicep-types` | ✅ High |
 | Dependabot integration | `npm` ecosystem; manual git dep updates | ✅ High |
 | npm to pnpm migration | `pnpm import` + `pnpm install` | ✅ High |
