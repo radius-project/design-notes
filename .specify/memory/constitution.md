@@ -1,8 +1,11 @@
 <!--
 Sync Impact Report
-- Version change: N/A -> 1.0.0
-- Modified principles: none (new document)
+- Version change: 1.1.0 -> 1.2.0
+- Modified principles: none
 - Added sections:
+  - Project Structure (multi-repository overview)
+  - VS Code Workspace (workspace file guidance for Spec Kit users)
+  - Spec Kit Usage (template folder exclusion guidance)
   - Principle I (API-First Design)
   - Principle II (Idiomatic Code Standards)
   - Principle III (Multi-Cloud Neutrality)
@@ -31,6 +34,34 @@ Sync Impact Report
 -->
 
 # Radius Design Notes Constitution
+
+## Project Structure
+
+Radius is a **multi-repository application**. To fully understand Radius as a platform, you MUST consider the following repositories, which work together to form the complete system:
+
+| Repository | Purpose | Location |
+| ------------ | --------- | ---------- |
+| **radius** | Core control plane, CLI, resource providers, controllers, and API definitions (Go, TypeSpec) | `../radius` |
+| **dashboard** | Web UI for Radius built on Backstage (TypeScript, React) | `../dashboard` |
+| **docs** | User documentation site built with Hugo (Markdown) | `../docs` |
+| **resource-types-contrib** | Community-contributed resource type schemas and Recipes (YAML, Bicep, Terraform) | `../resource-types-contrib` |
+
+These repositories are located as sibling folders to this `design-notes` repository. Features and changes often span multiple repositories, requiring coordinated design and implementation.
+
+### VS Code Workspace
+
+This repository includes a VS Code workspace file at the root: `design-notes.code-workspace`. **Users of Spec Kit in this repository are strongly encouraged to open this workspace** rather than opening individual repositories. The workspace provides:
+
+- All five Radius repositories in a single VS Code window
+- Consistent settings for cross-repository development
+- Unified search across all Radius codebases
+- Better context for AI assistants understanding the full scope of Radius
+
+To use: Open VS Code → File → Open Workspace from File → Select `design-notes.code-workspace`
+
+### Spec Kit Usage
+
+When using Spec Kit commands in this repository, the `./template` folder at the repository root MUST be ignored. This folder contains legacy or example templates that are NOT intended for use with Spec Kit workflows. Spec Kit templates are located in `.specify/templates/` and are managed separately.
 
 ## Core Principles
 
@@ -368,4 +399,4 @@ For day-to-day development guidance beyond this constitution, refer to:
 - [Developer guides](https://github.com/radius-project/radius/tree/main/docs/contributing) for detailed technical instructions
 - [Code organization guide](https://github.com/radius-project/radius/blob/main/docs/contributing/contributing-code/contributing-code-organization/README.md) for repository structure
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-07
+**Version**: 1.2.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2026-01-30
