@@ -26,9 +26,9 @@ This plan addresses:
 
 **Purpose**: Prepare pnpm tooling and verify prerequisites
 
-- [ ] T001 Verify Plan 1 (Go modules migration) is merged to main
-- [ ] T002 Verify pnpm is installed locally via `pnpm --version`
-- [ ] T003 Identify current bicep-types submodule commit SHA for pnpm git references via `git submodule status` in radius/
+- [x] T001 Verify Plan 1 (Go modules migration) is merged to main
+- [x] T002 Verify pnpm is installed locally via `pnpm --version`
+- [x] T003 Identify current bicep-types submodule commit SHA for pnpm git references via `git submodule status` in radius/
 
 ---
 
@@ -38,9 +38,9 @@ This plan addresses:
 
 **⚠️ CRITICAL**: Complete before any user story implementation
 
-- [ ] T004 Create feature branch `001-remove-bicep-types-submodule-pnpm` from main
-- [ ] T005 Pull latest main to ensure Plan 1 changes are included
-- [ ] T006 Verify current build works via `make build` in radius/
+- [x] T004 Create feature branch `001-remove-bicep-types-submodule-pnpm` from main
+- [x] T005 Pull latest main to ensure Plan 1 changes are included
+- [x] T006 Verify current build works via `make build` in radius/
 
 **Checkpoint**: Foundation ready - pnpm migration can proceed
 
@@ -56,34 +56,34 @@ This plan addresses:
 
 #### pnpm Migration - typespec/
 
-- [ ] T007 [US1] Delete radius/typespec/package-lock.json
-- [ ] T008 [US1] Generate pnpm lockfile via `pnpm install` in radius/typespec/
-- [ ] T009 [US1] Verify typespec builds via `pnpm run build` in radius/typespec/
+- [x] T007 [US1] Delete radius/typespec/package-lock.json
+- [x] T008 [US1] Generate pnpm lockfile via `pnpm install` in radius/typespec/
+- [x] T009 [US1] Verify typespec builds via `pnpm run build` in radius/typespec/
 
 #### pnpm Migration - hack/bicep-types-radius/src/generator/
 
-- [ ] T010 [US1] Update radius/hack/bicep-types-radius/src/generator/package.json: change bicep-types from `file:` to `github:Azure/bicep-types#<sha>&path:/src/bicep-types`
-- [ ] T011 [US1] Delete radius/hack/bicep-types-radius/src/generator/package-lock.json
-- [ ] T012 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/generator/
-- [ ] T013 [US1] Verify generator builds via `pnpm run build` in radius/hack/bicep-types-radius/src/generator/
+- [x] T010 [US1] Update radius/hack/bicep-types-radius/src/generator/package.json: change bicep-types from `file:` to `github:Azure/bicep-types#<sha>&path:/src/bicep-types`
+- [x] T011 [US1] Delete radius/hack/bicep-types-radius/src/generator/package-lock.json
+- [x] T012 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/generator/
+- [x] T013 [US1] Verify generator builds via `pnpm run build` in radius/hack/bicep-types-radius/src/generator/
 
 #### pnpm Migration - hack/bicep-types-radius/src/autorest.bicep/
 
-- [ ] T014 [US1] Update radius/hack/bicep-types-radius/src/autorest.bicep/package.json: change bicep-types from `file:` to `github:Azure/bicep-types#<sha>&path:/src/bicep-types`
-- [ ] T015 [US1] Delete radius/hack/bicep-types-radius/src/autorest.bicep/package-lock.json
-- [ ] T016 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/autorest.bicep/
-- [ ] T017 [US1] Verify autorest.bicep builds via `pnpm run build` in radius/hack/bicep-types-radius/src/autorest.bicep/
+- [x] T014 [US1] Update radius/hack/bicep-types-radius/src/autorest.bicep/package.json: change bicep-types from `file:` to `github:Azure/bicep-types#<sha>&path:/src/bicep-types`
+- [x] T015 [US1] Delete radius/hack/bicep-types-radius/src/autorest.bicep/package-lock.json
+- [x] T016 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/autorest.bicep/
+- [x] T017 [US1] Verify autorest.bicep builds via `pnpm run build` in radius/hack/bicep-types-radius/src/autorest.bicep/
 
 #### Submodule Removal
 
-- [ ] T018 [US1] Remove submodule from git index via `git rm bicep-types` in radius/
-- [ ] T019 [US1] Delete radius/.gitmodules file
-- [ ] T020 [US1] Clean up .git/modules/bicep-types directory via `rm -rf .git/modules/bicep-types`
+- [x] T018 [US1] Remove submodule from git index via `git rm bicep-types` in radius/
+- [x] T019 [US1] Delete radius/.gitmodules file
+- [x] T020 [US1] Clean up .git/modules/bicep-types directory via `rm -rf .git/modules/bicep-types`
 
 #### Verify Build Works
 
-- [ ] T021 [US1] Verify full build via `make build` in radius/
-- [ ] T022 [US1] Verify tests via `make test` in radius/
+- [x] T021 [US1] Verify full build via `make build` in radius/
+- [x] T022 [US1] Verify tests via `make test` in radius/
 
 **Checkpoint**: Repository builds and tests pass without submodule
 
@@ -99,33 +99,33 @@ This plan addresses:
 
 #### Makefile Updates
 
-- [ ] T023 [US2] Update radius/build/generate.mk: replace `npm` commands with `pnpm`
-- [ ] T024 [US2] Update radius/build/generate.mk: remove `git submodule update --init --recursive` commands
-- [ ] T025 [US2] Verify `make generate-bicep-types` works in radius/
+- [x] T023 [US2] Update radius/build/generate.mk: replace `npm` commands with `pnpm`
+- [x] T024 [US2] Update radius/build/generate.mk: remove `git submodule update --init --recursive` commands
+- [x] T025 [US2] Verify `make generate-bicep-types` works in radius/
 
 #### Workflow Updates - build.yaml (4 occurrences)
 
-- [ ] T026 [US2] Update radius/.github/workflows/build.yaml line ~110: remove `submodules: recursive` from checkout step
-- [ ] T027 [US2] Update radius/.github/workflows/build.yaml line ~212: remove `submodules: recursive` from checkout step
-- [ ] T028 [US2] Update radius/.github/workflows/build.yaml line ~369: remove `submodules: recursive` from checkout step
-- [ ] T029 [US2] Update radius/.github/workflows/build.yaml line ~436: remove `submodules: recursive` from checkout step
-- [ ] T030 [US2] Add pnpm setup step to radius/.github/workflows/build.yaml (pnpm/action-setup@v4)
+- [x] T026 [US2] Update radius/.github/workflows/build.yaml line ~110: remove `submodules: recursive` from checkout step
+- [x] T027 [US2] Update radius/.github/workflows/build.yaml line ~212: remove `submodules: recursive` from checkout step
+- [x] T028 [US2] Update radius/.github/workflows/build.yaml line ~369: remove `submodules: recursive` from checkout step
+- [x] T029 [US2] Update radius/.github/workflows/build.yaml line ~436: remove `submodules: recursive` from checkout step
+- [x] T030 [US2] Add pnpm setup step to radius/.github/workflows/build.yaml (pnpm/action-setup@v4)
 
 #### Workflow Updates - Other Files
 
-- [ ] T031 [P] [US2] Update radius/.github/workflows/codeql.yml line ~95: remove `submodules: recursive`, add pnpm setup
-- [ ] T032 [P] [US2] Update radius/.github/workflows/lint.yaml line ~58: remove `submodules: recursive`, add pnpm setup
-- [ ] T033 [P] [US2] Update radius/.github/workflows/validate-bicep.yaml line ~64: remove `submodules: true`, add pnpm setup
-- [ ] T034 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~52: remove `submodules: recursive`, add pnpm setup
-- [ ] T035 [P] [US2] Update radius/.github/workflows/long-running-azure.yaml line ~136: remove `submodules: recursive`, add pnpm setup
+- [x] T031 [P] [US2] Update radius/.github/workflows/codeql.yml line ~95: remove `submodules: recursive`, add pnpm setup
+- [x] T032 [P] [US2] Update radius/.github/workflows/lint.yaml line ~58: remove `submodules: recursive`, add pnpm setup
+- [x] T033 [P] [US2] Update radius/.github/workflows/validate-bicep.yaml line ~64: remove `submodules: true`, add pnpm setup
+- [x] T034 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~52: remove `submodules: recursive`, add pnpm setup
+- [x] T035 [P] [US2] Update radius/.github/workflows/long-running-azure.yaml line ~136: remove `submodules: recursive`, add pnpm setup
 
 #### Workflow Updates - Functional Tests (4 occurrences in cloud.yaml)
 
-- [ ] T036 [US2] Update radius/.github/workflows/functional-test-noncloud.yaml line ~208: remove `submodules: recursive`, add pnpm setup
-- [ ] T037 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~172: remove `submodules: recursive`, add pnpm setup
-- [ ] T038 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~328: remove `submodules: recursive`, add pnpm setup
-- [ ] T039 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~336: remove `submodules: recursive`, add pnpm setup
-- [ ] T040 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~626: remove `submodules: recursive`, add pnpm setup
+- [x] T036 [US2] Update radius/.github/workflows/functional-test-noncloud.yaml line ~208: remove `submodules: recursive`, add pnpm setup
+- [x] T037 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~172: remove `submodules: recursive`, add pnpm setup
+- [x] T038 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~328: remove `submodules: recursive`, add pnpm setup
+- [x] T039 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~336: remove `submodules: recursive`, add pnpm setup
+- [x] T040 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~626: remove `submodules: recursive`, add pnpm setup
 
 **Checkpoint**: All 15 submodule references removed from 8 workflow files
 
@@ -139,10 +139,10 @@ This plan addresses:
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Update radius/.github/dependabot.yml: remove `gitsubmodule` package-ecosystem section
-- [ ] T042 [P] [US3] Update radius/.github/dependabot.yml: add pnpm config for `/hack/bicep-types-radius/src/generator`
-- [ ] T043 [P] [US3] Update radius/.github/dependabot.yml: add pnpm config for `/hack/bicep-types-radius/src/autorest.bicep`
-- [ ] T044 [US3] Verify Dependabot config syntax via `actionlint` or manual review
+- [x] T041 [US3] Update radius/.github/dependabot.yml: remove `gitsubmodule` package-ecosystem section
+- [x] T042 [P] [US3] Update radius/.github/dependabot.yml: add pnpm config for `/hack/bicep-types-radius/src/generator`
+- [x] T043 [P] [US3] Update radius/.github/dependabot.yml: add pnpm config for `/hack/bicep-types-radius/src/autorest.bicep`
+- [x] T044 [US3] Verify Dependabot config syntax via `actionlint` or manual review
 
 **Checkpoint**: Dependabot configured for all pnpm directories
 
@@ -174,17 +174,17 @@ This plan addresses:
 
 #### Dev Container
 
-- [ ] T048 [US5] Update radius/.devcontainer/devcontainer.json: add corepack pnpm activation to postCreateCommand
+- [x] T048 [US5] Update radius/.devcontainer/devcontainer.json: add corepack pnpm activation to postCreateCommand
 
 #### Contributing Documentation
 
-- [ ] T049 [P] [US5] Update radius/CONTRIBUTING.md: replace npm with pnpm, remove all submodule references
-- [ ] T050 [P] [US5] Create radius/docs/contributing/migration-guide.md with cleanup commands for existing clones
+- [x] T049 [P] [US5] Update radius/CONTRIBUTING.md: replace npm with pnpm, remove all submodule references
+- [x] T050 [P] [US5] Create radius/docs/contributing/migration-guide.md with cleanup commands for existing clones
 
 #### README Updates
 
-- [ ] T051 [P] [US5] Review and update radius/README.md if it mentions submodules
-- [ ] T052 [P] [US5] Review and update radius/hack/bicep-types-radius/README.md if it exists
+- [x] T051 [P] [US5] Review and update radius/README.md if it mentions submodules
+- [x] T052 [P] [US5] Review and update radius/hack/bicep-types-radius/README.md if it exists
 
 **Checkpoint**: All documentation updated
 
@@ -194,10 +194,10 @@ This plan addresses:
 
 **Purpose**: Final verification before PR
 
-- [ ] T053 Run full `make build` in radius/
+- [x] T053 Run full `make build` in radius/
 - [ ] T054 Run full `make test` in radius/
 - [ ] T055 [P] Run `make generate-bicep-types` to verify codegen workflow
-- [ ] T056 [P] Verify pnpm lockfiles are consistent via `pnpm install --frozen-lockfile` in each directory
+- [x] T056 [P] Verify pnpm lockfiles are consistent via `pnpm install --frozen-lockfile` in each directory
 - [ ] T057 Fresh clone test: clone to new directory without `--recurse-submodules`, verify build
 - [ ] T058 Create PR from `001-remove-bicep-types-submodule-pnpm` to main
 - [ ] T059 Verify all CI workflows pass on PR
