@@ -1,8 +1,11 @@
 # Feature Specification: Git App Graph Preview
 
 **Feature Branch**: `001-git-app-graph-preview`
+
 **Created**: January 30, 2026
+
 **Status**: Draft
+
 **Input**: User description: "Radius currently stores the state of application deployments as an app graph within its data store. Today, the app graph does not get generated until the application is deployed. Help me build an app graph representation for applications that are defined (e.g. in an app.bicep file) but not yet deployed. Additionally, enrich the app graph representation with git changelog info (i.e. git commit data) so that I may use this data to visualize how the app graph changes over time (i.e. across commits). The ultimate goal is to be able to visualize the app graph and do diffs of the app graph in GitHub on PRs, commit comparisons, etc."
 
 ## Problem Statement
