@@ -15,23 +15,6 @@ Radius currently generates application graphs only after deployment, which means
 
 This feature introduces **static app graph generation** from Bicep files and **git-aware graph versioning** to enable visualization and diffing in GitHub workflows.
 
----
-
-## Constitution Alignment
-
-This specification addresses the following constitution principles:
-
-| Principle | How This Feature Aligns |
-|-----------|------------------------|
-| **I. API-First Design** | Graph generation will expose a well-defined API using TypeSpec; outputs follow consistent JSON schema |
-| **V. Collaboration-Centric Design** | Enables developers to preview topology; enables platform engineers to review architectural changes in PRs |
-| **VI. Open Source and Community-First** | Feature designed for GitHub-native workflows; PR visualization benefits community contributors |
-| **VII. Simplicity Over Cleverness** | Leverages existing Bicep CLI for parsing rather than custom parser; minimal new abstractions |
-| **VIII. Separation of Concerns** | Graph generation, git enrichment, and output formatting are distinct modules |
-| **IX. Incremental Adoption** | Feature is opt-in via CLI flags; does not change existing deployment workflows |
-
----
-
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Generate App Graph from Bicep Files (Priority: P1)
