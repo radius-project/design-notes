@@ -1,6 +1,6 @@
 <!--
 Sync Impact Report
-- Version change: 1.1.0 -> 1.2.0
+- Version change: 1.0.0 -> 1.1.0
 - Modified principles: none
 - Added sections:
   - Project Structure (multi-repository overview)
@@ -399,4 +399,4 @@ For day-to-day development guidance beyond this constitution, refer to:
 - [Developer guides](https://github.com/radius-project/radius/tree/main/docs/contributing) for detailed technical instructions
 - [Code organization guide](https://github.com/radius-project/radius/blob/main/docs/contributing/contributing-code/contributing-code-organization/README.md) for repository structure
 
-**Version**: 1.2.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2026-01-30
+**Version**: 1.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2026-01-30
