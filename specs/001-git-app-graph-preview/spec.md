@@ -29,15 +29,15 @@ As a **platform engineer**, I want to review app graph changes in PRs, so I can 
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid `app.bicep` file with container, gateway, and database resources, **When** I run `rad graph generate app.bicep`, **Then** I receive a JSON graph representation showing all resources and their connections.
+1. **Given** a valid `app.bicep` file with container, gateway, and database resources, **When** I run `rad app graph app.bicep`, **Then** I receive a JSON graph representation showing all resources and their connections.
 
-2. **Given** a Bicep file with syntax errors, **When** I run `rad graph generate app.bicep`, **Then** I receive a clear error message indicating the parsing failure with line/column information.
+2. **Given** a Bicep file with syntax errors, **When** I run `rad app graph app.bicep`, **Then** I receive a clear error message indicating the parsing failure with line/column information.
 
-3. **Given** a Bicep file referencing external modules, **When** I run `rad graph generate app.bicep`, **Then** the graph includes resources from all referenced modules with proper dependency tracking.
+3. **Given** a Bicep file referencing external modules, **When** I run `rad app graph app.bicep`, **Then** the graph includes resources from all referenced modules with proper dependency tracking.
 
-4. **Given** a Bicep file with parameterized values, **When** I run `rad graph generate app.bicep --parameters params.json`, **Then** the graph reflects the resolved parameter values.
+4. **Given** a Bicep file with parameterized values, **When** I run `rad app graph app.bicep --parameters params.json`, **Then** the graph reflects the resolved parameter values.
 
-5. **Given** a Bicep file using the Radius Bicep extension types, **When** I run `rad graph generate app.bicep`, **Then** the graph correctly identifies Radius-specific resource types and their relationships.
+5. **Given** a Bicep file using the Radius Bicep extension types, **When** I run `rad app graph app.bicep`, **Then** the graph correctly identifies Radius-specific resource types and their relationships.
 
 ---
 
@@ -111,11 +111,11 @@ As a developer, I want to view how my app graph evolved across commits, so I can
 
 **Acceptance Scenarios**:
 
-1. **Given** a git repository with multiple commits affecting Bicep files, **When** I run `rad graph history --commits 10`, **Then** I receive a timeline showing graph snapshots at each commit with change summaries.
+1. **Given** a git repository with multiple commits affecting Bicep files, **When** I run `rad app graph history app.bicep --commits 10`, **Then** I receive a timeline showing graph snapshots at each commit with change summaries.
 
-2. **Given** a specific commit SHA, **When** I run `rad graph show --commit abc123`, **Then** I receive the app graph as it existed at that commit.
+2. **Given** a specific commit SHA, **When** I run `rad app graph app.bicep --at abc123`, **Then** I receive the app graph as it existed at that commit.
 
-3. **Given** two commit SHAs, **When** I run `rad graph diff --from abc123 --to def456`, **Then** I receive a detailed diff showing all graph changes between those commits.
+3. **Given** two commit SHAs, **When** I run `rad app graph diff app.bicep --from abc123 --to def456`, **Then** I receive a detailed diff showing all graph changes between those commits.
 
 ---
 
@@ -151,6 +151,29 @@ As a developer, I want to export the app graph as a Mermaid diagram, so I can em
   - Mark affected values as "dynamic" in the graph, use placeholder notation
 - What happens when Bicep files use cloud-specific resources (Azure, AWS)?
   - Graph generation MUST work regardless of cloud provider; cloud-specific resources are represented with their provider prefix (e.g., `Microsoft.Storage/storageAccounts`, `AWS::S3::Bucket`)
+
+---
+
+## CLI Design
+
+This feature extends the existing `rad app graph` command with file-based input for static graph generation. The command intelligently distinguishes between deployed apps and Bicep files based on the argument:
+
+| Command | Input Type | Behavior |
+|---------|------------|----------|
+| `rad app graph myapp` | App name | Show deployed app graph (existing) |
+| `rad app graph myapp -e prod` | App name + environment | Show deployed graph in specific environment |
+| `rad app graph app.bicep` | Bicep file (`.bicep` extension) | Generate preview graph from file |
+| `rad app graph app.bicep --format mermaid` | Bicep file + format | Preview with Mermaid output |
+| `rad app graph app.bicep --git-enrich` | Bicep file + git | Preview with git metadata |
+| `rad app graph app.bicep --at abc123` | Bicep file + commit | Preview at specific commit |
+| `rad app graph diff app.bicep --from abc123 --to def456` | Bicep file + commits | Diff between commits |
+| `rad app graph history app.bicep --commits 10` | Bicep file + count | Show historical timeline |
+
+**Design Rationale**: Unifying under `rad app graph` provides:
+- Conceptual consistency: both are "app graphs" (prospective vs. deployed)
+- Discoverability: all graph functionality in one place
+- Intuitive disambiguation: `.bicep` extension clearly indicates file input
+- Alignment with existing `rad app graph <appname>` pattern
 
 ---
 
@@ -272,7 +295,7 @@ This feature may affect multiple Radius repositories:
 
 | Repository | Impact |
 |------------|--------|
-| `radius` | CLI implementation (`pkg/cli/cmd/graph/`), core graph logic |
+| `radius` | CLI implementation (`pkg/cli/cmd/app/graph/`), core graph logic |
 | `docs` | User documentation for new CLI commands, GitHub Action setup guide |
 | `design-notes` | This specification and implementation plan |
 
