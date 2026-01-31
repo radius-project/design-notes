@@ -49,35 +49,47 @@ As a developer, I want the app graph exported in a deterministic, diff-friendly 
 
 **Independent Test**: Generate graph twice from identical Bicep, verify outputs are byte-identical. Modify Bicep, regenerate, verify diff shows only the changed elements.
 
+**Output Model**: JSON is the canonical data format, always generated. Markdown is a rendered preview of the JSON data, generated additively when requested.
+
 **Acceptance Scenarios**:
 
-1. **Given** an app graph, **When** I export it, **Then** the output is deterministically sorted (alphabetical by resource ID) producing identical output for identical inputs.
+1. **Given** an app graph, **When** I export it, **Then** the JSON output is deterministically sorted (alphabetical by resource ID) producing identical output for identical inputs.
 
-2. **Given** an app graph, **When** I export to markdown format, **Then** I receive a human-readable document with a resource table and ASCII connection diagram suitable for GitHub rendering.
+2. **Given** an app graph, **When** I run `rad app graph app.bicep`, **Then** I receive JSON output that serves as the single source of truth for all automation and diff operations.
 
-3. **Given** an app graph, **When** I export to JSON format, **Then** I receive a structured document with stable key ordering that produces minimal diffs when resources change.
+3. **Given** an app graph, **When** I run `rad app graph app.bicep --format markdown`, **Then** I receive **both** JSON and a Markdown preview containing:
+   - A resource table with name, type, source file, and git metadata
+   - An embedded Mermaid diagram showing the topology that GitHub renders automatically
 
-4. **Given** two app graphs from different commits, **When** I diff them, **Then** added resources show as additions, removed resources show as deletions, and modified connections are clearly visible.
+4. **Given** a graph exported with `--format markdown`, **When** I write to files with `-o graph`, **Then** both `graph.json` and `graph.md` are created.
+
+5. **Given** a graph exported to markdown, **When** viewed in GitHub, **Then** the Mermaid diagram renders as a visual flowchart with distinct shapes for resource types (containers as rectangles, gateways as diamonds, databases as cylinders).
+
+6. **Given** two app graphs from different commits, **When** I diff them, **Then** the diff is computed from JSON (not Markdown), and added/removed/modified resources are clearly identified.
 
 ---
 
-### User Story 3 - Enrich Graph with Git Metadata (Priority: P2)
+### User Story 3 - Git Metadata Enrichment (Priority: P2)
 
-As a developer, I want the app graph to include git commit information, so I can track when and why each resource was added or modified.
+As a developer, I want the app graph to automatically include git commit information, so I can track when and why each resource was added or modified.
 
 **Why this priority**: Builds on P1 capabilities to enable historical tracking. Valuable but not blocking core functionality.
 
-**Independent Test**: Generate graph with git enrichment enabled, verify each resource includes commit SHA, author, and timestamp of last modification.
+**Independent Test**: Generate graph from a Bicep file in a git repository, verify each resource includes commit SHA, author, and timestamp of last modification by default.
 
 **Acceptance Scenarios**:
 
-1. **Given** a Bicep file in a git repository, **When** I generate the graph with `--git-enrich`, **Then** each resource includes the commit SHA, author, date, and message of its last modification.
+1. **Given** a Bicep file in a git repository, **When** I run `rad app graph app.bicep`, **Then** each resource automatically includes the commit SHA, author, date, and message of its last modification.
 
-2. **Given** a resource defined across multiple Bicep files, **When** I generate the enriched graph, **Then** the resource shows the most recent commit that affected any of its defining files.
+2. **Given** a resource defined across multiple Bicep files, **When** I generate the graph, **Then** the resource shows the most recent commit that affected any of its defining files.
 
-3. **Given** a newly added resource not yet committed, **When** I generate the enriched graph, **Then** the resource is marked as "uncommitted" with the current working directory state.
+3. **Given** a newly added resource not yet committed, **When** I generate the graph, **Then** the resource is marked as "uncommitted" with the current working directory state.
 
 4. **Given** a graph with git metadata, **When** I export to markdown, **Then** each resource row includes a linked commit SHA (e.g., `[abc123](../../commit/abc123)`).
+
+5. **Given** a Bicep file in a git repository, **When** I run `rad app graph app.bicep --no-git`, **Then** the graph is generated without git metadata for faster execution.
+
+6. **Given** a Bicep file outside a git repository, **When** I run `rad app graph app.bicep`, **Then** the graph is generated successfully with git fields marked as "not available".
 
 ---
 
@@ -119,24 +131,6 @@ As a developer, I want to view how my app graph evolved across commits, so I can
 
 ---
 
-### User Story 6 - Mermaid Diagram Generation (Priority: P3)
-
-As a developer, I want to export the app graph as a Mermaid diagram, so I can embed it in documentation and have GitHub render it automatically.
-
-**Why this priority**: Nice-to-have visualization enhancement. GitHub natively renders Mermaid in markdown.
-
-**Independent Test**: Export graph to Mermaid format, paste into GitHub markdown file, verify it renders as expected.
-
-**Acceptance Scenarios**:
-
-1. **Given** an app graph, **When** I export with `--format mermaid`, **Then** I receive valid Mermaid flowchart syntax that renders correctly in GitHub.
-
-2. **Given** a graph with multiple resource types, **When** I export to Mermaid, **Then** different resource types use distinct shapes (e.g., containers as rectangles, gateways as diamonds, databases as cylinders).
-
-3. **Given** a graph with connection directions, **When** I export to Mermaid, **Then** arrows indicate the direction of dependencies (outbound connections).
-
----
-
 ### Edge Cases
 
 - What happens when Bicep file references resources outside the current file/module that cannot be resolved?
@@ -146,7 +140,7 @@ As a developer, I want to export the app graph as a Mermaid diagram, so I can em
 - What happens when git history is shallow (e.g., `--depth 1` clone)?
   - Gracefully degrade: use available history, mark resources as "history unavailable" when git blame fails
 - How does the system handle large graphs (100+ resources)?
-  - Paginate CLI output, provide `--filter` options, optimize JSON/Mermaid output for size
+  - Paginate CLI output, provide `--filter` options, optimize JSON/Markdown output for size
 - What happens when Bicep uses runtime expressions that can't be statically resolved?
   - Mark affected values as "dynamic" in the graph, use placeholder notation
 - What happens when Bicep files use cloud-specific resources (Azure, AWS)?
@@ -158,16 +152,23 @@ As a developer, I want to export the app graph as a Mermaid diagram, so I can em
 
 This feature extends the existing `rad app graph` command with file-based input for static graph generation. The command intelligently distinguishes between deployed apps and Bicep files based on the argument:
 
-| Command | Input Type | Behavior |
-|---------|------------|----------|
-| `rad app graph myapp` | App name | Show deployed app graph (existing) |
-| `rad app graph myapp -e prod` | App name + environment | Show deployed graph in specific environment |
-| `rad app graph app.bicep` | Bicep file (`.bicep` extension) | Generate preview graph from file |
-| `rad app graph app.bicep --format mermaid` | Bicep file + format | Preview with Mermaid output |
-| `rad app graph app.bicep --git-enrich` | Bicep file + git | Preview with git metadata |
-| `rad app graph app.bicep --at abc123` | Bicep file + commit | Preview at specific commit |
-| `rad app graph diff app.bicep --from abc123 --to def456` | Bicep file + commits | Diff between commits |
-| `rad app graph history app.bicep --commits 10` | Bicep file + count | Show historical timeline |
+| Command | Input Type | Output |
+|---------|------------|--------|
+| `rad app graph myapp` | App name | Deployed app graph (existing behavior) |
+| `rad app graph myapp -e prod` | App name + environment | Deployed graph in specific environment |
+| `rad app graph app.bicep` | Bicep file (`.bicep` extension) | JSON to stdout |
+| `rad app graph app.bicep -o graph.json` | Bicep file + output file | JSON to file |
+| `rad app graph app.bicep --format markdown` | Bicep file + markdown | JSON + Markdown to stdout |
+| `rad app graph app.bicep --format markdown -o graph` | Bicep file + markdown + output | `graph.json` + `graph.md` files |
+| `rad app graph app.bicep --no-git` | Bicep file + no-git | JSON without git metadata (faster) |
+| `rad app graph app.bicep --at abc123` | Bicep file + commit | JSON at specific commit |
+| `rad app graph diff app.bicep --from abc123 --to def456` | Bicep file + commits | Diff computed from JSON, output as JSON or Markdown |
+| `rad app graph history app.bicep --commits 10` | Bicep file + count | Historical timeline |
+
+**Output Model**:
+- **JSON is canonical**: Always generated, serves as the single source of truth for all automation and diff operations
+- **Markdown is additive**: When `--format markdown` is specified, Markdown is generated *in addition to* JSON as a human-readable preview
+- **GitHub Action uses JSON**: Diff computation is always JSON-to-JSON; Markdown is purely a rendering/presentation layer for PR comments
 
 **Design Rationale**: Unifying under `rad app graph` provides:
 - Conceptual consistency: both are "app graphs" (prospective vs. deployed)
@@ -185,10 +186,10 @@ This feature extends the existing `rad app graph` command with file-based input 
 - **FR-002**: System MUST resolve module references and build a complete graph across multiple Bicep files
 - **FR-003**: System MUST extract connection relationships from resource properties (connections, routes, ports)
 - **FR-004**: System MUST produce deterministic output (same input = byte-identical output)
-- **FR-005**: System MUST support JSON output format with stable key ordering
-- **FR-006**: System MUST support Markdown output format with resource tables and ASCII diagrams
-- **FR-007**: System MUST support Mermaid output format for GitHub-native rendering
-- **FR-008**: System MUST enrich graph nodes with git metadata (commit SHA, author, date, message) when requested
+- **FR-005**: System MUST always generate JSON output as the canonical data format with stable key ordering for deterministic diffs
+- **FR-006**: System MUST support Markdown output as an **additive** preview format (generated alongside JSON when `--format markdown` is specified), containing a resource table and embedded Mermaid diagram
+- **FR-007**: System MUST perform all diff computations using JSON data, with Markdown used only as a rendering layer for human consumption
+- **FR-008**: System MUST enrich graph nodes with git metadata (commit SHA, author, date, message) by default when in a git repository, with `--no-git` flag to disable
 - **FR-009**: System MUST track which Bicep file(s) define each resource for git blame integration
 - **FR-010**: System MUST provide a GitHub Action that generates and posts graph diffs on PRs
 - **FR-011**: System MUST update existing PR comments rather than creating duplicates
@@ -245,7 +246,7 @@ This feature extends the existing `rad app graph` command with file-based input 
 - **SC-002**: Generated graphs are 100% deterministic (identical input produces byte-identical output)
 - **SC-003**: Graph diff correctly identifies all added, removed, and modified resources with zero false positives
 - **SC-004**: GitHub Action posts PR comments within 60 seconds of workflow trigger
-- **SC-005**: Markdown/Mermaid output renders correctly in GitHub without manual formatting
+- **SC-005**: Markdown output (including embedded Mermaid diagram) renders correctly in GitHub without manual formatting
 - **SC-006**: Git enrichment adds < 2 seconds overhead for repositories with up to 1000 commits
 - **SC-007**: System handles Bicep files up to 5000 lines without performance degradation
 - **SC-008**: Error messages include actionable guidance in 100% of failure cases
@@ -259,7 +260,7 @@ This feature MUST include comprehensive testing across the testing pyramid:
 ### Unit Tests
 - Test individual graph parsing functions in isolation
 - Test git metadata extraction logic
-- Test output formatters (JSON, Markdown, Mermaid) with known inputs
+- Test output formatters (JSON, Markdown with embedded Mermaid) with known inputs
 - Test error handling for malformed Bicep files
 - All unit tests runnable with `make test` without external dependencies
 
