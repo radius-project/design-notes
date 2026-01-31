@@ -1,8 +1,8 @@
 # Research: pnpm Migration and Submodule Removal
 
 **Plan**: [plan-2-pnpm-submodule.md](./plan-2-pnpm-submodule.md)
-**Date**: 2026-01-22
-**Status**: Complete
+**Date**: 2026-01-22 (Updated: 2026-01-31)
+**Status**: Complete (Validated via prototype)
 
 ## Research Questions
 
@@ -13,47 +13,84 @@ From Plan 2, the following items required research:
 3. npm to pnpm Migration - Best practices and commands
 4. pnpm in GitHub Actions - Installation and caching strategies
 5. Dev Container pnpm - Installation method for dev containers
-6. bicep-types npm Package - Verify package structure and validity
+6. bicep-types npm Package - Verify package structure and build requirements
+7. **NEW** TypeScript Build Strategy - How to build bicep-types in node_modules
 
 ---
 
 ## Findings
 
-### 1. pnpm Git Subdirectory References
+### 1. pnpm Git References for TypeScript Packages
 
 | Aspect | Details |
 | ------ | ------- |
-| **Decision** | Use `github:Azure/bicep-types#path:/src/bicep-types` syntax |
-| **Evidence** | [pnpm.io/package-sources](https://pnpm.io/package-sources) documents the `#path:/` parameter |
-| **Rationale** | This is the official pnpm syntax for referencing packages in subdirectories |
-| **Alternatives Considered** | npm tarball from GitHub releases - not available; fork to separate repo - unnecessary complexity |
+| **Decision** | Reference full repo via `git+https://` URL in package.json; pnpm fetches it automatically during install; build via postinstall script; create symlink |
+| **Evidence** | Prototype validation on branch `brooke-hamilton:radius:pnpm-direct-ref` |
+| **Rationale** | pnpm's `#path:/` subdirectory syntax does NOT work for TypeScript packages that require compilation; the package must be built in place after pnpm fetches it |
+| **Alternatives Considered** | `github:...#path:/src/bicep-types` - does not work because TypeScript needs compilation; npm tarball from GitHub releases - not available |
 
-**Syntax Options:**
+**❌ Syntax That Does NOT Work:**
 
 ```json
-// Basic subdirectory reference
+// These do NOT work for TypeScript packages requiring build
 "bicep-types": "github:Azure/bicep-types#path:/src/bicep-types"
-
-// With specific commit SHA (recommended for reproducibility)
 "bicep-types": "github:Azure/bicep-types#c1a289be58be&path:/src/bicep-types"
-
-// With semver (if tags exist)
-"bicep-types": "github:Azure/bicep-types#semver:^1.0.0&path:/src/bicep-types"
 ```
 
-**Recommended Approach:**
+**Why pnpm subdirectory references don't work:**
 
-Use commit SHA pinning for reproducibility:
+- The `bicep-types` package is TypeScript source that must be compiled
+- pnpm installs the source files but does NOT run `npm install` or `npm run build`
+- The package's `lib/` directory (compiled output) does not exist after install
+
+**✅ Recommended Approach (Validated in Prototype):**
+
+Reference the full repo in package.json. pnpm fetches it to `node_modules/bicep-types-repo/` during install. A postinstall script then builds the TypeScript and creates a symlink:
 
 ```json
 {
+  "pnpm": {
+    "onlyBuiltDependencies": ["autorest"]
+  },
+  "scripts": {
+    "postinstall": "cd node_modules/bicep-types-repo/src/bicep-types && npm install && npm run build && cd ../../../.. && rm -rf node_modules/bicep-types && ln -sf bicep-types-repo/src/bicep-types node_modules/bicep-types"
+  },
   "devDependencies": {
-    "bicep-types": "github:Azure/bicep-types#c1a289be58bea8e23cecbce871a11a3fad8c3467&path:/src/bicep-types"
+    "bicep-types-repo": "git+https://github.com/Azure/bicep-types.git#556bf5edad58e47ca57c6ddb1af155c3bcfdc5c7"
   }
 }
 ```
 
-**Note:** pnpm classifies git subdirectory references as "exotic sources". For transitive dependency security, consider `blockExoticSubdeps: true` in `.npmrc`.
+**Key elements:**
+
+| Element | Purpose |
+| ------- | ------- |
+| `bicep-types-repo` package name | pnpm installs the full repo to `node_modules/bicep-types-repo/`; name differs from symlink target |
+| `git+https://` URL format | Required by pnpm (not `github:` shorthand which defaults to SSH) |
+| Commit SHA after `#` | Pins to specific version |
+| `postinstall` script | Builds TypeScript and creates symlink after pnpm fetches the repo |
+| `pnpm.onlyBuiltDependencies` | Allows autorest lifecycle scripts (matches npm behavior) |
+
+**Postinstall script breakdown:**
+
+```bash
+# 1. Navigate to the bicep-types package within the fetched repo
+cd node_modules/bicep-types-repo/src/bicep-types
+
+# 2. Install its dependencies and compile TypeScript
+npm install && npm run build
+
+# 3. Return to package root
+cd ../../../..
+
+# 4. Remove any existing bicep-types directory/symlink
+rm -rf node_modules/bicep-types
+
+# 5. Create symlink so "import from 'bicep-types'" resolves correctly
+ln -sf bicep-types-repo/src/bicep-types node_modules/bicep-types
+```
+
+**Note:** An `.npmrc` file with `side-effects-cache = false` is required to ensure postinstall scripts run correctly.
 
 ---
 
@@ -62,37 +99,45 @@ Use commit SHA pinning for reproducibility:
 | Aspect | Details |
 | ------ | ------- |
 | **Decision** | Use `package-ecosystem: "npm"` for pnpm projects; git dependencies require manual updates |
-| **Evidence** | [GitHub Dependabot docs](https://docs.github.com/code-security/dependabot) - pnpm v7-v10 lockfiles supported under npm ecosystem |
-| **Rationale** | Dependabot treats pnpm as npm-compatible; git-based deps have limited auto-update support |
+| **Evidence** | [GitHub Dependabot docs](https://docs.github.com/code-security/dependabot) - pnpm v7-v10 lockfiles supported under npm ecosystem; prototype validation |
+| **Rationale** | Dependabot treats pnpm as npm-compatible; git-based deps (`git+https://...#commit`) have NO auto-update support |
 | **Alternatives Considered** | Renovate bot - more pnpm-native but adds complexity; manual updates only - reduces automation |
 
-**Configuration:**
+**Configuration (from prototype):**
 
 ```yaml
 # .github/dependabot.yml
 version: 2
 updates:
-  # For typespec directory
-  - package-ecosystem: "npm"  # Works for pnpm
-    directory: "/typespec"
+  # For autorest.bicep directory (NEW)
+  - package-ecosystem: npm
+    directory: /hack/bicep-types-radius/src/autorest.bicep
     schedule:
-      interval: "weekly"
+      interval: weekly
+    groups:
+      autorest-bicep:
+        patterns:
+          - "*"
+
+  # For generator directory (NEW)
+  - package-ecosystem: npm
+    directory: /hack/bicep-types-radius/src/generator
+    schedule:
+      interval: weekly
+    groups:
+      bicep-generator:
+        patterns:
+          - "*"
+
+  # For typespec directory (KEEP existing)
+  - package-ecosystem: npm
+    directory: /typespec
+    schedule:
+      interval: weekly
     groups:
       typespec:
         patterns:
           - "*"
-
-  # For generator directory
-  - package-ecosystem: "npm"
-    directory: "/hack/bicep-types-radius/src/generator"
-    schedule:
-      interval: "weekly"
-
-  # For autorest.bicep directory
-  - package-ecosystem: "npm"
-    directory: "/hack/bicep-types-radius/src/autorest.bicep"
-    schedule:
-      interval: "weekly"
 ```
 
 **Limitations:**
@@ -101,12 +146,12 @@ updates:
 | ------- | ------- |
 | pnpm lockfile updates | ✅ Supported (v7-v10) |
 | Registry package updates | ✅ Full support |
-| Git-based dependency updates | ⚠️ Limited - manual process needed |
+| `git+https://...#commit` dependency updates | ❌ NOT supported |
 | Security alerts | ✅ Supported |
 
 **Workaround for Git Dependencies:**
 
-Create a scheduled GitHub Action to check for bicep-types updates:
+The `bicep-types-repo` commit SHA must be updated manually. Consider a scheduled GitHub Action:
 
 ```yaml
 name: Check bicep-types updates
@@ -130,15 +175,40 @@ jobs:
 
 | Aspect | Details |
 | ------ | ------- |
-| **Decision** | Use `pnpm import` for lockfile conversion, then `pnpm install` |
-| **Evidence** | [pnpm.io/cli/import](https://pnpm.io/cli/import) documents the import command |
-| **Rationale** | Preserves exact dependency resolutions from package-lock.json |
-| **Alternatives Considered** | Fresh `pnpm install` - may resolve different versions; delete node_modules first - not necessary |
+| **Decision** | Fresh `pnpm install` after updating package.json (no import needed due to dependency changes) |
+| **Evidence** | Prototype validation - dependencies change significantly with git reference |
+| **Rationale** | The bicep-types reference changes from `file:` to `git+https://`; clean install is appropriate |
+| **Alternatives Considered** | `pnpm import` - not suitable when dependencies fundamentally change |
 
-**Migration Steps:**
+**Migration Steps (from prototype):**
 
 ```bash
-# Per-directory migration
+# Per-directory migration for bicep-types-radius packages
+cd hack/bicep-types-radius/src/autorest.bicep/
+
+# 1. Update package.json with:
+#    - pnpm.onlyBuiltDependencies: ["autorest"]
+#    - postinstall script
+#    - bicep-types-repo git reference (replacing bicep-types file: reference)
+
+# 2. Create .npmrc with side-effects-cache = false
+
+# 3. Delete old lockfile and node_modules
+rm -rf package-lock.json node_modules
+
+# 4. Install with pnpm (generates pnpm-lock.yaml)
+pnpm install
+
+# 5. Verify build works
+pnpm run build
+
+# Repeat for:
+# - hack/bicep-types-radius/src/generator/
+```
+
+**For typespec/ (no bicep-types dependency):**
+
+```bash
 cd typespec/
 
 # 1. Import existing lockfile (converts package-lock.json → pnpm-lock.yaml)
@@ -147,15 +217,11 @@ pnpm import
 # 2. Install dependencies with pnpm (validates the import)
 pnpm install
 
-# 3. Run tests to verify
+# 3. Verify
 pnpm test
 
 # 4. Remove old lockfile
 rm package-lock.json
-
-# Repeat for each directory:
-# - hack/bicep-types-radius/src/generator/
-# - hack/bicep-types-radius/src/autorest.bicep/
 ```
 
 **Supported Import Sources:**
@@ -173,6 +239,7 @@ rm package-lock.json
 | Install speed | Slower | Faster |
 | Phantom dependencies | Allowed | Blocked by default |
 | Lock file | package-lock.json | pnpm-lock.yaml |
+| Git repo packages | `package.json` at root required | Full repo fetched to node_modules/, postinstall handles build |
 
 ---
 
@@ -287,14 +354,16 @@ The Radius dev container already includes Node.js. The update needed:
 
 ---
 
-### 6. bicep-types npm Package Structure
+### 6. bicep-types npm Package Structure and Build Requirements
 
 | Aspect | Details |
 | ------ | ------- |
-| **Decision** | The `src/bicep-types/` directory is a valid, self-contained TypeScript npm package |
-| **Evidence** | Repository exploration of Azure/bicep-types |
-| **Rationale** | Package has complete package.json, TypeScript config, and test suite |
-| **Alternatives Considered** | Wait for official npm publish - uncertain timeline; not necessary |
+| **Decision** | The `src/bicep-types/` directory is a TypeScript package that REQUIRES local compilation |
+| **Evidence** | Prototype validation - `npm install && npm run build` required in postinstall |
+| **Rationale** | Package is TypeScript source; compiled `lib/` directory is not committed to git |
+| **Alternatives Considered** | Wait for official npm publish - uncertain timeline; use as-is - doesn't work without build |
+
+**Critical Finding:** The bicep-types package **cannot** be used directly from git without building. The compiled output (`lib/` directory) is `.gitignore`d.
 
 **Package Structure:**
 
@@ -305,7 +374,7 @@ src/bicep-types/
 ├── jest.config.ts        # Test configuration
 ├── .eslintrc.js          # Linting rules
 ├── README.md             # Package documentation
-├── src/
+├── src/                  # TypeScript SOURCE (in git)
 │   ├── index.ts          # Main exports
 │   ├── types.ts          # Core type definitions
 │   ├── indexer.ts        # Type indexing
@@ -313,14 +382,26 @@ src/bicep-types/
 │   └── writers/
 │       ├── json.ts       # JSON serialization
 │       └── markdown.ts   # Markdown generation
+├── lib/                  # ⚠️ COMPILED OUTPUT (NOT in git, must be built)
+│   ├── index.js
+│   ├── index.d.ts
+│   └── ...
 └── test/
     └── integration/      # Integration tests
 ```
 
-**Main Exports:**
+**Build Process Required:**
+
+```bash
+# Inside src/bicep-types/ directory:
+npm install    # Install devDependencies (typescript, etc.)
+npm run build  # Compiles src/ → lib/
+```
+
+**Main Exports (after build):**
 
 ```typescript
-// From src/index.ts
+// From lib/index.js (compiled from src/index.ts)
 export * from "./writers/json";      // writeTypesJson, readTypesJson, writeIndexJson
 export * from "./writers/markdown";  // writeMarkdown, writeIndexMarkdown
 export * from "./indexer";           // buildIndex
@@ -338,7 +419,7 @@ export * from "./types";             // TypeFactory, TypeIndex, BicepType, etc.
 | `ObjectType` | Object type definition |
 | `FunctionType` | Function type definition |
 
-**Compatibility:** The package is standard TypeScript/npm and fully compatible with pnpm.
+**Compatibility:** Standard TypeScript/npm package, compatible with pnpm after postinstall build.
 
 ---
 
@@ -356,14 +437,41 @@ export * from "./types";             // TypeFactory, TypeIndex, BicepType, etc.
 }
 ```
 
-**After (pnpm git reference):**
+**After (pnpm git reference with postinstall build - from prototype):**
 
 ```json
 {
+  "pnpm": {
+    "onlyBuiltDependencies": ["autorest"]
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "jest",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "postinstall": "cd node_modules/bicep-types-repo/src/bicep-types && npm install && npm run build && cd ../../../.. && rm -rf node_modules/bicep-types && ln -sf bicep-types-repo/src/bicep-types node_modules/bicep-types"
+  },
   "devDependencies": {
-    "bicep-types": "github:Azure/bicep-types#c1a289be58bea8e23cecbce871a11a3fad8c3467&path:/src/bicep-types"
+    "bicep-types-repo": "git+https://github.com/Azure/bicep-types.git#556bf5edad58e47ca57c6ddb1af155c3bcfdc5c7"
   }
 }
+```
+
+**Key differences from original plan:**
+
+- Package renamed to `bicep-types-repo` (pnpm fetches full repository to node_modules/)
+- Uses `git+https://` URL format (not `github:` shorthand)
+- Commit SHA appended with `#` (not combined with `&path:`)
+- `postinstall` script handles: install → build → symlink
+- `pnpm.onlyBuiltDependencies` allows autorest lifecycle scripts
+
+### .npmrc Files (NEW)
+
+Create `.npmrc` in both `autorest.bicep/` and `generator/` directories:
+
+```properties
+# Allow pnpm to install packages that need to run postinstall scripts
+side-effects-cache = false
 ```
 
 ### Makefile Updates
@@ -372,21 +480,41 @@ export * from "./types";             // TypeFactory, TypeIndex, BicepType, etc.
 
 ```makefile
 generate-bicep-types:
- git submodule update --init --recursive; \
- npm --prefix bicep-types/src/bicep-types install; \
- npm --prefix bicep-types/src/bicep-types ci && npm --prefix bicep-types/src/bicep-types run build; \
- npm --prefix hack/bicep-types-radius/src/autorest.bicep ci && ...
+	git submodule update --init --recursive; \
+	npm --prefix bicep-types/src/bicep-types install; \
+	npm --prefix bicep-types/src/bicep-types ci && npm --prefix bicep-types/src/bicep-types run build; \
+	npm --prefix hack/bicep-types-radius/src/autorest.bicep ci && ...
 ```
 
-**After:**
+**After (from prototype):**
 
 ```makefile
-generate-bicep-types:
- pnpm --prefix hack/bicep-types-radius/src/autorest.bicep install && \
- pnpm --prefix hack/bicep-types-radius/src/autorest.bicep run build; \
- pnpm --prefix hack/bicep-types-radius/src/generator install && \
- pnpm --prefix hack/bicep-types-radius/src/generator run generate -- ...
+.PHONY: generate-pnpm-installed
+generate-pnpm-installed:
+	@echo "$(ARROW) Detecting pnpm..."
+	@which pnpm > /dev/null || { echo "pnpm is a required dependency. Run 'npm install -g pnpm' to install."; exit 1; }
+	@echo "$(ARROW) OK"
+
+.PHONY: generate-bicep-types
+generate-bicep-types: generate-node-installed generate-pnpm-installed ## Generate Bicep extensibility types
+	@echo "$(ARROW) Generating Bicep extensibility types from OpenAPI specs..."
+	@echo "$(ARROW) Installing autorest.bicep dependencies (postinstall builds bicep-types)..."
+	cd hack/bicep-types-radius/src/autorest.bicep && pnpm install
+	@echo "$(ARROW) Building autorest.bicep..."
+	pnpm --prefix hack/bicep-types-radius/src/autorest.bicep run build
+	@echo "$(ARROW) Installing generator dependencies (postinstall builds bicep-types)..."
+	cd hack/bicep-types-radius/src/generator && pnpm install
+	@echo "$(ARROW) Running generator..."
+	cd hack/bicep-types-radius/src/generator && pnpm run generate \
+		--specs-dir ../../../../swagger --release-version ${VERSION} --verbose
 ```
+
+**Key changes:**
+- Added `generate-pnpm-installed` prerequisite target
+- Uses `pnpm install` instead of `npm ci`
+- Removed explicit bicep-types build steps (handled by postinstall)
+- Removed `git submodule update --init --recursive`
+- Uses `cd ... && pnpm install` pattern for cleaner execution
 
 ### Workflow Updates
 
@@ -423,7 +551,27 @@ generate-bicep-types:
   directory: /
 ```
 
-**Update npm entries to cover pnpm directories** (already using `npm` ecosystem which supports pnpm).
+**Add (from prototype):**
+
+```yaml
+- package-ecosystem: npm
+  directory: /hack/bicep-types-radius/src/autorest.bicep
+  schedule:
+    interval: weekly
+  groups:
+    autorest-bicep:
+      patterns:
+        - "*"
+
+- package-ecosystem: npm
+  directory: /hack/bicep-types-radius/src/generator
+  schedule:
+    interval: weekly
+  groups:
+    bicep-generator:
+      patterns:
+        - "*"
+```
 
 ---
 
@@ -431,11 +579,14 @@ generate-bicep-types:
 
 | Risk | Likelihood | Impact | Mitigation |
 | ---- | ---------- | ------ | ---------- |
-| pnpm git subdirectory refs unstable | Low | High | Well-documented feature; test thoroughly |
-| Dependabot can't update git deps | Medium | Low | Document manual process; consider future Renovate |
+| ~~pnpm git subdirectory refs unstable~~ | N/A | N/A | ✅ Resolved: Using git+https:// reference + postinstall build instead |
+| TypeScript build failure in postinstall | Low | High | Validated in prototype; postinstall is straightforward |
+| Dependabot can't update git deps | Certain | Low | Document manual process; consider future scheduled workflow |
 | Dev container pnpm issues | Low | Medium | Use Corepack which is Node.js-native |
 | CI cache invalidation | Low | Low | Configure cache-dependency-path properly |
 | Phantom dependency issues | Medium | Medium | pnpm's strictness catches issues early; fix during migration |
+| Duplicate repo in node_modules | Certain | Low | Both packages fetch same repo independently; acceptable tradeoff |
+| Postinstall script complexity | Low | Medium | Script is well-tested in prototype |
 
 ---
 
@@ -443,11 +594,16 @@ generate-bicep-types:
 
 | Research Question | Answer | Confidence |
 | ----------------- | ------ | ---------- |
-| Git subdirectory syntax | `github:Azure/bicep-types#<sha>&path:/src/bicep-types` | ✅ High |
-| Dependabot integration | `npm` ecosystem; manual git dep updates | ✅ High |
-| npm to pnpm migration | `pnpm import` + `pnpm install` | ✅ High |
+| Git subdirectory syntax | ❌ Does NOT work for TypeScript; use `git+https://` reference + postinstall build + symlink | ✅ High (prototype validated) |
+| Git reference format | `git+https://github.com/Azure/bicep-types.git#<commit-sha>` | ✅ High (prototype validated) |
+| TypeScript build strategy | `postinstall` script runs `npm install && npm run build` inside node_modules | ✅ High (prototype validated) |
+| Symlink strategy | `ln -sf bicep-types-repo/src/bicep-types node_modules/bicep-types` | ✅ High (prototype validated) |
+| Dependabot integration | `npm` ecosystem; git deps require manual updates | ✅ High |
+| npm to pnpm migration | Fresh `pnpm install` for bicep-types packages; `pnpm import` for typespec | ✅ High |
 | GitHub Actions setup | `pnpm/action-setup@v4` + `cache: 'pnpm'` | ✅ High |
 | Dev container pnpm | Corepack activation in postCreateCommand | ✅ High |
-| bicep-types package valid | Yes, standard TypeScript npm package | ✅ High |
+| bicep-types package valid | Yes, but **requires local build** | ✅ High (prototype validated) |
+| pnpm config required | `.npmrc` with `side-effects-cache = false` | ✅ High (prototype validated) |
+| autorest lifecycle scripts | `pnpm.onlyBuiltDependencies: ["autorest"]` | ✅ High (prototype validated) |
 
-**All research questions resolved. Plan 2 is ready for task breakdown.**
+**All research questions resolved. Prototype validated the approach. Plan 2 is ready for task breakdown.**
