@@ -55,13 +55,13 @@ As a developer, I want the app graph exported in a deterministic, diff-friendly 
 
 1. **Given** an app graph, **When** I export it, **Then** the JSON output is deterministically sorted (alphabetical by resource ID) producing identical output for identical inputs.
 
-2. **Given** an app graph, **When** I run `rad app graph app.bicep`, **Then** I receive JSON output that serves as the single source of truth for all automation and diff operations.
+2. **Given** an app graph, **When** I run `rad app graph app.bicep`, **Then** JSON is written to `.radius/app-graph.json` (default location) serving as the single source of truth for all automation and diff operations.
 
-3. **Given** an app graph, **When** I run `rad app graph app.bicep --format markdown`, **Then** I receive **both** JSON and a Markdown preview containing:
+3. **Given** an app graph, **When** I run `rad app graph app.bicep --stdout`, **Then** JSON is written to stdout instead of a file.
+
+4. **Given** an app graph, **When** I run `rad app graph app.bicep --format markdown`, **Then** I receive **both** `.radius/app-graph.json` and `.radius/app-graph.md` containing:
    - A resource table with name, type, source file, and git metadata
    - An embedded Mermaid diagram showing the topology that GitHub renders automatically
-
-4. **Given** a graph exported with `--format markdown`, **When** I write to files with `-o graph`, **Then** both `graph.json` and `graph.md` are created.
 
 5. **Given** a graph exported to markdown, **When** viewed in GitHub, **Then** the Mermaid diagram renders as a visual flowchart with distinct shapes for resource types (containers as rectangles, gateways as diamonds, databases as cylinders).
 
@@ -99,17 +99,21 @@ As a PR reviewer, I want to see a visual diff of the app graph in PR comments, s
 
 **Why this priority**: High-value GitHub integration, but depends on P1 capabilities being stable.
 
-**Independent Test**: Create a PR with Bicep changes, verify the action posts a comment showing before/after graph comparison.
+**Operational Model**: The GitHub Action reads committed `.radius/app-graph.json` files from git history — it does NOT generate graphs on-demand. This keeps the Action lightweight (no Bicep/Radius tooling required) and fast.
+
+**Independent Test**: Create a PR with Bicep changes and updated graph JSON, verify the action posts a comment showing before/after graph comparison.
 
 **Acceptance Scenarios**:
 
-1. **Given** a PR that modifies Bicep files, **When** the GitHub Action runs, **Then** it posts a comment showing the graph diff with added/removed/modified resources highlighted.
+1. **Given** a PR that includes changes to `.radius/app-graph.json`, **When** the GitHub Action runs, **Then** it reads the JSON from base and head commits and posts a comment showing the graph diff with added/removed/modified resources highlighted.
 
-2. **Given** a PR with no Bicep changes, **When** the GitHub Action runs, **Then** it posts a comment indicating "No app graph changes detected."
+2. **Given** a PR with no changes to `.radius/app-graph.json`, **When** the GitHub Action runs, **Then** it posts a comment indicating "No app graph changes detected."
 
 3. **Given** a PR that adds a new connection between resources, **When** the GitHub Action runs, **Then** the diff clearly shows the new connection with source and target resources.
 
 4. **Given** a PR comment already exists from a previous run, **When** the PR is updated and the action runs again, **Then** the existing comment is updated rather than creating a duplicate.
+
+5. **Given** a PR where Bicep files changed but `.radius/app-graph.json` was not updated, **When** the CI validation job runs, **Then** it fails with a message instructing the developer to run `rad app graph app.bicep` and commit the updated graph.
 
 ---
 
@@ -145,6 +149,10 @@ As a developer, I want to view how my app graph evolved across commits, so I can
   - Mark affected values as "dynamic" in the graph, use placeholder notation
 - What happens when Bicep files use cloud-specific resources (Azure, AWS)?
   - Graph generation MUST work regardless of cloud provider; cloud-specific resources are represented with their provider prefix (e.g., `Microsoft.Storage/storageAccounts`, `AWS::S3::Bucket`)
+- What happens when the committed graph is stale (Bicep changed but graph not regenerated)?
+  - CI validation job compares committed graph to freshly generated graph; fails PR if they differ
+  - Graph JSON includes `sourceHash` to detect staleness without full regeneration
+  - Clear error message instructs developer to run `rad app graph app.bicep`
 
 ---
 
@@ -156,10 +164,10 @@ This feature extends the existing `rad app graph` command with file-based input 
 |---------|------------|--------|
 | `rad app graph myapp` | App name | Deployed app graph (existing behavior) |
 | `rad app graph myapp -e prod` | App name + environment | Deployed graph in specific environment |
-| `rad app graph app.bicep` | Bicep file (`.bicep` extension) | JSON to stdout |
-| `rad app graph app.bicep -o graph.json` | Bicep file + output file | JSON to file |
-| `rad app graph app.bicep --format markdown` | Bicep file + markdown | JSON + Markdown to stdout |
-| `rad app graph app.bicep --format markdown -o graph` | Bicep file + markdown + output | `graph.json` + `graph.md` files |
+| `rad app graph app.bicep` | Bicep file (`.bicep` extension) | JSON to `.radius/app-graph.json` (default) |
+| `rad app graph app.bicep --stdout` | Bicep file + stdout flag | JSON to stdout (no file written) |
+| `rad app graph app.bicep -o custom.json` | Bicep file + custom output | JSON to specified file |
+| `rad app graph app.bicep --format markdown` | Bicep file + markdown | JSON + Markdown to `.radius/` |
 | `rad app graph app.bicep --no-git` | Bicep file + no-git | JSON without git metadata (faster) |
 | `rad app graph app.bicep --at abc123` | Bicep file + commit | JSON at specific commit |
 | `rad app graph diff app.bicep --from abc123 --to def456` | Bicep file + commits | Diff computed from JSON, output as JSON or Markdown |
@@ -178,6 +186,74 @@ This feature extends the existing `rad app graph` command with file-based input 
 
 ---
 
+## Committed Artifact Model
+
+The app graph JSON is designed to be **committed to version control** as a tracked artifact. This enables lightweight GitHub integration without requiring the Action to have Bicep/Radius tooling.
+
+### Default Output Location
+
+By default, `rad app graph app.bicep` writes to `.radius/app-graph.json` relative to the Bicep file's directory:
+
+```
+myapp/
+├── app.bicep
+├── modules/
+│   └── database.bicep
+└── .radius/
+    ├── app-graph.json      # Canonical graph data (committed)
+    └── app-graph.md        # Optional preview (if --format markdown)
+```
+
+### Developer Workflow
+
+```bash
+# 1. Make changes to Bicep files
+vim app.bicep
+
+# 2. Regenerate the graph (writes to .radius/app-graph.json by default)
+rad app graph app.bicep
+
+# 3. Commit both the Bicep changes and updated graph
+git add app.bicep .radius/app-graph.json
+git commit -m "Add redis cache to application"
+
+# 4. Push and create PR — GitHub Action reads committed JSON to render diff
+git push
+```
+
+### Why Committed Artifacts?
+
+| Benefit | Explanation |
+|---------|-------------|
+| **Simple GitHub Action** | Action is a lightweight viewer that reads JSON from git history — no Bicep CLI, no Radius environment needed |
+| **Fast CI** | No graph generation in CI; diff is just JSON comparison |
+| **Reproducible** | Graph captured at commit time, not regenerated with potentially different tooling |
+| **Auditable** | Graph evolution visible in git history alongside code changes |
+| **Fork-friendly** | Works in forks without special tooling or secrets |
+
+### Staleness Detection
+
+To prevent committed graphs from drifting out of sync with Bicep files:
+
+1. **CI Validation Job** (recommended): Regenerate graph in CI, compare to committed version, fail if different
+2. **Pre-commit Hook** (optional): Validate graph matches Bicep before allowing commit
+3. **Graph Metadata**: JSON includes `sourceHash` field — hash of input Bicep file(s) for staleness detection
+
+```json
+{
+  "metadata": {
+    "generatedAt": "2026-01-30T10:15:00Z",
+    "sourceFiles": ["app.bicep", "modules/database.bicep"],
+    "sourceHash": "sha256:abc123...",
+    "radiusCliVersion": "0.35.0"
+  },
+  "resources": [...],
+  "connections": [...]
+}
+```
+
+---
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -191,14 +267,16 @@ This feature extends the existing `rad app graph` command with file-based input 
 - **FR-007**: System MUST perform all diff computations using JSON data, with Markdown used only as a rendering layer for human consumption
 - **FR-008**: System MUST enrich graph nodes with git metadata (commit SHA, author, date, message) by default when in a git repository, with `--no-git` flag to disable
 - **FR-009**: System MUST track which Bicep file(s) define each resource for git blame integration
-- **FR-010**: System MUST provide a GitHub Action that generates and posts graph diffs on PRs
-- **FR-011**: System MUST update existing PR comments rather than creating duplicates
-- **FR-012**: System MUST support generating graphs at specific git commits/refs
-- **FR-013**: System MUST handle Bicep parameter files to resolve parameterized values
-- **FR-014**: System MUST report clear errors for invalid Bicep syntax with file/line/column information
-- **FR-015**: System MUST handle unresolvable references gracefully with placeholder annotations
-- **FR-016**: System MUST work with Bicep files targeting any cloud provider (multi-cloud neutrality per Constitution Principle III)
-- **FR-017**: System MUST be compatible with the Radius Bicep extension type definitions
+- **FR-010**: System MUST write graph output to `.radius/app-graph.json` by default (relative to Bicep file location), with `--stdout` flag for stdout output and `-o` flag for custom path
+- **FR-011**: System MUST include `sourceHash` metadata in JSON output to enable staleness detection
+- **FR-012**: System MUST provide a GitHub Action that reads committed graph JSON from git history and posts graph diffs on PRs (no graph generation in CI)
+- **FR-013**: System MUST update existing PR comments rather than creating duplicates
+- **FR-014**: System MUST support generating graphs at specific git commits/refs
+- **FR-015**: System MUST handle Bicep parameter files to resolve parameterized values
+- **FR-016**: System MUST report clear errors for invalid Bicep syntax with file/line/column information
+- **FR-017**: System MUST handle unresolvable references gracefully with placeholder annotations
+- **FR-018**: System MUST work with Bicep files targeting any cloud provider (multi-cloud neutrality per Constitution Principle III)
+- **FR-019**: System MUST be compatible with the Radius Bicep extension type definitions
 
 ### Non-Functional Requirements
 
@@ -280,7 +358,7 @@ This feature MUST include comprehensive testing across the testing pyramid:
 
 1. **Bicep Compiler Integration**: Should we use the official Bicep CLI for parsing, or implement a lightweight parser? Trade-off: accuracy vs. dependency management. **Recommendation**: Use official Bicep CLI per Constitution Principle VII (Simplicity Over Cleverness).
 
-2. **Graph Storage**: Should generated graphs be committed to the repo (e.g., `app-graph.json`)? Trade-off: visibility vs. repo noise.
+2. ~~**Graph Storage**: Should generated graphs be committed to the repo (e.g., `app-graph.json`)? Trade-off: visibility vs. repo noise.~~ **RESOLVED**: Yes, graphs are committed to `.radius/app-graph.json`. This enables lightweight GitHub Action (reads from git history, no tooling required) and provides auditable graph evolution.
 
 3. **GitHub App vs Action**: Should the PR integration be a GitHub Action (user-managed) or a GitHub App (centrally managed)? Trade-off: flexibility vs. ease of setup.
 
