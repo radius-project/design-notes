@@ -16,6 +16,7 @@ Azure
 SQLServer
 subcomponents
 Blazor
+brooke
 clusterissuer
 tcpreplay
 DDoS
@@ -45,6 +46,7 @@ deps
 deserialize
 desynchronization
 devcontainer
+devDependencies
 devcontainers
 dirs
 DNS
@@ -240,6 +242,7 @@ githubRepo
 gitmodules
 gitsubmodule
 gomod
+hamilton
 handoff
 hardcoding
 hostname
@@ -323,6 +326,8 @@ navbar
 newtab
 noncloud
 npm
+npmrc
+npx
 objectname
 oidcIssuer
 org's
@@ -332,6 +337,7 @@ pageinfo
 param
 params
 parametrization
+parallelizable
 passthrough
 Peirone
 pem
@@ -340,7 +346,11 @@ periodSeconds
 pfx
 pnpm
 pnpm's
+pnpmVersion
+POSIX
 postCreateCommand
+postinstall
+Postinstall
 powershell
 pre
 preconfigured
@@ -428,6 +438,7 @@ traceId
 ubuntu
 ui
 ucp
+uncompiled
 unencrypted
 unmanaged
 url
