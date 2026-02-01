@@ -18,7 +18,7 @@ Migrate JavaScript/TypeScript tooling in `hack/bicep-types-radius/` from npm to 
 
 - `bicep-types` npm package (currently via `file:` reference to submodule)
 - Various npm packages in `typespec/`, `hack/bicep-types-radius/`
-**Package Manager**: npm → pnpm migration (for `hack/bicep-types-radius/` only; `typespec/` optional)
+**Package Manager**: npm → pnpm migration (for `hack/bicep-types-radius/` and `typespec/`)
 **Storage**: N/A
 **Testing**: npm/pnpm scripts, `make test`
 **Target Platform**: Linux (CI), macOS/Windows (developer machines)
@@ -26,8 +26,7 @@ Migrate JavaScript/TypeScript tooling in `hack/bicep-types-radius/` from npm to 
 **Performance Goals**: Build time should not regress; pnpm typically improves it
 **Constraints**: Must maintain reproducible builds via lockfiles with commit SHA pinning; TypeScript packages require local build
 **Scale/Scope**:
-- 2 npm package directories requiring pnpm migration (`autorest.bicep/`, `generator/`)
-- 1 npm package directory optional migration (`typespec/` - no bicep-types dependency)
+- 3 npm package directories requiring pnpm migration (`autorest.bicep/`, `generator/`, `typespec/`)
 - 8 CI workflow files with 15 `submodules:` occurrences to remove
 - Multiple Makefile targets using npm commands
 
@@ -108,7 +107,8 @@ radius/
 │
 ├── typespec/
 │   ├── package.json                # NO CHANGE (no bicep-types dependency)
-│   └── package-lock.json           # KEEP (optional: migrate to pnpm later)
+│   ├── package-lock.json           # DELETE
+│   └── pnpm-lock.yaml              # CREATE: pnpm lockfile
 │
 ├── hack/bicep-types-radius/
 │   └── src/
@@ -139,7 +139,8 @@ radius/
 │       └── functional-test-cloud.yaml     # MODIFY: Remove submodules: recursive
 │
 ├── .devcontainer/
-│   └── devcontainer.json           # MODIFY: Add corepack pnpm activation to postCreateCommand
+│   ├── devcontainer.json           # MODIFY: Add pnpmVersion to node feature configuration
+│   └── post-create.sh              # MODIFY: Change npm ci to pnpm install for typespec
 │
 ├── CONTRIBUTING.md                 # MODIFY: Update setup instructions
 └── docs/contributing/
@@ -318,7 +319,7 @@ make generate-bicep-types
 9. **Update CI workflows**: Remove `submodules: recursive/true` from checkout steps
 10. **Remove submodule**: `git submodule deinit -f bicep-types`, `git rm bicep-types`, `rm .gitmodules`
 11. **Update Dependabot**: Remove `gitsubmodule`, add autorest.bicep and generator directories
-12. **Update dev container**: Add corepack pnpm activation to postCreateCommand
+12. **Update dev container**: Add `pnpmVersion` to node feature in devcontainer.json
 13. **Update documentation**: CONTRIBUTING.md, create migration guide
 14. **Verify**: Full CI pipeline passes, `make generate-bicep-types` succeeds
 
@@ -388,7 +389,7 @@ The original plan proposed using pnpm's subdirectory reference syntax:
 4. **pnpm Configuration**: ✅ `.npmrc` with `side-effects-cache = false`; `pnpm.onlyBuiltDependencies: ["autorest"]` in package.json
 5. **pnpm + Dependabot**: ✅ Use `package-ecosystem: npm`; git deps require manual updates
 6. **Workflow Caching**: ✅ Use `pnpm/action-setup@v4` with `actions/setup-node@v4` cache
-7. **Dev Container pnpm**: ✅ Use corepack in postCreateCommand
+7. **Dev Container pnpm**: ✅ Use `pnpmVersion` option in node devcontainer feature (built-in support, no extra scripts)
 
 ## Design Artifacts (Phase 1)
 
@@ -409,13 +410,8 @@ Developer quickstart after migration (combined for both plans):
 git clone https://github.com/radius-project/radius
 cd radius
 
-# Install pnpm (choose one method)
-# Option 1: Via npm (if npm is already available)
-npm install -g pnpm
-
-# Option 2: Via corepack (Node.js 16.13+)
-corepack enable
-corepack prepare pnpm@latest-10 --activate
+# Install pnpm
+npm install -g pnpm@10
 
 # Install TypeScript dependencies (postinstall scripts build bicep-types)
 pnpm --prefix hack/bicep-types-radius/src/autorest.bicep install
@@ -562,7 +558,7 @@ make generate-bicep-types
 | `hack/.../generator/.npmrc` | NEW: side-effects-cache = false |
 | `hack/.../generator/package-lock.json` | DELETE |
 | `hack/.../generator/pnpm-lock.yaml` | NEW |
-| `.devcontainer/devcontainer.json` | Add corepack pnpm activation (not in prototype) |
+| `.devcontainer/devcontainer.json` | Add pnpmVersion to node feature (not in prototype) |
 | `CONTRIBUTING.md` | Update setup instructions (not in prototype) |
 | `docs/contributing/migration-guide.md` | NEW (not in prototype) |
 

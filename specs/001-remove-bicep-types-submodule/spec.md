@@ -127,8 +127,8 @@ As a contributor reading the documentation, I want setup instructions that use o
 #### NPM/pnpm Dependencies
 
 - **FR-007**: All JavaScript/TypeScript tooling in the repository MUST be migrated to use pnpm as the package manager
-- **FR-008**: NPM packages in hack/bicep-types-radius/ MUST use pnpm git references for bicep-types packages
-- **FR-009**: Lockfiles MUST be updated to reflect pnpm git subdirectory references
+- **FR-008**: NPM packages in hack/bicep-types-radius/ MUST use pnpm git references with postinstall build scripts for bicep-types packages
+- **FR-009**: Lockfiles MUST be updated to reflect pnpm git references with postinstall build scripts
 - **FR-010**: pnpm dependencies MUST be pinned to a specific git commit SHA for reproducibility
 
 #### Build System
@@ -178,9 +178,9 @@ As a contributor reading the documentation, I want setup instructions that use o
 ### Measurable Outcomes
 
 - **SC-001**: New contributors can complete repository setup and first build in under 10 minutes following documentation
-- **SC-002**: CI/CD build success rate improves by eliminating submodule-related failures (target: 0 submodule-related build failures per month)
+- **SC-002**: CI/CD build success rate improves by eliminating submodule-related failures (target: 0 submodule-related build failures after migration is merged)
 - **SC-003**: 100% of build/test workflows execute without any git submodule commands
-- **SC-004**: Dependabot successfully monitors and creates PRs for bicep-types dependency updates
+- **SC-004**: Dependabot successfully monitors and creates PRs for npm registry package updates in pnpm directories (Note: bicep-types-repo git dependency requires manual SHA updates as Dependabot does not support git references)
 - **SC-005**: All existing regression tests pass without modification to test logic (only dependency resolution changes)
 - **SC-006**: Git worktrees can be created and used without conflicts or additional configuration
 - **SC-007**: Documentation requires no mentions of git submodule commands for standard development workflows
