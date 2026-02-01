@@ -41,9 +41,9 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 **Purpose**: Prepare pnpm tooling and verify prerequisites
 
-- [ ] T001 Verify Plan 1 (Go modules migration) is merged to main
-- [ ] T002 Verify pnpm is installed locally via `pnpm --version`
-- [ ] T003 Identify current bicep-types submodule commit SHA for pnpm git references via `git submodule status` in radius/
+- [X] T001 Verify Plan 1 (Go modules migration) is merged to main
+- [X] T002 Verify pnpm is installed locally via `pnpm --version`
+- [X] T003 Identify current bicep-types submodule commit SHA for pnpm git references via `git submodule status` in radius/
 
 ---
 
@@ -53,9 +53,9 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 **⚠️ CRITICAL**: Complete before any user story implementation
 
-- [ ] T004 Create feature branch `001-remove-bicep-types-submodule-pnpm` from main
-- [ ] T005 Pull latest main to ensure Plan 1 changes are included
-- [ ] T006 Verify current build works via `make build` in radius/
+- [X] T004 Create feature branch `001-remove-bicep-types-submodule-pnpm` from main
+- [X] T005 Pull latest main to ensure Plan 1 changes are included
+- [X] T006 Verify current build works via `make build` in radius/
 
 **Checkpoint**: Foundation ready - pnpm migration can proceed
 
@@ -71,41 +71,41 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 #### pnpm Migration - typespec/ (no bicep-types dependency)
 
-- [ ] T007 [US1] Delete radius/typespec/package-lock.json
-- [ ] T008 [US1] Generate pnpm lockfile via `pnpm install` in radius/typespec/
-- [ ] T009 [US1] Verify typespec builds via `pnpm run build` in radius/typespec/
+- [X] T007 [US1] Delete radius/typespec/package-lock.json
+- [X] T008 [US1] Generate pnpm lockfile via `pnpm install` in radius/typespec/
+- [X] T009 [US1] Verify typespec builds via `pnpm run build` in radius/typespec/
 
 #### pnpm Migration - hack/bicep-types-radius/src/generator/
 
-- [ ] T010 [US1] Update radius/hack/bicep-types-radius/src/generator/package.json:
+- [X] T010 [US1] Update radius/hack/bicep-types-radius/src/generator/package.json:
   - Add `"pnpm": { "onlyBuiltDependencies": ["autorest"] }`
   - Add `postinstall` script for bicep-types build and symlink
   - Replace `"bicep-types": "file:..."` with `"bicep-types-repo": "git+https://github.com/Azure/bicep-types.git#<sha>"`
-- [ ] T011 [US1] Create radius/hack/bicep-types-radius/src/generator/.npmrc with `side-effects-cache = false`
-- [ ] T012 [US1] Delete radius/hack/bicep-types-radius/src/generator/package-lock.json
-- [ ] T013 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/generator/
-- [ ] T014 [US1] Verify generator builds via `pnpm run build` in radius/hack/bicep-types-radius/src/generator/
+- [X] T011 [US1] Create radius/hack/bicep-types-radius/src/generator/.npmrc with `side-effects-cache = false`
+- [X] T012 [US1] Delete radius/hack/bicep-types-radius/src/generator/package-lock.json
+- [X] T013 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/generator/
+- [X] T014 [US1] Verify generator builds via `pnpm run build` in radius/hack/bicep-types-radius/src/generator/
 
 #### pnpm Migration - hack/bicep-types-radius/src/autorest.bicep/
 
-- [ ] T015 [US1] Update radius/hack/bicep-types-radius/src/autorest.bicep/package.json:
+- [X] T015 [US1] Update radius/hack/bicep-types-radius/src/autorest.bicep/package.json:
   - Add `"pnpm": { "onlyBuiltDependencies": ["autorest"] }`
   - Add `postinstall` script for bicep-types build and symlink
   - Replace `"bicep-types": "file:..."` with `"bicep-types-repo": "git+https://github.com/Azure/bicep-types.git#<sha>"`
-- [ ] T016 [US1] Create radius/hack/bicep-types-radius/src/autorest.bicep/.npmrc with `side-effects-cache = false`
-- [ ] T017 [US1] Delete radius/hack/bicep-types-radius/src/autorest.bicep/package-lock.json
-- [ ] T018 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/autorest.bicep/
-- [ ] T019 [US1] Verify autorest.bicep builds via `pnpm run build` in radius/hack/bicep-types-radius/src/autorest.bicep/
+- [X] T016 [US1] Create radius/hack/bicep-types-radius/src/autorest.bicep/.npmrc with `side-effects-cache = false`
+- [X] T017 [US1] Delete radius/hack/bicep-types-radius/src/autorest.bicep/package-lock.json
+- [X] T018 [US1] Generate pnpm lockfile via `pnpm install` in radius/hack/bicep-types-radius/src/autorest.bicep/
+- [X] T019 [US1] Verify autorest.bicep builds via `pnpm run build` in radius/hack/bicep-types-radius/src/autorest.bicep/
 
 #### Submodule Removal
 
-- [ ] T020 [US1] Remove submodule from git index via `git rm bicep-types` in radius/
-- [ ] T021 [US1] Delete radius/.gitmodules file
-- [ ] T022 [US1] Clean up .git/modules/bicep-types directory via `rm -rf .git/modules/bicep-types`
+- [X] T020 [US1] Remove submodule from git index via `git rm bicep-types` in radius/
+- [X] T021 [US1] Delete radius/.gitmodules file
+- [X] T022 [US1] Clean up .git/modules/bicep-types directory via `rm -rf .git/modules/bicep-types`
 
 #### Verify Build Works
 
-- [ ] T023 [US1] Verify full build via `make build` in radius/
+- [X] T023 [US1] Verify full build via `make build` in radius/
 - [ ] T024 [US1] Verify tests via `make test` in radius/
 
 **Checkpoint**: Repository builds and tests pass without submodule
@@ -122,51 +122,51 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 #### Makefile Updates
 
-- [ ] T025 [US2] Update radius/build/generate.mk: add `generate-pnpm-installed` target to verify pnpm availability
-- [ ] T026 [US2] Update radius/build/generate.mk: replace `npm` commands with `pnpm` in generate-bicep-types target
-- [ ] T027 [US2] Update radius/build/generate.mk: remove `git submodule update --init --recursive` commands
-- [ ] T028 [US2] Update radius/build/generate.mk line ~33: change error message from `run 'npm ci' in typespec directory.` to `run 'pnpm install' in typespec directory.`
-- [ ] T029 [US2] Update radius/build/generate.mk line ~55: change error message from `run 'npm install -g autorest@3.7.2' to install autorest` to `run 'pnpm add -g autorest@3.7.2' to install autorest`
-- [ ] T030 [US2] Update radius/build/test.mk line ~179: change error message from `run 'npm install -g oav@4.0.2' to install oav` to `run 'pnpm add -g oav@4.0.2' to install oav`
-- [ ] T031 [US2] Verify `make generate-bicep-types` works in radius/
+- [X] T025 [US2] Update radius/build/generate.mk: add `generate-pnpm-installed` target to verify pnpm availability
+- [X] T026 [US2] Update radius/build/generate.mk: replace `npm` commands with `pnpm` in generate-bicep-types target
+- [X] T027 [US2] Update radius/build/generate.mk: remove `git submodule update --init --recursive` commands
+- [X] T028 [US2] Update radius/build/generate.mk line ~33: change error message from `run 'npm ci' in typespec directory.` to `run 'pnpm install' in typespec directory.`
+- [X] T029 [US2] Update radius/build/generate.mk line ~55: change error message from `run 'npm install -g autorest@3.7.2' to install autorest` to `run 'pnpm add -g autorest@3.7.2' to install autorest`
+- [X] T030 [US2] Update radius/build/test.mk line ~179: change error message from `run 'npm install -g oav@4.0.2' to install oav` to `run 'pnpm add -g oav@4.0.2' to install oav`
+- [X] T031 [US2] Verify `make generate-bicep-types` works in radius/
 
 #### Workflow Updates - build.yaml (4 occurrences)
 
-- [ ] T032 [US2] Update radius/.github/workflows/build.yaml line ~110: remove `submodules: recursive` from checkout step
-- [ ] T033 [US2] Update radius/.github/workflows/build.yaml line ~212: remove `submodules: recursive` from checkout step
-- [ ] T034 [US2] Update radius/.github/workflows/build.yaml line ~369: remove `submodules: recursive` from checkout step
-- [ ] T035 [US2] Update radius/.github/workflows/build.yaml line ~436: remove `submodules: recursive` from checkout step
-- [ ] T036 [US2] Add pnpm setup step to radius/.github/workflows/build.yaml (pnpm/action-setup@v4)
+- [X] T032 [US2] Update radius/.github/workflows/build.yaml line ~110: remove `submodules: recursive` from checkout step
+- [X] T033 [US2] Update radius/.github/workflows/build.yaml line ~212: remove `submodules: recursive` from checkout step
+- [X] T034 [US2] Update radius/.github/workflows/build.yaml line ~369: remove `submodules: recursive` from checkout step
+- [X] T035 [US2] Update radius/.github/workflows/build.yaml line ~436: remove `submodules: recursive` from checkout step
+- [X] T036 [US2] Add pnpm setup step to radius/.github/workflows/build.yaml (pnpm/action-setup@v4)
 
 #### Workflow Updates - Other Files
 
-- [ ] T037 [P] [US2] Update radius/.github/workflows/codeql.yml line ~95: remove `submodules: recursive`, add pnpm setup
-- [ ] T038 [P] [US2] Update radius/.github/workflows/lint.yaml line ~58: remove `submodules: recursive`, add pnpm setup
-- [ ] T039 [P] [US2] Update radius/.github/workflows/validate-bicep.yaml line ~64: remove `submodules: true`, add pnpm setup
-- [ ] T040 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~52: remove `submodules: recursive`, add pnpm setup
-- [ ] T041 [P] [US2] Update radius/.github/workflows/long-running-azure.yaml line ~136: remove `submodules: recursive`, add pnpm setup
+- [X] T037 [P] [US2] Update radius/.github/workflows/codeql.yml line ~95: remove `submodules: recursive`, add pnpm setup
+- [X] T038 [P] [US2] Update radius/.github/workflows/lint.yaml line ~58: remove `submodules: recursive`, add pnpm setup
+- [X] T039 [P] [US2] Update radius/.github/workflows/validate-bicep.yaml line ~64: remove `submodules: true`, add pnpm setup
+- [X] T040 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~52: remove `submodules: recursive`, add pnpm setup
+- [X] T041 [P] [US2] Update radius/.github/workflows/long-running-azure.yaml line ~136: remove `submodules: recursive`, add pnpm setup
 
 #### Workflow Updates - Functional Tests (4 occurrences in cloud.yaml)
 
-- [ ] T042 [US2] Update radius/.github/workflows/functional-test-noncloud.yaml line ~208: remove `submodules: recursive`, add pnpm setup
-- [ ] T043 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~172: remove `submodules: recursive`, add pnpm setup
-- [ ] T044 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~328: remove `submodules: recursive`, add pnpm setup
-- [ ] T045 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~336: remove `submodules: recursive`, add pnpm setup
-- [ ] T046 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~626: remove `submodules: recursive`, add pnpm setup
+- [X] T042 [US2] Update radius/.github/workflows/functional-test-noncloud.yaml line ~208: remove `submodules: recursive`, add pnpm setup
+- [X] T043 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~172: remove `submodules: recursive`, add pnpm setup
+- [X] T044 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~328: remove `submodules: recursive`, add pnpm setup
+- [X] T045 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~336: remove `submodules: recursive`, add pnpm setup
+- [X] T046 [US2] Update radius/.github/workflows/functional-test-cloud.yaml line ~626: remove `submodules: recursive`, add pnpm setup
 
 #### Workflow Updates - npm to pnpm Consistency
 
 **⚠️ IMPORTANT**: Tasks T047-T055 MUST be executed AFTER T036-T046. The pnpm setup step must be added to each workflow BEFORE the workflow can use pnpm commands. When editing each workflow file, add the pnpm setup step first, then update npm commands to pnpm in the same edit.
 
-- [ ] T047 [P] [US2] Update radius/.github/workflows/lint.yaml line ~76: change `npm ci` to `pnpm install`
-- [ ] T048 [P] [US2] Update radius/.github/workflows/lint.yaml line ~78: change `npm install -g autorest@3.7.2` to `pnpm add -g autorest@3.7.2`
-- [ ] T049 [P] [US2] Update radius/.github/workflows/lint.yaml line ~79: change `npm install -g oav@4.0.2` to `pnpm add -g oav@4.0.2`
-- [ ] T050 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~95: change `npm ci` to `pnpm install`
-- [ ] T051 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~98: change `npm install -g autorest@3.7.2` to `pnpm add -g autorest@3.7.2`
-- [ ] T052 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~99: change `npm install -g oav@4.0.2` to `pnpm add -g oav@4.0.2`
+- [X] T047 [P] [US2] Update radius/.github/workflows/lint.yaml line ~76: change `npm ci` to `pnpm install`
+- [X] T048 [P] [US2] Update radius/.github/workflows/lint.yaml line ~78: change `npm install -g autorest@3.7.2` to `pnpm add -g autorest@3.7.2`
+- [X] T049 [P] [US2] Update radius/.github/workflows/lint.yaml line ~79: change `npm install -g oav@4.0.2` to `pnpm add -g oav@4.0.2`
+- [X] T050 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~95: change `npm ci` to `pnpm install`
+- [X] T051 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~98: change `npm install -g autorest@3.7.2` to `pnpm add -g autorest@3.7.2`
+- [X] T052 [P] [US2] Update radius/.github/workflows/publish-docs.yaml line ~99: change `npm install -g oav@4.0.2` to `pnpm add -g oav@4.0.2`
 - [ ] T053 [P] [US2] Update radius/.github/workflows/devcontainer-feature-test.yaml line ~36: change `npm install -g @devcontainers/cli` to `pnpm add -g @devcontainers/cli`
 - [ ] T054 [P] [US2] Update radius/.github/workflows/devcontainer-feature-test.yaml line ~53: change `npm install -g @devcontainers/cli` to `pnpm add -g @devcontainers/cli`
-- [ ] T055 [P] [US2] Update radius/.github/workflows/validate-bicep.yaml lines ~78-84: update npx installation fallback from `npm install -g npx` to `pnpm add -g npx` (or remove if npx is bundled with Node.js)
+- [X] T055 [P] [US2] Update radius/.github/workflows/validate-bicep.yaml lines ~78-84: update npx installation fallback from `npm install -g npx` to `pnpm add -g npx` (or remove if npx is bundled with Node.js)
 
 **Checkpoint**: All 15 submodule references removed from 8 workflow files, npm commands updated to pnpm for consistency
 
@@ -182,10 +182,10 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 ### Implementation for User Story 3
 
-- [ ] T056 [US3] Update radius/.github/dependabot.yml: remove `gitsubmodule` package-ecosystem section
-- [ ] T057 [P] [US3] Update radius/.github/dependabot.yml: add npm config for `/hack/bicep-types-radius/src/generator`
-- [ ] T058 [P] [US3] Update radius/.github/dependabot.yml: add npm config for `/hack/bicep-types-radius/src/autorest.bicep`
-- [ ] T059 [US3] Verify Dependabot config syntax via `actionlint` or manual review
+- [X] T056 [US3] Update radius/.github/dependabot.yml: remove `gitsubmodule` package-ecosystem section
+- [X] T057 [P] [US3] Update radius/.github/dependabot.yml: add npm config for `/hack/bicep-types-radius/src/generator`
+- [X] T058 [P] [US3] Update radius/.github/dependabot.yml: add npm config for `/hack/bicep-types-radius/src/autorest.bicep`
+- [X] T059 [US3] Verify Dependabot config syntax via `actionlint` or manual review
 
 **Checkpoint**: Dependabot configured for all pnpm directories
 
@@ -217,18 +217,18 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 #### Dev Container
 
-- [ ] T063 [US5] Get latest pnpm version via `pnpm --version` (or check corepack) and update dev container:
+- [X] T063 [US5] Get latest pnpm version via `pnpm --version` (or check corepack) and update dev container:
   - Update radius/.devcontainer/devcontainer.json: add `"pnpmVersion": "<version>"` to the node feature configuration
-- [ ] T064 [US5] Update radius/.devcontainer/post-create.sh line ~6: change `npm install -g @typespec/compiler` to `pnpm add -g @typespec/compiler`
-- [ ] T065 [US5] Update radius/.devcontainer/post-create.sh line ~21: change `npm ci` to `pnpm install` in typespec directory
-- [ ] T066 [US5] Update radius/.devcontainer/post-create.sh line ~22: change `npm install -g autorest@3.7.2` to `pnpm add -g autorest@3.7.2`
-- [ ] T067 [US5] Update radius/.devcontainer/post-create.sh line ~23: change `npm install -g oav@4.0.2` to `pnpm add -g oav@4.0.2`
+- [X] T064 [US5] Update radius/.devcontainer/post-create.sh line ~6: change `npm install -g @typespec/compiler` to `pnpm add -g @typespec/compiler`
+- [X] T065 [US5] Update radius/.devcontainer/post-create.sh line ~21: change `npm ci` to `pnpm install` in typespec directory
+- [X] T066 [US5] Update radius/.devcontainer/post-create.sh line ~22: change `npm install -g autorest@3.7.2` to `pnpm add -g autorest@3.7.2`
+- [X] T067 [US5] Update radius/.devcontainer/post-create.sh line ~23: change `npm install -g oav@4.0.2` to `pnpm add -g oav@4.0.2`
 
 #### Contributing Documentation
 
 - [ ] T068 [P] [US5] Update radius/CONTRIBUTING.md: replace npm with pnpm, remove all submodule references, document postinstall behavior
-- [ ] T069 [P] [US5] Create radius/docs/contributing/migration-guide.md with cleanup commands for existing clones
-- [ ] T070 [P] [US5] Update radius/docs/contributing/contributing-code/contributing-code-prerequisites/README.md lines ~183-185: change npm commands to pnpm
+- [X] T069 [P] [US5] Create radius/docs/contributing/migration-guide.md with cleanup commands for existing clones
+- [X] T070 [P] [US5] Update radius/docs/contributing/contributing-code/contributing-code-prerequisites/README.md lines ~183-185: change npm commands to pnpm
 
 #### README Updates
 
@@ -243,9 +243,9 @@ The `bicep-types` package is TypeScript source that must be compiled. The soluti
 
 **Purpose**: Final verification before PR
 
-- [ ] T073 Run full `make build` in radius/
+- [X] T073 Run full `make build` in radius/
 - [ ] T074 Run full `make test` in radius/
-- [ ] T075 [P] Run `make generate-bicep-types` to verify codegen workflow
+- [X] T075 [P] Run `make generate-bicep-types` to verify codegen workflow
 - [ ] T076 [P] Verify pnpm lockfiles are consistent via `pnpm install --frozen-lockfile` in each directory
 - [ ] T077 Fresh clone test: clone to new directory without `--recurse-submodules`, verify build
 - [ ] T078 Create PR from `001-remove-bicep-types-submodule-pnpm` to main
