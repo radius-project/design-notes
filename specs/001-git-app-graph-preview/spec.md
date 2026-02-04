@@ -135,6 +135,30 @@ As a developer, I want to view how my app graph evolved across commits, so I can
 
 ---
 
+### User Story 6 - Environment-Resolved Graph (Priority: P3)
+
+As a platform engineer, I want to see how abstract Radius types resolve to concrete infrastructure in a specific environment, so I can understand the actual resources that will be deployed.
+
+**Why this priority**: Advanced feature for environment-specific analysis. The static graph (showing portable types) serves most PR review needs; resolved views are valuable for deployment planning and troubleshooting.
+
+**Background**: Radius portable types like `Radius.Data/store` resolve differently depending on the environment's recipe configuration:
+- Environment → RecipePack → Recipe → Concrete Resource
+- The same `Radius.Data/store` might become PostgreSQL in `dev` and CosmosDB in `prod`
+
+**Independent Test**: Generate resolved graph for an environment with known recipe bindings, verify concrete resource types appear instead of abstract Radius types.
+
+**Acceptance Scenarios**:
+
+1. **Given** a Bicep file with `Radius.Data/store` and a connected Radius environment with PostgreSQL recipes, **When** I run `rad app graph app.bicep --environment prod`, **Then** the graph shows the resolved `Azure.DBforPostgreSQL/flexibleServers` (or equivalent) instead of the abstract `Radius.Data/store`.
+
+2. **Given** a Bicep file with portable types, **When** I run `rad app graph app.bicep --environment dev` and `rad app graph app.bicep --environment prod`, **Then** I can compare how the same application resolves to different infrastructure across environments.
+
+3. **Given** an environment where a recipe is not configured for a portable type, **When** I run `rad app graph app.bicep --environment prod`, **Then** the graph shows the abstract type with an annotation indicating "no recipe bound".
+
+4. **Given** a Bicep file, **When** I run `rad app graph app.bicep` (no `--environment` flag), **Then** the graph shows the abstract portable types (default behavior unchanged).
+
+---
+
 ### Edge Cases
 
 - What happens when Bicep file references resources outside the current file/module that cannot be resolved?
@@ -153,6 +177,10 @@ As a developer, I want to view how my app graph evolved across commits, so I can
   - CI validation job compares committed graph to freshly generated graph; fails PR if they differ
   - Graph JSON includes `sourceHash` to detect staleness without full regeneration
   - Clear error message instructs developer to run `rad app graph app.bicep`
+- What does the graph show for portable Radius types like `Radius.Data/store` that resolve differently per environment?
+  - **Static graph shows abstract types**: The declared `Radius.Data/store` is shown, not the resolved infrastructure (PostgreSQL, CosmosDB, etc.)
+  - This is intentional—the static graph represents the **portable application architecture** independent of environment-specific recipe resolution
+  - For environment-resolved views, see User Story 6 (P3)
 
 ---
 
@@ -172,6 +200,7 @@ This feature extends the existing `rad app graph` command with file-based input 
 | `rad app graph app.bicep --at abc123` | Bicep file + commit | JSON at specific commit |
 | `rad app graph diff app.bicep --from abc123 --to def456` | Bicep file + commits | Diff computed from JSON, output as JSON or Markdown |
 | `rad app graph history app.bicep --commits 10` | Bicep file + count | Historical timeline |
+| `rad app graph app.bicep --environment prod` | Bicep file + environment | JSON with resolved recipe types |
 
 **Output Model**:
 - **JSON is canonical**: Always generated, serves as the single source of truth for all automation and diff operations
@@ -358,7 +387,7 @@ This feature MUST include comprehensive testing across the testing pyramid:
 
 1. **Bicep Compiler Integration**: Should we use the official Bicep CLI for parsing, or implement a lightweight parser? Trade-off: accuracy vs. dependency management. **Recommendation**: Use official Bicep CLI per Constitution Principle VII (Simplicity Over Cleverness).
 
-2. ~~**Graph Storage**: Should generated graphs be committed to the repo (e.g., `app-graph.json`)? Trade-off: visibility vs. repo noise.~~ **RESOLVED**: Yes, graphs are committed to `.radius/app-graph.json`. This enables lightweight GitHub Action (reads from git history, no tooling required) and provides auditable graph evolution.
+2. ~~**Graph Storage**: Should generated graphs be committed to the repo (e.g., `app-graph.json`)? Trade-off: visibility vs. repo noise.~~ **RESOLVED (Initial Implementation)**: Graphs are committed to `.radius/app-graph.json`. This enables lightweight GitHub Action (reads from git history, no tooling required) and provides auditable graph evolution. **Future Evolution**: External storage backends (e.g., SQLite, cloud databases) could be supported for scenarios requiring graph queries across repositories, historical analytics, or enterprise-scale graph management.
 
 3. **GitHub App vs Action**: Should the PR integration be a GitHub Action (user-managed) or a GitHub App (centrally managed)? Trade-off: flexibility vs. ease of setup.
 
