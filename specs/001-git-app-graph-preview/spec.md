@@ -5,6 +5,16 @@
 **Status**: Draft   
 **Input**: User description: "Radius currently stores the state of application deployments as an app graph within its data store. Today, the app graph does not get generated until the application is deployed. Help me build an app graph representation for applications that are defined (e.g. in an app.bicep file) but not yet deployed. Additionally, enrich the app graph representation with git changelog info (i.e. git commit data) so that I may use this data to visualize how the app graph changes over time (i.e. across commits). The ultimate goal is to be able to visualize the app graph and do diffs of the app graph in GitHub on PRs, commit comparisons, etc."   
 
+## Clarifications
+
+### Session 2026-02-04
+
+- Q: GitHub App vs Action for PR integration? → A: GitHub Action (fork-friendly, no installation approval required, aligns with existing Radius workflow patterns)
+- Q: Diff visualization format in PR comments? → A: Table + Mermaid diagrams (change table for details, before/after diagrams for visual topology)
+- Q: How to handle Bicep parameters without params file? → A: Require params file (fail with error if Bicep has required parameters but no `--parameters` provided)
+- Q: GitHub Action trigger events? → A: `pull_request` + `push` (PR for review comments, push to main for baseline tracking)
+- Q: Monorepo support with multiple app graphs? → A: Auto-detect all `**/.radius/app-graph.json` files; each diffed independently
+
 ## Problem Statement
 
 Radius currently generates application graphs only after deployment, which means:
@@ -37,7 +47,9 @@ As a **platform engineer**, I want to review app graph changes in PRs, so I can 
 
 4. **Given** a Bicep file with parameterized values, **When** I run `rad app graph app.bicep --parameters params.json`, **Then** the graph reflects the resolved parameter values.
 
-5. **Given** a Bicep file using the Radius Bicep extension types, **When** I run `rad app graph app.bicep`, **Then** the graph correctly identifies Radius-specific resource types and their relationships.
+5. **Given** a Bicep file with required parameters (no defaults) and no `--parameters` flag, **When** I run `rad app graph app.bicep`, **Then** I receive a clear error listing the missing required parameters.
+
+6. **Given** a Bicep file using the Radius Bicep extension types, **When** I run `rad app graph app.bicep`, **Then** the graph correctly identifies Radius-specific resource types and their relationships.
 
 ---
 
@@ -101,6 +113,12 @@ As a PR reviewer, I want to see a visual diff of the app graph in PR comments, s
 
 **Operational Model**: The GitHub Action reads committed `.radius/app-graph.json` files from git history — it does NOT generate graphs on-demand. This keeps the Action lightweight (no Bicep/Radius tooling required) and fast.
 
+**Trigger Events**: The Action supports two trigger modes:
+- **`pull_request`**: Posts diff comments on PRs when `.radius/app-graph.json` changes
+- **`push` to main/default branch**: Updates baseline tracking for historical comparison
+
+**Monorepo Support**: The Action auto-detects all `**/.radius/app-graph.json` files in the repository. Each graph is diffed independently, with separate PR comment sections per application.
+
 **Independent Test**: Create a PR with Bicep changes and updated graph JSON, verify the action posts a comment showing before/after graph comparison.
 
 **Acceptance Scenarios**:
@@ -114,6 +132,8 @@ As a PR reviewer, I want to see a visual diff of the app graph in PR comments, s
 4. **Given** a PR comment already exists from a previous run, **When** the PR is updated and the action runs again, **Then** the existing comment is updated rather than creating a duplicate.
 
 5. **Given** a PR where Bicep files changed but `.radius/app-graph.json` was not updated, **When** the CI validation job runs, **Then** it fails with a message instructing the developer to run `rad app graph app.bicep` and commit the updated graph.
+
+6. **Given** a monorepo with multiple Radius applications (e.g., `apps/frontend/.radius/app-graph.json` and `apps/backend/.radius/app-graph.json`), **When** the GitHub Action runs on a PR, **Then** it detects all graph files and posts a unified comment with separate diff sections per application.
 
 ---
 
@@ -389,11 +409,11 @@ This feature MUST include comprehensive testing across the testing pyramid:
 
 2. ~~**Graph Storage**: Should generated graphs be committed to the repo (e.g., `app-graph.json`)? Trade-off: visibility vs. repo noise.~~ **RESOLVED (Initial Implementation)**: Graphs are committed to `.radius/app-graph.json`. This enables lightweight GitHub Action (reads from git history, no tooling required) and provides auditable graph evolution. **Future Evolution**: External storage backends (e.g., SQLite, cloud databases) could be supported for scenarios requiring graph queries across repositories, historical analytics, or enterprise-scale graph management.
 
-3. **GitHub App vs Action**: Should the PR integration be a GitHub Action (user-managed) or a GitHub App (centrally managed)? Trade-off: flexibility vs. ease of setup.
+3. ~~**GitHub App vs Action**: Should the PR integration be a GitHub Action (user-managed) or a GitHub App (centrally managed)? Trade-off: flexibility vs. ease of setup.~~ **RESOLVED**: GitHub Action. Fork-friendly, no installation approval required, aligns with existing Radius workflow patterns, supports incremental adoption.
 
-4. **Diff Visualization**: What's the preferred format for showing diffs in PR comments—table-based, Mermaid side-by-side, or unified text diff?
+4. ~~**Diff Visualization**: What's the preferred format for showing diffs in PR comments—table-based, Mermaid side-by-side, or unified text diff?~~ **RESOLVED**: Table + Mermaid diagrams. Change table shows added/removed/modified resources with details; before/after Mermaid diagrams provide visual topology comparison. Both render natively in GitHub.
 
-5. **Parameter Handling**: How should we handle Bicep parameters without a params file—use defaults, require params, or mark as "unknown"?
+5. ~~**Parameter Handling**: How should we handle Bicep parameters without a params file—use defaults, require params, or mark as "unknown"?~~ **RESOLVED**: Require params file. If Bicep has required parameters (no defaults) but no `--parameters` flag is provided, fail with a clear error message listing the missing parameters.
 
 ---
 
