@@ -236,4 +236,4 @@ func (impl *Impl) PrepareTemplate(filePath string) (map[string]any, error) {
 2. **Graph Storage**: ✅ Committed to `.radius/app-graph.json` (per spec)
 3. **GitHub App vs Action**: ✅ GitHub Action for MVP (simpler, fork-friendly)
 4. **Diff Visualization**: Table + Mermaid in PR comments
-5. **Parameter Handling**: Use defaults if no params file; mark unknown values as `<parameter>`
+5. **Parameter Handling**: ✅ Require params file; fail with clear error listing missing required parameters if Bicep has required parameters (no defaults) but no `--parameters` flag provided

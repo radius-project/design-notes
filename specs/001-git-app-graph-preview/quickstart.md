@@ -167,6 +167,11 @@ on:
   pull_request:
     paths:
       - '**/.radius/app-graph.json'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/.radius/app-graph.json'
 
 permissions:
   pull-requests: write
