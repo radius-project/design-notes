@@ -127,10 +127,7 @@ If the app graph is loaded (from any source format), we can then **register reci
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       RECIPE REGISTRATION                                   │
-│   Recipes bound to portable types in the graph:                             │
-│   • Radius.Data/store    → PostgreSQL recipe                                │
-│   • Radius.Cache/redis   → Redis recipe                                     │
-│   • Radius.Messaging/mq  → RabbitMQ recipe                                  │
+│   Recipes bound to types in the graph                                       │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
                                   ▼
