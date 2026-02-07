@@ -1,2 +1,5 @@
 .DS_STORE
 dictionary.dic
+
+# Folder for Copilot generated files
+.copilot-tracking/
