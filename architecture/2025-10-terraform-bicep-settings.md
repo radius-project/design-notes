@@ -178,6 +178,22 @@ resource corpTerraformSettings 'Radius.Core/terraformSettings@2025-08-01-preview
       }
     }
 
+    modules: {
+      authentication: {
+        git:{
+          pat:{
+            'github.com':{
+              username: 'test-username'
+              password: {
+                secretId: '/planes/radius/local/providers/Radius.Security/secrets/terraform-module-secrets'
+                key: 'pat'
+              }
+            }
+          }
+        }
+      }
+    }
+
     backend: {
       type: 'kubernetes'
       config: {
