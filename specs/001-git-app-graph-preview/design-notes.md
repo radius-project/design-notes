@@ -17,7 +17,7 @@ A fundamental aspect of the app graph is that it serves as a **projection of the
 The graph is designed to operate in multiple contexts:
 
 | Environment | Description | Use Case |
-|-------------|-------------|----------|
+| --- | --- | --- |
 | **Local workstation** | Graph generated from a local clone of a repository | Developer preview, local validation, pre-commit checks |
 | **Without git** | Graph generated from standalone files (no git repository) | Quick prototyping, isolated testing, non-versioned projects |
 | **Control plane server** | Graph managed by Radius UCP or similar orchestrator | Enterprise scenarios, centralized graph management, cross-repo analysis |
@@ -30,11 +30,11 @@ This flexibility ensures the graph works across the full development lifecycle�
 The graph's storage format varies by runtime environment, with different trade-offs for collaboration:
 
 | Environment | Storage | Conflict Handling |
-|-------------|---------|-------------------|
+| --- | --- | --- |
 | **Local/Git** | JSON file (`.radius/app-graph.json`) | Git branching and merging |
 | **Server-hosted** | Graph database | Transactional updates, no merge conflicts |
 
-**Local File Format Design Goals**
+## Local File Format Design Goals
 
 For users without a server instance, the serialized graph file must be as friendly as possible to branching and merging:
 
@@ -43,7 +43,7 @@ For users without a server instance, the serialized graph file must be as friend
 - **Stable identifiers**: Resource IDs derived from source content rather than generation order, so the same resource in different branches has the same ID
 - **Human-readable format**: Pretty-printed JSON with consistent indentation, making manual conflict resolution feasible when needed
 
-**Server-Hosted Graph Database**
+## Server-Hosted Graph Database
 
 When the graph is hosted on a control plane server, a proper graph database (e.g., Neo4j, Amazon Neptune, or an embedded solution) can be used:
 
@@ -102,7 +102,7 @@ This architecture allows Radius to **light up experiences in any repository**:
 
 If the app graph is loaded (from any source format), we can then **register recipes against the app graph**. This decouples recipe registration from the source format, allowing Radius deployments to work with any technology.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           SOURCE FORMATS                                    │
 ├─────────────┬─────────────┬─────────────┬─────────────┬─────────────────────┤
@@ -141,7 +141,7 @@ If the app graph is loaded (from any source format), we can then **register reci
 
 The graph facilitates **migration between deployment technologies**. For example, migrating from a GitOps workflow to a simpler `app.bicep` representation:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         GITOPS REPOSITORY                                   │
 │  ├── clusters/                                                              │
@@ -237,3 +237,41 @@ These conceptual foundations inform several implementation decisions in the [spe
 4. **Lightweight GitHub Action**: The Action reads committed JSON rather than generating graphs, keeping it source-format agnostic
 
 5. **Staleness Detection**: The `sourceHash` field enables validation that the graph matches its source files
+
+## Appendix 1: Radius Conceptual Graph
+
+```mermaid
+flowchart TD
+  Workspace["Workspace"]
+  Group["Group"]
+  Environment["Environment"]
+  RecipePack["Recipe Pack"]
+  Recipe["Recipe"]
+  Deployment["Deployment"]
+  ResourceType["Resource Type"]
+  DeployedResource["Deployed Resource<br/>(Resource Instance)"]
+  Workspace --> Environment
+  Workspace --> Group
+
+  %% Environment relationships
+  Environment --> RecipePack
+  Environment --> Deployment
+
+  %% Deployment selects group
+  Group --> Deployment
+
+  %% Recipes and resource types
+  RecipePack --> Recipe
+  Recipe --> ResourceType
+
+  %% Deployment uses recipes and types
+  Deployment --> ResourceType
+  Deployment --> Recipe
+
+  %% Deployment produces resource instances
+  Deployment --> DeployedResource
+
+  %% Resource instances are of a type and produced by a recipe
+  DeployedResource --> ResourceType
+  DeployedResource --> Recipe
+```
