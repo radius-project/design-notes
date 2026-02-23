@@ -113,9 +113,11 @@ As a PR reviewer, I want to see a visual diff of the app graph in PR comments, s
 
 **Operational Model**: The GitHub Action **generates the app graph automatically** as part of the workflow — developers do NOT need to run `rad app graph app.bicep` manually or commit graph artifacts. The Action checks out the PR head and base branches, runs `rad app graph app.bicep` on each, computes the diff, and posts the result as a PR comment. This keeps the developer experience friction-free at the cost of requiring Bicep/Radius tooling in CI.
 
-**Trigger Events**: The Action supports two trigger modes:
-- **`pull_request`**: Posts diff comments on PRs when `.radius/app-graph.json` changes
+**Trigger Events**: This workflow focuses on **PR review**:
+- **`pull_request`**: Posts diff comments on PRs when Bicep files change
 - **`push` to main/default branch**: Updates baseline tracking for historical comparison
+
+> **Note**: A separate workflow handles updating the README with an architecture diagram on merge to `main` — see User Story 7.
 
 **Monorepo Support**: The Action auto-detects all Bicep entry points (e.g., `**/app.bicep`) in the repository. Each application graph is generated and diffed independently, with separate PR comment sections per application.
 
@@ -179,6 +181,38 @@ As a platform engineer, I want to see how abstract Radius types resolve to concr
 
 ---
 
+### User Story 7 - README Architecture Diagram (Priority: P1)
+
+As a **repository maintainer**, I want the repo's README to always display an up-to-date architecture diagram of my application, so that anyone visiting the repo can immediately understand the application topology without reading Bicep files.
+
+**Why this priority**: The README is the first thing contributors and users see when visiting a repository. An always-current architecture diagram provides immediate, high-visibility value and is a primary motivator for adopting app graph generation. Depends on P1 graph generation and image rendering being stable.
+
+**Operational Model**: A **separate GitHub Actions workflow** triggers on every push to the `main` (or default) branch. It generates the app graph from the Bicep entry points on `main`, produces a topology image, and commits it back to the repository. The workflow then updates the README to embed the image under an `## Architecture` heading near the top of the file. If the heading doesn't exist, the workflow inserts it after the first heading (assumed to be the project title). If the generated graph is identical to the previously committed image, the workflow skips the commit to avoid unnecessary noise.
+
+**Trigger Events**:
+- **`push` to `main`/default branch**: Runs on every merge to `main` (i.e., when a PR is merged or a direct push occurs)
+- **`workflow_dispatch`**: Supports manual trigger for on-demand regeneration
+
+**Monorepo Support**: For repositories with multiple Bicep entry points, the workflow generates a combined architecture section with one image per application, each labeled with its path (e.g., `apps/frontend/`, `apps/backend/`).
+
+**Independent Test**: Merge a PR with Bicep changes to `main`, verify the workflow runs and the README is updated with an architecture image reflecting the current graph.
+
+**Acceptance Scenarios**:
+
+1. **Given** a repository with an `app.bicep` file and a README without an Architecture section, **When** a PR is merged to `main`, **Then** the workflow generates the app graph, produces a topology image, inserts an `## Architecture` heading after the project title in the README, embeds the image under that heading, and commits the changes to `main`.
+
+2. **Given** a repository whose README already has an `## Architecture` section with a previous topology image, **When** a PR with Bicep changes is merged to `main`, **Then** the workflow regenerates the image, replaces the existing image reference under the Architecture heading, and commits the update.
+
+3. **Given** a merge to `main` that does NOT change any Bicep files (or where changes produce an identical graph), **When** the workflow runs, **Then** it detects no visual change, skips the commit, and logs "Architecture diagram is already up-to-date."
+
+4. **Given** a monorepo with `apps/frontend/app.bicep` and `apps/backend/app.bicep`, **When** a merge to `main` changes the frontend Bicep, **Then** the workflow regenerates only the affected image, updates the README's Architecture section with per-application subsections, and commits.
+
+5. **Given** the workflow is triggered manually via `workflow_dispatch`, **When** it runs, **Then** it regenerates the architecture image(s) and updates the README regardless of whether Bicep files changed.
+
+6. **Given** the AI image generation pipeline is unavailable, **When** the workflow runs, **Then** it falls back to the deterministic renderer (Graphviz/DOT), produces the image, and updates the README with a note indicating the image was generated with the fallback renderer.
+
+---
+
 ### Edge Cases
 
 - What happens when Bicep file references resources outside the current file/module that cannot be resolved?
@@ -200,6 +234,12 @@ As a platform engineer, I want to see how abstract Radius types resolve to concr
   - **Static graph shows abstract types**: The declared `Radius.Data/store` is shown, not the resolved infrastructure (PostgreSQL, CosmosDB, etc.)
   - This is intentional—the static graph represents the **portable application architecture** independent of environment-specific recipe resolution
   - For environment-resolved views, see User Story 6 (P3)
+- What happens if the README has an unexpected structure (no headings, or `## Architecture` already used for different content)?
+  - The workflow uses marker comments (`<!-- radius-app-graph-start -->` / `<!-- radius-app-graph-end -->`) to identify its managed section. If markers exist, content between them is replaced. If not, the workflow inserts markers + content after the first `#` heading. This avoids overwriting user-authored Architecture sections not managed by the workflow.
+- What happens if the workflow commit conflicts with a concurrent push to `main`?
+  - The workflow pulls latest `main` before committing. If a conflict occurs, it retries once after rebasing. If still conflicting, it logs a warning and skips the commit (the next merge will trigger a fresh run).
+- What happens if the generated image is too large for the README (e.g., 100+ resource graph)?
+  - The workflow generates both a full-size image and a simplified summary image (key resources only). The README embeds the summary with a link to the full-size image in `.radius/`.
 
 ---
 
@@ -407,6 +447,9 @@ Since the GitHub Action generates graphs on-the-fly from Bicep source, there is 
 - **FR-018**: System MUST work with Bicep files targeting any cloud provider (multi-cloud neutrality per Constitution Principle III)
 - **FR-019**: System MUST be compatible with the Radius Bicep extension type definitions
 - **FR-020**: System MUST extract and include resource-specific properties (e.g., container image, ports, hostnames, database names) in each graph node so that visualizations can display them as node labels or detail annotations. Secret values MUST NOT be captured.
+- **FR-021**: System MUST provide a GitHub Actions workflow that triggers on push to the default branch (`main`), generates the app graph from Bicep entry points, produces a topology image, and commits it to the repository with an updated README embedding the image under an `## Architecture` heading
+- **FR-022**: The README update workflow MUST use HTML marker comments (`<!-- radius-app-graph-start -->` / `<!-- radius-app-graph-end -->`) to identify the managed section, and MUST skip the commit if the generated graph is identical to the existing one
+- **FR-023**: The README update workflow MUST support `workflow_dispatch` for manual on-demand regeneration
 
 ### Non-Functional Requirements
 
@@ -475,6 +518,7 @@ Since the GitHub Action generates graphs on-the-fly from Bicep source, there is 
 - **SC-006**: Git enrichment adds < 2 seconds overhead for repositories with up to 1000 commits
 - **SC-007**: System handles Bicep files up to 5000 lines without performance degradation
 - **SC-008**: Error messages include actionable guidance in 100% of failure cases
+- **SC-009**: README update workflow commits the architecture image to the repo within 90 seconds of a merge to `main`, and skips the commit when no graph changes are detected
 
 ---
 
@@ -500,6 +544,10 @@ This feature MUST include comprehensive testing across the testing pyramid:
 - End-to-end test: Bicep file → graph generation → output validation
 - Test GitHub Action in a real PR workflow
 - Test graph diff accuracy with known before/after states
+- Test README update workflow: merge Bicep changes to `main`, verify README is updated with architecture image
+- Test README update workflow skip: merge non-Bicep changes, verify no README commit is made
+- Test README marker insertion: verify workflow correctly inserts markers when README has no Architecture section
+- Test README marker replacement: verify workflow replaces content between existing markers without affecting surrounding content
 
 ---
 
