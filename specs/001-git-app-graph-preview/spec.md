@@ -13,7 +13,7 @@
 - Q: Diff visualization format in PR comments? → A: Table + Mermaid diagrams (change table for details, before/after diagrams for visual topology)
 - Q: How to handle Bicep parameters without params file? → A: Require params file (fail with error if Bicep has required parameters but no `--parameters` provided)
 - Q: GitHub Action trigger events? → A: `pull_request` + `push` (PR for review comments, push to main for baseline tracking)
-- Q: Monorepo support with multiple app graphs? → A: Auto-detect all `**/.radius/app-graph.json` files; each diffed independently
+- Q: Monorepo support with multiple app graphs? → A: Auto-detect all Bicep entry points (e.g., `**/app.bicep`); each diffed independently
 
 ## Problem Statement
 
@@ -39,7 +39,7 @@ As a **platform engineer**, I want to review app graph changes in PRs, so I can 
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid `app.bicep` file with container, gateway, and database resources, **When** I run `rad app graph app.bicep`, **Then** I receive a JSON graph representation showing all resources and their connections.
+1. **Given** a valid `app.bicep` file with container, gateway, and database resources, **When** I run `rad app graph app.bicep`, **Then** I receive a JSON graph representation showing all resources, their connections, and key properties for each resource (e.g., container image, ports, database name).
 
 2. **Given** a Bicep file with syntax errors, **When** I run `rad app graph app.bicep`, **Then** I receive a clear error message indicating the parsing failure with line/column information.
 
@@ -75,7 +75,7 @@ As a developer, I want the app graph exported in a deterministic, diff-friendly 
    - A resource table with name, type, source file, and git metadata
    - An embedded Mermaid diagram showing the topology that GitHub renders automatically
 
-5. **Given** a graph exported to markdown, **When** viewed in GitHub, **Then** the Mermaid diagram renders as a visual flowchart with distinct shapes for resource types (containers as rectangles, gateways as diamonds, databases as cylinders).
+5. **Given** a graph exported to markdown, **When** viewed in GitHub, **Then** the Mermaid diagram renders as a visual flowchart following the Visual Design Guidelines (rounded rectangle nodes, GitHub-consistent color palette for diff states, distinct shapes for databases) and node labels include key properties (e.g., container image tag, port numbers).
 
 6. **Given** two app graphs from different commits, **When** I diff them, **Then** the diff is computed from JSON (not Markdown), and added/removed/modified resources are clearly identified.
 
@@ -111,29 +111,29 @@ As a PR reviewer, I want to see a visual diff of the app graph in PR comments, s
 
 **Why this priority**: High-value GitHub integration, but depends on P1 capabilities being stable.
 
-**Operational Model**: The GitHub Action reads committed `.radius/app-graph.json` files from git history — it does NOT generate graphs on-demand. This keeps the Action lightweight (no Bicep/Radius tooling required) and fast.
+**Operational Model**: The GitHub Action **generates the app graph automatically** as part of the workflow — developers do NOT need to run `rad app graph app.bicep` manually or commit graph artifacts. The Action checks out the PR head and base branches, runs `rad app graph app.bicep` on each, computes the diff, and posts the result as a PR comment. This keeps the developer experience friction-free at the cost of requiring Bicep/Radius tooling in CI.
 
 **Trigger Events**: The Action supports two trigger modes:
 - **`pull_request`**: Posts diff comments on PRs when `.radius/app-graph.json` changes
 - **`push` to main/default branch**: Updates baseline tracking for historical comparison
 
-**Monorepo Support**: The Action auto-detects all `**/.radius/app-graph.json` files in the repository. Each graph is diffed independently, with separate PR comment sections per application.
+**Monorepo Support**: The Action auto-detects all Bicep entry points (e.g., `**/app.bicep`) in the repository. Each application graph is generated and diffed independently, with separate PR comment sections per application.
 
 **Independent Test**: Create a PR with Bicep changes and updated graph JSON, verify the action posts a comment showing before/after graph comparison.
 
 **Acceptance Scenarios**:
 
-1. **Given** a PR that includes changes to `.radius/app-graph.json`, **When** the GitHub Action runs, **Then** it reads the JSON from base and head commits and posts a comment showing the graph diff with added/removed/modified resources highlighted.
+1. **Given** a PR that includes changes to Bicep files, **When** the GitHub Action runs, **Then** it generates the app graph from both the base and head commits, computes the diff, and posts a comment showing added (green), removed (red), and modified (yellow) resources using the Visual Design Guidelines color conventions.
 
-2. **Given** a PR with no changes to `.radius/app-graph.json`, **When** the GitHub Action runs, **Then** it posts a comment indicating "No app graph changes detected."
+2. **Given** a PR with no changes to Bicep files (or where Bicep changes produce an identical graph), **When** the GitHub Action runs, **Then** it posts a comment indicating "No app graph changes detected."
 
 3. **Given** a PR that adds a new connection between resources, **When** the GitHub Action runs, **Then** the diff clearly shows the new connection with source and target resources.
 
 4. **Given** a PR comment already exists from a previous run, **When** the PR is updated and the action runs again, **Then** the existing comment is updated rather than creating a duplicate.
 
-5. **Given** a PR where Bicep files changed but `.radius/app-graph.json` was not updated, **When** the CI validation job runs, **Then** it fails with a message instructing the developer to run `rad app graph app.bicep` and commit the updated graph.
+5. **Given** a developer who has not run `rad app graph` locally, **When** they push Bicep changes and open a PR, **Then** the GitHub Action generates the graph and posts the diff automatically — no manual graph generation or commit is required.
 
-6. **Given** a monorepo with multiple Radius applications (e.g., `apps/frontend/.radius/app-graph.json` and `apps/backend/.radius/app-graph.json`), **When** the GitHub Action runs on a PR, **Then** it detects all graph files and posts a unified comment with separate diff sections per application.
+6. **Given** a monorepo with multiple Radius applications (e.g., `apps/frontend/app.bicep` and `apps/backend/app.bicep`), **When** the GitHub Action runs on a PR, **Then** it detects all Bicep entry points and posts a unified comment with separate diff sections per application.
 
 ---
 
@@ -193,10 +193,9 @@ As a platform engineer, I want to see how abstract Radius types resolve to concr
   - Mark affected values as "dynamic" in the graph, use placeholder notation
 - What happens when Bicep files use cloud-specific resources (Azure, AWS)?
   - Graph generation MUST work regardless of cloud provider; cloud-specific resources are represented with their provider prefix (e.g., `Microsoft.Storage/storageAccounts`, `AWS::S3::Bucket`)
-- What happens when the committed graph is stale (Bicep changed but graph not regenerated)?
-  - CI validation job compares committed graph to freshly generated graph; fails PR if they differ
-  - Graph JSON includes `sourceHash` to detect staleness without full regeneration
-  - Clear error message instructs developer to run `rad app graph app.bicep`
+- What happens if a developer commits `.radius/app-graph.json` alongside Bicep changes?
+  - The GitHub Action ignores committed graph artifacts and always generates fresh graphs from Bicep source to ensure accuracy
+  - Committed graph files are treated as optional local convenience, not as CI inputs
 - What does the graph show for portable Radius types like `Radius.Data/store` that resolve differently per environment?
   - **Static graph shows abstract types**: The declared `Radius.Data/store` is shown, not the resolved infrastructure (PostgreSQL, CosmosDB, etc.)
   - This is intentional—the static graph represents the **portable application architecture** independent of environment-specific recipe resolution
@@ -235,13 +234,61 @@ This feature extends the existing `rad app graph` command with file-based input 
 
 ---
 
-## Committed Artifact Model
+## Visual Design Guidelines
 
-The app graph JSON is designed to be **committed to version control** as a tracked artifact. This enables lightweight GitHub integration without requiring the Action to have Bicep/Radius tooling.
+All graph visualizations — Mermaid diagrams, PR comment diff tables, and Markdown output — MUST follow a visual style consistent with the **native GitHub UI** to feel integrated rather than bolted-on.
+
+### Color Palette (Diff States)
+
+| State | Color | Usage | GitHub Reference |
+|-------|-------|-------|------------------|
+| **Added** | Green (`#2da44e` / `--color-success-fg`) | New resources, new connections | Same as GitHub diff additions |
+| **Removed** | Red (`#cf222e` / `--color-danger-fg`) | Deleted resources, deleted connections | Same as GitHub diff deletions |
+| **Modified** | Yellow (`#bf8700` / `--color-attention-fg`) | Changed properties or connections | Same as GitHub warning/attention |
+| **Unchanged** | Gray (`#656d76` / `--color-fg-muted`) | Context resources shown for topology reference | Same as GitHub muted text |
+
+### Mermaid Diagram Styling
+
+- **Node shapes**: Rounded rectangles (`([...])`) for all resource nodes to match GitHub's card/box aesthetic
+  - Containers: rounded rectangle with container icon annotation
+  - Gateways: rounded rectangle with gateway/diamond icon annotation
+  - Databases: cylinder shape (Mermaid built-in `[(...)]`)
+- **Node labels**: Resource name as primary label, key properties (e.g., image tag, port) as secondary text
+- **Edges**: Solid lines for direct connections, dashed lines for implicit/inferred dependencies
+- **Diff coloring**: Use Mermaid `classDef` styles to apply the color palette above:
+  ```mermaid
+  classDef added fill:#dafbe1,stroke:#2da44e,color:#1a7f37
+  classDef removed fill:#ffebe9,stroke:#cf222e,color:#82071e
+  classDef modified fill:#fff8c5,stroke:#bf8700,color:#6a5600
+  classDef unchanged fill:#f6f8fa,stroke:#d0d7de,color:#656d76
+  ```
+- **Layout**: Top-to-bottom (`TB`) flow direction for application topology
+
+### PR Comment Styling
+
+- **Change summary table**: Use GitHub Markdown table with status emoji prefix for scanability:
+  - `🟢 Added` — green circle for new resources
+  - `🔴 Removed` — red circle for deleted resources
+  - `🟡 Modified` — yellow circle for changed resources
+- **Before/After diagrams**: Labeled with `### Before` and `### After` headings inside a collapsible `<details>` block to avoid overwhelming long PRs
+- **Comment header**: Include a brief summary line (e.g., "App Graph: +2 resources, -1 resource, ~1 modified") so reviewers can assess impact at a glance without expanding details
+- **Borders and containers**: Use GitHub's native `> [!NOTE]`, `> [!WARNING]`, and `> [!IMPORTANT]` callout syntax where appropriate for status messages
+
+### General Principles
+
+- Visual output MUST render correctly in both GitHub light and dark themes
+- Avoid hardcoded colors that become illegible in dark mode — use GitHub's CSS variable equivalents as reference and test both themes
+- Prefer semantic color usage (green = added, red = removed) over decorative color
+- Keep visualizations compact — prioritize information density over whitespace
+- All visual elements should feel like a native part of the GitHub PR review experience, not an external tool's output
+
+---
+
+The app graph JSON can be generated locally as a **developer preview** but is NOT required to be committed. The GitHub Action generates graphs automatically from Bicep source during CI.
 
 ### Default Output Location
 
-By default, `rad app graph app.bicep` writes to `.radius/app-graph.json` relative to the Bicep file's directory:
+Locally, `rad app graph app.bicep` writes to `.radius/app-graph.json` relative to the Bicep file's directory:
 
 ```
 myapp/
@@ -259,34 +306,33 @@ myapp/
 # 1. Make changes to Bicep files
 vim app.bicep
 
-# 2. Regenerate the graph (writes to .radius/app-graph.json by default)
-rad app graph app.bicep
+# 2. (Optional) Preview the graph locally
+rad app graph app.bicep            # writes to .radius/app-graph.json
+rad app graph app.bicep --stdout    # or view in terminal
 
-# 3. Commit both the Bicep changes and updated graph
-git add app.bicep .radius/app-graph.json
+# 3. Commit Bicep changes (no need to commit graph artifacts)
+git add app.bicep
 git commit -m "Add redis cache to application"
 
-# 4. Push and create PR — GitHub Action reads committed JSON to render diff
+# 4. Push and create PR — GitHub Action generates graphs and posts diff automatically
 git push
 ```
 
-### Why Committed Artifacts?
+**Key Point**: Developers do NOT need to run `rad app graph` or commit `.radius/app-graph.json` for the PR workflow to function. The GitHub Action handles graph generation and diffing entirely. Local graph generation is available as an optional preview tool.
+
+### Why This Model?
 
 | Benefit | Explanation |
 |---------|-------------|
-| **Simple GitHub Action** | Action is a lightweight viewer that reads JSON from git history — no Bicep CLI, no Radius environment needed |
-| **Fast CI** | No graph generation in CI; diff is just JSON comparison |
-| **Reproducible** | Graph captured at commit time, not regenerated with potentially different tooling |
-| **Auditable** | Graph evolution visible in git history alongside code changes |
-| **Fork-friendly** | Works in forks without special tooling or secrets |
+| **Zero developer friction** | Developers only commit Bicep files — no extra `rad app graph` step or graph artifacts to manage |
+| **Always up-to-date** | Graph is generated fresh from Bicep source on every PR, eliminating stale graph drift |
+| **Reproducible** | Graph generated from committed Bicep source using pinned tooling in CI |
+| **Fork-friendly** | Works in forks — the GitHub Action installs its own tooling |
+| **Optional local preview** | Developers can still run `rad app graph app.bicep` locally to preview changes before pushing |
 
-### Staleness Detection
+### Graph Metadata
 
-To prevent committed graphs from drifting out of sync with Bicep files:
-
-1. **CI Validation Job** (recommended): Regenerate graph in CI, compare to committed version, fail if different
-2. **Pre-commit Hook** (optional): Validate graph matches Bicep before allowing commit
-3. **Graph Metadata**: JSON includes `sourceHash` field — hash of input Bicep file(s) for staleness detection
+Generated graphs include metadata for traceability and debugging:
 
 ```json
 {
@@ -294,12 +340,15 @@ To prevent committed graphs from drifting out of sync with Bicep files:
     "generatedAt": "2026-01-30T10:15:00Z",
     "sourceFiles": ["app.bicep", "modules/database.bicep"],
     "sourceHash": "sha256:abc123...",
-    "radiusCliVersion": "0.35.0"
+    "radiusCliVersion": "0.35.0",
+    "generatedBy": "github-action"  
   },
   "resources": [...],
   "connections": [...]
 }
 ```
+
+Since the GitHub Action generates graphs on-the-fly from Bicep source, there is no staleness concern — the graph always reflects the current state of the code at each commit.
 
 ---
 
@@ -317,8 +366,8 @@ To prevent committed graphs from drifting out of sync with Bicep files:
 - **FR-008**: System MUST enrich graph nodes with git metadata (commit SHA, author, date, message) by default when in a git repository, with `--no-git` flag to disable
 - **FR-009**: System MUST track which Bicep file(s) define each resource for git blame integration
 - **FR-010**: System MUST write graph output to `.radius/app-graph.json` by default (relative to Bicep file location), with `--stdout` flag for stdout output and `-o` flag for custom path
-- **FR-011**: System MUST include `sourceHash` metadata in JSON output to enable staleness detection
-- **FR-012**: System MUST provide a GitHub Action that reads committed graph JSON from git history and posts graph diffs on PRs (no graph generation in CI)
+- **FR-011**: System MUST include `sourceHash` metadata in JSON output for traceability
+- **FR-012**: System MUST provide a GitHub Action that generates app graphs from Bicep source for both base and head commits, computes the diff, and posts the result as a PR comment (developers are NOT required to generate or commit graph artifacts manually)
 - **FR-013**: System MUST update existing PR comments rather than creating duplicates
 - **FR-014**: System MUST support generating graphs at specific git commits/refs
 - **FR-015**: System MUST handle Bicep parameter files to resolve parameterized values
@@ -326,6 +375,7 @@ To prevent committed graphs from drifting out of sync with Bicep files:
 - **FR-017**: System MUST handle unresolvable references gracefully with placeholder annotations
 - **FR-018**: System MUST work with Bicep files targeting any cloud provider (multi-cloud neutrality per Constitution Principle III)
 - **FR-019**: System MUST be compatible with the Radius Bicep extension type definitions
+- **FR-020**: System MUST extract and include resource-specific properties (e.g., container image, ports, hostnames, database names) in each graph node so that visualizations can display them as node labels or detail annotations. Secret values MUST NOT be captured.
 
 ### Non-Functional Requirements
 
@@ -334,6 +384,7 @@ To prevent committed graphs from drifting out of sync with Bicep files:
 - **NFR-003**: Feature MUST NOT require changes to existing deployment workflows (Constitution Principle IX - Incremental Adoption)
 - **NFR-004**: CLI commands MUST follow existing `rad` CLI patterns and conventions
 - **NFR-005**: Error messages MUST be actionable with clear guidance for resolution (Constitution Principle VI)
+- **NFR-006**: All visual output (Mermaid diagrams, PR comment tables, Markdown previews) MUST follow a GitHub-native visual style — rounded corners, GitHub's diff color palette (green/red/yellow), and correct rendering in both light and dark themes
 
 ### Key Entities
 
@@ -345,10 +396,25 @@ To prevent committed graphs from drifting out of sync with Bicep files:
   - ID: Unique resource identifier (matches Radius resource ID format)
   - Name: Human-readable resource name
   - Type: Resource type (e.g., `Applications.Core/containers`)
+  - Properties: Key resource-specific properties useful for visualization (see below)
   - SourceFile: Bicep file path where resource is defined
   - SourceLine: Line number in source file
   - Connections: Outbound connections to other resources
   - GitInfo: Last commit SHA, author, date, message affecting this resource
+  
+  **Resource Properties for Visualization**: Each resource node MUST include salient properties extracted from the Bicep definition so that visualizations can display them as node labels or detail panels. The properties captured are resource-type-specific:
+  
+  | Resource Type | Properties Captured |
+  |---------------|--------------------|
+  | `Applications.Core/containers` | `image` (container image reference), `ports` (port mappings), `env` (environment variable names, not values) |
+  | `Applications.Core/gateways` | `hostname`, `routes` (path prefixes) |
+  | `Applications.Core/httpRoutes` | `port`, `scheme` |
+  | `Applications.Datastores/*` | `resourceProvisioning`, `database` (name), `server` (host) |
+  | `Applications.Messaging/*` | `resourceProvisioning`, `queue`/`topic` (name) |
+  | Cloud-specific resources | `sku`, `location`, provider-specific key properties |
+  | All resources | `application` (parent app ID), `environment` (environment ID) |
+  
+  Properties with values that cannot be statically resolved (e.g., runtime expressions, secrets) are included with a `"dynamic"` placeholder value. Secret values (e.g., passwords, connection strings) are NEVER captured — only non-sensitive configuration is included.
   
 - **AppGraphConnection**: Edge between two resources
   - SourceID: Origin resource
@@ -373,7 +439,7 @@ To prevent committed graphs from drifting out of sync with Bicep files:
 - **SC-002**: Generated graphs are 100% deterministic (identical input produces byte-identical output)
 - **SC-003**: Graph diff correctly identifies all added, removed, and modified resources with zero false positives
 - **SC-004**: GitHub Action posts PR comments within 60 seconds of workflow trigger
-- **SC-005**: Markdown output (including embedded Mermaid diagram) renders correctly in GitHub without manual formatting
+- **SC-005**: Markdown output (including embedded Mermaid diagram) renders correctly in GitHub in both light and dark themes, following the Visual Design Guidelines for color and layout
 - **SC-006**: Git enrichment adds < 2 seconds overhead for repositories with up to 1000 commits
 - **SC-007**: System handles Bicep files up to 5000 lines without performance degradation
 - **SC-008**: Error messages include actionable guidance in 100% of failure cases
