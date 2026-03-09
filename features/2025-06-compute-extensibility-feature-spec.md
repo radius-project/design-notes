@@ -65,10 +65,10 @@ As a platform engineer, I can confidently adopt Radius across my organization, k
 A platform engineer initializes a new Radius environment and registers recipes for `Radius.Compute/containers@2025-05-01-preview` to deploy applications to Azure Container Instances (ACI) instead of Kubernetes, allowing teams to use Radius in environments without Kubernetes clusters. They would similarly register recipes for ACI-compatible gateway and secret store solutions.
 
 ### Scenario 2: Customize platform deployment behavior for core resources
-A platform engineer customizes the default Kubernetes recipes for `Radius.Compute/containers@2025-05-01-preview` (and similarly for `Radius.Compute/gateways` and `Radius.Security/secrets`) to align with company-specific infrastructure policies, such as adding mandatory security sidecars, custom labels for cost tracking, or integrating with internal monitoring systems, by modifying the recipe and re-registering it.
+A platform engineer customizes the default Kubernetes recipes for `Radius.Compute/containers@2025-05-01-preview` (and similarly for `Radius.Compute/routes` and `Radius.Security/secrets`) to align with company-specific infrastructure policies, such as adding mandatory security sidecars, custom labels for cost tracking, or integrating with internal monitoring systems, by modifying the recipe and re-registering it.
 
 ### Scenario 3: Extend Radius to a new, unsupported platform
-A platform engineer creates new Bicep or Terraform recipes to enable Radius to deploy `Radius.Compute/containers@2025-05-01-preview` to AWS Elastic Container Service (ECS), `Radius.Compute/gateways@2025-05-01-preview` to an AWS Application Load Balancer, and `Radius.Security/secrets@2025-05-01-preview` to AWS Secrets Manager. They then register these recipes in their Radius environment.
+A platform engineer creates new Bicep or Terraform recipes to enable Radius to deploy `Radius.Compute/containers@2025-05-01-preview` to AWS Elastic Container Service (ECS), `Radius.Compute/routes@2025-05-01-preview` to an AWS Application Load Balancer, and `Radius.Security/secrets@2025-05-01-preview` to AWS Secrets Manager. They then register these recipes in their Radius environment.
 
 ## Key dependencies and risks
 <!-- What dependencies must we take in order to enable this scenario? -->
@@ -115,7 +115,7 @@ When I, as a platform engineer, try to use Radius to deploy and manage applicati
 
 ## Desired user experience outcome
 <!-- <Write this as an “I statement” that expresses the new capability from user perspective … i.e. After this scenario is implemented “I can do, x, y, z, steps in cloud native app developer and seamlessly etc... As a result <summarize positive impact on my work / business>  -->
-After this feature is implemented, I can confidently use Radius as our central application platform, regardless of the specific compute, secret store, or gateway technologies we use. I can define how `Radius.Compute/containers@2025-05-01-preview` (and similarly versioned `Radius.Compute/gateways`, `Radius.Security/secrets`, and `Radius.Storage/volumes`) are provisioned on any target platform—be it Kubernetes with our custom configurations, serverless container platforms including Azure Container Instances, Azure Container Apps, AWS ECS, Google CloudRun, or a future platform—by simply writing and registering a Bicep or Terraform recipe. I can ensure all deployments adhere to our organizational standards by embedding those standards into the recipes. I can manage these recipes like any other piece of infrastructure-as-code, versioning them, testing them, and sharing them across my teams. As a result, my development teams get a consistent experience for defining their applications, while my platform team retains control and flexibility over the underlying infrastructure, all without needing to modify Radius core or manage complex forks. This significantly reduces our operational overhead and allows us to adapt quickly to new technologies and business needs.
+After this feature is implemented, I can confidently use Radius as our central application platform, regardless of the specific compute, secret store, or gateway technologies we use. I can define how `Radius.Compute/containers@2025-05-01-preview` (and similarly versioned `Radius.Compute/routes`, `Radius.Security/secrets`, and `Radius.Compute/persistentVolumes`) are provisioned on any target platform—be it Kubernetes with our custom configurations, serverless container platforms including Azure Container Instances, Azure Container Apps, AWS ECS, Google CloudRun, or a future platform—by simply writing and registering a Bicep or Terraform recipe. I can ensure all deployments adhere to our organizational standards by embedding those standards into the recipes. I can manage these recipes like any other piece of infrastructure-as-code, versioning them, testing them, and sharing them across my teams. As a result, my development teams get a consistent experience for defining their applications, while my platform team retains control and flexibility over the underlying infrastructure, all without needing to modify Radius core or manage complex forks. This significantly reduces our operational overhead and allows us to adapt quickly to new technologies and business needs.
 
 ### Detailed user experience
  <!-- <List of steps the user goes through from the start to the end of the scenario to provide more detailed view of exactly what the user is able to do given the new capabilities>  -->
@@ -126,7 +126,7 @@ Step 2
 #### User Story 1: As a Platform Engineer, I want to create a Recipe Pack that bundles multiple recipes for core resource types, so that I can easily register and manage them in a Radius environment:
 
 1. **Define a Recipe Pack**:
-   * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
+   * A platform engineer creates a Radius Recipe Pack resource definition that specifies a collection of Recipes. It would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/routes@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (recipeKind and recipeLocation) and its default parameters:
         > Note that Recipe Packs are modeled as a new resource type called `Config`, which was introduced in [this feature spec](https://github.com/radius-project/design-notes/blob/main/features/2025-07-23-radius-configuration-ux.md)
    * e.g. `computeRecipePack.bicep`:
         ```bicep
@@ -146,7 +146,7 @@ Step 2
                         recipeKind: 'terraform'
                         recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets/kubernetes?ref=v0.48'
                     }
-                    Radius.Storage/volumes: {
+                    Radius.Compute/persistentVolumes: {
                         recipeKind: 'terraform'
                         recipeLocation: 'https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes/kubernetes?ref=v0.48'
                     }
@@ -210,20 +210,20 @@ Step 2
         RESOURCE                TYPE                            GROUP     STATE
         computeRecipePack       Radius.Core/recipePacks       default   Succeeded
 
-        RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
-        Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-        Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-        Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        RESOURCE TYPE                      RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        Radius.Compute/containers          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        Radius.Security/secrets            terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        Radius.Compute/persistentVolumes   terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
         ```
         
         ```bash
         $ rad recipe list -environment my-env
-        RECIPE PACK             RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
-        computeRecipePack       Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-        computeRecipePack       Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-        computeRecipePack       Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
-        dataRecipePack          Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
-        networkingRecipePack    Radius.Compute/gateways          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
+        RECIPE PACK             RESOURCE TYPE                      RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        computeRecipePack       Radius.Compute/containers          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        computeRecipePack       Radius.Security/secrets            terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        computeRecipePack       Radius.Compute/persistentVolumes   terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        dataRecipePack          Radius.Data/redisCaches            terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+        networkingRecipePack    Radius.Compute/routes              terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/gateways?ref=v0.48
         ```
 
         ```bash
@@ -231,11 +231,11 @@ Step 2
         RESOURCE            TYPE                            GROUP     STATE
         my-env              Radius.Core/environments        default   Succeeded
 
-        RECIPE PACK         RESOURCE TYPE                    RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
-        computeRecipePack   Radius.Compute/containers        terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
-        computeRecipePack   Radius.Security/secrets          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
-        computeRecipePack   Radius.Storage/volumes           terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
-        dataRecipePack      Radius.Data/redisCaches          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
+        RECIPE PACK         RESOURCE TYPE                      RECIPE KIND     RECIPE VERSION      RECIPE LOCATION
+        computeRecipePack   Radius.Compute/containers          terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/compute/containers/kubernetes?ref=v0.48
+        computeRecipePack   Radius.Security/secrets            terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/security/secrets?ref=v0.48
+        computeRecipePack   Radius.Compute/persistentVolumes   terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/storage/volumes?ref=v0.48
+        dataRecipePack      Radius.Data/redisCaches            terraform                           https://github.com/project-radius/resource-types-contrib.git//recipes/data/redisCaches?ref=v0.48
         ```
 
         > Note: the `RECIPE VERSION` is equivalent to the `TEMPLATE VERSION` column that exists in the Radius CLI output today but remains blank until Recipes versioning is implemented. We're just preserving the existing output, but renaming it to `RECIPE VERSION`.
@@ -245,9 +245,9 @@ Step 2
 There will be default Recipe Packs built into Radius for platform engineers to use "off the shelf" for each supported compute platform (i.e. Kubernetes and ACI today, ECS and other future). Each Recipe Pack will include a set of pre-defined Recipes that are optimized for the specific platform and be invoked to provision the following resources:
 - `Radius.Compute/containers`: including any resources required to run containers (e.g. Kubernetes Deployments, ACI containerGroupProfile, ECS Task Definitions) and provide L4 ingress (e.g. Kubernetes Service/LoadBalancer, Azure Load Balancer, AWS Network Load Balancer). [Connections](https://github.com/radius-project/radius/blob/main/pkg/corerp/renderers/container/render.go#L706-L709) will leverage the `secrets` Recipes to store any secrets data. Environment variables in `Radius.Compute/containers` will also be able to reference values from `Radius.Security/secrets` (parity with existing functionality).
 - `Radius.Security/secrets`: these default Recipes provision the most common secret store for the underlying platform (e.g. Kubernetes Secrets, Azure Key Vault, AWS Secrets Manager). The `secrets` Recipes will also be leveraged to store any secrets data resulting from Connections (e.g. the secret values that are stored as secrets [today](https://github.com/radius-project/radius/blob/main/pkg/corerp/renderers/container/render.go#L706-L709)).
-- `Radius.Storage/volumes`: these default Recipes provision the most common storage solutions for the underlying platform (e.g. Kubernetes Persistent Volumes, Azure Files, Amazon Elastic File System).
+- `Radius.Compute/persistentVolumes`: these default Recipes provision the most common storage solutions for the underlying platform (e.g. Kubernetes Persistent Volumes, Azure Files, Amazon Elastic File System).
 
-> `Radius.Compute/gateways` for L7 ingress will not be included in the default Recipe Packs since it doesn't make sense to force a default given the wide range of preferences for ingress controllers (e.g. Contour, NGINX, Cilium, etc.) by users. Instead, L7 ingress will be implemented separately in the gateways Recipes, and these will not be included as a part of default Recipe packs for each compute platform. If a user wants L7 ingress, they will need to separately bring in their own Recipes for gateways that will implement an ingress controller of their choice (Contour, NGINX, Cilium, Azure Application Gateway, AWS Application Load Balancer, etc.).
+> `Radius.Compute/routes` for L7 ingress will not be included in the default Recipe Packs since it doesn't make sense to force a default given the wide range of preferences for ingress controllers (e.g. Contour, NGINX, Cilium, etc.) by users. Instead, L7 ingress will be implemented separately in the gateways Recipes, and these will not be included as a part of default Recipe packs for each compute platform. If a user wants L7 ingress, they will need to separately bring in their own Recipes for gateways that will implement an ingress controller of their choice (Contour, NGINX, Cilium, Azure Application Gateway, AWS Application Load Balancer, etc.).
 
 > Contour is no longer installed and the `--skip-contour-install` option on `rad install` is removed
 
@@ -617,7 +617,7 @@ rad environment update my-k8s-env --kubernetes-namespace new-namespace
     *   Familiarize yourself with the Radius project's general contribution guidelines (often found in `CONTRIBUTING.md`).
     *   Check for any specific guidelines related to recipes or extensibility.
 2.  **Develop Your Recipe(s)**:
-    *   Create high-quality, well-tested Bicep or Terraform recipes for one or more core types (`Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`, `Radius.Storage/volumes@2025-05-01-preview`).
+    *   Create high-quality, well-tested Bicep or Terraform recipes for one or more core types (`Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/routes@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`, `Radius.Compute/persistentVolumes@2025-05-01-preview`).
     *   Ensure recipes are generic enough for broad use or clearly document their specific use case.
     *   Follow established patterns for parameters, outputs, and resource naming within the Radius ecosystem.
 3.  **Document Your Recipe(s)**:
@@ -658,7 +658,7 @@ rad environment update my-k8s-env --kubernetes-namespace new-namespace
 #### User Story 7: As a platform engineer or app developer, I want to migrate existing Radius applications to use the new RRT-based core types and recipes, so that I can take advantage of the new extensibility features without breaking existing applications:
 
 1.  **Understand the New Model**:
-    *   Platform engineers and developers review documentation on the RRT-based core types (`Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`, `Radius.Storage/volumes@2025-05-01-preview`) and the recipe-driven approach.
+    *   Platform engineers and developers review documentation on the RRT-based core types (`Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/routes@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`, `Radius.Compute/persistentVolumes@2025-05-01-preview`) and the recipe-driven approach.
 2.  **Update Radius Environment**:
     *   Platform engineers update their Radius environment definition to use the new `Radius.Core/environments@2025-05-01-preview` (or later) resource type.
     *   They register recipes for the new RRT versions of core types in their respective environments. For users migrating from existing Kubernetes or ACI setups, they would register the default recipes provided by Radius for these platforms.
@@ -729,7 +729,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 #### User Story 9: As an application developer, I want to add a gateway resource to my application that provisions an ingress controller that I can use to route traffic to my application containers, so that I can manage ingress traffic using my organization's preferred ingress solution:
 
-Given: my platform engineer has set up a Radius environment with recipes registered for `Radius.Compute/containers@2025-05-01-preview` and `Radius.Compute/gateways@2025-05-01-preview` resources. The Recipe backing the gateway resource is configured to provision an ingress controller that complies with the specifications determined by my organization.
+Given: my platform engineer has set up a Radius environment with recipes registered for `Radius.Compute/containers@2025-05-01-preview` and `Radius.Compute/routes@2025-05-01-preview` resources. The Recipe backing the gateway resource is configured to provision an ingress controller that complies with the specifications determined by my organization.
 
 1. **Define a container for the service that needs to be exposed to the internet**:
 * The developer defines a container in their application Bicep file that will be provisioned by the default recipe.
@@ -751,10 +751,10 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     }
     ```
 
-1. **Define a  Gateway Resource**:
-* The developer defines a gateway resource in their application Bicep file and the default recipe provisions an ingress controller (e.g. Contour, NGINX, Traefik, etc.) to handle the traffic routing.
+1. **Define a  Routes Resource**:
+* The developer defines a routes resource in their application Bicep file and the default recipe provisions an ingress controller (e.g. Contour, NGINX, Traefik, etc.) to handle the traffic routing.
     ```bicep
-    resource myCustomGateway 'Radius.Compute/gateways@2025-05-01-preview' = {
+    resource myCustomGateway 'Radius.Compute/routes@2025-05-01-preview' = {
         name: 'myCustomGateway'
         properties: {
             environment: env.id
@@ -771,20 +771,20 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 1. **Deploy the Application**:
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
-* Radius uses the registered recipe for `Radius.Compute/gateways@2025-05-01-preview` to provision the ingress controller and the recipe for `Radius.Compute/containers@2025-05-01-preview` to deploy the container with the ingress controller configured to route traffic to the container.
+* Radius uses the registered recipe for `Radius.Compute/routes@2025-05-01-preview` to provision the ingress controller and the recipe for `Radius.Compute/containers@2025-05-01-preview` to deploy the container with the ingress controller configured to route traffic to the container.
     ```bash
     Building app.bicep...
     Deploying template './app.bicep' for application 'myapp' and environment 'my-env' from workspace 'default'...
 
     Deployment In Progress...
 
-    Completed            myCustomGateway         Radius.Compute/gateways
+    Completed            myCustomGateway         Radius.Compute/routes
     Completed            frontend                Radius.Compute/containers
 
     Deployment Complete
 
     Resources:
-        myCustomGateway         Radius.Compute/gateways
+        myCustomGateway         Radius.Compute/routes
         frontend                Radius.Compute/containers
 
         Public endpoint http://1.1.1.1.nip.io/
@@ -797,12 +797,12 @@ Note that the developer UX is the same as today. However, there are several chan
 
 #### User Story 10: As an application developer, I want to create custom storage resources and mount them as volumes to my containers, so that I can use custom storage solutions or configurations:
 
-Given: my platform engineer has set up a Radius environment with recipes registered for `Radius.Compute/containers@2025-05-01-preview` and `Radius.Storage/volumes@2025-05-01-preview` resources. The volume recipe is configured to provision storage (e.g. Azure Disks, Blob Storage, AWS EBS, S3, etc.) based on the specifications determined by my organization that can then be mounted to my containers.
+Given: my platform engineer has set up a Radius environment with recipes registered for `Radius.Compute/containers@2025-05-01-preview` and `Radius.Compute/persistentVolumes@2025-05-01-preview` resources. The volume recipe is configured to provision storage (e.g. Azure Disks, Blob Storage, AWS EBS, S3, etc.) based on the specifications determined by my organization that can then be mounted to my containers.
 
 1. **Define a Volume Resource**:
     * The developer defines a volume resource in their application Bicep file that will be provisioned by the default recipe.
     ```bicep
-    resource myStorageVolume 'Radius.Storage/volumes@2025-05-01-preview' = {
+    resource myStorageVolume 'Radius.Compute/persistentVolumes@2025-05-01-preview' = {
         name: 'myStorageVolume'
         properties: {
             environment: env.id
@@ -837,7 +837,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 1. **Deploy the Application**:
 * The developer deploys the application using `rad deploy app.bicep --environment my-env`.
-* Radius uses the registered recipe for `Radius.Storage/volumes@2025-05-01-preview` to provision the storage volume and the recipe for `Radius.Compute/containers@2025-05-01-preview` to deploy the container with the storage mounted as a volume in the container.
+* Radius uses the registered recipe for `Radius.Compute/persistentVolumes@2025-05-01-preview` to provision the storage volume and the recipe for `Radius.Compute/containers@2025-05-01-preview` to deploy the container with the storage mounted as a volume in the container.
 
 #### User Story 11: As a platform engineer, I want an interactive guided experience for setting up Radius environments with default recipes for core types based on the platform I'm targeting, so that I can quickly get started with Radius without needing to manually configure everything via disparate steps:
 
@@ -848,7 +848,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     NAME      RESOURCE TYPE                               RECIPE KIND  RECIPE VERSION      RECIPE LOCATION
     default   Radius.Compute/containers                   bicep                            ghcr.io/radius-project/recipes/local-dev/containers:latest
     default   Radius.Security/secrets                     bicep                            ghcr.io/radius-project/recipes/local-dev/secrets:latest
-    default   Radius.Storage/volumes                      bicep                            ghcr.io/radius-project/recipes/local-dev/volumes:latest
+    default   Radius.Compute/persistentVolumes            bicep                            ghcr.io/radius-project/recipes/local-dev/volumes:latest
     default   Radius.Data/sqlDatabases                    bicep                            ghcr.io/radius-project/recipes/local-dev/sqldatabases:latest
     default   Radius.Data/rabbitMQQueues                  bicep                            ghcr.io/radius-project/recipes/local-dev/rabbitmqqueues:latest
     default   Radius.Dapr/pubSubBrokers                   bicep                            ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:latest
@@ -880,12 +880,12 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 * Recipes accept a new `allowPlatformOptions` parameter that determines whether platform-specific configurations via their own schemas (e.g., ACI containerGroupProfile, Kubernetes podSpec) are allowed in the resource type definition.
 * Ability to package and register sets of related recipes as "Recipe Packs" to simplify distribution and management. Environment definitions can reference these packs, which will include the necessary recipes for core types.
 * Core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secrets`, `Applications.Core/volumes`) are re-implemented as Radius Resource Types (RRT) with new, versioned resource type names (e.g., `Radius.Compute/containers@2025-05-01-preview`).
-* Radius resource types naming convention is standardized to `Radius.<Domain>/<ResourceType>@<Version>`, e.g. `Radius.Core/environments@2025-05-01-preview`, `Radius.Compute/containers@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`, `Radius.Storage/volumes@2025-05-01-preview`.
+* Radius resource types naming convention is standardized to `Radius.<Domain>/<ResourceType>@<Version>`, e.g. `Radius.Core/environments@2025-05-01-preview`, `Radius.Compute/containers@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`, `Radius.Compute/persistentVolumes@2025-05-01-preview`.
 * New `radius-project/resource-types-contrib` repository is created to host both core (built-in) and extended (optional) types and Recipes, allowing for community contributions and extensions.
 * The `runtimes` property in the `Radius.Compute/containers` resource type is replaced with a `platformOptions` property that allows for platform-specific configurations (e.g., ACI confidential containers, Kubernetes tolerations). This property will be a key-value object, with the key corresponding to the platform and the value is an object that matches the platform's API schema, e.g. `'kubernetes':{<podspec>}` or `'aci':{<containerGroupProfile>}`.
 * The `{kind:  'manualScaling', replicas: 5}` extension in the `Radius.Compute/containers` resource type is moved to a top-level property in the container definition, as this is a container property common to all platforms.
 * The `{kind: 'kubernetesMetadata', labels: {key: value}}` extension in the `Radius.Compute/containers` resource type is moved to the `platformOptions.kubernetes` property, as it is a Kubernetes-specific configuration.
-* Ingress controller customization is enabled through the `Radius.Compute/gateways@2025-05-01-preview` resource type, where platform engineers can implement the ingress controller solutions of their choice using Recipes. Contour installation is no longer a hard dependency for Radius, allowing users to use alternative gateway solutions like NGINX Ingress Controller or Traefik.
+* Ingress controller customization is enabled through the `Radius.Compute/routes@2025-05-01-preview` resource type, where platform engineers can implement the ingress controller solutions of their choice using Recipes. Contour installation is no longer a hard dependency for Radius, allowing users to use alternative gateway solutions like NGINX Ingress Controller or Traefik.
 * Recipe Packs are introduced as a new concept to bundle and distribute related recipes together, making it easier to manage and share them across different environments. Recipe Packs are modeled as Radius resources, specifically `Radius.Core/recipePacks@2025-05-01-preview`, and can be referenced by environments.
 * Resource types are renamed to follow the new Radius naming convention:
     ```
@@ -893,8 +893,8 @@ Given: my platform engineer has set up a Radius environment with recipes registe
     `Applications.Core/applications` --> `Radius.Core/applications`
     `Radius.Core/recipePacks` --> `Radius.Core/recipePacks` (new `recipePacks` resource added to `Core` namespace)
     `Applications.Core/containers` --> `Radius.Compute/containers`
-    `Applications.Core/gateways` --> `Radius.Compute/gateways`
-    `Applications.Core/volumes` --> `Radius.Storage/volumes`
+    `Applications.Core/gateways` --> `Radius.Compute/routes`
+    `Applications.Core/volumes` --> `Radius.Compute/persistentVolumes`
     `Applications.Core/secretStores` --> `Radius.Security/secrets`
     `Applications.Datastores/sqlDatabases` --> `Radius.Data/sqlDatabases`
     `Applications.Datastores/mongoDatabases` --> `Radius.Data/mongoDatabases`
@@ -910,7 +910,7 @@ Given: my platform engineer has set up a Radius environment with recipes registe
 
 ### Feature 1: RRT Implementation of Core Application Model Types
 <!-- One or two sentence summary -->
-Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secrets`, `Applications.Core/volumes`) as Radius Resource Types (RRT) with new, versioned resource type names (i.e. `Radius.Compute/containers`, `Radius.Compute/gateways`, `Radius.Security/secrets`, `Radius.Storage/volumes`). These RRTs will form the basis of the extensible application model. These new core types must support Connections and may be modified by platform engineers to allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves.
+Re-implement existing core types (`Applications.Core/containers`, `Applications.Core/gateways`, `Applications.Core/secrets`, `Applications.Core/volumes`) as Radius Resource Types (RRT) with new, versioned resource type names (i.e. `Radius.Compute/containers`, `Radius.Compute/routes`, `Radius.Security/secrets`, `Radius.Compute/persistentVolumes`). These RRTs will form the basis of the extensible application model. These new core types must support Connections and may be modified by platform engineers to allow for the configuration of platform-specific capabilities (e.g. confidential containers) in the resource types themselves.
 
 ### Feature 2: Extensible Environment Configuration
 <!-- One or two sentence summary -->
@@ -1086,7 +1086,7 @@ Recipe packs being defined in a yaml manifest that bundles individual Recipes ca
 <details><summary>Click to expand tooling approach implementation details</summary>
 
 1.  **Define a Recipe Pack**:
-    *   A platform engineer creates a manifest file (e.g. `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/gateways@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (OCI URI or local path) and its default parameters.
+    *   A platform engineer creates a manifest file (e.g. `recipe-pack.yaml`) that defines a collection of recipes. This manifest would list each core resource type (e.g., `Radius.Compute/containers@2025-05-01-preview`, `Radius.Compute/routes@2025-05-01-preview`, `Radius.Security/secrets@2025-05-01-preview`) and associate it with a specific Recipe (OCI URI or local path) and its default parameters.
     *   Example `recipe-pack.yaml`:
         ```yaml
         name: aci-production-pack
@@ -1103,7 +1103,7 @@ Recipe packs being defined in a yaml manifest that bundles individual Recipes ca
                 LOG_LEVEL: "Information"
                 # Optional: allow platform-specific options like containerGroupProfile for ACI
                 allowPlatformOptions: true
-            - resourceType: "Radius.Compute/gateways@2025-05-01-preview"
+            - resourceType: "Radius.Compute/routes@2025-05-01-preview"
             recipeKind: "bicep"
             recipeLocation: "oci://ghcr.io/my-org/recipes/core/aci-gateway:1.1.0"
             parameters:
