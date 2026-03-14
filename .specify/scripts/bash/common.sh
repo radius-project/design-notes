@@ -54,7 +54,7 @@ get_current_branch() {
         fi
     fi
 
-    echo "main"  # Final fallback
+    echo "main" # Final fallback
 }
 
 # Check if we have git available
@@ -211,7 +211,7 @@ except Exception:
                 while IFS= read -r preset_id; do
                     local candidate="$presets_dir/$preset_id/templates/${template_name}.md"
                     [ -f "$candidate" ] && echo "$candidate" && return 0
-                done <<< "$sorted_presets"
+                done <<<"$sorted_presets"
             else
                 # python3 returned empty list — fall through to directory scan
                 for preset in "$presets_dir"/*/; do
@@ -236,7 +236,7 @@ except Exception:
         for ext in "$ext_dir"/*/; do
             [ -d "$ext" ] || continue
             # Skip hidden directories (e.g. .backup, .cache)
-            case "$(basename "$ext")" in .*) continue;; esac
+            case "$(basename "$ext")" in .*) continue ;; esac
             local candidate="$ext/templates/${template_name}.md"
             [ -f "$candidate" ] && echo "$candidate" && return 0
         done
@@ -250,4 +250,3 @@ except Exception:
     # callers check [ -n "$TEMPLATE" ] to detect "not found".
     return 0
 }
-

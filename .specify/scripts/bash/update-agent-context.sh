@@ -2,7 +2,7 @@
 
 # Update agent context files with information from plan.md
 #
-# This script maintains AI agent context files by parsing feature specifications 
+# This script maintains AI agent context files by parsing feature specifications
 # and updating agent-specific configuration files with project information.
 #
 # MAIN FUNCTIONS:
@@ -53,14 +53,17 @@ SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 # Get all paths and variables from common functions
-_paths_output=$(get_feature_paths) || { echo "ERROR: Failed to resolve feature paths" >&2; exit 1; }
+_paths_output=$(get_feature_paths) || {
+    echo "ERROR: Failed to resolve feature paths" >&2
+    exit 1
+}
 eval "$_paths_output"
 unset _paths_output
 
-NEW_PLAN="$IMPL_PLAN"  # Alias for compatibility with existing code
+NEW_PLAN="$IMPL_PLAN" # Alias for compatibility with existing code
 AGENT_TYPE="${1:-}"
 
-# Agent-specific file paths  
+# Agent-specific file paths
 CLAUDE_FILE="$REPO_ROOT/CLAUDE.md"
 GEMINI_FILE="$REPO_ROOT/GEMINI.md"
 COPILOT_FILE="$REPO_ROOT/.github/agents/copilot-instructions.md"
@@ -141,7 +144,7 @@ validate_environment() {
         fi
         exit 1
     fi
-    
+
     # Check if plan.md exists
     if [[ ! -f "$NEW_PLAN" ]]; then
         log_error "No plan.md found at $NEW_PLAN"
@@ -151,7 +154,7 @@ validate_environment() {
         fi
         exit 1
     fi
-    
+
     # Check if template exists (needed for new files)
     if [[ ! -f "$TEMPLATE_FILE" ]]; then
         log_warning "Template file not found at $TEMPLATE_FILE"
@@ -166,50 +169,50 @@ validate_environment() {
 extract_plan_field() {
     local field_pattern="$1"
     local plan_file="$2"
-    
-    grep "^\*\*${field_pattern}\*\*: " "$plan_file" 2>/dev/null | \
-        head -1 | \
-        sed "s|^\*\*${field_pattern}\*\*: ||" | \
-        sed 's/^[ \t]*//;s/[ \t]*$//' | \
-        grep -v "NEEDS CLARIFICATION" | \
+
+    grep "^\*\*${field_pattern}\*\*: " "$plan_file" 2>/dev/null |
+        head -1 |
+        sed "s|^\*\*${field_pattern}\*\*: ||" |
+        sed 's/^[ \t]*//;s/[ \t]*$//' |
+        grep -v "NEEDS CLARIFICATION" |
         grep -v "^N/A$" || echo ""
 }
 
 parse_plan_data() {
     local plan_file="$1"
-    
+
     if [[ ! -f "$plan_file" ]]; then
         log_error "Plan file not found: $plan_file"
         return 1
     fi
-    
+
     if [[ ! -r "$plan_file" ]]; then
         log_error "Plan file is not readable: $plan_file"
         return 1
     fi
-    
+
     log_info "Parsing plan data from $plan_file"
-    
+
     NEW_LANG=$(extract_plan_field "Language/Version" "$plan_file")
     NEW_FRAMEWORK=$(extract_plan_field "Primary Dependencies" "$plan_file")
     NEW_DB=$(extract_plan_field "Storage" "$plan_file")
     NEW_PROJECT_TYPE=$(extract_plan_field "Project Type" "$plan_file")
-    
+
     # Log what we found
     if [[ -n "$NEW_LANG" ]]; then
         log_info "Found language: $NEW_LANG"
     else
         log_warning "No language information found in plan"
     fi
-    
+
     if [[ -n "$NEW_FRAMEWORK" ]]; then
         log_info "Found framework: $NEW_FRAMEWORK"
     fi
-    
+
     if [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]]; then
         log_info "Found database: $NEW_DB"
     fi
-    
+
     if [[ -n "$NEW_PROJECT_TYPE" ]]; then
         log_info "Found project type: $NEW_PROJECT_TYPE"
     fi
@@ -219,11 +222,11 @@ format_technology_stack() {
     local lang="$1"
     local framework="$2"
     local parts=()
-    
+
     # Add non-empty parts
     [[ -n "$lang" && "$lang" != "NEEDS CLARIFICATION" ]] && parts+=("$lang")
     [[ -n "$framework" && "$framework" != "NEEDS CLARIFICATION" && "$framework" != "N/A" ]] && parts+=("$framework")
-    
+
     # Join with proper formatting
     if [[ ${#parts[@]} -eq 0 ]]; then
         echo ""
@@ -232,7 +235,7 @@ format_technology_stack() {
     else
         # Join multiple parts with " + "
         local result="${parts[0]}"
-        for ((i=1; i<${#parts[@]}; i++)); do
+        for ((i = 1; i < ${#parts[@]}; i++)); do
             result="$result + ${parts[i]}"
         done
         echo "$result"
@@ -245,7 +248,7 @@ format_technology_stack() {
 
 get_project_structure() {
     local project_type="$1"
-    
+
     if [[ "$project_type" == *"web"* ]]; then
         echo "backend/\\nfrontend/\\ntests/"
     else
@@ -255,20 +258,20 @@ get_project_structure() {
 
 get_commands_for_language() {
     local lang="$1"
-    
+
     case "$lang" in
-        *"Python"*)
-            echo "cd src && pytest && ruff check ."
-            ;;
-        *"Rust"*)
-            echo "cargo test && cargo clippy"
-            ;;
-        *"JavaScript"*|*"TypeScript"*)
-            echo "npm test \\&\\& npm run lint"
-            ;;
-        *)
-            echo "# Add commands for $lang"
-            ;;
+    *"Python"*)
+        echo "cd src && pytest && ruff check ."
+        ;;
+    *"Rust"*)
+        echo "cargo test && cargo clippy"
+        ;;
+    *"JavaScript"* | *"TypeScript"*)
+        echo "npm test \\&\\& npm run lint"
+        ;;
+    *)
+        echo "# Add commands for $lang"
+        ;;
     esac
 }
 
@@ -282,40 +285,40 @@ create_new_agent_file() {
     local temp_file="$2"
     local project_name="$3"
     local current_date="$4"
-    
+
     if [[ ! -f "$TEMPLATE_FILE" ]]; then
         log_error "Template not found at $TEMPLATE_FILE"
         return 1
     fi
-    
+
     if [[ ! -r "$TEMPLATE_FILE" ]]; then
         log_error "Template file is not readable: $TEMPLATE_FILE"
         return 1
     fi
-    
+
     log_info "Creating new agent context file from template..."
-    
+
     if ! cp "$TEMPLATE_FILE" "$temp_file"; then
         log_error "Failed to copy template file"
         return 1
     fi
-    
+
     # Replace template placeholders
     local project_structure
     project_structure=$(get_project_structure "$NEW_PROJECT_TYPE")
-    
+
     local commands
     commands=$(get_commands_for_language "$NEW_LANG")
-    
+
     local language_conventions
     language_conventions=$(get_language_conventions "$NEW_LANG")
-    
+
     # Perform substitutions with error checking using safer approach
     # Escape special characters for sed by using a different delimiter or escaping
     local escaped_lang=$(printf '%s\n' "$NEW_LANG" | sed 's/[\[\.*^$()+{}|]/\\&/g')
     local escaped_framework=$(printf '%s\n' "$NEW_FRAMEWORK" | sed 's/[\[\.*^$()+{}|]/\\&/g')
     local escaped_branch=$(printf '%s\n' "$CURRENT_BRANCH" | sed 's/[\[\.*^$()+{}|]/\\&/g')
-    
+
     # Build technology stack and recent change strings conditionally
     local tech_stack
     if [[ -n "$escaped_lang" && -n "$escaped_framework" ]]; then
@@ -348,7 +351,7 @@ create_new_agent_file() {
         "s|\[LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE\]|$language_conventions|"
         "s|\[LAST 3 FEATURES AND WHAT THEY ADDED\]|$recent_change|"
     )
-    
+
     for substitution in "${substitutions[@]}"; do
         if ! sed -i.bak -e "$substitution" "$temp_file"; then
             log_error "Failed to perform substitution: $substitution"
@@ -356,7 +359,7 @@ create_new_agent_file() {
             return 1
         fi
     done
-    
+
     # Convert \n sequences to actual newlines
     newline=$(printf '\n')
     sed -i.bak2 "s/\\\\n/${newline}/g" "$temp_file"
@@ -368,63 +371,60 @@ create_new_agent_file() {
     if [[ "$target_file" == *.mdc ]]; then
         local frontmatter_file
         frontmatter_file=$(mktemp) || return 1
-        printf '%s\n' "---" "description: Project Development Guidelines" "globs: [\"**/*\"]" "alwaysApply: true" "---" "" > "$frontmatter_file"
-        cat "$temp_file" >> "$frontmatter_file"
+        printf '%s\n' "---" "description: Project Development Guidelines" "globs: [\"**/*\"]" "alwaysApply: true" "---" "" >"$frontmatter_file"
+        cat "$temp_file" >>"$frontmatter_file"
         mv "$frontmatter_file" "$temp_file"
     fi
 
     return 0
 }
 
-
-
-
 update_existing_agent_file() {
     local target_file="$1"
     local current_date="$2"
-    
+
     log_info "Updating existing agent context file..."
-    
+
     # Use a single temporary file for atomic update
     local temp_file
     temp_file=$(mktemp) || {
         log_error "Failed to create temporary file"
         return 1
     }
-    
+
     # Process the file in one pass
     local tech_stack=$(format_technology_stack "$NEW_LANG" "$NEW_FRAMEWORK")
     local new_tech_entries=()
     local new_change_entry=""
-    
+
     # Prepare new technology entries
     if [[ -n "$tech_stack" ]] && ! grep -q "$tech_stack" "$target_file"; then
         new_tech_entries+=("- $tech_stack ($CURRENT_BRANCH)")
     fi
-    
+
     if [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]] && [[ "$NEW_DB" != "NEEDS CLARIFICATION" ]] && ! grep -q "$NEW_DB" "$target_file"; then
         new_tech_entries+=("- $NEW_DB ($CURRENT_BRANCH)")
     fi
-    
+
     # Prepare new change entry
     if [[ -n "$tech_stack" ]]; then
         new_change_entry="- $CURRENT_BRANCH: Added $tech_stack"
     elif [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]] && [[ "$NEW_DB" != "NEEDS CLARIFICATION" ]]; then
         new_change_entry="- $CURRENT_BRANCH: Added $NEW_DB"
     fi
-    
+
     # Check if sections exist in the file
     local has_active_technologies=0
     local has_recent_changes=0
-    
+
     if grep -q "^## Active Technologies" "$target_file" 2>/dev/null; then
         has_active_technologies=1
     fi
-    
+
     if grep -q "^## Recent Changes" "$target_file" 2>/dev/null; then
         has_recent_changes=1
     fi
-    
+
     # Process file line by line
     local in_tech_section=false
     local in_changes_section=false
@@ -432,91 +432,94 @@ update_existing_agent_file() {
     local changes_entries_added=false
     local existing_changes_count=0
     local file_ended=false
-    
+
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Handle Active Technologies section
         if [[ "$line" == "## Active Technologies" ]]; then
-            echo "$line" >> "$temp_file"
+            echo "$line" >>"$temp_file"
             in_tech_section=true
             continue
         elif [[ $in_tech_section == true ]] && [[ "$line" =~ ^##[[:space:]] ]]; then
             # Add new tech entries before closing the section
             if [[ $tech_entries_added == false ]] && [[ ${#new_tech_entries[@]} -gt 0 ]]; then
-                printf '%s\n' "${new_tech_entries[@]}" >> "$temp_file"
+                printf '%s\n' "${new_tech_entries[@]}" >>"$temp_file"
                 tech_entries_added=true
             fi
-            echo "$line" >> "$temp_file"
+            echo "$line" >>"$temp_file"
             in_tech_section=false
             continue
         elif [[ $in_tech_section == true ]] && [[ -z "$line" ]]; then
             # Add new tech entries before empty line in tech section
             if [[ $tech_entries_added == false ]] && [[ ${#new_tech_entries[@]} -gt 0 ]]; then
-                printf '%s\n' "${new_tech_entries[@]}" >> "$temp_file"
+                printf '%s\n' "${new_tech_entries[@]}" >>"$temp_file"
                 tech_entries_added=true
             fi
-            echo "$line" >> "$temp_file"
+            echo "$line" >>"$temp_file"
             continue
         fi
-        
+
         # Handle Recent Changes section
         if [[ "$line" == "## Recent Changes" ]]; then
-            echo "$line" >> "$temp_file"
+            echo "$line" >>"$temp_file"
             # Add new change entry right after the heading
             if [[ -n "$new_change_entry" ]]; then
-                echo "$new_change_entry" >> "$temp_file"
+                echo "$new_change_entry" >>"$temp_file"
             fi
             in_changes_section=true
             changes_entries_added=true
             continue
         elif [[ $in_changes_section == true ]] && [[ "$line" =~ ^##[[:space:]] ]]; then
-            echo "$line" >> "$temp_file"
+            echo "$line" >>"$temp_file"
             in_changes_section=false
             continue
         elif [[ $in_changes_section == true ]] && [[ "$line" == "- "* ]]; then
             # Keep only first 2 existing changes
             if [[ $existing_changes_count -lt 2 ]]; then
-                echo "$line" >> "$temp_file"
+                echo "$line" >>"$temp_file"
                 ((existing_changes_count++))
             fi
             continue
         fi
-        
+
         # Update timestamp
         if [[ "$line" =~ (\*\*)?Last\ updated(\*\*)?:.*[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] ]]; then
-            echo "$line" | sed "s/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/$current_date/" >> "$temp_file"
+            echo "$line" | sed "s/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/$current_date/" >>"$temp_file"
         else
-            echo "$line" >> "$temp_file"
+            echo "$line" >>"$temp_file"
         fi
-    done < "$target_file"
-    
+    done <"$target_file"
+
     # Post-loop check: if we're still in the Active Technologies section and haven't added new entries
     if [[ $in_tech_section == true ]] && [[ $tech_entries_added == false ]] && [[ ${#new_tech_entries[@]} -gt 0 ]]; then
-        printf '%s\n' "${new_tech_entries[@]}" >> "$temp_file"
+        printf '%s\n' "${new_tech_entries[@]}" >>"$temp_file"
         tech_entries_added=true
     fi
-    
+
     # If sections don't exist, add them at the end of the file
     if [[ $has_active_technologies -eq 0 ]] && [[ ${#new_tech_entries[@]} -gt 0 ]]; then
-        echo "" >> "$temp_file"
-        echo "## Active Technologies" >> "$temp_file"
-        printf '%s\n' "${new_tech_entries[@]}" >> "$temp_file"
+        echo "" >>"$temp_file"
+        echo "## Active Technologies" >>"$temp_file"
+        printf '%s\n' "${new_tech_entries[@]}" >>"$temp_file"
         tech_entries_added=true
     fi
-    
+
     if [[ $has_recent_changes -eq 0 ]] && [[ -n "$new_change_entry" ]]; then
-        echo "" >> "$temp_file"
-        echo "## Recent Changes" >> "$temp_file"
-        echo "$new_change_entry" >> "$temp_file"
+        echo "" >>"$temp_file"
+        echo "## Recent Changes" >>"$temp_file"
+        echo "$new_change_entry" >>"$temp_file"
         changes_entries_added=true
     fi
-    
+
     # Ensure Cursor .mdc files have YAML frontmatter for auto-inclusion
     if [[ "$target_file" == *.mdc ]]; then
         if ! head -1 "$temp_file" | grep -q '^---'; then
             local frontmatter_file
-            frontmatter_file=$(mktemp) || { rm -f "$temp_file"; return 1; }
-            printf '%s\n' "---" "description: Project Development Guidelines" "globs: [\"**/*\"]" "alwaysApply: true" "---" "" > "$frontmatter_file"
-            cat "$temp_file" >> "$frontmatter_file"
+            frontmatter_file=$(mktemp) || {
+                rm -f "$temp_file"
+                return 1
+            }
+            printf '%s\n' "---" "description: Project Development Guidelines" "globs: [\"**/*\"]" "alwaysApply: true" "---" "" >"$frontmatter_file"
+            cat "$temp_file" >>"$frontmatter_file"
             mv "$frontmatter_file" "$temp_file"
         fi
     fi
@@ -537,19 +540,19 @@ update_existing_agent_file() {
 update_agent_file() {
     local target_file="$1"
     local agent_name="$2"
-    
+
     if [[ -z "$target_file" ]] || [[ -z "$agent_name" ]]; then
         log_error "update_agent_file requires target_file and agent_name parameters"
         return 1
     fi
-    
+
     log_info "Updating $agent_name context file: $target_file"
-    
+
     local project_name
     project_name=$(basename "$REPO_ROOT")
     local current_date
     current_date=$(date +%Y-%m-%d)
-    
+
     # Create directory if it doesn't exist
     local target_dir
     target_dir=$(dirname "$target_file")
@@ -559,7 +562,7 @@ update_agent_file() {
             return 1
         fi
     fi
-    
+
     if [[ ! -f "$target_file" ]]; then
         # Create new file from template
         local temp_file
@@ -567,7 +570,7 @@ update_agent_file() {
             log_error "Failed to create temporary file"
             return 1
         }
-        
+
         if create_new_agent_file "$target_file" "$temp_file" "$project_name" "$current_date"; then
             if mv "$temp_file" "$target_file"; then
                 log_success "Created new $agent_name context file"
@@ -587,12 +590,12 @@ update_agent_file() {
             log_error "Cannot read existing file: $target_file"
             return 1
         fi
-        
+
         if [[ ! -w "$target_file" ]]; then
             log_error "Cannot write to existing file: $target_file"
             return 1
         fi
-        
+
         if update_existing_agent_file "$target_file" "$current_date"; then
             log_success "Updated existing $agent_name context file"
         else
@@ -600,7 +603,7 @@ update_agent_file() {
             return 1
         fi
     fi
-    
+
     return 0
 }
 
@@ -610,79 +613,79 @@ update_agent_file() {
 
 update_specific_agent() {
     local agent_type="$1"
-    
+
     case "$agent_type" in
-        claude)
-            update_agent_file "$CLAUDE_FILE" "Claude Code" || return 1
-            ;;
-        gemini)
-            update_agent_file "$GEMINI_FILE" "Gemini CLI" || return 1
-            ;;
-        copilot)
-            update_agent_file "$COPILOT_FILE" "GitHub Copilot" || return 1
-            ;;
-        cursor-agent)
-            update_agent_file "$CURSOR_FILE" "Cursor IDE" || return 1
-            ;;
-        qwen)
-            update_agent_file "$QWEN_FILE" "Qwen Code" || return 1
-            ;;
-        opencode)
-            update_agent_file "$AGENTS_FILE" "opencode" || return 1
-            ;;
-        codex)
-            update_agent_file "$AGENTS_FILE" "Codex CLI" || return 1
-            ;;
-        windsurf)
-            update_agent_file "$WINDSURF_FILE" "Windsurf" || return 1
-            ;;
-        kilocode)
-            update_agent_file "$KILOCODE_FILE" "Kilo Code" || return 1
-            ;;
-        auggie)
-            update_agent_file "$AUGGIE_FILE" "Auggie CLI" || return 1
-            ;;
-        roo)
-            update_agent_file "$ROO_FILE" "Roo Code" || return 1
-            ;;
-        codebuddy)
-            update_agent_file "$CODEBUDDY_FILE" "CodeBuddy CLI" || return 1
-            ;;
-        qodercli)
-            update_agent_file "$QODER_FILE" "Qoder CLI" || return 1
-            ;;
-        amp)
-            update_agent_file "$AMP_FILE" "Amp" || return 1
-            ;;
-        shai)
-            update_agent_file "$SHAI_FILE" "SHAI" || return 1
-            ;;
-        tabnine)
-            update_agent_file "$TABNINE_FILE" "Tabnine CLI" || return 1
-            ;;
-        kiro-cli)
-            update_agent_file "$KIRO_FILE" "Kiro CLI" || return 1
-            ;;
-        agy)
-            update_agent_file "$AGY_FILE" "Antigravity" || return 1
-            ;;
-        bob)
-            update_agent_file "$BOB_FILE" "IBM Bob" || return 1
-            ;;
-        vibe)
-            update_agent_file "$VIBE_FILE" "Mistral Vibe" || return 1
-            ;;
-        kimi)
-            update_agent_file "$KIMI_FILE" "Kimi Code" || return 1
-            ;;
-        generic)
-            log_info "Generic agent: no predefined context file. Use the agent-specific update script for your agent."
-            ;;
-        *)
-            log_error "Unknown agent type '$agent_type'"
-            log_error "Expected: claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|tabnine|kiro-cli|agy|bob|vibe|qodercli|kimi|generic"
-            exit 1
-            ;;
+    claude)
+        update_agent_file "$CLAUDE_FILE" "Claude Code" || return 1
+        ;;
+    gemini)
+        update_agent_file "$GEMINI_FILE" "Gemini CLI" || return 1
+        ;;
+    copilot)
+        update_agent_file "$COPILOT_FILE" "GitHub Copilot" || return 1
+        ;;
+    cursor-agent)
+        update_agent_file "$CURSOR_FILE" "Cursor IDE" || return 1
+        ;;
+    qwen)
+        update_agent_file "$QWEN_FILE" "Qwen Code" || return 1
+        ;;
+    opencode)
+        update_agent_file "$AGENTS_FILE" "opencode" || return 1
+        ;;
+    codex)
+        update_agent_file "$AGENTS_FILE" "Codex CLI" || return 1
+        ;;
+    windsurf)
+        update_agent_file "$WINDSURF_FILE" "Windsurf" || return 1
+        ;;
+    kilocode)
+        update_agent_file "$KILOCODE_FILE" "Kilo Code" || return 1
+        ;;
+    auggie)
+        update_agent_file "$AUGGIE_FILE" "Auggie CLI" || return 1
+        ;;
+    roo)
+        update_agent_file "$ROO_FILE" "Roo Code" || return 1
+        ;;
+    codebuddy)
+        update_agent_file "$CODEBUDDY_FILE" "CodeBuddy CLI" || return 1
+        ;;
+    qodercli)
+        update_agent_file "$QODER_FILE" "Qoder CLI" || return 1
+        ;;
+    amp)
+        update_agent_file "$AMP_FILE" "Amp" || return 1
+        ;;
+    shai)
+        update_agent_file "$SHAI_FILE" "SHAI" || return 1
+        ;;
+    tabnine)
+        update_agent_file "$TABNINE_FILE" "Tabnine CLI" || return 1
+        ;;
+    kiro-cli)
+        update_agent_file "$KIRO_FILE" "Kiro CLI" || return 1
+        ;;
+    agy)
+        update_agent_file "$AGY_FILE" "Antigravity" || return 1
+        ;;
+    bob)
+        update_agent_file "$BOB_FILE" "IBM Bob" || return 1
+        ;;
+    vibe)
+        update_agent_file "$VIBE_FILE" "Mistral Vibe" || return 1
+        ;;
+    kimi)
+        update_agent_file "$KIMI_FILE" "Kimi Code" || return 1
+        ;;
+    generic)
+        log_info "Generic agent: no predefined context file. Use the agent-specific update script for your agent."
+        ;;
+    *)
+        log_error "Unknown agent type '$agent_type'"
+        log_error "Expected: claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|tabnine|kiro-cli|agy|bob|vibe|qodercli|kimi|generic"
+        exit 1
+        ;;
     esac
 }
 
@@ -740,19 +743,19 @@ update_all_existing_agents() {
 print_summary() {
     echo
     log_info "Summary of changes:"
-    
+
     if [[ -n "$NEW_LANG" ]]; then
         echo "  - Added language: $NEW_LANG"
     fi
-    
+
     if [[ -n "$NEW_FRAMEWORK" ]]; then
         echo "  - Added framework: $NEW_FRAMEWORK"
     fi
-    
+
     if [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]]; then
         echo "  - Added database: $NEW_DB"
     fi
-    
+
     echo
     log_info "Usage: $0 [claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|tabnine|kiro-cli|agy|bob|vibe|qodercli|kimi|generic]"
 }
@@ -764,18 +767,18 @@ print_summary() {
 main() {
     # Validate environment before proceeding
     validate_environment
-    
+
     log_info "=== Updating agent context files for feature $CURRENT_BRANCH ==="
-    
+
     # Parse the plan file to extract project information
     if ! parse_plan_data "$NEW_PLAN"; then
         log_error "Failed to parse plan data"
         exit 1
     fi
-    
+
     # Process based on agent type argument
     local success=true
-    
+
     if [[ -z "$AGENT_TYPE" ]]; then
         # No specific agent provided - update all existing agent files
         log_info "No agent specified, updating all existing agent files..."
@@ -789,10 +792,10 @@ main() {
             success=false
         fi
     fi
-    
+
     # Print summary
     print_summary
-    
+
     if [[ "$success" == true ]]; then
         log_success "Agent context update completed successfully"
         exit 0
