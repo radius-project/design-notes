@@ -98,7 +98,8 @@ function Get-HighestNumberFromBranches {
                 }
             }
         }
-    } catch {
+    }
+    catch {
         # If git command fails, return 0
         Write-Verbose "Could not check Git branches: $_"
     }
@@ -113,7 +114,8 @@ function Get-NextBranchNumber {
     # Fetch all remotes to get latest branch info (suppress errors if no remotes)
     try {
         git fetch --all --prune 2>$null | Out-Null
-    } catch {
+    }
+    catch {
         # Ignore fetch errors
     }
 
@@ -148,10 +150,12 @@ try {
     $repoRoot = git rev-parse --show-toplevel 2>$null
     if ($LASTEXITCODE -eq 0) {
         $hasGit = $true
-    } else {
+    }
+    else {
         throw "Git not available"
     }
-} catch {
+}
+catch {
     $repoRoot = $fallbackRoot
     $hasGit = $false
 }
@@ -187,7 +191,8 @@ function Get-BranchName {
         # Keep words that are length >= 3 OR appear as uppercase in original (likely acronyms)
         if ($word.Length -ge 3) {
             $meaningfulWords += $word
-        } elseif ($Description -match "\b$($word.ToUpper())\b") {
+        }
+        elseif ($Description -match "\b$($word.ToUpper())\b") {
             # Keep short words if they appear as uppercase in original (likely acronyms)
             $meaningfulWords += $word
         }
@@ -198,7 +203,8 @@ function Get-BranchName {
         $maxWords = if ($meaningfulWords.Count -eq 4) { 4 } else { 3 }
         $result = ($meaningfulWords | Select-Object -First $maxWords) -join '-'
         return $result
-    } else {
+    }
+    else {
         # Fallback to original logic if no meaningful words found
         $result = ConvertTo-CleanBranchName -Name $Description
         $fallbackWords = ($result -split '-') | Where-Object { $_ } | Select-Object -First 3
@@ -210,7 +216,8 @@ function Get-BranchName {
 if ($ShortName) {
     # Use provided short name, just clean it up
     $branchSuffix = ConvertTo-CleanBranchName -Name $ShortName
-} else {
+}
+else {
     # Generate from description with smart filtering
     $branchSuffix = Get-BranchName -Description $featureDesc
 }
@@ -220,7 +227,8 @@ if ($Number -eq 0) {
     if ($hasGit) {
         # Check existing branches on remotes
         $Number = Get-NextBranchNumber -SpecsDir $specsDir
-    } else {
+    }
+    else {
         # Fall back to local directory check
         $Number = (Get-HighestNumberFromSpecs -SpecsDir $specsDir) + 1
     }
@@ -257,7 +265,8 @@ if ($hasGit) {
         if ($LASTEXITCODE -eq 0) {
             $branchCreated = $true
         }
-    } catch {
+    }
+    catch {
         # Exception during git command
     }
 
@@ -267,12 +276,14 @@ if ($hasGit) {
         if ($existingBranch) {
             Write-Error "Error: Branch '$branchName' already exists. Please use a different feature name or specify a different number with -Number."
             exit 1
-        } else {
+        }
+        else {
             Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
             exit 1
         }
     }
-} else {
+}
+else {
     Write-Warning "[specify] Warning: Git repository not detected; skipped branch creation for $branchName"
 }
 
@@ -283,7 +294,8 @@ $template = Resolve-Template -TemplateName 'spec-template' -RepoRoot $repoRoot
 $specFile = Join-Path $featureDir 'spec.md'
 if ($template -and (Test-Path $template)) { 
     Copy-Item $template $specFile -Force 
-} else { 
+}
+else { 
     New-Item -ItemType File -Path $specFile | Out-Null 
 }
 
@@ -293,12 +305,13 @@ $env:SPECIFY_FEATURE = $branchName
 if ($Json) {
     $obj = [PSCustomObject]@{ 
         BRANCH_NAME = $branchName
-        SPEC_FILE = $specFile
+        SPEC_FILE   = $specFile
         FEATURE_NUM = $featureNum
-        HAS_GIT = $hasGit
+        HAS_GIT     = $hasGit
     }
     $obj | ConvertTo-Json -Compress
-} else {
+}
+else {
     Write-Output "BRANCH_NAME: $branchName"
     Write-Output "SPEC_FILE: $specFile"
     Write-Output "FEATURE_NUM: $featureNum"

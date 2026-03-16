@@ -36,7 +36,8 @@ $template = Resolve-Template -TemplateName 'plan-template' -RepoRoot $paths.REPO
 if ($template -and (Test-Path $template)) { 
     Copy-Item $template $paths.IMPL_PLAN -Force
     Write-Output "Copied plan template to $($paths.IMPL_PLAN)"
-} else {
+}
+else {
     Write-Warning "Plan template not found"
     # Create a basic plan file if template doesn't exist
     New-Item -ItemType File -Path $paths.IMPL_PLAN -Force | Out-Null
@@ -46,13 +47,14 @@ if ($template -and (Test-Path $template)) {
 if ($Json) {
     $result = [PSCustomObject]@{ 
         FEATURE_SPEC = $paths.FEATURE_SPEC
-        IMPL_PLAN = $paths.IMPL_PLAN
-        SPECS_DIR = $paths.FEATURE_DIR
-        BRANCH = $paths.CURRENT_BRANCH
-        HAS_GIT = $paths.HAS_GIT
+        IMPL_PLAN    = $paths.IMPL_PLAN
+        SPECS_DIR    = $paths.FEATURE_DIR
+        BRANCH       = $paths.CURRENT_BRANCH
+        HAS_GIT      = $paths.HAS_GIT
     }
     $result | ConvertTo-Json -Compress
-} else {
+}
+else {
     Write-Output "FEATURE_SPEC: $($paths.FEATURE_SPEC)"
     Write-Output "IMPL_PLAN: $($paths.IMPL_PLAN)"
     Write-Output "SPECS_DIR: $($paths.FEATURE_DIR)"

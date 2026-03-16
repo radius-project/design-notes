@@ -74,7 +74,8 @@ if ($PathsOnly) {
             IMPL_PLAN    = $paths.IMPL_PLAN
             TASKS        = $paths.TASKS
         } | ConvertTo-Json -Compress
-    } else {
+    }
+    else {
         Write-Output "REPO_ROOT: $($paths.REPO_ROOT)"
         Write-Output "BRANCH: $($paths.CURRENT_BRANCH)"
         Write-Output "FEATURE_DIR: $($paths.FEATURE_DIR)"
@@ -128,10 +129,11 @@ if ($IncludeTasks -and (Test-Path $paths.TASKS)) {
 if ($Json) {
     # JSON output
     [PSCustomObject]@{ 
-        FEATURE_DIR = $paths.FEATURE_DIR
+        FEATURE_DIR    = $paths.FEATURE_DIR
         AVAILABLE_DOCS = $docs 
     } | ConvertTo-Json -Compress
-} else {
+}
+else {
     # Text output
     Write-Output "FEATURE_DIR:$($paths.FEATURE_DIR)"
     Write-Output "AVAILABLE_DOCS:"
