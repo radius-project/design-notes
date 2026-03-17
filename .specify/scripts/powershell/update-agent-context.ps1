@@ -24,8 +24,8 @@ Optional agent key to update a single agent. If omitted, updates all existing ag
 Relies on common helper functions in common.ps1
 #>
 param(
-    [Parameter(Position=0)]
-    [ValidateSet('claude','gemini','copilot','cursor-agent','qwen','opencode','codex','windsurf','kilocode','auggie','roo','codebuddy','amp','shai','tabnine','kiro-cli','agy','bob','qodercli','vibe','kimi','generic')]
+    [Parameter(Position = 0)]
+    [ValidateSet('claude', 'gemini', 'copilot', 'cursor-agent', 'qwen', 'opencode', 'codex', 'windsurf', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'shai', 'tabnine', 'kiro-cli', 'agy', 'bob', 'qodercli', 'vibe', 'kimi', 'generic')]
     [string]$AgentType
 )
 
@@ -37,33 +37,33 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Acquire environment paths
 $envData = Get-FeaturePathsEnv
-$REPO_ROOT     = $envData.REPO_ROOT
+$REPO_ROOT = $envData.REPO_ROOT
 $CURRENT_BRANCH = $envData.CURRENT_BRANCH
-$HAS_GIT       = $envData.HAS_GIT
-$IMPL_PLAN     = $envData.IMPL_PLAN
+$HAS_GIT = $envData.HAS_GIT
+$IMPL_PLAN = $envData.IMPL_PLAN
 $NEW_PLAN = $IMPL_PLAN
 
 # Agent file paths
-$CLAUDE_FILE   = Join-Path $REPO_ROOT 'CLAUDE.md'
-$GEMINI_FILE   = Join-Path $REPO_ROOT 'GEMINI.md'
-$COPILOT_FILE  = Join-Path $REPO_ROOT '.github/agents/copilot-instructions.md'
-$CURSOR_FILE   = Join-Path $REPO_ROOT '.cursor/rules/specify-rules.mdc'
-$QWEN_FILE     = Join-Path $REPO_ROOT 'QWEN.md'
-$AGENTS_FILE   = Join-Path $REPO_ROOT 'AGENTS.md'
+$CLAUDE_FILE = Join-Path $REPO_ROOT 'CLAUDE.md'
+$GEMINI_FILE = Join-Path $REPO_ROOT 'GEMINI.md'
+$COPILOT_FILE = Join-Path $REPO_ROOT '.github/agents/copilot-instructions.md'
+$CURSOR_FILE = Join-Path $REPO_ROOT '.cursor/rules/specify-rules.mdc'
+$QWEN_FILE = Join-Path $REPO_ROOT 'QWEN.md'
+$AGENTS_FILE = Join-Path $REPO_ROOT 'AGENTS.md'
 $WINDSURF_FILE = Join-Path $REPO_ROOT '.windsurf/rules/specify-rules.md'
 $KILOCODE_FILE = Join-Path $REPO_ROOT '.kilocode/rules/specify-rules.md'
-$AUGGIE_FILE   = Join-Path $REPO_ROOT '.augment/rules/specify-rules.md'
-$ROO_FILE      = Join-Path $REPO_ROOT '.roo/rules/specify-rules.md'
+$AUGGIE_FILE = Join-Path $REPO_ROOT '.augment/rules/specify-rules.md'
+$ROO_FILE = Join-Path $REPO_ROOT '.roo/rules/specify-rules.md'
 $CODEBUDDY_FILE = Join-Path $REPO_ROOT 'CODEBUDDY.md'
-$QODER_FILE    = Join-Path $REPO_ROOT 'QODER.md'
-$AMP_FILE      = Join-Path $REPO_ROOT 'AGENTS.md'
-$SHAI_FILE     = Join-Path $REPO_ROOT 'SHAI.md'
-$TABNINE_FILE  = Join-Path $REPO_ROOT 'TABNINE.md'
-$KIRO_FILE     = Join-Path $REPO_ROOT 'AGENTS.md'
-$AGY_FILE      = Join-Path $REPO_ROOT '.agent/rules/specify-rules.md'
-$BOB_FILE      = Join-Path $REPO_ROOT 'AGENTS.md'
-$VIBE_FILE     = Join-Path $REPO_ROOT '.vibe/agents/specify-agents.md'
-$KIMI_FILE     = Join-Path $REPO_ROOT 'KIMI.md'
+$QODER_FILE = Join-Path $REPO_ROOT 'QODER.md'
+$AMP_FILE = Join-Path $REPO_ROOT 'AGENTS.md'
+$SHAI_FILE = Join-Path $REPO_ROOT 'SHAI.md'
+$TABNINE_FILE = Join-Path $REPO_ROOT 'TABNINE.md'
+$KIRO_FILE = Join-Path $REPO_ROOT 'AGENTS.md'
+$AGY_FILE = Join-Path $REPO_ROOT '.agent/rules/specify-rules.md'
+$BOB_FILE = Join-Path $REPO_ROOT 'AGENTS.md'
+$VIBE_FILE = Join-Path $REPO_ROOT '.vibe/agents/specify-agents.md'
+$KIMI_FILE = Join-Path $REPO_ROOT 'KIMI.md'
 
 $TEMPLATE_FILE = Join-Path $REPO_ROOT '.specify/templates/agent-file-template.md'
 
@@ -73,36 +73,36 @@ $script:NEW_FRAMEWORK = ''
 $script:NEW_DB = ''
 $script:NEW_PROJECT_TYPE = ''
 
-function Write-Info { 
+function Write-Info {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    Write-Host "INFO: $Message" 
+    Write-Host "INFO: $Message"
 }
 
-function Write-Success { 
+function Write-Success {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    Write-Host "$([char]0x2713) $Message" 
+    Write-Host "$([char]0x2713) $Message"
 }
 
-function Write-WarningMsg { 
+function Write-WarningMsg {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    Write-Warning $Message 
+    Write-Warning $Message
 }
 
-function Write-Err { 
+function Write-Err {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    Write-Host "ERROR: $Message" -ForegroundColor Red 
+    Write-Host "ERROR: $Message" -ForegroundColor Red
 }
 
 function Validate-Environment {
@@ -126,32 +126,32 @@ function Validate-Environment {
 
 function Extract-PlanField {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$FieldPattern,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$PlanFile
     )
     if (-not (Test-Path $PlanFile)) { return '' }
     # Lines like **Language/Version**: Python 3.12
     $regex = "^\*\*$([Regex]::Escape($FieldPattern))\*\*: (.+)$"
     Get-Content -LiteralPath $PlanFile -Encoding utf8 | ForEach-Object {
-        if ($_ -match $regex) { 
+        if ($_ -match $regex) {
             $val = $Matches[1].Trim()
-            if ($val -notin @('NEEDS CLARIFICATION','N/A')) { return $val }
+            if ($val -notin @('NEEDS CLARIFICATION', 'N/A')) { return $val }
         }
     } | Select-Object -First 1
 }
 
 function Parse-PlanData {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$PlanFile
     )
     if (-not (Test-Path $PlanFile)) { Write-Err "Plan file not found: $PlanFile"; return $false }
     Write-Info "Parsing plan data from $PlanFile"
-    $script:NEW_LANG        = Extract-PlanField -FieldPattern 'Language/Version' -PlanFile $PlanFile
-    $script:NEW_FRAMEWORK   = Extract-PlanField -FieldPattern 'Primary Dependencies' -PlanFile $PlanFile
-    $script:NEW_DB          = Extract-PlanField -FieldPattern 'Storage' -PlanFile $PlanFile
+    $script:NEW_LANG = Extract-PlanField -FieldPattern 'Language/Version' -PlanFile $PlanFile
+    $script:NEW_FRAMEWORK = Extract-PlanField -FieldPattern 'Primary Dependencies' -PlanFile $PlanFile
+    $script:NEW_DB = Extract-PlanField -FieldPattern 'Storage' -PlanFile $PlanFile
     $script:NEW_PROJECT_TYPE = Extract-PlanField -FieldPattern 'Project Type' -PlanFile $PlanFile
 
     if ($NEW_LANG) { Write-Info "Found language: $NEW_LANG" } else { Write-WarningMsg 'No language information found in plan' }
@@ -163,29 +163,29 @@ function Parse-PlanData {
 
 function Format-TechnologyStack {
     param(
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Lang,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Framework
     )
     $parts = @()
     if ($Lang -and $Lang -ne 'NEEDS CLARIFICATION') { $parts += $Lang }
-    if ($Framework -and $Framework -notin @('NEEDS CLARIFICATION','N/A')) { $parts += $Framework }
+    if ($Framework -and $Framework -notin @('NEEDS CLARIFICATION', 'N/A')) { $parts += $Framework }
     if (-not $parts) { return '' }
     return ($parts -join ' + ')
 }
 
-function Get-ProjectStructure { 
+function Get-ProjectStructure {
     param(
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$ProjectType
     )
-    if ($ProjectType -match 'web') { return "backend/`nfrontend/`ntests/" } else { return "src/`ntests/" } 
+    if ($ProjectType -match 'web') { return "backend/`nfrontend/`ntests/" } else { return "src/`ntests/" }
 }
 
-function Get-CommandsForLanguage { 
+function Get-CommandsForLanguage {
     param(
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Lang
     )
     switch -Regex ($Lang) {
@@ -196,21 +196,21 @@ function Get-CommandsForLanguage {
     }
 }
 
-function Get-LanguageConventions { 
+function Get-LanguageConventions {
     param(
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Lang
     )
-    if ($Lang) { "${Lang}: Follow standard conventions" } else { 'General: Follow standard conventions' } 
+    if ($Lang) { "${Lang}: Follow standard conventions" } else { 'General: Follow standard conventions' }
 }
 
 function New-AgentFile {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$TargetFile,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$ProjectName,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [datetime]$Date
     )
     if (-not (Test-Path $TEMPLATE_FILE)) { Write-Err "Template not found at $TEMPLATE_FILE"; return $false }
@@ -226,44 +226,48 @@ function New-AgentFile {
     $escaped_branch = $CURRENT_BRANCH
 
     $content = Get-Content -LiteralPath $temp -Raw -Encoding utf8
-    $content = $content -replace '\[PROJECT NAME\]',$ProjectName
-    $content = $content -replace '\[DATE\]',$Date.ToString('yyyy-MM-dd')
-    
+    $content = $content -replace '\[PROJECT NAME\]', $ProjectName
+    $content = $content -replace '\[DATE\]', $Date.ToString('yyyy-MM-dd')
+
     # Build the technology stack string safely
     $techStackForTemplate = ""
     if ($escaped_lang -and $escaped_framework) {
         $techStackForTemplate = "- $escaped_lang + $escaped_framework ($escaped_branch)"
-    } elseif ($escaped_lang) {
+    }
+    elseif ($escaped_lang) {
         $techStackForTemplate = "- $escaped_lang ($escaped_branch)"
-    } elseif ($escaped_framework) {
+    }
+    elseif ($escaped_framework) {
         $techStackForTemplate = "- $escaped_framework ($escaped_branch)"
     }
-    
-    $content = $content -replace '\[EXTRACTED FROM ALL PLAN.MD FILES\]',$techStackForTemplate
+
+    $content = $content -replace '\[EXTRACTED FROM ALL PLAN.MD FILES\]', $techStackForTemplate
     # For project structure we manually embed (keep newlines)
     $escapedStructure = [Regex]::Escape($projectStructure)
-    $content = $content -replace '\[ACTUAL STRUCTURE FROM PLANS\]',$escapedStructure
+    $content = $content -replace '\[ACTUAL STRUCTURE FROM PLANS\]', $escapedStructure
     # Replace escaped newlines placeholder after all replacements
-    $content = $content -replace '\[ONLY COMMANDS FOR ACTIVE TECHNOLOGIES\]',$commands
-    $content = $content -replace '\[LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE\]',$languageConventions
-    
+    $content = $content -replace '\[ONLY COMMANDS FOR ACTIVE TECHNOLOGIES\]', $commands
+    $content = $content -replace '\[LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE\]', $languageConventions
+
     # Build the recent changes string safely
     $recentChangesForTemplate = ""
     if ($escaped_lang -and $escaped_framework) {
         $recentChangesForTemplate = "- ${escaped_branch}: Added ${escaped_lang} + ${escaped_framework}"
-    } elseif ($escaped_lang) {
+    }
+    elseif ($escaped_lang) {
         $recentChangesForTemplate = "- ${escaped_branch}: Added ${escaped_lang}"
-    } elseif ($escaped_framework) {
+    }
+    elseif ($escaped_framework) {
         $recentChangesForTemplate = "- ${escaped_branch}: Added ${escaped_framework}"
     }
-    
-    $content = $content -replace '\[LAST 3 FEATURES AND WHAT THEY ADDED\]',$recentChangesForTemplate
+
+    $content = $content -replace '\[LAST 3 FEATURES AND WHAT THEY ADDED\]', $recentChangesForTemplate
     # Convert literal \n sequences introduced by Escape to real newlines
-    $content = $content -replace '\\n',[Environment]::NewLine
+    $content = $content -replace '\\n', [Environment]::NewLine
 
     # Prepend Cursor frontmatter for .mdc files so rules are auto-included
     if ($TargetFile -match '\.mdc$') {
-        $frontmatter = @('---','description: Project Development Guidelines','globs: ["**/*"]','alwaysApply: true','---','') -join [Environment]::NewLine
+        $frontmatter = @('---', 'description: Project Development Guidelines', 'globs: ["**/*"]', 'alwaysApply: true', '---', '') -join [Environment]::NewLine
         $content = $frontmatter + $content
     }
 
@@ -276,9 +280,9 @@ function New-AgentFile {
 
 function Update-ExistingAgentFile {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$TargetFile,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [datetime]$Date
     )
     if (-not (Test-Path $TargetFile)) { return (New-AgentFile -TargetFile $TargetFile -ProjectName (Split-Path $REPO_ROOT -Leaf) -Date $Date) }
@@ -287,25 +291,25 @@ function Update-ExistingAgentFile {
     $newTechEntries = @()
     if ($techStack) {
         $escapedTechStack = [Regex]::Escape($techStack)
-        if (-not (Select-String -Pattern $escapedTechStack -Path $TargetFile -Quiet)) { 
-            $newTechEntries += "- $techStack ($CURRENT_BRANCH)" 
+        if (-not (Select-String -Pattern $escapedTechStack -Path $TargetFile -Quiet)) {
+            $newTechEntries += "- $techStack ($CURRENT_BRANCH)"
         }
     }
-    if ($NEW_DB -and $NEW_DB -notin @('N/A','NEEDS CLARIFICATION')) {
+    if ($NEW_DB -and $NEW_DB -notin @('N/A', 'NEEDS CLARIFICATION')) {
         $escapedDB = [Regex]::Escape($NEW_DB)
-        if (-not (Select-String -Pattern $escapedDB -Path $TargetFile -Quiet)) { 
-            $newTechEntries += "- $NEW_DB ($CURRENT_BRANCH)" 
+        if (-not (Select-String -Pattern $escapedDB -Path $TargetFile -Quiet)) {
+            $newTechEntries += "- $NEW_DB ($CURRENT_BRANCH)"
         }
     }
     $newChangeEntry = ''
     if ($techStack) { $newChangeEntry = "- ${CURRENT_BRANCH}: Added ${techStack}" }
-    elseif ($NEW_DB -and $NEW_DB -notin @('N/A','NEEDS CLARIFICATION')) { $newChangeEntry = "- ${CURRENT_BRANCH}: Added ${NEW_DB}" }
+    elseif ($NEW_DB -and $NEW_DB -notin @('N/A', 'NEEDS CLARIFICATION')) { $newChangeEntry = "- ${CURRENT_BRANCH}: Added ${NEW_DB}" }
 
     $lines = Get-Content -LiteralPath $TargetFile -Encoding utf8
     $output = New-Object System.Collections.Generic.List[string]
     $inTech = $false; $inChanges = $false; $techAdded = $false; $changeAdded = $false; $existingChanges = 0
 
-    for ($i=0; $i -lt $lines.Count; $i++) {
+    for ($i = 0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
         if ($line -eq '## Active Technologies') {
             $output.Add($line)
@@ -332,7 +336,7 @@ function Update-ExistingAgentFile {
             continue
         }
         if ($line -match '(\*\*)?Last updated(\*\*)?: .*\d{4}-\d{2}-\d{2}') {
-            $output.Add(($line -replace '\d{4}-\d{2}-\d{2}',$Date.ToString('yyyy-MM-dd')))
+            $output.Add(($line -replace '\d{4}-\d{2}-\d{2}', $Date.ToString('yyyy-MM-dd')))
             continue
         }
         $output.Add($line)
@@ -345,7 +349,7 @@ function Update-ExistingAgentFile {
 
     # Ensure Cursor .mdc files have YAML frontmatter for auto-inclusion
     if ($TargetFile -match '\.mdc$' -and $output.Count -gt 0 -and $output[0] -ne '---') {
-        $frontmatter = @('---','description: Project Development Guidelines','globs: ["**/*"]','alwaysApply: true','---','')
+        $frontmatter = @('---', 'description: Project Development Guidelines', 'globs: ["**/*"]', 'alwaysApply: true', '---', '')
         $output.InsertRange(0, $frontmatter)
     }
 
@@ -355,9 +359,9 @@ function Update-ExistingAgentFile {
 
 function Update-AgentFile {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$TargetFile,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$AgentName
     )
     if (-not $TargetFile -or -not $AgentName) { Write-Err 'Update-AgentFile requires TargetFile and AgentName'; return $false }
@@ -370,10 +374,12 @@ function Update-AgentFile {
 
     if (-not (Test-Path $TargetFile)) {
         if (New-AgentFile -TargetFile $TargetFile -ProjectName $projectName -Date $date) { Write-Success "Created new $AgentName context file" } else { Write-Err 'Failed to create new agent file'; return $false }
-    } else {
+    }
+    else {
         try {
             if (Update-ExistingAgentFile -TargetFile $TargetFile -Date $date) { Write-Success "Updated existing $AgentName context file" } else { Write-Err 'Failed to update agent file'; return $false }
-        } catch {
+        }
+        catch {
             Write-Err "Cannot access or update existing file: $TargetFile. $_"
             return $false
         }
@@ -383,32 +389,32 @@ function Update-AgentFile {
 
 function Update-SpecificAgent {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Type
     )
     switch ($Type) {
-        'claude'   { Update-AgentFile -TargetFile $CLAUDE_FILE   -AgentName 'Claude Code' }
-        'gemini'   { Update-AgentFile -TargetFile $GEMINI_FILE   -AgentName 'Gemini CLI' }
-        'copilot'  { Update-AgentFile -TargetFile $COPILOT_FILE  -AgentName 'GitHub Copilot' }
+        'claude' { Update-AgentFile -TargetFile $CLAUDE_FILE   -AgentName 'Claude Code' }
+        'gemini' { Update-AgentFile -TargetFile $GEMINI_FILE   -AgentName 'Gemini CLI' }
+        'copilot' { Update-AgentFile -TargetFile $COPILOT_FILE  -AgentName 'GitHub Copilot' }
         'cursor-agent' { Update-AgentFile -TargetFile $CURSOR_FILE   -AgentName 'Cursor IDE' }
-        'qwen'     { Update-AgentFile -TargetFile $QWEN_FILE     -AgentName 'Qwen Code' }
+        'qwen' { Update-AgentFile -TargetFile $QWEN_FILE     -AgentName 'Qwen Code' }
         'opencode' { Update-AgentFile -TargetFile $AGENTS_FILE   -AgentName 'opencode' }
-        'codex'    { Update-AgentFile -TargetFile $AGENTS_FILE   -AgentName 'Codex CLI' }
+        'codex' { Update-AgentFile -TargetFile $AGENTS_FILE   -AgentName 'Codex CLI' }
         'windsurf' { Update-AgentFile -TargetFile $WINDSURF_FILE -AgentName 'Windsurf' }
         'kilocode' { Update-AgentFile -TargetFile $KILOCODE_FILE -AgentName 'Kilo Code' }
-        'auggie'   { Update-AgentFile -TargetFile $AUGGIE_FILE   -AgentName 'Auggie CLI' }
-        'roo'      { Update-AgentFile -TargetFile $ROO_FILE      -AgentName 'Roo Code' }
+        'auggie' { Update-AgentFile -TargetFile $AUGGIE_FILE   -AgentName 'Auggie CLI' }
+        'roo' { Update-AgentFile -TargetFile $ROO_FILE      -AgentName 'Roo Code' }
         'codebuddy' { Update-AgentFile -TargetFile $CODEBUDDY_FILE -AgentName 'CodeBuddy CLI' }
         'qodercli' { Update-AgentFile -TargetFile $QODER_FILE    -AgentName 'Qoder CLI' }
-        'amp'      { Update-AgentFile -TargetFile $AMP_FILE      -AgentName 'Amp' }
-        'shai'     { Update-AgentFile -TargetFile $SHAI_FILE     -AgentName 'SHAI' }
-        'tabnine'  { Update-AgentFile -TargetFile $TABNINE_FILE  -AgentName 'Tabnine CLI' }
+        'amp' { Update-AgentFile -TargetFile $AMP_FILE      -AgentName 'Amp' }
+        'shai' { Update-AgentFile -TargetFile $SHAI_FILE     -AgentName 'SHAI' }
+        'tabnine' { Update-AgentFile -TargetFile $TABNINE_FILE  -AgentName 'Tabnine CLI' }
         'kiro-cli' { Update-AgentFile -TargetFile $KIRO_FILE     -AgentName 'Kiro CLI' }
-        'agy'      { Update-AgentFile -TargetFile $AGY_FILE      -AgentName 'Antigravity' }
-        'bob'      { Update-AgentFile -TargetFile $BOB_FILE      -AgentName 'IBM Bob' }
-        'vibe'     { Update-AgentFile -TargetFile $VIBE_FILE     -AgentName 'Mistral Vibe' }
-        'kimi'     { Update-AgentFile -TargetFile $KIMI_FILE     -AgentName 'Kimi Code' }
-        'generic'  { Write-Info 'Generic agent: no predefined context file. Use the agent-specific update script for your agent.' }
+        'agy' { Update-AgentFile -TargetFile $AGY_FILE      -AgentName 'Antigravity' }
+        'bob' { Update-AgentFile -TargetFile $BOB_FILE      -AgentName 'IBM Bob' }
+        'vibe' { Update-AgentFile -TargetFile $VIBE_FILE     -AgentName 'Mistral Vibe' }
+        'kimi' { Update-AgentFile -TargetFile $KIMI_FILE     -AgentName 'Kimi Code' }
+        'generic' { Write-Info 'Generic agent: no predefined context file. Use the agent-specific update script for your agent.' }
         default { Write-Err "Unknown agent type '$Type'"; Write-Err 'Expected: claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|tabnine|kiro-cli|agy|bob|vibe|qodercli|kimi|generic'; return $false }
     }
 }
@@ -416,25 +422,25 @@ function Update-SpecificAgent {
 function Update-AllExistingAgents {
     $found = $false
     $ok = $true
-    if (Test-Path $CLAUDE_FILE)   { if (-not (Update-AgentFile -TargetFile $CLAUDE_FILE   -AgentName 'Claude Code')) { $ok = $false }; $found = $true }
-    if (Test-Path $GEMINI_FILE)   { if (-not (Update-AgentFile -TargetFile $GEMINI_FILE   -AgentName 'Gemini CLI')) { $ok = $false }; $found = $true }
-    if (Test-Path $COPILOT_FILE)  { if (-not (Update-AgentFile -TargetFile $COPILOT_FILE  -AgentName 'GitHub Copilot')) { $ok = $false }; $found = $true }
-    if (Test-Path $CURSOR_FILE)   { if (-not (Update-AgentFile -TargetFile $CURSOR_FILE   -AgentName 'Cursor IDE')) { $ok = $false }; $found = $true }
-    if (Test-Path $QWEN_FILE)     { if (-not (Update-AgentFile -TargetFile $QWEN_FILE     -AgentName 'Qwen Code')) { $ok = $false }; $found = $true }
-    if (Test-Path $AGENTS_FILE)   { if (-not (Update-AgentFile -TargetFile $AGENTS_FILE   -AgentName 'Codex/opencode')) { $ok = $false }; $found = $true }
+    if (Test-Path $CLAUDE_FILE) { if (-not (Update-AgentFile -TargetFile $CLAUDE_FILE   -AgentName 'Claude Code')) { $ok = $false }; $found = $true }
+    if (Test-Path $GEMINI_FILE) { if (-not (Update-AgentFile -TargetFile $GEMINI_FILE   -AgentName 'Gemini CLI')) { $ok = $false }; $found = $true }
+    if (Test-Path $COPILOT_FILE) { if (-not (Update-AgentFile -TargetFile $COPILOT_FILE  -AgentName 'GitHub Copilot')) { $ok = $false }; $found = $true }
+    if (Test-Path $CURSOR_FILE) { if (-not (Update-AgentFile -TargetFile $CURSOR_FILE   -AgentName 'Cursor IDE')) { $ok = $false }; $found = $true }
+    if (Test-Path $QWEN_FILE) { if (-not (Update-AgentFile -TargetFile $QWEN_FILE     -AgentName 'Qwen Code')) { $ok = $false }; $found = $true }
+    if (Test-Path $AGENTS_FILE) { if (-not (Update-AgentFile -TargetFile $AGENTS_FILE   -AgentName 'Codex/opencode')) { $ok = $false }; $found = $true }
     if (Test-Path $WINDSURF_FILE) { if (-not (Update-AgentFile -TargetFile $WINDSURF_FILE -AgentName 'Windsurf')) { $ok = $false }; $found = $true }
     if (Test-Path $KILOCODE_FILE) { if (-not (Update-AgentFile -TargetFile $KILOCODE_FILE -AgentName 'Kilo Code')) { $ok = $false }; $found = $true }
-    if (Test-Path $AUGGIE_FILE)   { if (-not (Update-AgentFile -TargetFile $AUGGIE_FILE   -AgentName 'Auggie CLI')) { $ok = $false }; $found = $true }
-    if (Test-Path $ROO_FILE)      { if (-not (Update-AgentFile -TargetFile $ROO_FILE      -AgentName 'Roo Code')) { $ok = $false }; $found = $true }
+    if (Test-Path $AUGGIE_FILE) { if (-not (Update-AgentFile -TargetFile $AUGGIE_FILE   -AgentName 'Auggie CLI')) { $ok = $false }; $found = $true }
+    if (Test-Path $ROO_FILE) { if (-not (Update-AgentFile -TargetFile $ROO_FILE      -AgentName 'Roo Code')) { $ok = $false }; $found = $true }
     if (Test-Path $CODEBUDDY_FILE) { if (-not (Update-AgentFile -TargetFile $CODEBUDDY_FILE -AgentName 'CodeBuddy CLI')) { $ok = $false }; $found = $true }
-    if (Test-Path $QODER_FILE)    { if (-not (Update-AgentFile -TargetFile $QODER_FILE    -AgentName 'Qoder CLI')) { $ok = $false }; $found = $true }
-    if (Test-Path $SHAI_FILE)     { if (-not (Update-AgentFile -TargetFile $SHAI_FILE     -AgentName 'SHAI')) { $ok = $false }; $found = $true }
-    if (Test-Path $TABNINE_FILE)  { if (-not (Update-AgentFile -TargetFile $TABNINE_FILE  -AgentName 'Tabnine CLI')) { $ok = $false }; $found = $true }
-    if (Test-Path $KIRO_FILE)     { if (-not (Update-AgentFile -TargetFile $KIRO_FILE     -AgentName 'Kiro CLI')) { $ok = $false }; $found = $true }
-    if (Test-Path $AGY_FILE)      { if (-not (Update-AgentFile -TargetFile $AGY_FILE      -AgentName 'Antigravity')) { $ok = $false }; $found = $true }
-    if (Test-Path $BOB_FILE)      { if (-not (Update-AgentFile -TargetFile $BOB_FILE      -AgentName 'IBM Bob')) { $ok = $false }; $found = $true }
-    if (Test-Path $VIBE_FILE)     { if (-not (Update-AgentFile -TargetFile $VIBE_FILE     -AgentName 'Mistral Vibe')) { $ok = $false }; $found = $true }
-    if (Test-Path $KIMI_FILE)     { if (-not (Update-AgentFile -TargetFile $KIMI_FILE     -AgentName 'Kimi Code')) { $ok = $false }; $found = $true }
+    if (Test-Path $QODER_FILE) { if (-not (Update-AgentFile -TargetFile $QODER_FILE    -AgentName 'Qoder CLI')) { $ok = $false }; $found = $true }
+    if (Test-Path $SHAI_FILE) { if (-not (Update-AgentFile -TargetFile $SHAI_FILE     -AgentName 'SHAI')) { $ok = $false }; $found = $true }
+    if (Test-Path $TABNINE_FILE) { if (-not (Update-AgentFile -TargetFile $TABNINE_FILE  -AgentName 'Tabnine CLI')) { $ok = $false }; $found = $true }
+    if (Test-Path $KIRO_FILE) { if (-not (Update-AgentFile -TargetFile $KIRO_FILE     -AgentName 'Kiro CLI')) { $ok = $false }; $found = $true }
+    if (Test-Path $AGY_FILE) { if (-not (Update-AgentFile -TargetFile $AGY_FILE      -AgentName 'Antigravity')) { $ok = $false }; $found = $true }
+    if (Test-Path $BOB_FILE) { if (-not (Update-AgentFile -TargetFile $BOB_FILE      -AgentName 'IBM Bob')) { $ok = $false }; $found = $true }
+    if (Test-Path $VIBE_FILE) { if (-not (Update-AgentFile -TargetFile $VIBE_FILE     -AgentName 'Mistral Vibe')) { $ok = $false }; $found = $true }
+    if (Test-Path $KIMI_FILE) { if (-not (Update-AgentFile -TargetFile $KIMI_FILE     -AgentName 'Kimi Code')) { $ok = $false }; $found = $true }
     if (-not $found) {
         Write-Info 'No existing agent files found, creating default Claude file...'
         if (-not (Update-AgentFile -TargetFile $CLAUDE_FILE -AgentName 'Claude Code')) { $ok = $false }
