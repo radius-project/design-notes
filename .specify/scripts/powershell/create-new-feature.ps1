@@ -35,6 +35,12 @@ if (-not $FeatureDescription -or $FeatureDescription.Count -eq 0) {
 
 $featureDesc = ($FeatureDescription -join ' ').Trim()
 
+# Validate description is not empty after trimming (e.g., user passed only whitespace)
+if ([string]::IsNullOrWhiteSpace($featureDesc)) {
+    Write-Error "Error: Feature description cannot be empty or contain only whitespace"
+    exit 1
+}
+
 # Resolve repository root. Prefer git information when available, but fall back
 # to searching for repository markers so the workflow still functions in repositories that
 # were initialized with --no-git.
@@ -136,6 +142,9 @@ if (-not $fallbackRoot) {
     Write-Error "Error: Could not determine repository root. Please run this script from within the repository."
     exit 1
 }
+
+# Load common functions (includes Resolve-Template)
+. "$PSScriptRoot/common.ps1"
 
 try {
     $repoRoot = git rev-parse --show-toplevel 2>$null
@@ -250,11 +259,28 @@ if ($branchName.Length -gt $maxBranchLength) {
 }
 
 if ($hasGit) {
+    $branchCreated = $false
     try {
-        git checkout -b $branchName | Out-Null
+        git checkout -q -b $branchName 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $branchCreated = $true
+        }
     }
     catch {
-        Write-Warning "Failed to create git branch: $branchName"
+        # Exception during git command
+    }
+
+    if (-not $branchCreated) {
+        # Check if branch already exists
+        $existingBranch = git branch --list $branchName 2>$null
+        if ($existingBranch) {
+            Write-Error "Error: Branch '$branchName' already exists. Please use a different feature name or specify a different number with -Number."
+            exit 1
+        }
+        else {
+            Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
+            exit 1
+        }
     }
 }
 else {
@@ -264,9 +290,9 @@ else {
 $featureDir = Join-Path $specsDir $branchName
 New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
 
-$template = Join-Path $repoRoot '.specify/templates/spec-template.md'
+$template = Resolve-Template -TemplateName 'spec-template' -RepoRoot $repoRoot
 $specFile = Join-Path $featureDir 'spec.md'
-if (Test-Path $template) {
+if ($template -and (Test-Path $template)) {
     Copy-Item $template $specFile -Force
 }
 else {
@@ -292,4 +318,3 @@ else {
     Write-Output "HAS_GIT: $hasGit"
     Write-Output "SPECIFY_FEATURE environment variable set to: $branchName"
 }
-
