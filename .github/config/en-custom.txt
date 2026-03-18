@@ -1,3 +1,10 @@
+attestation
+attestations
+Buildx
+GoReleaser
+prerelease
+QEMU
+SBOM
 AAD
 ACR
 AKS
