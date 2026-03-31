@@ -91,15 +91,19 @@ The user clicks back to the main repository page.
 
 1. The user clicks Deploy and sees options for creating AWS, Azure, or Google Cloud environments. The user clicks **Create AWS environment**.
 
-    ![image7](2026-03-github-radius-feature-spec/image7.png)    
+    ![image7](2026-03-github-radius-feature-spec/image7.png)
 
 1. A new window opens for creating an AWS environment.
 
-1. The user clicks **Create trusted OIDC identity provider and IAM  role**. The AWS console opens in the same window. The user is  prompted to login to their account.
+    ![image8](2026-03-github-radius-feature-spec/image8.png)
+
+1. The user clicks **Create trusted OIDC identity provider and IAM  role**. The AWS console opens in a new window. The user is  prompted to login to their account.
 
     ![image9](2026-03-github-radius-feature-spec/image9.png)
 
 1. A CloudFormation stack is opened. The user reviews the stack then  clicks Create stack.
+
+    ![image10](2026-03-github-radius-feature-spec/image10.png)
 
     This CloudFormation stack is stored in a Radius-maintained S3 bucket. It creates an IAM OIDC Identity Provider, similar to running this command:
 
@@ -153,13 +157,13 @@ The user clicks back to the main repository page.
 
     The set of IAM policies should be as minimal as possible but enough to enable creating all resources that Radius supports.
 
-1. The user returns to the *Connect an AWS* account page. They enter the IAM role ARN, select the region, then click **Confirm authentication**.
+1. The user returns to the *Create an AWS environment* page. They enter the environment name, IAM role ARN, select the region, then click **Confirm authentication**.
 
     ![image11](2026-03-github-radius-feature-spec/image11.png)
 
     When the user clicks Confirm authentication:
 
-    - A GitHub Environment is created in the repository
+    - A GitHub environment is created in the repository
     - Metadata is added to the environment, possible as an environment-level environment variable, including:
       - AWS Account ID
       - AWS Region
@@ -168,7 +172,7 @@ The user clicks back to the main repository page.
 
 1. While the workflow is running, there is a visual indication that it is running in the background. Once complete the *Check environment dependencies >* button is enabled. The User clicks **Check environment dependencies >** button.
 
-###  Step 4: Defining environment dependencies
+###  Step 4: Defining recipe parameters
 
 1. Radius examines the resources in app.bicep and the default recipes for each resource type. The user is presented with each required recipe parameter to set on the environment. In the case of todo-list-app:
 
@@ -178,19 +182,21 @@ The user clicks back to the main repository page.
 
     ![image12](2026-03-github-radius-feature-spec/image12.png)
 
+    Radius prepopulates the drop down boxes with valid values by making API calls to list relevant resources from the user's AWS account. For example, the list of EKS clusters is prepopulated for the user to select from (however namespace is left blank since there is no AWS API call to list Kubernetes namespaces).
+
 1. The user returns to the GitHub repository.
 
 ###  Step 5: Deployment
 
-1. The user clicks **Deploy** again. The user sees that there is now a dev environment setup with their AWS account.
+1. The user clicks **Deploy** again. The user sees that there is now a `dev` environment setup with their AWS account.
 
     ![image13](2026-03-github-radius-feature-spec/image13.png)
 
-1. The user clicks the dev environment.
+1. The user clicks the `dev` environment.
 
     ![image14](2026-03-github-radius-feature-spec/image14.png)
 
-    The user is redirected to the deployment dashboard and monitors the deployment. Since there is only a single application in this repository, the deployment begins.
+    The user is redirected to the deployment dashboard and monitors the deployment. The user is prompted which application to deploy (not visualized here). Since there is only a single application in this repository, the user only has to click **Deploy** and the deployment begins.
 
     ![image15](2026-03-github-radius-feature-spec/image15.png)
 
