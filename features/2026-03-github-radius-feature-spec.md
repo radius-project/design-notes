@@ -63,8 +63,7 @@ The following user journeys are out of scope for the initial prototype, but will
 
     In the background, Copilot is first reading the Radius platform constitution. This is a markdown file which instructs Copilot on how to model cloud-native applications. The Radius platform constitution is maintained by the Radius team and cannot be customized for now. The constitution has the following sections:
 
-    - **Application architecture patterns**. A set of pre-defined architectural patterns. The purpose of these patterns is to prevent
-      arbitrary architectures and ensure applications are composable using existing resource types. This will likely include:
+    - **Application architecture patterns**. A set of pre-defined architectural patterns. The purpose of these patterns is to prevent arbitrary architectures and ensure applications are composable using existing resource types. This will likely include:
       - Stateless web/API service
       - Stateful/database-backed application
       - Event-driven application
@@ -195,7 +194,7 @@ The user clicks back to the main repository page.
 
     ![image15](2026-03-github-radius-feature-spec/image15.png)
 
-    Resources queued for deployment are marked in grey. Resources being deployed are yellow. Resources successfully deployed are green. Resources that failed to deploy are red.
+    Resources queued for deployment are marked in gray. Resources being deployed are yellow. Resources successfully deployed are green. Resources that failed to deploy are red.
 
     When the user returns to the main repository page, they now see a deployment with the environment and timestamp under Deployments.
 
