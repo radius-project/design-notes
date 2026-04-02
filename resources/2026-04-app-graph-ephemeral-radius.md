@@ -23,8 +23,8 @@ This design proposes extending Radius to support three kinds of application grap
 
 A graph constructed from application definitions authored in Bicep files (or their compiled JSON output), **without** deploying the application. This is useful for:
 
-- Visualizing application architecture from source code checked into a repository.
-- Highlighting infrastructure changes introduced by a Pull Request.
+* Visualizing application architecture from source code checked into a repository.
+* Highlighting infrastructure changes introduced by a Pull Request.
 
 **Limitation:** Because the concrete infrastructure resources depend on the recipe bound to each resource type — which in turn depends on the target Radius environment — the static graph cannot include infrastructure-level details.
 
@@ -37,11 +37,10 @@ The graph of a **live, deployed** application, as described above. This is the o
 A graph that shows what the concrete infrastructure resources and their dependencies **would be** if an application definition were deployed against a specific environment, without actually deploying it. This could be surfaced via a command such as:
 
 ```sh
-rad app graph -e <env-id> --dry-run
+rad app graph -e env-id --dry-run
 ```
 
 Radius should provide a way to access all three kinds of graph.
-
 
 ## Terms and definitions
 
@@ -53,517 +52,302 @@ Radius should provide a way to access all three kinds of graph.
 | Simulated Deployment Graph | An application graph that represents what would be deployed if an application definition were applied to a specific environment. |
 | rootScope | The current UCP scope (e.g., `/planes/radius/local/resourceGroups/default`). |
 
-
 ## Objectives
 
-> **Issue Reference:** 
-
+> **Issue Reference:**
 
 ### Goals
 
-* Finalize graph datamodel flexible/ extensible for both static and run-time application graphs  
-* Finalize persistence details
-* Radius should provide a cli command that outputs app graph from  application definition files
-* Radius should provide an API that retrieves the run time application graph
-* Radius should provide a cli command that outputs graph of a deployed application
+* Define a graph schema that is flexible and extensible enough to represent static, run-time, and simulated deployment graphs.
+  * Review the server-side API (`getGraph` custom action on `Applications.Core/applications|Radius.Core/applications`) that returns the run-time application graph for a deployed application, based on schema decisions.
+* Identify a persistence mechanism since the graph should be available irrespective of the epheremal nature of Radius control plane. The graph construction is still an in-memory operation.
+* Provide a CLI command that constructs and outputs a static application graph from Bicep or compiled JSON application definition files.
+* Provide a CLI command that outputs the run-time graph of a deployed application by calling the `getGraph` API.
 
-### Non goals
+### Non-goals
 
-* Authorization/ RBAC for viewing graph
-
+* Authorization / RBAC for viewing the graph - identified as a future capability dependent on Radius RBAC feature.
+* Simulated deployment graph (dry-run) — identified as a future capability but out of scope for this iteration.
 
 ### User scenarios (optional)
-
-#### User story 1
 
 ## Design
 
 ### Schema
 
-Thes graph schema should be applicable to both kind of graph, selectively populating relevant fields. The graph should be a DAG. Today, ARM (specifically DE) constructs a Dependency graph for deploying one or more resources using a arm json template ( or bicep template) and specifies dependency using a "dependsOn" contruct. This graph is in-memory. With Radius, these multiple resources would be tied to an application root resource. The scale (number of nodes) is comparable, making an in-memory graph construction a good choice for radius graph too. 
+#### Design principles
 
-While the dependency graph is mainly used to determine the order of construction of resources, Radius users might be interested in querying dependencies of specific resources. For example, 
+* **Unified schema.** A single graph schema should represent both static and run-time graphs. Fields that only apply to one graph type (e.g., `provisioningState` for run-time graphs) are optionally populated. See [Resource property selection](#resource-property-selection)
+* **DAG structure.** The graph is a directed acyclic graph (DAG). Each node is a Radius resource; each edge is a connection (inbound or outbound) between resources.
+* **Query capabilities.** Beyond depicticing the dependency between resources, the graph should support queries such as: "what does the frontend container depend on?" or "is this resource owned by the application or shared via the environment?"
+* **In-memory construction.** The graph is built in-memory on each request. This mirrors how ARM's Deployment Engine constructs a dependency graph from an ARM JSON template (or Bicep) using `dependsOn`. Radius applications have a comparable number of nodes, so the same approach is viable.
+* **Persistence of serialized output.** When Radius is used with ephemeral infrastructure (e.g., GitHub Actions workspaces), the control plane is torn down after each workflow run. GitHub READMEs and PR views need access to the graph without spinning up the control plane. This requires persisting the serialized graph JSON independently of the control plane state. See [Graph persistence](#graph-persistence) below.
 
-Query adjecent nodes of a given node  (the frontend depends on both auth server and backend).  
+#### Graph persistence
 
-Querying specific details of one/ more nodes . For example, the user might be interested in whether a resource the application is using is owned by the application or shared (environment resource). 
+The graph is constructed in-memory but must be persisted so it remains accessible when the Radius control plane is not running (e.g., the [GitHub Actions workspace](https://github.com/radius-project/radius/blob/b9999a12d965f659bb5c943f336c88781b883832/eng/design-notes/2026-03-github-workspace-design.md) tears down the cluster after each run). The persistence strategy differs by graph type:
 
-### Cli support (static graph)
+| Graph type | Persisted where | Written when |
+|---|---|---|
+| Static graph | `.radius/static/<app>.json` on each branch | CI generates from Bicep on push and PR |
+| Run-time graph | `graphs/<app>.json` on `radius-state` orphan branch | `rad shutdown` serializes after deploy |
+
+* **Static graph per branch**: The CLI command that builds a static graph from Bicep writes the JSON to `.radius/static/`. CI runs this on every push, committing the result to the current branch. On a PR, GitHub's diff view naturally shows the architecture changes between the `main` branch graph and the PR branch graph, giving reviewers a clear picture of what the PR introduces.
+* **Run-time graph on orphan branch**: `rad shutdown` calls `getGraph` for each deployed application and writes the JSON to `graphs/` on the `radius-state` orphan branch. This is a natural extension of the existing shutdown backup flow, which already persists SQL dumps to the same branch.
+
+The Radius graphs do not have any sensitive data, therefore this should be OK.
+
+#### Resource property selection
+
+The graph JSON includes properties for each resource node. A key schema design decision is **which** properties of a resource appear in the graph. There are two broad approaches:
+
+##### Approach A: Include all properties (current behavior) 
+
+Dump every property from the resource's stored state into the graph node. This is what the `getGraph` API does today. All properties are read from the Radius control plane datastore and serialized into the response, potentially traveling over the network to CLI clients/consumers.
+
+| Pros | Cons |
+|---|---|
+| Simple — no schema changes needed | Graph JSON can be large (especially with output resources populated) , increasing network bandwidth between the control plane and consumers |
+| Consumers have full data; no second API call needed | May include noisy or irrelevant fields (internal IDs, timestamps) |
+| Forward-compatible — new properties appear automatically | Harder to guarantee a stable rendering contract for UI/visualization |
+
+##### Approach B: Schema-driven property selection
+
+Extend the [resource type YAML manifest](https://docs.radapp.io/concepts/resource-types/) with a top-level `graphProperties` list that declares which properties should be included in the graph. Only listed properties are projected into the graph JSON. This reduces the data read from the control plane datastore and serialized over the network. It allows a default view to rely on data filtering applied at control plane.
+
+Example manifest addition:
+
+```yaml
+# In the resource type definition YAML
+graphProperties:
+  - port
+  - container.image
+  - container.ports.web.containerPort
+```
+
+Alternatively, if most properties are display-worthy, an exclude list can be used:
+
+```yaml
+graphExclude:
+  - container.readinessProbe
+  - container.livenessProbe
+```
+
+| Pros | Cons |
+|---|---|
+| Compact graph JSON — only display-relevant fields | Requires schema markers to every resource type definition |
+| Resource type authors control what's meaningful for visualization | New properties are hidden by default until annotated |
+| Stable rendering contract for UI components | More complex graph construction logic (filter by annotation) |
+
+##### Approach C: Hybrid — full dump with display hints (Claude suggested)
+
+Include all properties in the graph JSON, but add a `displayProperties` list to each `ApplicationGraphResource` node that identifies the subset of properties recommended for rendering. Consumers can use the hints for default views and fall back to the full property set for advanced/detail views.
+
+```json
+{
+  "id": "...",
+  "type": "Applications.Core/containers",
+  "name": "frontend",
+  "properties": { /* all properties */ },
+  "displayProperties": ["container.image", "container.ports.web.containerPort"]
+}
+```
+
+| Pros | Cons |
+|---|---|
+| Full data always available — no information loss | Graph JSON size is not reduced |
+| Display hints guide UI without restricting it | Two sources of truth (all props + display list) to maintain |
+| Backward-compatible — existing consumers unaffected | Still requires resource type authors to specify display hints |
+
+
+### Static graph
 
 ### Server side support
-Since we are querying an Application's details, UCP should proxy this API to Applications.Core resource provider. We should be able to reuse much of the ApplicationGraph structure we currently have in  `cli` for supporting the `rad app connections` command. The ApplicationGraph is a list of Resources, with each Resource including information about its Dependencies(Connections). 
 
-The Applications.Core RP should be able to 
-1. query all resources in the `rootScope`
-2. filter resources relevant to the given Application based on the app.id field
-3. construct the graph object based on `connections`.
+None
 
-We should be able to handle connections that take a resourceID for destination as well as those which take a URL. 
+### Cli side support
 
-As requirement evolves, we would be able to add properties such as a repository link to a container or a health url and retrieve these as part of application graph. This graph object could then be consumed by react components to provide the desired UX experience. 
+There are two primary ways `rad app graph --path-to-bicep` (specific cli command is TBD)` can construct the static graph.
 
+```bicep
+extension radius
 
-### API design
+@description('The Radius application ID. Set automatically by the rad CLI.')
+param application string
 
-The API to retrieve an Application Graph looks like
-
-`POST /{rootScope}/providers/Applications.Core/applications/{applicationName}/getGraph`
-
-  - Description: retrieve {applicationName}'s  Application Graph.
-  - Type: ARM Synchronous
-
-Where
-
-`/{rootScope}/providers/Applications.Core/applications/{applicationName}` is the resource ID of the Application for which we want the graph.
-
-`getGraph` is the custom action on this resource. Ref. [ARM Custom Actions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/custom-providers/custom-providers-action-endpoint-how-to)
-
-
-
-Possible Responses
-
-* `HTTP 200 OK` with Serialized `ApplicationGraph` as response data.
-* `HTTP 404 Not Found` for Application Not Found
-
-***Model changes***
-
-Addition of ApplicationGraphResponse type and getGraph method to applications.tsp
-
-```
-@doc("Describes the application architecture and its dependencies.")
-model ApplicationGraphResponse {
-  @doc("The resources in the application graph.")
-  @extension("x-ms-identifiers", ["id"])
-  resources: Array<ApplicationGraphResource>;
-}
-
-@doc("Describes the connection between two resources.")
-model ApplicationGraphConnection {
-  @doc("The resource ID ")
-  id: string;
-
-  @doc("The direction of the connection. 'Outbound' indicates this connection specifies the ID of the destination and 'Inbound' indicates indicates this connection specifies the ID of the source.")
-  direction: Direction;
-}
-
-@doc("The direction of a connection.")
-enum Direction {
-  @doc("The resource defining this connection makes an outbound connection resource specified by this id.")
-  Outbound,
-
-  @doc("The resource defining this connection accepts inbound connections from the resource specified by this id.")
-  Inbound,
-}
-
-@doc("Describes a resource in the application graph.")
-model ApplicationGraphResource {
-  @doc("The resource ID.")
-  id: string;
-
-  @doc("The resource type.")
-  type: string;
-
-  @doc("The resource name.")
-  name: string;
-
-  @doc("The resources that comprise this resource.")
-  @extension("x-ms-identifiers", ["id"])
-  resources: Array<ApplicationGraphOutputResource>;
-
-  @doc("The connections between resources in the application graph.")
-  @extension("x-ms-identifiers",[])
-  connections: Array<ApplicationGraphConnection>;
-
-  @doc("provisioningState of this resource") 
-  provisioningState?: string
-}
-
-@doc("Describes an output resource that comprises an application graph resource.")
-model ApplicationGraphOutputResource {
-  @doc("The resource ID.")
-  id: string;
-
-  @doc("The resource type.")
-  type: string;
-
-  @doc("The resource name.")
-  name: string;
-}
-```
-
-```
- @doc("Gets the application graph and resources.")
-  @action("getGraph")
-  getGraph is ArmResourceActionSync<
-    ApplicationResource,
-    {},
-    ApplicationGraphResponse,
-    UCPBaseParameters<ApplicationResource>
-  >;
-```
-
-***Example***
-
-`rad deploy app.bicep`
-
-Contents of `app.bicep`
-
-```
-import radius as radius
-
-@description('Specifies the location for resources.')
-param location string = 'local'
-
-@description('Specifies the environment for resources.')
+@description('The Radius environment ID. Set automatically by the rad CLI.')
 param environment string
 
-@description('Specifies the port for the container resource.')
-param port int = 3000
-
-@description('Specifies the image for the container resource.')
-param magpieimage string
-
-resource app 'Applications.Core/applications@2023-10-01-preview' = {
-  name: 'corerp-resources-gateway'
-  location: location
+resource app 'Radius.Core/applications@2025-08-01-preview' = {
+  name: 'my-app'
   properties: {
     environment: environment
   }
 }
 
-resource gateway 'Applications.Core/gateways@2023-10-01-preview' = {
-  name: 'http-gtwy-gtwy'
-  location: location
+resource frontend 'Radius.Compute/containers@2025-08-01-preview' = {
+  name: 'frontend'
   properties: {
     application: app.id
-    routes: [
-      {
-        path: '/'
-        destination: frontendRoute.id
-      }
-      {
-        path: '/backend1'
-        destination: backendRoute.id
-      }
-      {
-        // Route /backend2 requests to the backend, and
-        // transform the request to /
-        path: '/backend2'
-        destination: backendRoute.id
-        replacePrefix: '/'
-      }
-    ]
-  }
-}
-
-resource frontendRoute 'Applications.Core/httpRoutes@2023-10-01-preview' = {
-  name: 'http-gtwy-front-rte'
-  location: location
-  properties: {
-    application: app.id
-    port: 81
-  }
-}
-
-resource frontendContainer 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'http-gtwy-front-ctnr'
-  location: location
-  properties: {
-    application: app.id
-    container: {
-      image: magpieimage
-      ports: {
-        web: {
-          containerPort: port
-          provides: frontendRoute.id
+    environment: environment
+    containers: {
+      frontend: {
+        image: 'ghcr.io/my-org/frontend:latest'
+        ports: {
+          web: {
+            containerPort: 3000
+          }
         }
-      }
-      readinessProbe: {
-        kind: 'httpGet'
-        containerPort: port
-        path: '/healthz'
       }
     }
     connections: {
       backend: {
-        source: backendRoute.id
+        source: 'http://backend:8080'
       }
     }
   }
 }
 
-resource backendRoute 'Applications.Core/httpRoutes@2023-10-01-preview' = {
-  name: 'http-gtwy-back-rte'
-  location: location
+resource backend 'Radius.Compute/containers@2025-08-01-preview' = {
+  name: 'backend'
   properties: {
     application: app.id
-  }
-}
-
-resource backendContainer 'Applications.Core/containers@2023-10-01-preview' = {
-  name: 'http-gtwy-back-ctnr'
-  location: location
-  properties: {
-    application: app.id
-    container: {
-      image: magpieimage
-      env: {
-        gatewayUrl: gateway.properties.url
-      }
-      ports: {
-        web: {
-          containerPort: port
-          provides: backendRoute.id
+    environment: environment
+    containers: {
+      backend: {
+        image: 'ghcr.io/my-org/backend:latest'
+        ports: {
+          api: {
+            containerPort: 8080
+          }
         }
       }
-      readinessProbe: {
-        kind: 'httpGet'
-        containerPort: port
-        path: '/healthz'
+    }
+    connections: {
+      mongodb: {
+        source: db.id
       }
     }
   }
 }
 
+resource db 'Radius.Data/mongoDatabases@2025-08-01-preview' = {
+  name: 'my-db'
+  properties: {
+    application: app.id
+    environment: environment
+  }
+}
 ```
 
-Assuming we set up Radius with the default  `rad init` command, Rest API For querying the above Application's graph would look like
-
-`POST /ucphostname:ucpport/apis/api.ucp.dev/v1alpha3/planes/radius/local/resourceGroups/default/providers/Applications.Core/applications/corerp-resources-gateway/getGraph?api-version=2023-10-01-preview`
-
-Response indicating Success would be 
-
-`HTTP 200 OK` With response body as below. 
-
-```
+```json
 {
-    "resources": [
-        {
-            "connections": [
-                {
-                    "direction": "Inbound",
-                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-front-ctnr"
-                }
-            ],
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-front-rte",
-            "name": "http-gtwy-front-rte",
-            "resources": [
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Service/http-gtwy-front-rte",
-                    "name": "http-gtwy-front-rte",
-                    "type": "core/Service"
-                }
-            ],
-            "type": "Applications.Core/httpRoutes",
-            "provisioningState": "Succeeded"
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.38.33.27573",
+      "templateHash": "7342800074738175601"
+    }
+  },
+  "parameters": {
+    "application": {
+      "type": "string",
+      "metadata": {
+        "description": "The Radius application ID. Set automatically by the rad CLI."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "The Radius environment ID. Set automatically by the rad CLI."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Radius.Core/applications",
+      "apiVersion": "2025-08-01-preview",
+      "name": "my-app",
+      "properties": {
+        "environment": "[parameters('environment')]"
+      }
+    },
+    {
+      "type": "Radius.Compute/containers",
+      "apiVersion": "2025-08-01-preview",
+      "name": "frontend",
+      "properties": {
+        "application": "[resourceId('Radius.Core/applications', 'my-app')]",
+        "environment": "[parameters('environment')]",
+        "containers": {
+          "frontend": {
+            "image": "ghcr.io/my-org/frontend:latest",
+            "ports": {
+              "web": {
+                "containerPort": 3000
+              }
+            }
+          }
         },
-        {
-            "connections": [
-                {
-                    "direction": "Outbound",
-                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
-                }
-            ],
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-back-ctnr",
-            "name": "http-gtwy-back-ctnr",
-            "resources": [
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/apps/Deployment/http-gtwy-back-ctnr",
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "apps/Deployment"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/ServiceAccount/http-gtwy-back-ctnr",
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "core/ServiceAccount"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/Role/http-gtwy-back-ctnr",
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "rbac.authorization.k8s.io/Role"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/RoleBinding/http-gtwy-back-ctnr",
-                    "name": "http-gtwy-back-ctnr",
-                    "type": "rbac.authorization.k8s.io/RoleBinding"
-                }
-            ],
-            "type": "Applications.Core/containers",
-            "provisioningState": "Succeeded"
-        },
-        {
-            "connections": [
-                {
-                    "direction": "Inbound",
-                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
-                },
-                {
-                    "direction": "Inbound",
-                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte"
-                },
-                {
-                    "direction": "Outbound",
-                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-front-rte"
-                }
-            ],
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-front-ctnr",
-            "name": "http-gtwy-front-ctnr",
-            "resources": [
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/apps/Deployment/http-gtwy-front-ctnr",
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "apps/Deployment"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Secret/http-gtwy-front-ctnr",
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "core/Secret"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/ServiceAccount/http-gtwy-front-ctnr",
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "core/ServiceAccount"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/Role/http-gtwy-front-ctnr",
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "rbac.authorization.k8s.io/Role"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/rbac.authorization.k8s.io/RoleBinding/http-gtwy-front-ctnr",
-                    "name": "http-gtwy-front-ctnr",
-                    "type": "rbac.authorization.k8s.io/RoleBinding"
-                }
-            ],
-            "type": "Applications.Core/containers",
-            "provisioningState": "Succeeded"
-        },
-        {
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/gateways/http-gtwy-gtwy",
-            "name": "http-gtwy-gtwy",
-            "resources": [
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-back-rte",
-                    "name": "http-gtwy-back-rte",
-                    "type": "projectcontour.io/HTTPProxy"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-front-rte",
-                    "name": "http-gtwy-front-rte",
-                    "type": "projectcontour.io/HTTPProxy"
-                },
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/projectcontour.io/HTTPProxy/http-gtwy-gtwy",
-                    "name": "http-gtwy-gtwy",
-                    "type": "projectcontour.io/HTTPProxy"
-                }
-            ],
-            "type": "Applications.Core/gateways",
-            "provisioningState": "Succeeded"
-        },
-        {
-            "connections": [
-                {
-                    "direction": "Inbound",
-                    "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/containers/http-gtwy-back-ctnr"
-                }
-            ],
-            "id": "/planes/radius/local/resourcegroups/default/providers/Applications.Core/httpRoutes/http-gtwy-back-rte",
-            "name": "http-gtwy-back-rte",
-            "resources": [
-                {
-                    "id": "/planes/kubernetes/local/namespaces/default-corerp-resources-gateway/providers/core/Service/http-gtwy-back-rte",
-                    "name": "http-gtwy-back-rte",
-                    "type": "core/Service"
-                }
-            ],
-            "type": "Applications.Core/httpRoutes",
-            "provisioningState": "Succeeded"
+        "connections": {
+          "backend": {
+            "source": "http://backend:8080"
+          }
         }
-    ]
+      },
+      "dependsOn": [
+        "[resourceId('Radius.Core/applications', 'my-app')]"
+      ]
+    },
+    {
+      "type": "Radius.Compute/containers",
+      "apiVersion": "2025-08-01-preview",
+      "name": "backend",
+      "properties": {
+        "application": "[resourceId('Radius.Core/applications', 'my-app')]",
+        "environment": "[parameters('environment')]",
+        "containers": {
+          "backend": {
+            "image": "ghcr.io/my-org/backend:latest",
+            "ports": {
+              "api": {
+                "containerPort": 8080
+              }
+            }
+          }
+        },
+        "connections": {
+          "mongodb": {
+            "source": "[resourceId('Radius.Data/mongoDatabases', 'my-db')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Radius.Core/applications', 'my-app')]",
+        "[resourceId('Radius.Data/mongoDatabases', 'my-db')]"
+      ]
+    },
+    {
+      "type": "Radius.Data/mongoDatabases",
+      "apiVersion": "2025-08-01-preview",
+      "name": "my-db",
+      "properties": {
+        "application": "[resourceId('Radius.Core/applications', 'my-app')]",
+        "environment": "[parameters('environment')]"
+      },
+      "dependsOn": [
+        "[resourceId('Radius.Core/applications', 'my-app')]"
+      ]
+    }
+  ]
 }
 ```
+#### Approach 1: from bicep files and "connections" property
+
+#### Approach 2: compile bicep templates to json, and use ARM json templates to infer connections
 
 
-## Alternatives considered
 
-There are multiple ways of representing a graph. We considered below model as an option since it is optimized for bandwidth. However, the model does not work well for pagination (to be added in future), which would be a requirement to support large applications.  
-
-
-```
-@doc("Describes the application architecture and its dependencies.")
-model ApplicationGraphResponse {
-  @doc("The connections between resources in the application graph.")
-  @extension("x-ms-identifiers",[])
-  connections: Array<ApplicationGraphConnection>;
-
-  @doc("The resources in the application graph.")
-  @extension("x-ms-identifiers", ["id"])
-  resources: Array<ApplicationGraphResource>;
-}
-
-@doc("Describes the connection between two resources.")
-model ApplicationGraphConnection {
-  @doc("The source of the connection.")
-  source: string;
-
-  @doc("The destination of the connection.")
-  destination: string;
-}
-
-@doc("Describes a resource in the application graph.")
-model ApplicationGraphResource {
-  @doc("The resource ID.")
-  id: string;
-
-  @doc("The resource type.")
-  type: string;
-
-  @doc("The resource name.")
-  name: string;
-
-  @doc("The resources that comprise this resource.")
-  @extension("x-ms-identifiers", ["id"])
-  resources: Array<ApplicationGraphResource>;
-}
-
-@doc("Describes an output resource that comprises an application graph resource.")
-model ApplicationGraphOutputResource {
-  @doc("The resource ID.")
-  id: string;
-
-  @doc("The resource type.")
-  type: string;
-
-  @doc("The resource name.")
-  name: string;
-}
-```
-
-
-## Test plan
-
-We should add a E2E that deploys an application and tests if the ApplicationGraph object that can be retrieved using the new API as expected. 
-
-We should also add UTs as needed for all the functions introduced/changed.
-
-
-## Monitoring
-
-Trace and Metrics will be generated automatically for the new API. 
-We should return appropriate errors so that logs are generated for these conditions.
-
-## Development plan
-
-1. Support new Route in Applications.Core 
-2. Implement controller and UT for the new Route 
-3. Implement E2E that tests the new API
-4. Add documentation
-5. Rewrite rad app connections using the new API, update relevant tests.
-
-
-## Open issues
-
-1. The serialized ApplicationGraph in HTTP response could be quite heavy for huge Applications, consuming more network bandwidth. We might have to make this better based on the requirement. 
-
-2. We currently do not have a efficient query to retrieve only the resources in a given application. This might need to be revisited.
