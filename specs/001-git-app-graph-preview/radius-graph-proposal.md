@@ -83,11 +83,11 @@ One versioned graph where deployed state, source artifacts, and deployment histo
 
 ## High-Level Features
 
-- **Versioned graph state.** Every deployment produces a versioned snapshot of the graph — source artifacts, deployment operations, and resulting deployed resources — linked together. Users can browse, query, and diff the graph across any point in its history.
+- **Versioned graph state** Every deployment produces a versioned snapshot of the graph — source artifacts, deployment operations, and resulting deployed resources — linked together. Users can browse, query, and diff the graph across any point in its history.
 
-- **Graph querying and key-value access.** The storage layer exposes both key-value operations (preserving compatibility with existing Radius storage providers) and graph traversal queries for navigating the relationships between deployed state and source artifacts.
+- **Graph querying** The storage layer supports graph traversal queries for navigating the relationships between deployed state and source artifacts.
 
-- **Multiple runtime modes.** The graph storage system runs as:
+- **Multiple runtime modes** The graph storage system runs as:
 
   | Mode | Description | Example |
   | ------ | ------------- | --------- |
@@ -95,4 +95,4 @@ One versioned graph where deployed state, source artifacts, and deployment histo
   | **Server stateless** | Graph generated ephemerally in CI/CD without a persistent process | GitHub Actions, PR visualization |
   | **Long-running stateful** | Graph hosted in a graph database on the control plane | Enterprise deployments, real-time collaboration |
 
-- **Ingest from existing tools.** Many infrastructure and application tools already store their configuration in text files (YAML, JSON, HCL, Bicep) and ship parsers that turn those files into structured data. GitHub's dependency graph works this way — it reads package manifests from many platforms and builds a unified dependency view. Radius can use the same approach: leverage existing parsers from tools like Kustomize, KRO, Flux, and others to pull their resources into the graph alongside Radius-native `app.bicep` definitions. No new file formats are required — the graph simply understands what's already in a repository.
+- **Ingest from existing tools** Many infrastructure and application tools already store their configuration in text files (YAML, JSON, HCL, Bicep) and ship parsers that turn those files into structured data. GitHub's dependency graph works this way — it reads package manifests from many platforms and builds a unified dependency view. Radius can use the same approach: leverage existing parsers from tools like Kustomize, KRO, Flux, and others to pull their resources into the graph alongside Radius-native `app.bicep` definitions. No new file formats are required — the graph simply understands what's already in a repository.
