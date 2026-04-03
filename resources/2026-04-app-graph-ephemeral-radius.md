@@ -80,7 +80,7 @@ Radius should provide a way to access all three kinds of graph.
 * **Unified schema.** A single graph schema should represent both static and run-time graphs. Fields that only apply to one graph type (e.g., `provisioningState` for run-time graphs) are optionally populated. See [Resource property selection](#resource-property-selection)
 * **DAG structure.** The graph is a directed acyclic graph (DAG). Each node is a Radius resource; each edge is a connection (inbound or outbound) between resources.
 * **Query capabilities.** Beyond depicticing the dependency between resources, the graph should support queries such as: "what does the frontend container depend on?" or "is this resource owned by the application or shared via the environment?"
-* **In-memory construction.** The graph is built in-memory on each request. This mirrors how ARM's Deployment Engine constructs a dependency graph from an ARM JSON template (or Bicep) using `dependsOn`. Radius applications have a comparable number of nodes, so the same approach is viable.
+* **In-memory construction.** The graph is built in-memory on each request. This mirrors how ARM's Deployment Engine constructs a dependency graph from an ARM JSON template (or Bicep) using `dependsOn`. Radius applications have a comparable number of nodes, so the same approach is viable. `Cytoscape`, `jq`,`gonum\graph` can be used for visualization and query.
 * **Persistence of serialized output.** When Radius is used with ephemeral infrastructure (e.g., GitHub Actions workspaces), the control plane is torn down after each workflow run. GitHub READMEs and PR views need access to the graph without spinning up the control plane. This requires persisting the serialized graph JSON independently of the control plane state. See [Graph persistence](#graph-persistence) below.
 
 #### Graph persistence
@@ -103,7 +103,7 @@ The graph JSON includes properties for each resource node. A key schema design d
 
 ##### Approach A: Include all properties (current behavior) 
 
-Dump every property from the resource's stored state into the graph node. This is what the `getGraph` API does today. All properties are read from the Radius control plane datastore and serialized into the response, potentially traveling over the network to CLI clients/consumers.
+Dump every property from the resource's stored state into the graph node. This is what the `getGraph` API does today. All properties are read from the Radius control plane datastore and serialized into the response, potentially traveling over the network to CLI clients/consumers. "View"/ upper layers have the business logic to filter  data as needed.
 
 | Pros | Cons |
 |---|---|
@@ -113,7 +113,8 @@ Dump every property from the resource's stored state into the graph node. This i
 
 ##### Approach B: Schema-driven property selection
 
-Extend the [resource type YAML manifest](https://docs.radapp.io/concepts/resource-types/) with a top-level `graphProperties` list that declares which properties should be included in the graph. Only listed properties are projected into the graph JSON. This reduces the data read from the control plane datastore and serialized over the network. It allows a default view to rely on data filtering applied at control plane.
+Extend the [resource type YAML manifest](https://docs.radapp.io/concepts/resource-types/) with a top-level `graphProperties` list that declares which properties should be included in the graph. Only listed properties are projected into the graph JSON. This reduces the data read from the control plane datastore and serialized over the network. It allows a default view to rely on data filtering applied at control plane. 
+
 
 Example manifest addition:
 
@@ -139,7 +140,7 @@ graphExclude:
 | Resource type authors control what's meaningful for visualization | New properties are hidden by default until annotated |
 | Stable rendering contract for UI components | More complex graph construction logic (filter by annotation) |
 
-##### Approach C: Hybrid — full dump with display hints (Claude suggested)
+##### Approach C: Hybrid — full dump with display hints (Claude suggested, retaining for discussion)
 
 Include all properties in the graph JSON, but add a `displayProperties` list to each `ApplicationGraphResource` node that identifies the subset of properties recommended for rendering. Consumers can use the hints for default views and fall back to the full property set for advanced/detail views.
 
@@ -345,6 +346,7 @@ resource db 'Radius.Data/mongoDatabases@2025-08-01-preview' = {
   ]
 }
 ```
+
 #### Approach 1: Parse Bicep source files directly
 
 The CLI would parse `.bicep` files, locate `connections` blocks, and resolve symbolic resource references (like `db.id`) to build graph edges.
