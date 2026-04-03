@@ -2,9 +2,7 @@
 
 ## Summary
 
-Given any running resource deployed by Radius, a user can answer: *what exact versions of which files, recipes, and configurations produced this?* Given any source artifact, a user can answer: *what did this deploy, and where?* This proposal introduces a versioned graph that makes this possible — connecting every deployed resource to the specific versions of every artifact that created it: the `app.bicep` file, the parameters, the recipes, the environment configuration, and the deployment operation itself.
-
-Today this is not possible. Deployed state (resources running in the cloud) and the artifacts that created it (`app.bicep` files, parameters, recipe packs, environment configuration) live in separate, disconnected systems. The graph connects them into a single, traversable, versioned model.
+Given any running resource deployed by Radius, a user can answer: *What exact versions of which files, recipes, and configurations produced this?* Given any source artifact, a user can answer: *What did this deploy, and where?* This proposal introduces a versioned graph that makes this possible — connecting every deployed resource to the specific versions of every artifact that created it: the `app.bicep` file, the parameters, the recipes, the environment configuration, and the deployment operation itself.
 
 ## Context
 
