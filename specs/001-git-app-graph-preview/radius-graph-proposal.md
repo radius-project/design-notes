@@ -14,16 +14,16 @@ Radius is currently developing three capabilities that shape this proposal:
 
 These features will work using the existing storage backends (etcd, serialized JSON files, or PostgreSQL). This proposal is to develop, in parallel, a graph storage system that unifies these into a single connected model where every deployed resource is linked to the versioned artifacts that produced it.
 
-## Proposal Adds: A Versioned Graph of Deployed State and Source Artifacts
+## Proposal: A Versioned Graph of Deployed State and Source Artifacts
 
 Given any deployed resource, a user can traverse the graph to find:
 
-- The exact `app.bicep` file (and version) that declared it.
-- The artifact diffs between deployments.
-- The parameter values used at deployment time.
-- The recipe and recipe pack that provisioned the underlying infrastructure.
-- The environment and group configuration in effect when it was deployed.
-- The deployment operation that created or last modified it.
+- The exact `app.bicep` file (and version) that declared it
+- The artifact diffs between deployments
+- The parameter values used at deployment time
+- The recipe and recipe pack that provisioned the underlying infrastructure
+- The environment and group configuration in effect when it was deployed
+- The deployment operation that created or last modified it
 
 Given any source artifact (an `app.bicep` file, a recipe, a parameter set), a user can traverse the graph in the other direction to find every deployed resource it has ever produced, across environments and over time.
 
