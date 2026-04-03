@@ -345,9 +345,43 @@ resource db 'Radius.Data/mongoDatabases@2025-08-01-preview' = {
   ]
 }
 ```
-#### Approach 1: from bicep files and "connections" property
+#### Approach 1: Parse Bicep source files directly
 
-#### Approach 2: compile bicep templates to json, and use ARM json templates to infer connections
+The CLI would parse `.bicep` files, locate `connections` blocks, and resolve symbolic resource references (like `db.id`) to build graph edges.
+
+| Pros | Cons |
+|---|---|
+| Works directly on the source files developers author — no compilation step | Requires a Bicep parser in Go. Bicep's compiler is C#/.NET; no Go parser exists for Bicep syntax. |
+| Symbolic names like `db.id` are human-readable and map directly to resource declarations | Must handle Bicep's full expression language: string interpolation, conditionals (`if`), loops (`for`), ternaries, built-in functions |
+| No dependency on the Bicep CLI binary being installed | Cannot handle Bicep **modules** — resources split across files via `module` declarations would require recursive resolution |
+| Faster execution — no subprocess spawn | Bicep syntax evolves across versions; a custom parser would need ongoing maintenance |
+| | Does not handle `.bicepparam` files or parameter defaults that affect which resources are included |
+
+#### Approach 2: Compile Bicep to ARM JSON, then parse the JSON
+
+The CLI invokes `bicep build` (which it already does for `rad deploy` via `pkg/cli/bicep`), then parses the compiled ARM JSON to extract resources, `connections`, and `dependsOn`.
+
+| Pros | Cons |
+|---|---|
+| Radius CLI already invokes `bicep build` for deployment — the compilation pipeline exists in `pkg/cli/bicep` | Requires the Bicep CLI to be installed (already a prerequisite for `rad deploy`) |
+| ARM JSON is a stable, well-documented format with standard JSON parsing in Go | Connection sources become ARM expressions like `"[resourceId('Radius.Data/mongoDatabases', 'my-db')]"` — need to parse `resourceId()` calls to extract type + name |
+| Handles modules automatically — Bicep flattens module references into nested deployments in the JSON output | Parameters remain unresolved (e.g., `"[parameters('environment')]"`) — acceptable for static graphs since runtime values aren't needed |
+| Handles conditionals, loops, and all Bicep features — the compiler resolves them | Conditional resources appear with a `"condition"` field that can't be evaluated without parameter values — the graph may include resources that wouldn't actually be deployed |
+| `dependsOn` arrays are auto-computed — gives deployment ordering edges for free in addition to `connections` edges | Slight overhead of spawning a subprocess, but already acceptable for `rad deploy` |
+| Also supports pre-compiled JSON as input — users can pass `.json` files directly, skipping the Bicep step | |
+| Literal URL sources (like `"http://backend:8080"`) pass through as-is — easy to distinguish from `resourceId()` expressions | |
+
+#### Recommendation
+
+**Approach 2** (compile to JSON) is the preferred choice:
+
+1. **No custom parser needed.** Parsing ARM JSON in Go is trivial (`encoding/json`). Parsing Bicep syntax in Go would be a significant, ongoing maintenance burden.
+2. **Handles all Bicep features.** Modules, conditionals, loops, parameter defaults — the Bicep compiler deals with all of this.
+3. **Two edge sources.** The JSON provides both `connections` (application-level relationships) and `dependsOn` (deployment ordering), enabling a richer graph.
+
+The main implementation work is parsing `resourceId()` expressions from connection source strings — a straightforward regex/string-split on a well-known format like `[resourceId('Radius.Data/mongoDatabases', 'my-db')]`.
+
+
 
 
 
