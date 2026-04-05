@@ -8,6 +8,7 @@ args
 aspell
 azurecr
 Analytics
+Automatable
 Async
 Async
 AWSSimpleQueueService
@@ -65,8 +66,10 @@ entrypoint
 EOF
 Extensibility
 FileShare
+Frontmatter
 Fluentd
 FTEs
+GHA
 GKE
 GOAPP
 GitHubAccess
@@ -85,6 +88,7 @@ KeyVault
 Kinesis
 kubeconfig
 Kubernetes
+Linters
 ListSecret
 Liveness
 LocalID
@@ -158,6 +162,7 @@ ToCs
 UCP
 UDP
 UI
+UIs
 URIs
 VPC
 VSCode
@@ -201,6 +206,7 @@ containername
 corerp
 cosmosAccount
 cosmosdb
+curation
 customizations
 dapr
 daprPubSubBrokers
@@ -231,6 +237,7 @@ eshop
 exe
 extensibility
 failureThreshold
+formatters
 fileshare
 frontend
 fullyQualifiedHostname
@@ -263,6 +270,7 @@ infrastructure
 init
 initialDelaySeconds
 integrations
+invocable
 io
 js
 json
@@ -279,6 +287,7 @@ lifecycle
 lifecycles
 linkTitle
 linter
+linters
 linux
 liveness
 lrt
@@ -337,6 +346,7 @@ pageinfo
 param
 params
 parametrization
+parallelize
 parallelizable
 passthrough
 Peirone
@@ -378,6 +388,7 @@ redisCaches
 redoc
 replacePrefix
 repo
+repo's
 reproducibility
 resourceGroupName
 resourceId
@@ -424,6 +435,7 @@ Symlinked
 src
 subnet
 subnets
+superset
 subscriptionID
 subscriptionName
 subscriptionid
@@ -435,6 +447,7 @@ tlstermination
 toc
 todo
 traceId
+triages
 ubuntu
 ui
 ucp

@@ -17,27 +17,21 @@
 
 5. **Enforce deterministically first.** Linters, CI, and formatters always catch violations; skills are probabilistic. Use deterministic enforcement as primary; use skills for guidance that can't be automated.
 
-6. **Agent config is shared infrastructure.** Skills, instructions, and agent config affect every contributor's sessions. Treat changes with the same rigor as CI pipelines. Add CODEOWNERS. Use PRs.
+6. **Dual-audience authoring.** One source of truth, two interfaces. Skills reference contributing docs; they don't duplicate them.
 
-7. **Dual-audience authoring.** One source of truth, two interfaces. Skills reference contributing docs; they don't duplicate them.
+7. **Plan for obsolescence.** Review quarterly; prune aggressively. Stale skills give outdated guidance and waste context.
 
-8. **Plan for obsolescence.** Review quarterly; prune aggressively. Stale skills give outdated guidance and waste context.
-
-9. **Environment-agnostic by default.** Skills should work in dev containers, Codespaces, and cloud agent alike.
+8. **Environment-agnostic by default.** Skills should work in dev containers, Codespaces, and cloud agent alike.
 
 ---
 
 ## Success Criteria
 
 - [ ] A contributor to any repo can ask Copilot "how do I build this?" and get a correct answer
-- [ ] Every high-value workflow has a skill backed by a contributing doc
+- [ ] Every high-value human/agent workflow has a skill backed by a contributing doc
 - [ ] Contributing docs are accurate and verified against current code
 - [ ] Every code repo has `copilot-setup-steps.yml` aligned with its dev container
 - [ ] Cloud agent can build and test code in any repo out of the box
-- [ ] No repo has > 5 active skills at launch
-- [ ] Always-on context stays within vendor-recommended limits
-- [ ] Zero dead skills; every skill is tested and addresses a real pain point
-- [ ] Agent infrastructure has CODEOWNERS and quarterly review cadence
 
 ---
 
@@ -239,7 +233,6 @@ Create an automated agent that runs weekly, analyzes Copilot Agent session logs,
 - [ ] Build the analysis prompt (`radius.skill-lifecycle-review.prompt.md`) that encodes the add/edit/remove signal heuristics
 - [ ] Create the `radius-skill-lifecycle-reviewer` agent definition for local/manual runs outside CI
 - [ ] Establish a log retention policy (e.g., rolling 4-week window) to bound storage and analysis scope
-- [ ] Add CODEOWNERS entry for the workflow and prompt files
 
 **Dependencies**: Phases 2–5 must be complete so there is a meaningful set of skills, instructions, and agents generating logs to analyze. Log collection infrastructure may require coordination with GitHub org admins for audit log API access.
 
