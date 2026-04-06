@@ -1,37 +1,7 @@
 <!-- markdownlint-disable MD060 -->
-# Agent Ex — Agent Experience Plan
+# Agent Ex — Implementation Plan
 
-**Goal**: Provide a first-class environment across all Radius repositories where AI agents and human contributors work together effectively. Every skill, instruction, agent, and contributing document should serve *both* audiences — humans read the contributing docs; agents consume the same knowledge as skills and instructions.
-
----
-
-## Design Principles
-
-1. **Start minimal, add from friction.** Don't build a comprehensive library up-front. Start with the minimum, observe what agents get wrong, add skills only when real pain justifies the context cost.
-
-2. **Documentation is the durable foundation.** Skills are ephemeral agent interfaces; contributing docs are the durable knowledge base. Invest in docs first; skills are thin wrappers on top.
-
-3. **Skills encode project-specific, non-obvious knowledge.** Skills are valuable when they encode knowledge the model cannot infer: custom pipelines, internal conventions, cross-repo coordination. They are low-value for standard workflows (`go test`, `npm install`). A skill must satisfy ≥2 of: project-specific, multi-step/non-obvious, frequently repeated, error-prone without guidance.
-
-4. **Context budget is finite.** Always-on context costs tokens before your task starts. Targets: [`copilot-instructions.md` < 2 pages](https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot#asking-copilot-cloud-agent-to-generate-a-copilot-instructionsmd-file), [instruction files < 200 lines](https://code.claude.com/docs/en/memory#write-effective-instructions), [skill files < 500 lines](https://code.claude.com/docs/en/skills#add-supporting-files). When in doubt, put knowledge in a doc the agent reads on-demand.
-
-5. **Enforce deterministically first.** Linters, CI, and formatters always catch violations; skills are probabilistic. Use deterministic enforcement as primary; use skills for guidance that can't be automated.
-
-6. **Dual-audience authoring.** One source of truth, two interfaces. Skills reference contributing docs; they don't duplicate them.
-
-7. **Plan for obsolescence.** Review quarterly; prune aggressively. Stale skills give outdated guidance and waste context.
-
-8. **Environment-agnostic by default.** Skills should work in dev containers, Codespaces, and cloud agent alike.
-
----
-
-## Success Criteria
-
-- [ ] A contributor to any repo can ask Copilot "how do I build this?" and get a correct answer
-- [ ] Every high-value human/agent workflow has a skill backed by a contributing doc
-- [ ] Contributing docs are accurate and verified against current code
-- [ ] Every code repo has `copilot-setup-steps.yml` aligned with its dev container
-- [ ] Cloud agent can build and test code in any repo out of the box
+This document describes the implementation mechanics for delivering the capabilities defined in [agent-ex-features.md](agent-ex-features.md).
 
 ---
 
@@ -54,7 +24,7 @@
 
 ## Gaps
 
-The items below are illustrative examples based on the current-state assessment. The actual scope of work will be determined within each phase of the plan, as Spec Kit specifications are developed, and as implementations are tested.
+The items below are illustrative examples based on the current-state assessment. The actual scope of work will be determined within each phase, as Spec Kit specifications are developed and implementations are tested.
 
 ### Missing skills (create now)
 
@@ -96,9 +66,7 @@ Deferred: `python.instructions.md` (few scripts), `csharp.instructions.md` (low-
 
 ---
 
-## The Plan
-
-### Phase validation
+## Phase Validation
 
 Each phase produces a set of **validation prompts** — questions or tasks you give to the agent that should succeed if the phase's deliverables are effective. These are committed as `radius.validate.<phase>.prompt.md` files so they're reusable, reviewable, and serve as living acceptance tests.
 
@@ -109,7 +77,11 @@ Validation has two layers:
 
 A phase is not complete until both layers pass.
 
-### Phase 0: Cloud agent environments
+---
+
+## Phase 0: Cloud Agent Environments
+
+**Enables**: [1.1 Set up a development environment](agent-ex-features.md#11-set-up-a-development-environment)
 
 Create `copilot-setup-steps.yml` for each code repo, aligned with its dev container.
 
@@ -135,7 +107,11 @@ Action items:
 - Deterministic: Assign a test issue to Copilot cloud agent in each repo. The agent must successfully check out, install dependencies, and run `make build` (or equivalent) without manual tool installation.
 - Prompt: "Build this project and run the unit tests." — agent should succeed in cloud agent environment without trial-and-error tool installation.
 
-### Phase 1: Contributing docs
+---
+
+## Phase 1: Contributing Docs
+
+**Enables**: All [Build and Test](agent-ex-features.md#1-build-and-test-features-and-bug-fixes) sub-scenarios (including [1.4 CLI commands](agent-ex-features.md#14-add-or-update-cli-commands)), [Explain Architecture](agent-ex-features.md#4-explain-architecture-and-design)
 
 Contributing docs are the foundation that skills reference. Fix the foundation first.
 
@@ -145,16 +121,20 @@ Contributing docs are the foundation that skills reference. Fix the foundation f
 - [ ] **`resource-types-contrib/`**: Review 5 docs for accuracy. Add prerequisites. Create missing `CONTRIBUTING.md`.
 - [ ] **`bicep-types-aws/`**: Review 3 docs. Add prerequisites, test documentation, type generation pipeline overview.
 
-**Gate**: After completing Phase 1, re-evaluate the skills identified in Section 3a and the backlog in 3b. The doc audit will reveal which workflows are truly non-obvious vs. well-documented enough for agents to follow unaided. Adjust the Phase 2 skill list before proceeding.
+**Gate**: After completing Phase 1, re-evaluate the skills identified in the Gaps section and the backlog. The doc audit will reveal which workflows are truly non-obvious vs. well-documented enough for agents to follow unaided. Adjust the Phase 2 skill list before proceeding.
 
 **Validation**:
 
 - Deterministic: Each doc follows the standard format (Purpose → Prerequisites → Steps → Verification → Troubleshooting). Links resolve. Code snippets are syntactically valid.
 - Prompts: "How do I run the control plane locally?" / "How do I add a resource type?" / "How do I build the dashboard?" — agent should find and follow the contributing doc to produce a correct, step-by-step answer for each repo.
 
-### Phase 2: Skills
+---
 
-Create 4 new skills (Section 3a). Update 5 existing `radius/` skills:
+## Phase 2: Skills
+
+**Enables**: [1.3 Schema changes](agent-ex-features.md#13-modify-api-type-definitions-schema-changes), [1.4 CLI commands](agent-ex-features.md#14-add-or-update-cli-commands) (backlog), [1.9 Resource type definitions](agent-ex-features.md#19-add-or-update-resource-type-definitions-contrib), [1.13 AWS Bicep types](agent-ex-features.md#113-generate-aws-bicep-types) (backlog), [4. Explain architecture](agent-ex-features.md#4-explain-architecture-and-design)
+
+Create 4 new skills (see Gaps section). Update 5 existing `radius/` skills:
 
 - [ ] `radius-build-cli` — Add contrib doc link. Evaluate if a full skill is justified or if a doc reference in `copilot-instructions.md` suffices.
 - [ ] `radius-build-images` — Verify accuracy. Retain (multi-step, Radius-specific).
@@ -167,16 +147,24 @@ Create 4 new skills (Section 3a). Update 5 existing `radius/` skills:
 - Deterministic: Each skill file < 500 lines. Each skill references ≥1 contributing doc. Skill folder follows naming convention.
 - Prompts: For each skill, invoke it and verify the agent follows the correct multi-step workflow. E.g., invoke `radius-schema-changes` and confirm it runs TypeSpec → Swagger → Go in the right order.
 
-### Phase 3: Instructions
+---
 
-Create instructions listed in Section 3c. Each file < 2K tokens. Only Radius-specific conventions — don't repeat what linters enforce or models know.
+## Phase 3: Instructions
+
+**Enables**: [1.2 Go code](agent-ex-features.md#12-write-and-modify-go-code), [1.5 GitHub workflows](agent-ex-features.md#15-edit-github-actions-workflows), [1.6 Dockerfiles](agent-ex-features.md#16-write-and-modify-dockerfiles), [1.7 Bicep](agent-ex-features.md#17-write-and-modify-bicep-files), [1.8 Shell/Make](agent-ex-features.md#18-write-shell-scripts-and-makefiles), [1.10 Dashboard plugins](agent-ex-features.md#110-develop-dashboard-plugins), [1.11 Documentation](agent-ex-features.md#111-author-and-edit-documentation), [2. Code review](agent-ex-features.md#2-review-code)
+
+Create instructions listed in the Gaps section. Each file < 2K tokens. Only Radius-specific conventions — don't repeat what linters enforce or models know.
 
 **Validation**:
 
 - Deterministic: Each instruction file < 200 lines. `applyTo` patterns match intended file types (test with `glob` matching). No overlap with linter-enforced rules.
 - Prompts: Open a file matching the `applyTo` pattern and ask the agent to write new code in that file. Verify the output follows the conventions in the instruction (e.g., TypeSpec naming, YAML schema structure).
 
-### Phase 4: Per-repo `copilot-instructions.md`
+---
+
+## Phase 4: Per-Repo `copilot-instructions.md`
+
+**Enables**: All capabilities — this is the agent's entry point to each repo.
 
 Each repo gets a `copilot-instructions.md` covering: repo purpose, tech stack, available skills/instructions/agents/prompts, link to `CONTRIBUTING.md`.
 
@@ -188,7 +176,11 @@ Each repo gets a `copilot-instructions.md` covering: repo purpose, tech stack, a
 - Deterministic: Each file < 2 pages. Lists all skills, instructions, agents, and prompts in the repo.
 - Prompt: Start a fresh chat in each repo and ask "What can you help me with in this project?" — agent should reference the repo's purpose, available skills, and link to contributing docs.
 
-### Phase 5: Agents and prompts
+---
+
+## Phase 5: Agents and Prompts
+
+**Enables**: [1.12 Create PRs](agent-ex-features.md#112-create-pull-requests-and-manage-contributions), [2. Review code](agent-ex-features.md#2-review-code), [3. Investigate issues](agent-ex-features.md#3-investigate-issues), [1.4 CLI commands](agent-ex-features.md#14-add-or-update-cli-commands) (prompt), [1.9 Resource types](agent-ex-features.md#19-add-or-update-resource-type-definitions-contrib)
 
 - [ ] Replicate `issue-investigator` across repos (or make workspace-level)
 - [ ] Create: `resource-type-contributor` (`resource-types-contrib/`), `dashboard-developer` (`dashboard/`), `docs-contributor` (`docs/`)
@@ -200,9 +192,13 @@ Each repo gets a `copilot-instructions.md` covering: repo purpose, tech stack, a
 - Deterministic: Agent and prompt files follow naming conventions. Agents are invocable (`@radius-*` resolves).
 - Prompts: Invoke each agent with a representative task. E.g., `@radius-resource-type-contributor` should walk through creating a complete resource type. Run each workflow prompt end-to-end.
 
-### Phase 6: Skill lifecycle agent (continuous improvement)
+---
 
-Create an automated agent that runs weekly, analyzes Copilot Agent session logs, and recommends skill additions, edits, or removals based on real usage patterns. This closes the feedback loop from Principle 1 ("start minimal, add from friction") and Principle 8 ("plan for obsolescence") by replacing manual quarterly reviews with data-driven, continuous curation.
+## Phase 6: Skill Lifecycle Agent
+
+**Enables**: [5. Continuously improve agent effectiveness](agent-ex-features.md#5-continuously-improve-agent-effectiveness)
+
+Create an automated agent that runs weekly, analyzes Copilot Agent session logs, and recommends skill additions, edits, or removals based on real usage patterns. This closes the feedback loop by replacing manual quarterly reviews with data-driven, continuous curation.
 
 **How it works**:
 
@@ -224,7 +220,7 @@ Create an automated agent that runs weekly, analyzes Copilot Agent session logs,
    - Instructions to adjust (coverage gaps or overlaps)
    - Context budget impact estimate (tokens saved/added)
 
-4. **Human-in-the-loop**: Recommendations are issues, not auto-applied changes. A maintainer reviews, triages, and either implements or closes with rationale. This preserves Principle 6 ("agent config is shared infrastructure") — no automated changes to skills without review.
+4. **Human-in-the-loop**: Recommendations are issues, not auto-applied changes. A maintainer reviews, triages, and either implements or closes with rationale. No automated changes to skills without review.
 
 **Implementation**:
 
