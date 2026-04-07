@@ -1,5 +1,12 @@
 # Design notes
 
+---
+
+> [!WARNING]
+> This repository has been moved to the main [Radius repository](https://github.com/radius-project/radius) and is no longer actively maintained.
+
+---
+
 This `design-notes` repository contains design proposals, enhancements, and architectural decisions for Radius. It provides a consistent and controlled path to record changes and developments, ensuring clarity and transparency for all stakeholders in the Radius community.
 
 Design notes are used for evaluating the design of **planned** changes and additions to Radius. Do not use this repository for feature requests - please create an issue on the [main Radius repository](https://github.com/radius-project) instead. We create documents in this repo to describe **why** and **how** to accomplish something once we have agreement that it is appropriate for the project.
