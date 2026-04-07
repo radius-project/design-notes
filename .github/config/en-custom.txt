@@ -747,6 +747,7 @@ OpenAPI
 openAPI
 openAPIV
 OpenID
+openssl
 OpenTelemetry
 operationStatuses
 ORAS
@@ -922,6 +923,7 @@ reimplement
 reinstallation
 reinstallations
 rekey
+releaseable
 remoteRef
 renderer
 renderers
@@ -1131,6 +1133,7 @@ TerraformConfig
 terraformrc
 Terraform's
 TerraformSettings
+testability
 tf
 TF
 th
