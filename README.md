@@ -3,7 +3,7 @@
 ---
 
 > [!WARNING]
-> This repository has been migrated to the core Radius [repo](https://github.com/radius-project/radius), and it's not longer maintained.
+> This repository has been moved to the main [Radius repository](https://github.com/radius-project/radius) and is no longer actively maintained.
 
 ---
 
